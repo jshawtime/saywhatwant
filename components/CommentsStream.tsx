@@ -398,16 +398,16 @@ const CommentsStream: React.FC = () => {
     setShowColorPicker(false);
   };
 
-  // Get darker version of color for placeholder
-  const getDarkerColor = (color: string) => {
-    // Convert hex to RGB, reduce brightness by 40%
+  // Get darker version of color for placeholder and inputs
+  const getDarkerColor = (color: string, factor: number = 0.6) => {
+    // Convert hex to RGB, reduce brightness by factor
     const r = parseInt(color.slice(1, 3), 16);
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
     
-    const darkerR = Math.floor(r * 0.6);
-    const darkerG = Math.floor(g * 0.6);
-    const darkerB = Math.floor(b * 0.6);
+    const darkerR = Math.floor(r * factor);
+    const darkerG = Math.floor(g * factor);
+    const darkerB = Math.floor(b * factor);
     
     return `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
   };
@@ -495,7 +495,7 @@ const CommentsStream: React.FC = () => {
                 maxLength={MAX_USERNAME_LENGTH}
                 style={{ 
                   width: '100%',
-                  color: userColor 
+                  color: getDarkerColor(userColor, 0.7) // Match darker username in comments
                 }}
               />
               {username && (
@@ -566,7 +566,7 @@ const CommentsStream: React.FC = () => {
                   className="text-xs font-medium flex-shrink-0" 
                   style={{ 
                     lineHeight: '20px',
-                    color: comment.color || '#60A5FA'
+                    color: getDarkerColor(comment.color || '#60A5FA', 0.7) // Darker username
                   }}
                 >
                   {comment.username || 'Anonymous'}:
@@ -584,9 +584,11 @@ const CommentsStream: React.FC = () => {
                 
                 {/* Timestamp - positioned absolute on right */}
                 <span 
-                  className="absolute top-0 right-0 text-[10px] text-white/25 border border-white/10 px-1.5 py-0.5 rounded"
+                  className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
                   style={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)'
+                    color: comment.color || '#60A5FA',
+                    borderColor: getDarkerColor(comment.color || '#60A5FA', 0.4),
+                    backgroundColor: getDarkerColor(comment.color || '#60A5FA', 0.1)
                   }}
                 >
                   {formatTimestamp(comment.timestamp)}
@@ -617,41 +619,50 @@ const CommentsStream: React.FC = () => {
         )}
         
         <form onSubmit={handleSubmit} className="flex gap-2">
-          <textarea
-            ref={inputRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
-            placeholder="Say what you want..."
-            className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
-            style={{
-              '--placeholder-color': getDarkerColor(userColor),
-              color: userColor,
-            } as React.CSSProperties}
-            maxLength={MAX_COMMENT_LENGTH}
-            disabled={isSubmitting}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
+          <div className="flex-1 relative">
+            <textarea
+              ref={inputRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
+              placeholder="Say what you want..."
+              className="w-full px-3 py-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
+              style={{
+                '--placeholder-color': getDarkerColor(userColor, 0.4),
+                color: getDarkerColor(userColor, 0.35), // Much darker for better readability
+              } as React.CSSProperties}
+              maxLength={MAX_COMMENT_LENGTH}
+              disabled={isSubmitting}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+            {/* Character counter inside textarea */}
+            <div 
+              className="absolute bottom-2 right-2 text-[10px] pointer-events-none"
+              style={{ color: getDarkerColor(userColor, 0.7) }}
+            >
+              {inputText.length}/{MAX_COMMENT_LENGTH}
+            </div>
+          </div>
           <button
             type="submit"
             disabled={isSubmitting || !inputText.trim()}
-            className={`p-2 rounded-lg transition-all hover-scale ${
+            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
               isSubmitting || !inputText.trim()
-                ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-500 text-white'
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:opacity-80'
             }`}
+            style={{ 
+              backgroundColor: getDarkerColor(userColor, 0.15),
+              color: userColor 
+            }}
           >
             <Send className="w-4 h-4" />
           </button>
         </form>
-        
-        <div className="mt-1 text-xs text-white/40 text-right">
-          {inputText.length}/{MAX_COMMENT_LENGTH}
-        </div>
       </div>
     </div>
   );
