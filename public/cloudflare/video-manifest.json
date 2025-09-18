@@ -1,0 +1,27 @@
+{
+  "videos": [
+    {
+      "key": "demo-video-1.mp4",
+      "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      "size": 15069849,
+      "lastModified": "2024-01-01T00:00:00.000Z",
+      "contentType": "video/mp4"
+    },
+    {
+      "key": "demo-video-2.mp4",
+      "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      "size": 15069849,
+      "lastModified": "2024-01-01T00:00:00.000Z",
+      "contentType": "video/mp4"
+    },
+    {
+      "key": "demo-video-3.mp4",
+      "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      "size": 5744737,
+      "lastModified": "2024-01-01T00:00:00.000Z",
+      "contentType": "video/mp4"
+    }
+  ],
+  "lastUpdated": "2024-01-01T00:00:00.000Z",
+  "total": 3
+}

@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-09-18T20:36:51.607Z",
+  "source": "local",
+  "totalVideos": 2,
+  "videos": [
+    {
+      "key": "This_person_saying_202509181108_wc37h.mp4",
+      "url": "/sww-videos/This_person_saying_202509181108_wc37h.mp4",
+      "size": 2754966,
+      "lastModified": "2025-09-18T20:36:14.639Z",
+      "contentType": "video/mp4"
+    },
+    {
+      "key": "This_person_says_202509181115_6hxeo.mp4",
+      "url": "/sww-videos/This_person_says_202509181115_6hxeo.mp4",
+      "size": 3130866,
+      "lastModified": "2025-09-18T20:36:14.649Z",
+      "contentType": "video/mp4"
+    }
+  ]
+}

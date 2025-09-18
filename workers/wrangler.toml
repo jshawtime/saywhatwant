@@ -1,0 +1,19 @@
+name = "sww-comments"
+main = "comments-worker.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespace binding
+[[kv_namespaces]]
+binding = "COMMENTS_KV"
+id = "YOUR_KV_NAMESPACE_ID_HERE" # Replace with actual namespace ID after creation
+
+# Development configuration
+[env.development]
+name = "sww-comments-dev"
+
+# Production configuration
+[env.production]
+name = "sww-comments"
+
+# Optional: Custom domain routing
+# route = "https://yourdomain.com/api/comments/*"
