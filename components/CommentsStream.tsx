@@ -444,7 +444,7 @@ const CommentsStream: React.FC = () => {
         <div className="p-3 space-y-2">
           {/* Title and Username */}
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-bold">Say What Want</h2>
+            <h2 className="text-lg font-light uppercase opacity-50">Say What Want</h2>
             
             {/* Username Input - Always Visible */}
             <div className="relative flex items-center gap-2" style={{ width: 'calc(12ch * 1.5 + 60px)' }} ref={colorPickerRef}>
@@ -504,10 +504,11 @@ const CommentsStream: React.FC = () => {
                     setUsername('');
                     localStorage.removeItem('sww-username');
                   }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
                   aria-label="Clear username"
+                  style={{ color: getDarkerColor(userColor, 0.6) }}
                 >
-                  <X className="w-3 h-3 text-white/60 hover:text-white" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </div>
@@ -620,12 +621,19 @@ const CommentsStream: React.FC = () => {
         
         <form onSubmit={handleSubmit} className="flex gap-2">
           <div className="flex-1 relative">
+            {/* Character counter at top of textarea */}
+            <div 
+              className="absolute top-2 right-2 text-[10px] pointer-events-none z-10"
+              style={{ color: getDarkerColor(userColor, 0.6) }}
+            >
+              {inputText.length}/{MAX_COMMENT_LENGTH}
+            </div>
             <textarea
               ref={inputRef}
               value={inputText}
               onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
               placeholder="Say what you want..."
-              className="w-full px-3 py-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
+              className="w-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
               style={{
                 '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
                 color: userColor, // Match message text color
@@ -639,13 +647,6 @@ const CommentsStream: React.FC = () => {
                 }
               }}
             />
-            {/* Character counter inside textarea */}
-            <div 
-              className="absolute bottom-2 right-2 text-[10px] pointer-events-none"
-              style={{ color: getDarkerColor(userColor, 0.6) }}
-            >
-              {inputText.length}/{MAX_COMMENT_LENGTH}
-            </div>
           </div>
           <button
             type="submit"
