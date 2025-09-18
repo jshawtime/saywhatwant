@@ -105,6 +105,47 @@ wrangler kv:namespace create "COMMENTS_KV"
 
 That's it! Comments will now use Cloudflare Workers + KV storage.
 
+## 🎨 Color System
+
+The app uses a dynamic color system where each user can select their personalized color. All colors are derived from a single user-selected base color.
+
+### Color Brightness Levels
+
+| Brightness | Usage | Elements |
+|------------|-------|----------|
+| **100%** | Primary elements | • Person icon<br>• Message text<br>• Time tag text<br>• Send button icon<br>• Typed text in input |
+| **60%** | Secondary text | • Username in comments<br>• Username input field<br>• "Say what you want..." placeholder<br>• Character counter |
+| **15%** | Backgrounds | • Send button background |
+| **10%** | Subtle backgrounds | • Time tag background |
+| **40%** | Borders | • Time tag border |
+
+### Implementation Notes for Refactoring
+
+The color system currently uses a single `getDarkerColor()` function in `CommentsStream.tsx` that takes:
+- Base color (hex format)
+- Brightness factor (0-1)
+
+All color variations are calculated from the user's selected base color (`userColor`).
+
+**Current Implementation:**
+```javascript
+getDarkerColor(userColor, 0.6) // 60% brightness
+```
+
+**Future Refactoring Ideas:**
+1. Create a color theme object with predefined levels
+2. Use CSS variables for each brightness level
+3. Consider using a color library (e.g., chroma.js) for consistent HSL/HSB adjustments
+4. Move color calculations to a separate utility module
+5. Define semantic color groups:
+   - **Primary Group**: Full brightness - interactive elements
+   - **Secondary Group**: 60% brightness - text labels  
+   - **Background Group**: 10-15% brightness - subtle backgrounds
+
+**Color Persistence:**
+- User's selected color is stored in `localStorage` as `sww-color`
+- Each comment stores its color, preserving the color the user had when posting
+
 ## 🛠️ Available Scripts
 
 ### Development

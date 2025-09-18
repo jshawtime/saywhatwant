@@ -495,7 +495,7 @@ const CommentsStream: React.FC = () => {
                 maxLength={MAX_USERNAME_LENGTH}
                 style={{ 
                   width: '100%',
-                  color: getDarkerColor(userColor, 0.7) // Match darker username in comments
+                  color: getDarkerColor(userColor, 0.6) // Match darker username in comments
                 }}
               />
               {username && (
@@ -566,7 +566,7 @@ const CommentsStream: React.FC = () => {
                   className="text-xs font-medium flex-shrink-0" 
                   style={{ 
                     lineHeight: '20px',
-                    color: getDarkerColor(comment.color || '#60A5FA', 0.7) // Darker username
+                    color: getDarkerColor(comment.color || '#60A5FA', 0.6) // Darker username
                   }}
                 >
                   {comment.username || 'Anonymous'}:
@@ -627,8 +627,8 @@ const CommentsStream: React.FC = () => {
               placeholder="Say what you want..."
               className="w-full px-3 py-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
               style={{
-                '--placeholder-color': getDarkerColor(userColor, 0.4),
-                color: getDarkerColor(userColor, 0.35), // Much darker for better readability
+                '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
+                color: userColor, // Match message text color
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}
               disabled={isSubmitting}
@@ -642,7 +642,7 @@ const CommentsStream: React.FC = () => {
             {/* Character counter inside textarea */}
             <div 
               className="absolute bottom-2 right-2 text-[10px] pointer-events-none"
-              style={{ color: getDarkerColor(userColor, 0.7) }}
+              style={{ color: getDarkerColor(userColor, 0.6) }}
             >
               {inputText.length}/{MAX_COMMENT_LENGTH}
             </div>
