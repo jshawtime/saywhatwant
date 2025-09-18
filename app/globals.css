@@ -5,6 +5,7 @@
 /* Global Variables */
 :root {
   --comment-username-gap: 10px; /* Gap between username and message text - adjust for tighter/looser spacing */
+  --placeholder-color: rgba(255, 255, 255, 0.4); /* Default placeholder color */
 }
 
 /* Custom animations */
@@ -94,6 +95,12 @@
 
 .hover-scale:hover {
   transform: scale(1.05);
+}
+
+/* Custom placeholder color */
+textarea::placeholder {
+  color: var(--placeholder-color);
+  opacity: 1;
 }
 
 @layer base {

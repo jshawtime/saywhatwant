@@ -11,6 +11,22 @@ const POLLING_INTERVAL = 5000;
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 12;
 
+// Predefined color palette for usernames
+const COLOR_PALETTE = [
+  '#60A5FA', // blue-400
+  '#34D399', // emerald-400
+  '#FBBF24', // amber-400
+  '#F87171', // red-400
+  '#A78BFA', // violet-400
+  '#FB923C', // orange-400
+  '#4ADE80', // green-400
+  '#F472B6', // pink-400
+  '#38BDF8', // sky-400
+  '#A3E635', // lime-400
+  '#E879F9', // fuchsia-400
+  '#94A3B8', // slate-400
+];
+
 const CommentsStream: React.FC = () => {
   // State management
   const [allComments, setAllComments] = useState<Comment[]>([]);
@@ -25,24 +41,51 @@ const CommentsStream: React.FC = () => {
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [usernameFlash, setUsernameFlash] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [userColor, setUserColor] = useState('#60A5FA'); // Default blue-400
+  const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastFetchTimeRef = useRef<number>(Date.now());
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   // Storage key for localStorage
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
 
-  // Load username from localStorage
+  // Load username and color from localStorage
   useEffect(() => {
     const savedUsername = localStorage.getItem('sww-username');
+    const savedColor = localStorage.getItem('sww-color');
+    
     if (savedUsername) {
       setUsername(savedUsername);
       setHasClickedUsername(true); // If there's a saved username, treat it as if they've clicked
     }
+    
+    if (savedColor && COLOR_PALETTE.includes(savedColor)) {
+      setUserColor(savedColor);
+    }
   }, []);
+
+  // Close color picker on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showColorPicker]);
 
   // Parse URLs in comment text
   const parseCommentText = useCallback((text: string): React.ReactNode[] => {
@@ -278,6 +321,7 @@ const CommentsStream: React.FC = () => {
         text: inputText.trim(),
         timestamp: Date.now(),
         username: username || undefined,
+        color: userColor,
       };
       
       // Load existing comments
@@ -346,6 +390,41 @@ const CommentsStream: React.FC = () => {
   };
 
   // Username is now auto-saved on change, no need for save function
+  
+  // Handle color selection
+  const selectColor = (color: string) => {
+    setUserColor(color);
+    localStorage.setItem('sww-color', color);
+    setShowColorPicker(false);
+  };
+
+  // Get darker version of color for placeholder
+  const getDarkerColor = (color: string) => {
+    // Convert hex to RGB, reduce brightness by 40%
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    
+    const darkerR = Math.floor(r * 0.6);
+    const darkerG = Math.floor(g * 0.6);
+    const darkerB = Math.floor(b * 0.6);
+    
+    return `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
+  };
+
+  // Shuffle colors array
+  const shuffleColors = () => {
+    const shuffled = [...COLOR_PALETTE].sort(() => Math.random() - 0.5);
+    setRandomizedColors(shuffled);
+  };
+
+  // Toggle color picker with randomization
+  const toggleColorPicker = () => {
+    if (!showColorPicker) {
+      shuffleColors();
+    }
+    setShowColorPicker(!showColorPicker);
+  };
 
   // Filter comments based on search
   const filteredComments = useMemo(() => {
@@ -368,10 +447,32 @@ const CommentsStream: React.FC = () => {
             <h2 className="text-lg font-bold">Say What Want</h2>
             
             {/* Username Input - Always Visible */}
-            <div className="relative flex items-center gap-2" style={{ width: 'calc(12ch * 1.5 + 60px)' }}>
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <User className="w-4 h-4 text-white/40" />
-              </div>
+            <div className="relative flex items-center gap-2" style={{ width: 'calc(12ch * 1.5 + 60px)' }} ref={colorPickerRef}>
+              <button
+                onClick={toggleColorPicker}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
+                style={{ color: userColor }}
+                aria-label="Choose color"
+              >
+                <User className="w-4 h-4" />
+              </button>
+              
+              {/* Color Picker Dropdown */}
+              {showColorPicker && (
+                <div className="absolute top-full left-0 mt-1 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-2 grid grid-cols-6 gap-1 z-20 shadow-xl">
+                  {randomizedColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => selectColor(color)}
+                      className="p-1.5 rounded hover:bg-white/10 transition-colors"
+                      style={{ color }}
+                      aria-label={`Select color ${color}`}
+                    >
+                      <User className="w-4 h-4" />
+                    </button>
+                  ))}
+                </div>
+              )}
               <input
                 type="text"
                 value={username}
@@ -392,7 +493,10 @@ const CommentsStream: React.FC = () => {
                     : 'border-white/10'
                 }`}
                 maxLength={MAX_USERNAME_LENGTH}
-                style={{ width: '100%' }}
+                style={{ 
+                  width: '100%',
+                  color: userColor 
+                }}
               />
               {username && (
                 <button
@@ -458,13 +562,22 @@ const CommentsStream: React.FC = () => {
             >
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
-                <span className="text-xs font-medium text-blue-400 flex-shrink-0" style={{ lineHeight: '20px' }}>
+                <span 
+                  className="text-xs font-medium flex-shrink-0" 
+                  style={{ 
+                    lineHeight: '20px',
+                    color: comment.color || '#60A5FA'
+                  }}
+                >
                   {comment.username || 'Anonymous'}:
                 </span>
                 
                 {/* Message with right margin for timestamp */}
                 <div className="flex-1 pr-12">
-                  <div className="text-sm leading-snug break-words" style={{ lineHeight: '20px' }}>
+                  <div className="text-sm leading-snug break-words" style={{ 
+                    lineHeight: '20px',
+                    color: comment.color || '#60A5FA'
+                  }}>
                     {parseCommentText(comment.text)}
                   </div>
                 </div>
@@ -509,7 +622,11 @@ const CommentsStream: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
             placeholder="Say what you want..."
-            className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 placeholder-white/40 min-h-[40px] max-h-[120px] text-sm"
+            className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
+            style={{
+              '--placeholder-color': getDarkerColor(userColor),
+              color: userColor,
+            } as React.CSSProperties}
             maxLength={MAX_COMMENT_LENGTH}
             disabled={isSubmitting}
             onKeyDown={(e) => {

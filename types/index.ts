@@ -5,6 +5,7 @@ export interface Comment {
   timestamp: number;
   username?: string;
   userAgent?: string;
+  color?: string; // User's chosen color
 }
 
 export interface CommentsResponse {
