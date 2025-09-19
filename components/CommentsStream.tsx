@@ -556,28 +556,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         <div className="p-3 space-y-2">
           {/* Title and Username */}
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
-              {toggleVideo && (
-                <button
-                  onClick={toggleVideo}
-                  className="p-1.5 hover:opacity-80 transition-opacity"
-                  style={{ 
-                    color: showVideo 
-                      ? getDarkerColor(userColor, 0.6)  // Username color when active
-                      : userColor,  // Same as title when off
-                    opacity: showVideo ? 1 : 0.5  // Same opacity as title when off
-                  }}
-                  title={showVideo ? 'Hide video' : 'Show video'}
-                  tabIndex={-1}
-                >
-                  <Tv className="w-5 h-5" />
-                </button>
-              )}
-            </div>
+            <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
             
-            {/* Username Input - Always Visible */}
-            <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 65px)' }} ref={colorPickerRef}>
+            {/* Username Input and TV Toggle - Always Visible */}
+            <div className="flex items-center gap-4">
+              <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 65px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
@@ -654,6 +637,25 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 </button>
               )}
             </div>
+            
+            {/* TV Toggle */}
+            {toggleVideo && (
+              <button
+                onClick={toggleVideo}
+                className="p-2 hover:opacity-80 transition-opacity"
+                style={{ 
+                  color: showVideo 
+                    ? getDarkerColor(userColor, 0.6)  // Username color when active
+                    : userColor,  // Same as title when off
+                  opacity: showVideo ? 1 : 0.5  // Same opacity as title when off
+                }}
+                title={showVideo ? 'Hide video' : 'Show video'}
+                tabIndex={-1}
+              >
+                <Tv className="w-5 h-5" />
+              </button>
+            )}
+          </div>
           </div>
 
           {/* Filter Bar */}

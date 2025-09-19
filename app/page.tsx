@@ -54,24 +54,33 @@ export default function Home() {
   return (
     <main className="flex h-screen bg-black relative">
       {/* Left Side - Video Player (9:16 aspect ratio container) */}
-      {showVideo && (
-        <div className="relative h-full" style={{ width: 'calc(100vh * 9 / 16)' }}>
-          <VideoPlayer />
-          
-          {/* Color Overlay */}
-          <div 
-            className="absolute inset-0 pointer-events-none video-overlay"
-            style={{
-              backgroundColor: userColor,
-              opacity: 'var(--video-overlay-opacity)',
-              mixBlendMode: 'var(--video-overlay-blend)' as any,
-            }}
-          />
-        </div>
-      )}
+      <div 
+        className={`relative h-full overflow-hidden transition-all duration-500 ease-in-out ${
+          showVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{ 
+          width: showVideo ? 'calc(100vh * 9 / 16)' : '0',
+        }}
+      >
+        {showVideo && (
+          <>
+            <VideoPlayer />
+            
+            {/* Color Overlay */}
+            <div 
+              className="absolute inset-0 pointer-events-none video-overlay"
+              style={{
+                backgroundColor: userColor,
+                opacity: 'var(--video-overlay-opacity)',
+                mixBlendMode: 'var(--video-overlay-blend)' as any,
+              }}
+            />
+          </>
+        )}
+      </div>
 
       {/* Right Side - Comments Stream */}
-      <div className="flex-1 h-full min-w-0">
+      <div className="flex-1 h-full min-w-0 transition-all duration-500 ease-in-out">
         <CommentsStream 
           showVideo={showVideo}
           toggleVideo={toggleVideo}
