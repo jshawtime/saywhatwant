@@ -14,10 +14,10 @@ const VideoPlayer: React.FC = () => {
   const [isLoopMode, setIsLoopMode] = useState(false);
   const [userColor, setUserColor] = useState('#60A5FA');
   const [showOverlay, setShowOverlay] = useState(true);
-  const [overlayOpacity, setOverlayOpacity] = useState(0.7);
-  const [blendMode, setBlendMode] = useState('overlay');
+  const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
+  const [blendMode, setBlendMode] = useState('hue');  // Default, will read from CSS if available
   const [showBlendMenu, setShowBlendMenu] = useState(false);
-  const [videoBrightness, setVideoBrightness] = useState(1); // 1 = 100% brightness
+  const [videoBrightness, setVideoBrightness] = useState(0.3); // 0.3 = 30% brightness
   const [showSettings, setShowSettings] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
@@ -166,9 +166,20 @@ const VideoPlayer: React.FC = () => {
     if (savedShowOverlay !== null) {
       setShowOverlay(JSON.parse(savedShowOverlay));
     }
+    
+    // Load opacity from localStorage or CSS
     if (savedOpacity !== null) {
       setOverlayOpacity(parseFloat(savedOpacity));
+    } else {
+      // Try to get initial value from CSS
+      const cssOpacity = getComputedStyle(document.documentElement)
+        .getPropertyValue('--video-overlay-opacity').trim();
+      if (cssOpacity) {
+        setOverlayOpacity(parseFloat(cssOpacity));
+      }
     }
+    
+    // Load blend mode from localStorage or CSS
     if (savedBlendMode !== null) {
       setBlendMode(savedBlendMode);
     } else {
@@ -179,6 +190,7 @@ const VideoPlayer: React.FC = () => {
         setBlendMode(cssBlendMode);
       }
     }
+    
     if (savedBrightness !== null) {
       setVideoBrightness(parseFloat(savedBrightness));
     }

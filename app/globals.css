@@ -10,8 +10,8 @@
   --scrollbar-bg: rgba(255, 255, 255, 0.1); /* Default scrollbar track color */
   
   /* Video Overlay Settings */
-  --video-overlay-opacity: 0.5; /* Opacity of color overlay on video (0 = transparent, 1 = opaque) */
-  --video-overlay-blend: color-burn; /* Blend mode for video overlay */
+  --video-overlay-opacity: 1.0; /* Opacity of color overlay on video (0 = transparent, 1 = opaque) */
+  --video-overlay-blend: hue; /* Blend mode for video overlay */
   /* Available blend modes:
      normal - Standard overlay
      multiply - Darkens video
