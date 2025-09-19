@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
-import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings, Sun, Sparkles, Layers } from 'lucide-react';
+import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings, Sun, Layers } from 'lucide-react';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -458,90 +458,91 @@ const VideoPlayer: React.FC = () => {
                 />
               </div>
 
-              {/* Color Overlay Toggle */}
-              <button
-                onClick={toggleOverlay}
-                className={`p-2 rounded-full transition-all ${
-                  showOverlay ? 'bg-black/60' : 'bg-black/30'
-                } hover:bg-black/50`}
-                title={showOverlay ? "Disable color overlay" : "Enable color overlay"}
-              >
-                <Palette 
-                  className="w-4 h-4"
-                  style={{ 
-                    color: showOverlay ? userColor : getDarkerColor(userColor, 0.4)
-                  }}
-                />
-              </button>
-
-              {/* Filter Opacity */}
-              {showOverlay && (
-                <div className="flex items-center gap-2 bg-black/40 rounded-full px-2 py-1">
-                  <Sparkles 
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: getDarkerColor(userColor, 0.6) }}
-                    title="Filter opacity"
-                  />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={overlayOpacity}
-                    onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-                    className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-                    style={{
-                      background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.4)} 0%, ${userColor} ${overlayOpacity * 100}%, rgba(255,255,255,0.2) ${overlayOpacity * 100}%, rgba(255,255,255,0.2) 100%)`,
-                      color: userColor
+              {/* Filter Opacity with Toggle */}
+              <div className="flex items-center gap-2 bg-black/40 rounded-full px-2 py-1">
+                <button
+                  onClick={toggleOverlay}
+                  className="flex-shrink-0"
+                  title={showOverlay ? "Disable color overlay" : "Enable color overlay"}
+                >
+                  <Palette 
+                    className="w-4 h-4"
+                    style={{ 
+                      color: showOverlay ? userColor : getDarkerColor(userColor, 0.3)
                     }}
-                    title="Filter opacity"
                   />
-                </div>
-              )}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={overlayOpacity}
+                  onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+                  disabled={!showOverlay}
+                  className={`w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider ${
+                    !showOverlay ? 'opacity-30 cursor-default' : ''
+                  }`}
+                  style={{
+                    background: showOverlay 
+                      ? `linear-gradient(to right, ${getDarkerColor(userColor, 0.4)} 0%, ${userColor} ${overlayOpacity * 100}%, rgba(255,255,255,0.2) ${overlayOpacity * 100}%, rgba(255,255,255,0.2) 100%)`
+                      : 'rgba(255,255,255,0.1)',
+                    color: userColor
+                  }}
+                  title="Filter opacity"
+                />
+              </div>
 
               {/* Blend Mode */}
-              {showOverlay && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowBlendMenu(!showBlendMenu)}
-                    className="flex items-center gap-1 px-2 py-2 bg-black/40 rounded-full hover:bg-black/50 transition-all w-full"
-                    title="Blend mode"
+              <div className="relative">
+                <button
+                  onClick={() => showOverlay && setShowBlendMenu(!showBlendMenu)}
+                  className={`flex items-center gap-1 px-2 py-2 bg-black/40 rounded-full transition-all w-full ${
+                    showOverlay ? 'hover:bg-black/50' : 'cursor-default'
+                  }`}
+                  title="Blend mode"
+                >
+                  <Layers 
+                    className="w-4 h-4"
+                    style={{ color: showOverlay ? getDarkerColor(userColor, 0.6) : getDarkerColor(userColor, 0.2) }}
+                  />
+                  <span 
+                    className="text-xs" 
+                    style={{ 
+                      color: showOverlay ? getDarkerColor(userColor, 0.8) : getDarkerColor(userColor, 0.3)
+                    }}
                   >
-                    <Layers 
-                      className="w-4 h-4"
-                      style={{ color: getDarkerColor(userColor, 0.6) }}
-                    />
-                    <span className="text-xs" style={{ color: getDarkerColor(userColor, 0.8) }}>{blendMode}</span>
-                  </button>
-                  
-                  {showBlendMenu && (
-                    <div className="absolute bottom-full mb-2 left-0 bg-black/90 backdrop-blur-md rounded-lg p-1 min-w-[140px] grid grid-cols-2 gap-0.5">
-                      {blendModes.map(mode => (
-                        <button
-                          key={mode}
-                          onClick={() => handleBlendModeChange(mode)}
-                          className={`text-left px-2 py-1.5 text-xs rounded transition-colors ${
-                            mode === blendMode
-                              ? 'bg-white/20'
-                              : 'hover:bg-white/10'
-                          }`}
-                          style={{
-                            color: mode === blendMode ? userColor : getDarkerColor(userColor, 0.6)
-                          }}
-                        >
-                          {mode}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                    {blendMode}
+                  </span>
+                </button>
+                
+                {showBlendMenu && showOverlay && (
+                  <div className="absolute bottom-full mb-2 left-0 bg-black/90 backdrop-blur-md rounded-lg p-1 min-w-[140px] grid grid-cols-2 gap-0.5">
+                    {blendModes.map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => handleBlendModeChange(mode)}
+                        className={`text-left px-2 py-1.5 text-xs rounded transition-colors ${
+                          mode === blendMode
+                            ? 'bg-white/20'
+                            : 'hover:bg-white/10'
+                        }`}
+                        style={{
+                          color: mode === blendMode ? userColor : getDarkerColor(userColor, 0.6)
+                        }}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Playback Mode */}
-              <div className="flex bg-black/40 rounded-full p-0.5">
+              <div className="flex justify-center bg-black/40 rounded-full p-0.5">
                 <button
                   onClick={togglePlayMode}
-                  className={`flex-1 p-2 rounded-full transition-all ${
+                  className={`px-3 py-2 rounded-full transition-all ${
                     !isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
                   }`}
                   title="Random playback"
@@ -549,13 +550,13 @@ const VideoPlayer: React.FC = () => {
                   <Shuffle 
                     className="w-4 h-4"
                     style={{ 
-                      color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
+                      color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.5)
                     }}
                   />
                 </button>
                 <button
                   onClick={togglePlayMode}
-                  className={`flex-1 p-2 rounded-full transition-all ${
+                  className={`px-3 py-2 rounded-full transition-all ${
                     isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
                   }`}
                   title="Loop current video"
@@ -563,7 +564,7 @@ const VideoPlayer: React.FC = () => {
                   <Repeat 
                     className="w-4 h-4"
                     style={{ 
-                      color: isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
+                      color: isLoopMode ? userColor : getDarkerColor(userColor, 0.5)
                     }}
                   />
                 </button>
