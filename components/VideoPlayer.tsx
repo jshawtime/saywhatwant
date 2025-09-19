@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
-import { Shuffle, Repeat, Palette } from 'lucide-react';
+import { Shuffle, Repeat, Palette, Share2 } from 'lucide-react';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -187,6 +187,46 @@ const VideoPlayer: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Listen for shared video events
+  useEffect(() => {
+    const handlePlaySharedVideo = (event: CustomEvent) => {
+      const { videoKey } = event.detail;
+      
+      // Find the video in available videos
+      const video = availableVideos.find(v => v.key === videoKey);
+      if (video) {
+        // Set the video and enable loop mode
+        setCurrentVideo(video);
+        setIsLoopMode(true);
+        localStorage.setItem('sww-video-loop', JSON.stringify(true));
+        
+        // Preload might not be needed in loop mode, but reset it
+        setNextVideo(null);
+      }
+    };
+
+    window.addEventListener('playSharedVideo' as any, handlePlaySharedVideo);
+    
+    return () => {
+      window.removeEventListener('playSharedVideo' as any, handlePlaySharedVideo);
+    };
+  }, [availableVideos]);
+
+  // Share current video
+  const shareVideo = () => {
+    if (!currentVideo) return;
+    
+    // Create a share event with video details
+    const shareEvent = new CustomEvent('shareVideo', {
+      detail: {
+        videoKey: currentVideo.key,
+        videoName: currentVideo.key.replace(/\.mp4$/, '').replace(/_/g, ' ')
+      }
+    });
+    
+    window.dispatchEvent(shareEvent);
+  };
+
   const loadFallbackVideo = () => {
     // Fallback to a demo video if R2 is not configured
     const fallbackVideo: VideoItem = {
@@ -282,6 +322,25 @@ const VideoPlayer: React.FC = () => {
             mixBlendMode: 'overlay' as any,
           }}
         />
+      )}
+
+      {/* Share Button */}
+      {currentVideo && !error && (
+        <div className="absolute bottom-4 left-4 z-20">
+          <button
+            onClick={shareVideo}
+            className="p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/60 transition-all"
+            title="Share this video in chat"
+          >
+            <Share2 
+              className="w-4 h-4"
+              style={{ 
+                color: userColor,
+                opacity: 0.8
+              }}
+            />
+          </button>
+        </div>
       )}
 
       {/* Controls Overlay */}

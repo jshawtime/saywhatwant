@@ -60,6 +60,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const lastFetchTimeRef = useRef<number>(Date.now());
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const isVideoShareRef = useRef<boolean>(false);
 
   // Storage key for localStorage
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
@@ -98,6 +99,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     if (savedFilterEnabled) {
       setIsFilterEnabled(savedFilterEnabled === 'true');
     }
+  }, []);
+
+  // Listen for video share events
+  useEffect(() => {
+    const handleShareVideo = (event: CustomEvent) => {
+      const { videoKey } = event.detail;
+      
+      // Insert video link into input
+      const videoLink = `[video:${videoKey}] <-- video`;
+      setInputText(videoLink);
+      isVideoShareRef.current = true; // Mark this as a video share
+      
+      // Focus the input
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    };
+
+    window.addEventListener('shareVideo' as any, handleShareVideo);
+    
+    return () => {
+      window.removeEventListener('shareVideo' as any, handleShareVideo);
+    };
   }, []);
 
   // Close color picker on click outside
@@ -149,25 +173,58 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Parse URLs in comment text
   const parseCommentText = useCallback((text: string): React.ReactNode[] => {
+    // Check for video links first
+    const videoRegex = /\[video:([^\]]+)\] <-- video/g;
     const urlRegex = /(https?:\/\/[^\s]+)/gi;
-    const parts = text.split(urlRegex);
     
-    return parts.map((part, index) => {
-      if (part.match(urlRegex)) {
-        return (
-          <a
-            key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 underline break-all"
+    // Split by video links first
+    const videoParts = text.split(videoRegex);
+    const result: React.ReactNode[] = [];
+    
+    for (let i = 0; i < videoParts.length; i++) {
+      if (i % 2 === 1) {
+        // This is a video key
+        const videoKey = videoParts[i];
+        result.push(
+          <button
+            key={`video-${i}`}
+            onClick={() => {
+              // Dispatch event to play this video
+              const playEvent = new CustomEvent('playSharedVideo', {
+                detail: { videoKey }
+              });
+              window.dispatchEvent(playEvent);
+            }}
+            className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 underline"
+            title={`Play video: ${videoKey}`}
           >
-            {part}
-          </a>
+            <span>←</span> video
+          </button>
         );
+      } else {
+        // This is regular text, parse for URLs
+        const urlParts = videoParts[i].split(urlRegex);
+        urlParts.forEach((part, urlIndex) => {
+          if (part.match(urlRegex)) {
+            result.push(
+              <a
+                key={`url-${i}-${urlIndex}`}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline break-all"
+              >
+                {part}
+              </a>
+            );
+          } else if (part) {
+            result.push(<span key={`text-${i}-${urlIndex}`}>{part}</span>);
+          }
+        });
       }
-      return <span key={index}>{part}</span>;
-    });
+    }
+    
+    return result;
   }, []);
 
   // Format timestamp
