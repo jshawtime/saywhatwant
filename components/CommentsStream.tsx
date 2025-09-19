@@ -480,16 +480,12 @@ const CommentsStream: React.FC = () => {
             <div className="relative flex items-center gap-2" style={{ width: 'calc(16ch * 1.5 + 60px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10 group"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
                 style={{ color: userColor }}
                 aria-label="Choose color"
                 title="Click to pick color or press 'R' for random"
               >
                 <User className="w-4 h-4" />
-                {/* Tooltip */}
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                  Click or press 'R' for random color
-                </span>
               </button>
               
               {/* Color Picker Dropdown */}

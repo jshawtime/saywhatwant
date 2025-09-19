@@ -108,7 +108,7 @@ textarea::placeholder {
   font-size: 1.725rem; /* 18px */
   font-weight: 800; /* light */
   text-transform: uppercase;
-  opacity: 0.5; /* 50% opacity for subtitle effect */
+  opacity: 0.25; /* 50% opacity for subtitle effect */
   letter-spacing: -0.1em; /* slight spacing for uppercase */
   line-height: 1.75rem;
   /* Color is set dynamically via inline style to match username */
