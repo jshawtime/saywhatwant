@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
-import { Shuffle, Repeat } from 'lucide-react';
+import { Shuffle, Repeat, Palette } from 'lucide-react';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -13,6 +13,9 @@ const VideoPlayer: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoopMode, setIsLoopMode] = useState(false);
   const [userColor, setUserColor] = useState('#60A5FA');
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.5);
+  const [showOpacitySlider, setShowOpacitySlider] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -140,6 +143,32 @@ const VideoPlayer: React.FC = () => {
     }
   }, []);
 
+  // Load overlay preferences
+  useEffect(() => {
+    const savedShowOverlay = localStorage.getItem('sww-video-overlay');
+    const savedOpacity = localStorage.getItem('sww-video-overlay-opacity');
+    
+    if (savedShowOverlay !== null) {
+      setShowOverlay(JSON.parse(savedShowOverlay));
+    }
+    if (savedOpacity !== null) {
+      setOverlayOpacity(parseFloat(savedOpacity));
+    }
+  }, []);
+
+  // Toggle overlay
+  const toggleOverlay = () => {
+    const newState = !showOverlay;
+    setShowOverlay(newState);
+    localStorage.setItem('sww-video-overlay', JSON.stringify(newState));
+  };
+
+  // Update opacity
+  const handleOpacityChange = (newOpacity: number) => {
+    setOverlayOpacity(newOpacity);
+    localStorage.setItem('sww-video-overlay-opacity', newOpacity.toString());
+  };
+
   // Load and watch for color changes
   useEffect(() => {
     const updateColor = () => {
@@ -243,9 +272,22 @@ const VideoPlayer: React.FC = () => {
         </div>
       )}
 
-      {/* Random/Loop Switch Overlay */}
+      {/* Color Overlay */}
+      {currentVideo && !error && showOverlay && (
+        <div 
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{
+            backgroundColor: userColor,
+            opacity: overlayOpacity,
+            mixBlendMode: 'overlay' as any,
+          }}
+        />
+      )}
+
+      {/* Controls Overlay */}
       {currentVideo && !error && (
-        <div className="absolute bottom-4 right-4 z-20">
+        <div className="absolute bottom-4 right-4 z-20 flex items-end gap-2">
+          {/* Random/Loop Switch */}
           <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full p-1">
             {/* Random Mode (Left) */}
             <button
@@ -277,6 +319,53 @@ const VideoPlayer: React.FC = () => {
                 style={{ 
                   color: isLoopMode ? userColor : getDarkerColor(userColor, 0.4),
                   opacity: isLoopMode ? 1 : 0.6
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Color Overlay Controls */}
+          <div 
+            className="flex flex-col items-end gap-2"
+            onMouseEnter={() => setShowOpacitySlider(true)}
+            onMouseLeave={() => setShowOpacitySlider(false)}
+          >
+            {/* Opacity Slider */}
+            {(showOpacitySlider || showOverlay) && (
+              <div className={`flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-2 transition-opacity ${
+                showOpacitySlider || showOverlay ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <span className="text-xs text-white/40">Opacity</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={overlayOpacity}
+                  onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+                  className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                  style={{
+                    background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.4)} 0%, ${userColor} ${overlayOpacity * 100}%, rgba(255,255,255,0.2) ${overlayOpacity * 100}%, rgba(255,255,255,0.2) 100%)`,
+                    color: userColor
+                  }}
+                />
+                <span className="text-xs text-white/60 w-10 text-right">{Math.round(overlayOpacity * 100)}%</span>
+              </div>
+            )}
+
+            {/* Color Overlay Toggle */}
+            <button
+              onClick={toggleOverlay}
+              className={`p-2 rounded-full transition-all ${
+                showOverlay ? 'bg-black/50' : 'bg-black/30'
+              } backdrop-blur-sm hover:bg-black/60`}
+              title={showOverlay ? "Hide color overlay" : "Show color overlay"}
+            >
+              <Palette 
+                className="w-4 h-4"
+                style={{ 
+                  color: showOverlay ? userColor : getDarkerColor(userColor, 0.4),
+                  opacity: showOverlay ? 1 : 0.6
                 }}
               />
             </button>

@@ -6,44 +6,14 @@ import CommentsStream from '@/components/CommentsStream';
 
 export default function Home() {
   const [showVideo, setShowVideo] = useState(true);
-  const [userColor, setUserColor] = useState('#60A5FA');
 
-  // Load video preference and color from localStorage
+  // Load video preference from localStorage
   useEffect(() => {
     const savedShowVideo = localStorage.getItem('sww-show-video');
     if (savedShowVideo !== null) {
       setShowVideo(savedShowVideo === 'true');
     }
-    
-    // Get user color from localStorage for overlay
-    const savedColor = localStorage.getItem('sww-color');
-    if (savedColor) {
-      setUserColor(savedColor);
-    }
-    
-    // Listen for color changes
-    const handleStorageChange = () => {
-      const newColor = localStorage.getItem('sww-color');
-      if (newColor) {
-        setUserColor(newColor);
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also check periodically for same-tab changes
-    const interval = setInterval(() => {
-      const currentColor = localStorage.getItem('sww-color');
-      if (currentColor && currentColor !== userColor) {
-        setUserColor(currentColor);
-      }
-    }, 500);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [userColor]);
+  }, []);
 
   const toggleVideo = () => {
     const newState = !showVideo;
@@ -62,21 +32,7 @@ export default function Home() {
           width: showVideo ? 'calc(100vh * 9 / 16)' : '0',
         }}
       >
-        {showVideo && (
-          <>
-            <VideoPlayer />
-            
-            {/* Color Overlay */}
-            <div 
-              className="absolute inset-0 pointer-events-none video-overlay"
-              style={{
-                backgroundColor: userColor,
-                opacity: 'var(--video-overlay-opacity)',
-                mixBlendMode: 'var(--video-overlay-blend)' as any,
-              }}
-            />
-          </>
-        )}
+        {showVideo && <VideoPlayer />}
       </div>
 
       {/* Right Side - Comments Stream */}
@@ -84,7 +40,6 @@ export default function Home() {
         <CommentsStream 
           showVideo={showVideo}
           toggleVideo={toggleVideo}
-          videoOverlayColor={userColor}
         />
       </div>
     </main>

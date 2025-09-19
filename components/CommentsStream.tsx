@@ -30,10 +30,9 @@ const COLOR_PALETTE = [
 interface CommentsStreamProps {
   showVideo?: boolean;
   toggleVideo?: () => void;
-  videoOverlayColor?: string;
 }
 
-const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, toggleVideo, videoOverlayColor }) => {
+const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, toggleVideo }) => {
   // State management
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
