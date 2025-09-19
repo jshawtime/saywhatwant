@@ -444,7 +444,7 @@ const CommentsStream: React.FC = () => {
         <div className="p-3 space-y-2">
           {/* Title and Username */}
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-light uppercase opacity-50">Say What Want</h2>
+            <h2 className="sww-title">Say What Want</h2>
             
             {/* Username Input - Always Visible */}
             <div className="relative flex items-center gap-2" style={{ width: 'calc(16ch * 1.5 + 60px)' }} ref={colorPickerRef}>
@@ -619,7 +619,7 @@ const CommentsStream: React.FC = () => {
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form onSubmit={handleSubmit} className="flex gap-2 items-stretch">
           <div className="flex-1 relative">
             {/* Character counter at top of textarea */}
             <div 
@@ -633,7 +633,7 @@ const CommentsStream: React.FC = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
               placeholder="Say what you want..."
-              className="w-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[40px] max-h-[120px] text-sm"
+              className="w-full h-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm"
               style={{
                 '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
                 color: userColor, // Match message text color
@@ -651,14 +651,13 @@ const CommentsStream: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting || !inputText.trim()}
-            className={`aspect-square flex items-center justify-center rounded-lg transition-colors ${
+            className={`aspect-square flex items-center justify-center rounded-lg transition-colors self-stretch ${
               isSubmitting || !inputText.trim()
                 ? 'opacity-50 cursor-not-allowed'
                 : 'hover:opacity-90'
             }`}
             style={{ 
-              height: '100%',
-              minHeight: '56px', // Ensures minimum size
+              minWidth: '56px', // Square based on min-height
               backgroundColor: getDarkerColor(userColor, 0.6), // Username color
               color: userColor // Message text color
             }}

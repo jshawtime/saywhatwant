@@ -103,6 +103,18 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Say What Want Title */
+.sww-title {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 300; /* light */
+  text-transform: uppercase;
+  opacity: 0.5;
+  letter-spacing: 0.05em; /* slight spacing for uppercase */
+  line-height: 1.75rem;
+  color: inherit;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
 @layer base {
   html {
     height: 100%;
