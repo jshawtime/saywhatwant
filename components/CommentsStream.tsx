@@ -52,6 +52,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [filterUsernames, setFilterUsernames] = useState<{username: string, color: string}[]>([]);
   const [isFilterEnabled, setIsFilterEnabled] = useState(false);
   const [filterByColorToo, setFilterByColorToo] = useState(true); // New option to filter by color as well
+  const [pendingVideoKey, setPendingVideoKey] = useState<string | null>(null);
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
@@ -60,7 +61,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const lastFetchTimeRef = useRef<number>(Date.now());
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
   const colorPickerRef = useRef<HTMLDivElement>(null);
-  const isVideoShareRef = useRef<boolean>(false);
 
   // Storage key for localStorage
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
@@ -106,10 +106,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     const handleShareVideo = (event: CustomEvent) => {
       const { videoKey } = event.detail;
       
-      // Insert video link into input
-      const videoLink = `[video:${videoKey}] <-- video`;
-      setInputText(videoLink);
-      isVideoShareRef.current = true; // Mark this as a video share
+      // Store the video key internally
+      setPendingVideoKey(videoKey);
+      
+      // Just show the link text in input
+      setInputText('<-- video');
       
       // Focus the input
       if (inputRef.current) {
@@ -433,9 +434,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Create new comment
+      let commentText = inputText.trim();
+      
+      // If there's a pending video, insert the full video link
+      if (pendingVideoKey && commentText === '<-- video') {
+        commentText = `[video:${pendingVideoKey}] <-- video`;
+      }
+      
       const newComment: Comment = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text: inputText.trim(),
+        text: commentText,
         timestamp: Date.now(),
         username: username || undefined,
         color: userColor,
@@ -452,8 +460,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       setAllComments(prev => [...prev, newComment]);
       setDisplayedComments(prev => [...prev, newComment]);
       
-      // Clear input
+      // Clear input and pending video
       setInputText('');
+      setPendingVideoKey(null);
       
       // Keep focus in input field for rapid messaging
       if (inputRef.current) {
@@ -897,14 +906,34 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             <textarea
               ref={inputRef}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
+              onChange={(e) => {
+                const newText = e.target.value.substring(0, MAX_COMMENT_LENGTH);
+                setInputText(newText);
+                
+                // Clear pending video if user modifies the text
+                if (pendingVideoKey && newText !== '<-- video') {
+                  setPendingVideoKey(null);
+                }
+              }}
+              onClick={(e) => {
+                // If clicking on a video link in the input, play it
+                if (pendingVideoKey && inputText === '<-- video') {
+                  const playEvent = new CustomEvent('playSharedVideo', {
+                    detail: { videoKey: pendingVideoKey }
+                  });
+                  window.dispatchEvent(playEvent);
+                }
+              }}
               placeholder="Say what you want..."
               className="w-full h-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
               style={{
                 '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
                 '--scrollbar-color': getDarkerColor(userColor, 0.6), // Match username color
                 '--scrollbar-bg': getDarkerColor(userColor, 0.1), // Very subtle background
-                color: userColor, // Match message text color
+                color: pendingVideoKey && inputText === '<-- video' ? '#60A5FA' : userColor, // Blue for video link
+                cursor: pendingVideoKey && inputText === '<-- video' ? 'pointer' : 'text',
+                textDecoration: pendingVideoKey && inputText === '<-- video' ? 'underline' : 'none',
+                backgroundColor: getDarkerColor(userColor, 0.05), // Very dark version of user color
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}
               disabled={isSubmitting}

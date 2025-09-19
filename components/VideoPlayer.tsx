@@ -319,7 +319,7 @@ const VideoPlayer: React.FC = () => {
           style={{
             backgroundColor: userColor,
             opacity: overlayOpacity,
-            mixBlendMode: 'overlay' as any,
+            mixBlendMode: getComputedStyle(document.documentElement).getPropertyValue('--video-overlay-blend').trim() as any || 'overlay',
           }}
         />
       )}

@@ -11,7 +11,7 @@
   
   /* Video Overlay Settings */
   --video-overlay-opacity: 0.5; /* Opacity of color overlay on video (0 = transparent, 1 = opaque) */
-  --video-overlay-blend: overlay; /* Blend mode for video overlay */
+  --video-overlay-blend: color-dodge; /* Blend mode for video overlay */
   /* Available blend modes:
      normal - Standard overlay
      multiply - Darkens video
