@@ -680,7 +680,7 @@ const CommentsStream: React.FC = () => {
             >
               <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform`}
                 style={{ 
-                  backgroundColor: userColor,  // Same as send icon
+                  backgroundColor: isFilterEnabled ? userColor : getDarkerColor(userColor, 0.4),  // Darker when off
                   transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)'
                 }}
               />
