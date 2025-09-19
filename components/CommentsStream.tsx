@@ -584,22 +584,33 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     return filtered;
   }, [displayedComments, searchTerm, filterUsernames, isFilterEnabled]);
 
-  // Maintain scroll position when filters change
+  // Scroll to bottom when filters are turned off
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // Check if we were near the bottom before the filter change
-    const isNearBottom = streamRef.current.scrollHeight - (streamRef.current.scrollTop + streamRef.current.clientHeight) < 100;
-    
-    // If we were near the bottom, scroll to bottom after filter changes
-    if (isNearBottom) {
+    // When filter is turned off, scroll to bottom to show latest messages
+    if (!isFilterEnabled) {
       setTimeout(() => {
         if (streamRef.current) {
           streamRef.current.scrollTop = streamRef.current.scrollHeight;
         }
-      }, 10);
+      }, 50);
     }
-  }, [filteredComments]);
+  }, [isFilterEnabled]);
+
+  // Scroll to bottom when search is cleared
+  useEffect(() => {
+    if (!streamRef.current) return;
+    
+    // When search is cleared, scroll to bottom to show latest messages
+    if (!searchTerm) {
+      setTimeout(() => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = streamRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [searchTerm]);
 
   // Add username to filter
   const addToFilter = (username: string, color: string) => {
