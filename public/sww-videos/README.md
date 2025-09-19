@@ -25,6 +25,19 @@ public/sww-videos/
 - The manifest file is auto-generated - don't edit it manually
 - To switch to R2 storage, simply set `useLocal: false` in the config
 
+## Git Exclusion
+
+Video files are **excluded from version control** via `.gitignore` to:
+- Keep repository size manageable  
+- Avoid Git LFS requirements
+- Prevent slow clones/pulls
+
+Only tracked files:
+- `video-manifest.json` - The video index
+- `README.md` - This documentation
+
+To share videos with team members, use cloud storage or direct file transfer, not Git.
+
 ## Switching to R2
 
 When ready for production:
