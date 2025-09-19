@@ -98,7 +98,8 @@
 }
 
 /* Custom placeholder color */
-textarea::placeholder {
+textarea::placeholder,
+input::placeholder {
   color: var(--placeholder-color);
   opacity: 1;
 }

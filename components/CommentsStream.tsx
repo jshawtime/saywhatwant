@@ -46,6 +46,7 @@ const CommentsStream: React.FC = () => {
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [filterUsernames, setFilterUsernames] = useState<{username: string, color: string}[]>([]);
   const [isFilterEnabled, setIsFilterEnabled] = useState(false);
+  const [filterByColorToo, setFilterByColorToo] = useState(true); // New option to filter by color as well
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
@@ -486,10 +487,18 @@ const CommentsStream: React.FC = () => {
     
     // Apply username filters first (if enabled)
     if (isFilterEnabled && filterUsernames.length > 0) {
-      const filterNames = filterUsernames.map(f => f.username);
-      filtered = filtered.filter(comment => 
-        comment.username && filterNames.includes(comment.username)
-      );
+      filtered = filtered.filter(comment => {
+        if (!comment.username) return false;
+        
+        // Check if this username/color combination is in our filters
+        return filterUsernames.some(filter => {
+          const usernameMatches = filter.username === comment.username;
+          const colorMatches = filter.color === (comment.color || '#60A5FA');
+          
+          // Filter by both username AND color to differentiate users
+          return filterByColorToo ? (usernameMatches && colorMatches) : usernameMatches;
+        });
+      });
     }
     
     // Then apply search filter
@@ -506,16 +515,23 @@ const CommentsStream: React.FC = () => {
 
   // Add username to filter
   const addToFilter = (username: string, color: string) => {
-    if (!filterUsernames.some(f => f.username === username)) {
+    // Check if this exact username/color combo already exists
+    const exists = filterUsernames.some(f => 
+      f.username === username && f.color === color
+    );
+    
+    if (!exists) {
       const newFilters = [...filterUsernames, {username, color}];
       setFilterUsernames(newFilters);
       localStorage.setItem('sww-filters', JSON.stringify(newFilters));
     }
   };
 
-  // Remove username from filter
-  const removeFromFilter = (username: string) => {
-    const newFilters = filterUsernames.filter(f => f.username !== username);
+  // Remove username from filter (now includes color for exact match)
+  const removeFromFilter = (username: string, color: string) => {
+    const newFilters = filterUsernames.filter(f => 
+      !(f.username === username && f.color === color)
+    );
     setFilterUsernames(newFilters);
     localStorage.setItem('sww-filters', JSON.stringify(newFilters));
   };
@@ -632,13 +648,13 @@ const CommentsStream: React.FC = () => {
                 ) : (
                   filterUsernames.map((filter) => (
                     <span
-                      key={filter.username}
+                      key={`${filter.username}-${filter.color}`}
                       className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md"
                       style={{ backgroundColor: getDarkerColor(filter.color, 0.1) }}
                     >
                       <span className="text-xs" style={{ color: filter.color }}>{filter.username}</span>
                       <button
-                        onClick={() => removeFromFilter(filter.username)}
+                        onClick={() => removeFromFilter(filter.username, filter.color)}
                         className="hover:opacity-80"
                         style={{ color: filter.color }}
                         tabIndex={-1}
@@ -653,40 +669,50 @@ const CommentsStream: React.FC = () => {
             {/* Filter Toggle Switch */}
             <button
               onClick={toggleFilter}
-              className={`relative w-11 h-6 rounded-full transition-colors`}
+              className={`relative w-9 h-5 rounded-full transition-colors`}
               style={{ 
                 backgroundColor: isFilterEnabled 
-                  ? getDarkerColor(userColor, 0.6)  // Same as send button
-                  : 'rgba(255,255,255,0.2)'
+                  ? getDarkerColor(userColor, 0.35)  // Darker than username
+                  : getDarkerColor(userColor, 0.2)
               }}
               title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
               tabIndex={-1}
             >
-              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                isFilterEnabled ? 'translate-x-5' : 'translate-x-0'
-              }`} />
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform`}
+                style={{ 
+                  backgroundColor: userColor,  // Same as send icon
+                  transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)'
+                }}
+              />
             </button>
           </div>
 
           {/* Search Bar - Instant Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none" 
+              style={{ color: getDarkerColor(userColor, 0.6) }} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-10 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40"
+              className="w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none"
+              style={{ 
+                borderColor: searchTerm ? getDarkerColor(userColor, 0.5) : 'rgba(255,255,255,0.1)',
+                color: searchTerm ? userColor : 'rgba(255,255,255,0.6)',
+                '--placeholder-color': getDarkerColor(userColor, 0.4)
+              } as React.CSSProperties}
               tabIndex={-1}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-colors"
                 aria-label="Clear search"
+                style={{ color: getDarkerColor(userColor, 0.6) }}
                 tabIndex={-1}
               >
-                <X className="w-3 h-3 text-white/60 hover:text-white" />
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
