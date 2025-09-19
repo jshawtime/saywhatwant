@@ -844,8 +844,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1"
         style={{
-          '--scrollbar-color': getDarkerColor(userColor, 0.6),
-          '--scrollbar-bg': getDarkerColor(userColor, 0.1),
+          '--scrollbar-color': getDarkerColor(userColor, 0.3),
+          '--scrollbar-bg': getDarkerColor(userColor, 0.05),
         } as React.CSSProperties}
       >
         {isLoading ? (
