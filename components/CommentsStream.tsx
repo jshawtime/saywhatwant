@@ -9,7 +9,7 @@ const INITIAL_LOAD_COUNT = 500;
 const LAZY_LOAD_BATCH = 50;
 const POLLING_INTERVAL = 5000;
 const MAX_COMMENT_LENGTH = 1000;
-const MAX_USERNAME_LENGTH = 12;
+const MAX_USERNAME_LENGTH = 16;
 
 // Predefined color palette for usernames
 const COLOR_PALETTE = [
@@ -447,7 +447,7 @@ const CommentsStream: React.FC = () => {
             <h2 className="text-lg font-light uppercase opacity-50">Say What Want</h2>
             
             {/* Username Input - Always Visible */}
-            <div className="relative flex items-center gap-2" style={{ width: 'calc(12ch * 1.5 + 60px)' }} ref={colorPickerRef}>
+            <div className="relative flex items-center gap-2" style={{ width: 'calc(16ch * 1.5 + 60px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
@@ -587,9 +587,9 @@ const CommentsStream: React.FC = () => {
                 <span 
                   className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
                   style={{ 
-                    color: comment.color || '#60A5FA',
-                    borderColor: getDarkerColor(comment.color || '#60A5FA', 0.4),
-                    backgroundColor: getDarkerColor(comment.color || '#60A5FA', 0.1)
+                    color: getDarkerColor(comment.color || '#60A5FA', 0.7), // Darker text
+                    borderColor: getDarkerColor(comment.color || '#60A5FA', 0.3), // Darker border
+                    backgroundColor: getDarkerColor(comment.color || '#60A5FA', 0.08) // Darker background
                   }}
                 >
                   {formatTimestamp(comment.timestamp)}
@@ -651,17 +651,19 @@ const CommentsStream: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting || !inputText.trim()}
-            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+            className={`aspect-square flex items-center justify-center rounded-lg transition-colors ${
               isSubmitting || !inputText.trim()
                 ? 'opacity-50 cursor-not-allowed'
-                : 'hover:opacity-80'
+                : 'hover:opacity-90'
             }`}
             style={{ 
-              backgroundColor: getDarkerColor(userColor, 0.15),
-              color: userColor 
+              height: '100%',
+              minHeight: '56px', // Ensures minimum size
+              backgroundColor: getDarkerColor(userColor, 0.6), // Username color
+              color: userColor // Message text color
             }}
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-7 h-7" /> {/* Oversized icon */}
           </button>
         </form>
       </div>

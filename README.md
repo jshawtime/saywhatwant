@@ -113,11 +113,11 @@ The app uses a dynamic color system where each user can select their personalize
 
 | Brightness | Usage | Elements |
 |------------|-------|----------|
-| **100%** | Primary elements | • Person icon<br>• Message text<br>• Time tag text<br>• Send button icon<br>• Typed text in input |
-| **60%** | Secondary text | • Username in comments<br>• Username input field<br>• "Say what you want..." placeholder<br>• Character counter |
-| **15%** | Backgrounds | • Send button background |
-| **10%** | Subtle backgrounds | • Time tag background |
-| **40%** | Borders | • Time tag border |
+| **100%** | Primary elements | • Person icon<br>• Message text<br>• Send button icon<br>• Typed text in input |
+| **70%** | Time tag text | • Time tag labels |
+| **60%** | Secondary text | • Username in comments<br>• Username input field<br>• "Say what you want..." placeholder<br>• Character counter<br>• Send button background<br>• Username clear button |
+| **30%** | Borders | • Time tag border |
+| **8%** | Subtle backgrounds | • Time tag background |
 
 ### Implementation Notes for Refactoring
 
