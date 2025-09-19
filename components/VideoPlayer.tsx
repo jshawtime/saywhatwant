@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
-import { Shuffle, Repeat, Palette, ArrowUp, ChevronDown } from 'lucide-react';
+import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings } from 'lucide-react';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -18,9 +18,11 @@ const VideoPlayer: React.FC = () => {
   const [blendMode, setBlendMode] = useState('overlay');
   const [showBlendMenu, setShowBlendMenu] = useState(false);
   const [videoBrightness, setVideoBrightness] = useState(1); // 1 = 100% brightness
+  const [showSettings, setShowSettings] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
   const blendMenuRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   // Available blend modes
   const blendModes = [
@@ -226,11 +228,18 @@ const VideoPlayer: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Close blend menu on click outside
+  // Close blend menu and settings on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (blendMenuRef.current && !blendMenuRef.current.contains(event.target as Node)) {
         setShowBlendMenu(false);
+      }
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        // Check if the click is not on the settings button itself
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-settings-button]')) {
+          setShowSettings(false);
+        }
       }
     };
 
@@ -378,148 +387,210 @@ const VideoPlayer: React.FC = () => {
         />
       )}
 
-      {/* Controls Overlay */}
+      {/* Settings Button and Share Button */}
       {currentVideo && !error && (
-        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
-          {/* Brightness Slider (leftmost) */}
-          <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full px-3 py-2">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={videoBrightness}
-              onChange={(e) => handleBrightnessChange(parseFloat(e.target.value))}
-              className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-              style={{
-                background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.2)} 0%, ${userColor} ${videoBrightness * 100}%, rgba(255,255,255,0.2) ${videoBrightness * 100}%, rgba(255,255,255,0.2) 100%)`,
-              }}
-              title="Brightness"
-            />
+        <>
+          {/* Share Button (bottom left) */}
+          <div className="absolute bottom-4 left-4 z-20">
+            <button
+              onClick={shareVideo}
+              className="p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/60 transition-all"
+              title="Share this video in chat"
+            >
+              <Share2 
+                className="w-4 h-4"
+                style={{ 
+                  color: userColor,
+                  opacity: 0.8
+                }}
+              />
+            </button>
           </div>
 
-          {/* Opacity Slider */}
-          {showOverlay && (
-            <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full px-3 py-2">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={overlayOpacity}
-                onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-                className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-                style={{
-                  background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.4)} 0%, ${userColor} ${overlayOpacity * 100}%, rgba(255,255,255,0.2) ${overlayOpacity * 100}%, rgba(255,255,255,0.2) 100%)`,
-                  color: userColor
+          {/* Settings Button (bottom right) */}
+          <div className="absolute bottom-4 right-4 z-20">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className={`p-2 rounded-full transition-all ${
+                showSettings ? 'bg-black/70' : 'bg-black/50'
+              } backdrop-blur-sm hover:bg-black/60`}
+              title="Video settings"
+              data-settings-button
+            >
+              <Settings 
+                className="w-4 h-4"
+                style={{ 
+                  color: showSettings ? userColor : getDarkerColor(userColor, 0.6),
+                  opacity: showSettings ? 1 : 0.8
                 }}
-                title="Filter"
               />
-            </div>
-          )}
+            </button>
+          </div>
 
-          {/* Blend Mode Menu */}
-          {showOverlay && (
-            <div className="relative" ref={blendMenuRef}>
-              <button
-                onClick={() => setShowBlendMenu(!showBlendMenu)}
-                className="flex items-center gap-1 px-3 py-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/60 transition-all"
-                title="Change blend mode"
-              >
-                <span className="text-xs" style={{ color: getDarkerColor(userColor, 0.6) }}>{blendMode}</span>
-                <ChevronDown className="w-3 h-3" style={{ color: getDarkerColor(userColor, 0.6) }} />
-              </button>
+          {/* Settings Panel */}
+          <div 
+            ref={settingsRef}
+            className={`absolute bottom-0 right-0 z-30 bg-black/80 backdrop-blur-md transition-transform duration-300 ease-out ${
+              showSettings ? 'translate-x-0' : 'translate-x-full'
+            }`}
+            style={{
+              width: '320px',
+              height: '100%',
+            }}
+          >
+            <div className="p-4 space-y-4 h-full overflow-y-auto">
+              <h3 className="text-sm font-medium text-white/60 mb-4">Video Settings</h3>
               
-              {showBlendMenu && (
-                <div className="absolute bottom-full mb-2 right-0 bg-black/90 backdrop-blur-md rounded-lg p-1 min-w-[140px] grid grid-cols-2 gap-0.5">
-                  {blendModes.map(mode => (
-                    <button
-                      key={mode}
-                      onClick={() => handleBlendModeChange(mode)}
-                      className={`text-left px-2 py-1.5 text-xs rounded transition-colors ${
-                        mode === blendMode
-                          ? 'bg-white/20'
-                          : 'hover:bg-white/10'
-                      }`}
+              {/* Brightness Slider */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs text-white/40">Brightness</label>
+                  <span className="text-xs" style={{ color: getDarkerColor(userColor, 0.6) }}>
+                    {Math.round(videoBrightness * 100)}%
+                  </span>
+                </div>
+                <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full px-3 py-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={videoBrightness}
+                    onChange={(e) => handleBrightnessChange(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.4)} 0%, ${userColor} ${videoBrightness * 100}%, rgba(255,255,255,0.2) ${videoBrightness * 100}%, rgba(255,255,255,0.2) 100%)`,
+                      color: userColor
+                    }}
+                    title="Brightness"
+                  />
+                </div>
+              </div>
+
+              {/* Color Overlay Toggle */}
+              <div className="space-y-2">
+                <label className="text-xs text-white/40">Color Overlay</label>
+                <button
+                  onClick={toggleOverlay}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
+                    showOverlay ? 'bg-white/10' : 'bg-black/30'
+                  } hover:bg-white/20`}
+                >
+                  <span className="text-sm" style={{ color: getDarkerColor(userColor, 0.8) }}>
+                    {showOverlay ? 'Enabled' : 'Disabled'}
+                  </span>
+                  <Palette 
+                    className="w-4 h-4"
+                    style={{ 
+                      color: showOverlay ? userColor : getDarkerColor(userColor, 0.4),
+                      opacity: showOverlay ? 1 : 0.6
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* Filter (Opacity) Slider */}
+              {showOverlay && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs text-white/40">Filter Opacity</label>
+                    <span className="text-xs" style={{ color: getDarkerColor(userColor, 0.6) }}>
+                      {Math.round(overlayOpacity * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full px-3 py-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={overlayOpacity}
+                      onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
                       style={{
-                        color: mode === blendMode ? userColor : getDarkerColor(userColor, 0.6)
+                        background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.4)} 0%, ${userColor} ${overlayOpacity * 100}%, rgba(255,255,255,0.2) ${overlayOpacity * 100}%, rgba(255,255,255,0.2) 100%)`,
+                        color: userColor
                       }}
-                    >
-                      {mode}
-                    </button>
-                  ))}
+                      title="Filter"
+                    />
+                  </div>
                 </div>
               )}
+
+              {/* Blend Mode Menu */}
+              {showOverlay && (
+                <div className="space-y-2">
+                  <label className="text-xs text-white/40">Blend Mode</label>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowBlendMenu(!showBlendMenu)}
+                      className="w-full flex items-center justify-between px-3 py-2 bg-black/50 rounded-lg hover:bg-white/10 transition-all"
+                    >
+                      <span className="text-sm" style={{ color: getDarkerColor(userColor, 0.8) }}>{blendMode}</span>
+                      <ChevronDown className="w-3 h-3" style={{ color: getDarkerColor(userColor, 0.6) }} />
+                    </button>
+                    
+                    {showBlendMenu && (
+                      <div className="absolute top-full mt-2 left-0 right-0 bg-black/90 backdrop-blur-md rounded-lg p-1 grid grid-cols-2 gap-0.5 z-40">
+                        {blendModes.map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => handleBlendModeChange(mode)}
+                            className={`text-left px-2 py-1.5 text-xs rounded transition-colors ${
+                              mode === blendMode
+                                ? 'bg-white/20'
+                                : 'hover:bg-white/10'
+                            }`}
+                            style={{
+                              color: mode === blendMode ? userColor : getDarkerColor(userColor, 0.6)
+                            }}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Playback Mode */}
+              <div className="space-y-2">
+                <label className="text-xs text-white/40">Playback Mode</label>
+                <div className="flex bg-black/50 rounded-full p-1">
+                  <button
+                    onClick={togglePlayMode}
+                    className={`flex-1 px-3 py-2 rounded-full transition-all ${
+                      !isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
+                    }`}
+                    title="Random mode - play videos randomly"
+                  >
+                    <Shuffle 
+                      className="w-4 h-4 mx-auto"
+                      style={{ 
+                        color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
+                      }}
+                    />
+                  </button>
+                  <button
+                    onClick={togglePlayMode}
+                    className={`flex-1 px-3 py-2 rounded-full transition-all ${
+                      isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
+                    }`}
+                    title="Loop mode - repeat current video"
+                  >
+                    <Repeat 
+                      className="w-4 h-4 mx-auto"
+                      style={{ 
+                        color: isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
+                      }}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
-
-          {/* Color Overlay Toggle */}
-          <button
-            onClick={toggleOverlay}
-            className={`p-2 rounded-full transition-all ${
-              showOverlay ? 'bg-black/50' : 'bg-black/30'
-            } backdrop-blur-sm hover:bg-black/60`}
-            title={showOverlay ? "Hide color overlay" : "Show color overlay"}
-          >
-            <Palette 
-              className="w-4 h-4"
-              style={{ 
-                color: showOverlay ? userColor : getDarkerColor(userColor, 0.4),
-                opacity: showOverlay ? 1 : 0.6
-              }}
-            />
-          </button>
-
-          {/* Random/Loop Switch */}
-          <div className="flex bg-black/50 backdrop-blur-sm rounded-full p-1">
-            {/* Random Mode (Left) */}
-            <button
-              onClick={togglePlayMode}
-              className={`px-3 py-2 rounded-full transition-all ${
-                !isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
-              }`}
-              title="Random mode - play videos randomly"
-            >
-              <Shuffle 
-                className="w-4 h-4"
-                style={{ 
-                  color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
-                }}
-              />
-            </button>
-
-            {/* Loop Mode (Right) */}
-            <button
-              onClick={togglePlayMode}
-              className={`px-3 py-2 rounded-full transition-all ${
-                isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
-              }`}
-              title="Loop mode - repeat current video"
-            >
-              <Repeat 
-                className="w-4 h-4"
-                style={{ 
-                  color: isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
-                }}
-              />
-            </button>
           </div>
-
-          {/* Share Button (rightmost) */}
-          <button
-            onClick={shareVideo}
-            className="p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/60 transition-all"
-            title="Share this video in chat"
-          >
-            <ArrowUp 
-              className="w-4 h-4"
-              style={{ 
-                color: userColor,
-                opacity: 0.8
-              }}
-            />
-          </button>
-        </div>
+        </>
       )}
     </div>
   );
