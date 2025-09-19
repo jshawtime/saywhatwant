@@ -44,7 +44,7 @@ const CommentsStream: React.FC = () => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [userColor, setUserColor] = useState('#60A5FA'); // Default blue-400
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
-  const [filterUsernames, setFilterUsernames] = useState<string[]>([]);
+  const [filterUsernames, setFilterUsernames] = useState<{username: string, color: string}[]>([]);
   const [isFilterEnabled, setIsFilterEnabled] = useState(false);
 
   // Refs
@@ -78,7 +78,11 @@ const CommentsStream: React.FC = () => {
       try {
         const filters = JSON.parse(savedFilters);
         if (Array.isArray(filters)) {
-          setFilterUsernames(filters);
+          // Handle both old format (strings) and new format (objects)
+          const processedFilters = filters.map(f => 
+            typeof f === 'string' ? {username: f, color: '#60A5FA'} : f
+          );
+          setFilterUsernames(processedFilters);
         }
       } catch (e) {
         console.error('Error loading saved filters:', e);
@@ -482,8 +486,9 @@ const CommentsStream: React.FC = () => {
     
     // Apply username filters first (if enabled)
     if (isFilterEnabled && filterUsernames.length > 0) {
+      const filterNames = filterUsernames.map(f => f.username);
       filtered = filtered.filter(comment => 
-        comment.username && filterUsernames.includes(comment.username)
+        comment.username && filterNames.includes(comment.username)
       );
     }
     
@@ -500,9 +505,9 @@ const CommentsStream: React.FC = () => {
   }, [displayedComments, searchTerm, filterUsernames, isFilterEnabled]);
 
   // Add username to filter
-  const addToFilter = (username: string) => {
-    if (!filterUsernames.includes(username)) {
-      const newFilters = [...filterUsernames, username];
+  const addToFilter = (username: string, color: string) => {
+    if (!filterUsernames.some(f => f.username === username)) {
+      const newFilters = [...filterUsernames, {username, color}];
       setFilterUsernames(newFilters);
       localStorage.setItem('sww-filters', JSON.stringify(newFilters));
     }
@@ -510,7 +515,7 @@ const CommentsStream: React.FC = () => {
 
   // Remove username from filter
   const removeFromFilter = (username: string) => {
-    const newFilters = filterUsernames.filter(u => u !== username);
+    const newFilters = filterUsernames.filter(f => f.username !== username);
     setFilterUsernames(newFilters);
     localStorage.setItem('sww-filters', JSON.stringify(newFilters));
   };
@@ -614,22 +619,28 @@ const CommentsStream: React.FC = () => {
           {/* Filter Bar */}
           <div className="relative flex items-center gap-2">
             <div className="flex-1 relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 z-10 pointer-events-none" />
-              <div className={`w-full min-h-[34px] pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-center gap-2 flex-wrap transition-colors ${
-                isFilterEnabled && filterUsernames.length > 0 ? 'border-blue-500/50' : 'border-white/10'
-              }`}>
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none" 
+                style={{ color: getDarkerColor(userColor, 0.6) }} />
+              <div className={`w-full min-h-[34px] pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-center gap-2 flex-wrap transition-colors`}
+                style={{ 
+                  borderColor: isFilterEnabled && filterUsernames.length > 0 
+                    ? getDarkerColor(userColor, 0.5) 
+                    : 'rgba(255,255,255,0.1)'
+                }}>
                 {filterUsernames.length === 0 ? (
-                  <span className="text-white/40">Click usernames to filter...</span>
+                  <span style={{ color: getDarkerColor(userColor, 0.4) }}>Click usernames to filter...</span>
                 ) : (
-                  filterUsernames.map((name) => (
+                  filterUsernames.map((filter) => (
                     <span
-                      key={name}
+                      key={filter.username}
                       className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md"
+                      style={{ backgroundColor: getDarkerColor(filter.color, 0.1) }}
                     >
-                      <span className="text-xs">{name}</span>
+                      <span className="text-xs" style={{ color: filter.color }}>{filter.username}</span>
                       <button
-                        onClick={() => removeFromFilter(name)}
-                        className="hover:text-white/60"
+                        onClick={() => removeFromFilter(filter.username)}
+                        className="hover:opacity-80"
+                        style={{ color: filter.color }}
                         tabIndex={-1}
                       >
                         <X className="w-3 h-3" />
@@ -642,11 +653,12 @@ const CommentsStream: React.FC = () => {
             {/* Filter Toggle Switch */}
             <button
               onClick={toggleFilter}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                isFilterEnabled 
-                  ? 'bg-blue-600' 
-                  : 'bg-white/20'
-              }`}
+              className={`relative w-11 h-6 rounded-full transition-colors`}
+              style={{ 
+                backgroundColor: isFilterEnabled 
+                  ? getDarkerColor(userColor, 0.6)  // Same as send button
+                  : 'rgba(255,255,255,0.2)'
+              }}
               title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
               tabIndex={-1}
             >
@@ -708,7 +720,7 @@ const CommentsStream: React.FC = () => {
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
                 <button 
-                  onClick={() => comment.username && addToFilter(comment.username)}
+                  onClick={() => comment.username && addToFilter(comment.username, comment.color || '#60A5FA')}
                   className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer" 
                   style={{ 
                     lineHeight: '20px',
