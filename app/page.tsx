@@ -3,18 +3,47 @@
 import React, { useState, useEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
-import { Eye, EyeOff } from 'lucide-react';
 
 export default function Home() {
   const [showVideo, setShowVideo] = useState(true);
+  const [userColor, setUserColor] = useState('#60A5FA');
 
-  // Load video preference from localStorage
+  // Load video preference and color from localStorage
   useEffect(() => {
     const savedShowVideo = localStorage.getItem('sww-show-video');
     if (savedShowVideo !== null) {
       setShowVideo(savedShowVideo === 'true');
     }
-  }, []);
+    
+    // Get user color from localStorage for overlay
+    const savedColor = localStorage.getItem('sww-color');
+    if (savedColor) {
+      setUserColor(savedColor);
+    }
+    
+    // Listen for color changes
+    const handleStorageChange = () => {
+      const newColor = localStorage.getItem('sww-color');
+      if (newColor) {
+        setUserColor(newColor);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check periodically for same-tab changes
+    const interval = setInterval(() => {
+      const currentColor = localStorage.getItem('sww-color');
+      if (currentColor && currentColor !== userColor) {
+        setUserColor(currentColor);
+      }
+    }, 500);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [userColor]);
 
   const toggleVideo = () => {
     const newState = !showVideo;
@@ -24,29 +53,30 @@ export default function Home() {
 
   return (
     <main className="flex h-screen bg-black relative">
-      {/* Video Toggle Button */}
-      <button
-        onClick={toggleVideo}
-        className="absolute top-4 left-4 z-50 p-2 bg-black/50 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-black/70 transition-colors group"
-        title={showVideo ? 'Hide video' : 'Show video'}
-      >
-        {showVideo ? (
-          <EyeOff className="w-5 h-5 text-white/70 group-hover:text-white" />
-        ) : (
-          <Eye className="w-5 h-5 text-white/70 group-hover:text-white" />
-        )}
-      </button>
-
       {/* Left Side - Video Player (9:16 aspect ratio container) */}
       {showVideo && (
         <div className="relative h-full" style={{ width: 'calc(100vh * 9 / 16)' }}>
           <VideoPlayer />
+          
+          {/* Color Overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none video-overlay"
+            style={{
+              backgroundColor: userColor,
+              opacity: 'var(--video-overlay-opacity)',
+              mixBlendMode: 'var(--video-overlay-blend)' as any,
+            }}
+          />
         </div>
       )}
 
       {/* Right Side - Comments Stream */}
       <div className="flex-1 h-full min-w-0">
-        <CommentsStream />
+        <CommentsStream 
+          showVideo={showVideo}
+          toggleVideo={toggleVideo}
+          videoOverlayColor={userColor}
+        />
       </div>
     </main>
   );

@@ -6,6 +6,30 @@
 :root {
   --comment-username-gap: 10px; /* Gap between username and message text - adjust for tighter/looser spacing */
   --placeholder-color: rgba(255, 255, 255, 0.4); /* Default placeholder color */
+  --scrollbar-color: #60A5FA; /* Default scrollbar thumb color */
+  --scrollbar-bg: rgba(255, 255, 255, 0.1); /* Default scrollbar track color */
+  
+  /* Video Overlay Settings */
+  --video-overlay-opacity: 0.5; /* Opacity of color overlay on video (0 = transparent, 1 = opaque) */
+  --video-overlay-blend: overlay; /* Blend mode for video overlay */
+  /* Available blend modes:
+     normal - Standard overlay
+     multiply - Darkens video
+     screen - Lightens video
+     overlay - Balanced mix (default)
+     darken - Only darkens
+     lighten - Only lightens
+     color-dodge - Brightens dramatically
+     color-burn - Darkens dramatically
+     hard-light - Strong contrast
+     soft-light - Subtle contrast
+     difference - Inverted colors
+     exclusion - Softer inversion
+     hue - Apply color's hue only
+     saturation - Apply color's saturation only
+     color - Apply hue and saturation
+     luminosity - Apply brightness only
+  */
 }
 
 /* Custom animations */

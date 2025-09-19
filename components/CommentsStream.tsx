@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Send, ChevronDown, User, X, Filter } from 'lucide-react';
+import { Search, Send, ChevronDown, User, X, Filter, Tv } from 'lucide-react';
 import { Comment, CommentsResponse } from '@/types';
 
 // Configuration
@@ -27,7 +27,13 @@ const COLOR_PALETTE = [
   '#94A3B8', // slate-400
 ];
 
-const CommentsStream: React.FC = () => {
+interface CommentsStreamProps {
+  showVideo?: boolean;
+  toggleVideo?: () => void;
+  videoOverlayColor?: string;
+}
+
+const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, toggleVideo, videoOverlayColor }) => {
   // State management
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
@@ -550,7 +556,25 @@ const CommentsStream: React.FC = () => {
         <div className="p-3 space-y-2">
           {/* Title and Username */}
           <div className="flex items-center justify-between gap-4">
-            <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
+              {toggleVideo && (
+                <button
+                  onClick={toggleVideo}
+                  className="p-1.5 hover:opacity-80 transition-opacity"
+                  style={{ 
+                    color: showVideo 
+                      ? getDarkerColor(userColor, 0.6)  // Username color when active
+                      : userColor,  // Same as title when off
+                    opacity: showVideo ? 1 : 0.5  // Same opacity as title when off
+                  }}
+                  title={showVideo ? 'Hide video' : 'Show video'}
+                  tabIndex={-1}
+                >
+                  <Tv className="w-5 h-5" />
+                </button>
+              )}
+            </div>
             
             {/* Username Input - Always Visible */}
             <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 65px)' }} ref={colorPickerRef}>
