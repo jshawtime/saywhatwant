@@ -48,6 +48,7 @@ const CommentsStream: React.FC = () => {
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
   const lastFetchTimeRef = useRef<number>(Date.now());
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
   const colorPickerRef = useRef<HTMLDivElement>(null);
@@ -477,13 +478,14 @@ const CommentsStream: React.FC = () => {
             <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
             
             {/* Username Input - Always Visible */}
-            <div className="relative flex items-center gap-2" style={{ width: 'calc(20ch + 50px)' }} ref={colorPickerRef}>
+            <div className="relative flex items-center gap-2" style={{ width: 'calc(20ch + 30px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
                 style={{ color: userColor }}
                 aria-label="Choose color"
                 title="Click to pick color or press 'R' for random"
+                tabIndex={-1}
               >
                 <User className="w-4 h-4" />
               </button>
@@ -505,16 +507,25 @@ const CommentsStream: React.FC = () => {
                 </div>
               )}
               <input
+                ref={usernameRef}
                 type="text"
                 value={username}
                 onChange={(e) => {
-                  const newUsername = e.target.value.substring(0, MAX_USERNAME_LENGTH);
+                  // Remove spaces and limit length
+                  const newUsername = e.target.value.replace(/\s/g, '').substring(0, MAX_USERNAME_LENGTH);
                   setUsername(newUsername);
                   localStorage.setItem('sww-username', newUsername);
                 }}
                 onFocus={() => {
                   if (!hasClickedUsername) {
                     setHasClickedUsername(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Tab to message field
+                  if (e.key === 'Tab' && !e.shiftKey) {
+                    e.preventDefault();
+                    inputRef.current?.focus();
                   }
                 }}
                 placeholder={hasClickedUsername && username ? "" : "..."}
@@ -538,6 +549,7 @@ const CommentsStream: React.FC = () => {
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
                   aria-label="Clear username"
                   style={{ color: getDarkerColor(userColor, 0.6) }}
+                  tabIndex={-1}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -554,12 +566,14 @@ const CommentsStream: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
               className="w-full pl-10 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40"
+              tabIndex={-1}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
                 aria-label="Clear search"
+                tabIndex={-1}
               >
                 <X className="w-3 h-3 text-white/60 hover:text-white" />
               </button>
@@ -677,6 +691,14 @@ const CommentsStream: React.FC = () => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSubmit(e);
+                } else if (e.key === 'Tab' && e.shiftKey) {
+                  // Shift+Tab to username field
+                  e.preventDefault();
+                  usernameRef.current?.focus();
+                } else if (e.key === 'Tab' && !e.shiftKey) {
+                  // Tab cycles back to username
+                  e.preventDefault();
+                  usernameRef.current?.focus();
                 }
               }}
             />
@@ -694,6 +716,7 @@ const CommentsStream: React.FC = () => {
               backgroundColor: getDarkerColor(userColor, 0.6), // Username color
               color: userColor // Message text color
             }}
+            tabIndex={-1}
           >
             <Send className="w-7 h-7" /> {/* Oversized icon */}
           </button>
