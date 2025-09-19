@@ -3,19 +3,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
+import { Shuffle, Repeat } from 'lucide-react';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
+  const [nextVideo, setNextVideo] = useState<VideoItem | null>(null);
+  const [availableVideos, setAvailableVideos] = useState<VideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoopMode, setIsLoopMode] = useState(false);
+  const [userColor, setUserColor] = useState('#60A5FA');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const nextVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Fetch manifest and select random video
+  // Fetch manifest and initialize videos
   useEffect(() => {
-    loadRandomVideo();
+    loadVideoManifest();
   }, []);
 
-  const loadRandomVideo = async () => {
+  // Load video manifest and initialize
+  const loadVideoManifest = async () => {
     setIsLoading(true);
     setError(null);
 
@@ -37,29 +44,119 @@ const VideoPlayer: React.FC = () => {
         throw new Error('No videos available');
       }
 
-      // Select random video
-      const randomIndex = Math.floor(Math.random() * manifest.videos.length);
-      const selectedVideo = manifest.videos[randomIndex];
+      // Process video URLs based on source type
+      const processedVideos = manifest.videos.map(video => {
+        const processedVideo = { ...video };
+        if (videoSource.type === 'local') {
+          processedVideo.url = `${videoSource.videosPath}/${video.key}`;
+        }
+        return processedVideo;
+      });
+
+      setAvailableVideos(processedVideos);
       
-      // Update URL based on source type
-      if (videoSource.type === 'local') {
-        // For local videos, prepend the videos path
-        selectedVideo.url = `${videoSource.videosPath}/${selectedVideo.key}`;
-      }
-      // For R2, the URL should already be complete in the manifest
-      
-      console.log(`[VideoPlayer] Selected video from ${videoSource.type}:`, selectedVideo.key);
+      // Load initial random video
+      const randomIndex = Math.floor(Math.random() * processedVideos.length);
+      const selectedVideo = processedVideos[randomIndex];
       setCurrentVideo(selectedVideo);
+      
+      // Preload next random video if not in loop mode
+      if (!isLoopMode) {
+        preloadNextRandomVideo(processedVideos, selectedVideo);
+      }
+      
+      console.log(`[VideoPlayer] Selected video:`, selectedVideo.key);
       
     } catch (err) {
       console.error('[VideoPlayer] Error loading video:', err);
       setError(err instanceof Error ? err.message : 'Failed to load video');
-      // Try to load a fallback video if available
       loadFallbackVideo();
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Preload next random video
+  const preloadNextRandomVideo = (videos: VideoItem[], currentVid: VideoItem) => {
+    if (videos.length <= 1) return;
+    
+    // Pure random selection
+    let randomIndex = Math.floor(Math.random() * videos.length);
+    
+    // Ensure we don't select the same video
+    while (videos[randomIndex].key === currentVid.key && videos.length > 1) {
+      randomIndex = Math.floor(Math.random() * videos.length);
+    }
+    
+    const next = videos[randomIndex];
+    setNextVideo(next);
+    
+    // Preload the video
+    if (nextVideoRef.current) {
+      nextVideoRef.current.src = next.url;
+      nextVideoRef.current.load();
+    }
+  };
+
+  // Handle video ended
+  const handleVideoEnded = () => {
+    if (!isLoopMode && availableVideos.length > 0) {
+      // Switch to next preloaded video
+      if (nextVideo) {
+        setCurrentVideo(nextVideo);
+        
+        // Preload another random video
+        preloadNextRandomVideo(availableVideos, nextVideo);
+      } else {
+        // Fallback: load a new random video
+        const randomIndex = Math.floor(Math.random() * availableVideos.length);
+        const selectedVideo = availableVideos[randomIndex];
+        setCurrentVideo(selectedVideo);
+        preloadNextRandomVideo(availableVideos, selectedVideo);
+      }
+    }
+    // If loop mode is on, the video will naturally loop via the loop attribute
+  };
+
+  // Toggle between random and loop mode
+  const togglePlayMode = () => {
+    const newLoopMode = !isLoopMode;
+    setIsLoopMode(newLoopMode);
+    
+    // Save preference
+    localStorage.setItem('sww-video-loop', JSON.stringify(newLoopMode));
+    
+    // If switching to random mode, preload next video
+    if (!newLoopMode && currentVideo && availableVideos.length > 0) {
+      preloadNextRandomVideo(availableVideos, currentVideo);
+    }
+  };
+
+  // Load loop preference
+  useEffect(() => {
+    const savedLoopMode = localStorage.getItem('sww-video-loop');
+    if (savedLoopMode !== null) {
+      setIsLoopMode(JSON.parse(savedLoopMode));
+    }
+  }, []);
+
+  // Load and watch for color changes
+  useEffect(() => {
+    const updateColor = () => {
+      const savedColor = localStorage.getItem('sww-color');
+      if (savedColor) {
+        setUserColor(savedColor);
+      }
+    };
+
+    // Initial load
+    updateColor();
+
+    // Check periodically for color changes (same tab)
+    const interval = setInterval(updateColor, 500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const loadFallbackVideo = () => {
     // Fallback to a demo video if R2 is not configured
@@ -74,10 +171,23 @@ const VideoPlayer: React.FC = () => {
     setError('Using demo video - Configure R2 bucket for full experience');
   };
 
+  // Darker color helper
+  const getDarkerColor = (color: string, factor: number) => {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    const newR = Math.round(r * factor);
+    const newG = Math.round(g * factor);
+    const newB = Math.round(b * factor);
+    
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  };
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
-      {/* Video Element */}
+      {/* Main Video Element */}
       {currentVideo && !error && (
         <video
           ref={videoRef}
@@ -85,13 +195,26 @@ const VideoPlayer: React.FC = () => {
           className="w-full h-full object-cover"
           src={currentVideo.url}
           autoPlay
-          loop
+          loop={isLoopMode}
           muted={true}
           playsInline
+          onEnded={handleVideoEnded}
           onError={(e) => {
             console.error('[VideoPlayer] Video playback error:', e);
             setError('Failed to play video');
           }}
+        />
+      )}
+
+      {/* Hidden Preload Video */}
+      {nextVideo && !isLoopMode && (
+        <video
+          ref={nextVideoRef}
+          className="hidden"
+          src={nextVideo.url}
+          muted={true}
+          playsInline
+          preload="auto"
         />
       )}
 
@@ -111,10 +234,51 @@ const VideoPlayer: React.FC = () => {
           <div className="text-white text-center p-6">
             <p className="text-sm text-red-400 mb-4">{error}</p>
             <button
-              onClick={loadRandomVideo}
+              onClick={loadVideoManifest}
               className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >
               Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Random/Loop Switch Overlay */}
+      {currentVideo && !error && (
+        <div className="absolute bottom-4 right-4 z-20">
+          <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full p-1">
+            {/* Random Mode (Left) */}
+            <button
+              onClick={() => !isLoopMode ? null : togglePlayMode()}
+              className={`p-2 rounded-full transition-all ${
+                !isLoopMode ? 'bg-black/50' : 'bg-transparent hover:bg-black/30'
+              }`}
+              title="Random mode - play videos randomly"
+            >
+              <Shuffle 
+                className="w-4 h-4"
+                style={{ 
+                  color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.4),
+                  opacity: !isLoopMode ? 1 : 0.6
+                }}
+              />
+            </button>
+
+            {/* Loop Mode (Right) */}
+            <button
+              onClick={() => isLoopMode ? null : togglePlayMode()}
+              className={`p-2 rounded-full transition-all ${
+                isLoopMode ? 'bg-black/50' : 'bg-transparent hover:bg-black/30'
+              }`}
+              title="Loop mode - repeat current video"
+            >
+              <Repeat 
+                className="w-4 h-4"
+                style={{ 
+                  color: isLoopMode ? userColor : getDarkerColor(userColor, 0.4),
+                  opacity: isLoopMode ? 1 : 0.6
+                }}
+              />
             </button>
           </div>
         </div>
