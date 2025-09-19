@@ -584,6 +584,23 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     return filtered;
   }, [displayedComments, searchTerm, filterUsernames, isFilterEnabled]);
 
+  // Maintain scroll position when filters change
+  useEffect(() => {
+    if (!streamRef.current) return;
+    
+    // Check if we were near the bottom before the filter change
+    const isNearBottom = streamRef.current.scrollHeight - (streamRef.current.scrollTop + streamRef.current.clientHeight) < 100;
+    
+    // If we were near the bottom, scroll to bottom after filter changes
+    if (isNearBottom) {
+      setTimeout(() => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = streamRef.current.scrollHeight;
+        }
+      }, 10);
+    }
+  }, [filteredComments]);
+
   // Add username to filter
   const addToFilter = (username: string, color: string) => {
     // Check if this exact username/color combo already exists
@@ -815,6 +832,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         ref={streamRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1"
+        style={{
+          '--scrollbar-color': getDarkerColor(userColor, 0.6),
+          '--scrollbar-bg': getDarkerColor(userColor, 0.1),
+        } as React.CSSProperties}
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
