@@ -1,0 +1,48 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Workers
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_COMMENTS_API: ${{ vars.NEXT_PUBLIC_COMMENTS_API }}
+          NEXT_PUBLIC_R2_BUCKET_URL: ${{ vars.NEXT_PUBLIC_R2_BUCKET_URL }}
+        
+      - name: Deploy Comments Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: workers
+          command: deploy
+          
+      - name: Deploy Main Site
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy
+          
+      - name: Display URLs
+        run: |
+          echo "✅ Deployment complete!"
+          echo "Main site: https://say-what-want.${{ vars.CF_ACCOUNT_SUBDOMAIN }}.workers.dev"
+          echo "Comments API: https://sww-comments.${{ vars.CF_ACCOUNT_SUBDOMAIN }}.workers.dev"

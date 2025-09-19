@@ -1,0 +1,30 @@
+# Say What Want - Main Site Configuration
+name = "say-what-want"
+main = "workers/site-worker.js"
+compatibility_date = "2024-01-01"
+
+# Static site configuration
+[site]
+bucket = "./out"
+
+# KV Namespace binding (shared with comments worker)
+[[kv_namespaces]]
+binding = "COMMENTS_KV"
+id = "YOUR_KV_NAMESPACE_ID_HERE" # Same ID as in workers/wrangler.toml
+
+# Environment variables
+[vars]
+COMMENTS_WORKER_URL = "https://sww-comments.workers.dev"
+R2_BUCKET_URL = "https://YOUR-R2-BUCKET.r2.dev"
+
+# Routes (optional custom domain)
+# route = "yourdomain.com/*"
+
+# Development configuration
+[env.development]
+name = "say-what-want-dev"
+vars = { COMMENTS_WORKER_URL = "http://localhost:8787", R2_BUCKET_URL = "http://localhost:8788" }
+
+# Production configuration  
+[env.production]
+name = "say-what-want"
