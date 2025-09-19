@@ -39,6 +39,5 @@ public/sww-videos/*.webm
 public/sww-videos/*.mov
 public/sww-videos/*.avi
 public/sww-videos/*.mkv
-# Keep the manifest and README
+# Keep the manifest
 !public/sww-videos/video-manifest.json
-!public/sww-videos/README.md
