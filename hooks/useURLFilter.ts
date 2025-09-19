@@ -18,7 +18,11 @@ export function useURLFilter() {
         negativeWords: [],
         wordRemove: [],
         videoPlaylist: [],
-        videoPanel: null
+        videoPanel: null,
+        from: null,
+        to: null,
+        timeFrom: null,
+        timeTo: null
       };
     }
     // Initialize with current URL state on client
@@ -115,6 +119,28 @@ export function useURLFilter() {
     manager.removeFromURL('negativeWords', word);
   }, []);
   
+  // Update date/time filters
+  const setDateTimeFilter = useCallback((from: string | null, to: string | null) => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ from, to });
+  }, []);
+  
+  const setTimeFilter = useCallback((timeFrom: number | null, timeTo: number | null) => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ timeFrom, timeTo });
+  }, []);
+  
+  // Clear date/time filter
+  const clearDateTimeFilter = useCallback(() => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ 
+      from: null, 
+      to: null, 
+      timeFrom: null, 
+      timeTo: null 
+    });
+  }, []);
+  
   // Clear all URL filters
   const clearURLFilters = useCallback(() => {
     const manager = URLFilterManager.getInstance();
@@ -127,7 +153,12 @@ export function useURLFilter() {
     urlState.searchTerms.length > 0 ||
     urlState.words.length > 0 ||
     urlState.negativeWords.length > 0 ||
-    urlState.videoPlaylist.length > 0;
+    urlState.wordRemove.length > 0 ||
+    urlState.videoPlaylist.length > 0 ||
+    urlState.from !== null ||
+    urlState.to !== null ||
+    urlState.timeFrom !== null ||
+    urlState.timeTo !== null;
   
   return {
     urlState,
@@ -148,6 +179,11 @@ export function useURLFilter() {
     // Negative word filters
     addNegativeWordToURL,
     removeNegativeWordFromURL,
+    
+    // Date/time filters
+    setDateTimeFilter,
+    setTimeFilter,
+    clearDateTimeFilter,
     
     // Clear all
     clearURLFilters

@@ -11,6 +11,10 @@ export interface SWWFilterState {
   wordRemove: string[];        // Words to remove/hide from display
   videoPlaylist: string[];     // Video keys to play
   videoPanel: boolean | null;  // Panel visibility state
+  from: string | null;         // Start time (YYYY-MM-DD, YYYY-MM-DDTHH:MM, T[minutes], keywords)
+  to: string | null;           // End time (YYYY-MM-DD, YYYY-MM-DDTHH:MM, T[minutes], keywords)
+  timeFrom: number | null;     // Alternative: minutes ago (number only)
+  timeTo: number | null;       // Alternative: minutes ago (number only)
 }
 
 export class URLFilterManager {
@@ -58,7 +62,11 @@ export class URLFilterManager {
       negativeWords: [],
       wordRemove: [],
       videoPlaylist: [],
-      videoPanel: null
+      videoPanel: null,
+      from: null,
+      to: null,
+      timeFrom: null,
+      timeTo: null
     };
   }
   
@@ -133,6 +141,32 @@ export class URLFilterManager {
             state.videoPanel = true;
           }
           break;
+          
+        case 'from':
+          // Store raw value - will be parsed when filtering
+          state.from = values[0];
+          break;
+          
+        case 'to':
+          // Store raw value - will be parsed when filtering
+          state.to = values[0];
+          break;
+          
+        case 'timeFrom':
+          // Parse as number (minutes)
+          const timeFromNum = parseInt(values[0], 10);
+          if (!isNaN(timeFromNum)) {
+            state.timeFrom = timeFromNum;
+          }
+          break;
+          
+        case 'timeTo':
+          // Parse as number (minutes)
+          const timeToNum = parseInt(values[0], 10);
+          if (!isNaN(timeToNum)) {
+            state.timeTo = timeToNum;
+          }
+          break;
       }
     }
     
@@ -178,6 +212,20 @@ export class URLFilterManager {
     // Add video panel state (only if explicitly set)
     if (state.videoPanel !== null) {
       params.push(`video=${state.videoPanel}`);
+    }
+    
+    // Add date/time filters
+    if (state.from) {
+      params.push(`from=${encodeURIComponent(state.from)}`);
+    }
+    if (state.to) {
+      params.push(`to=${encodeURIComponent(state.to)}`);
+    }
+    if (state.timeFrom !== null) {
+      params.push(`timeFrom=${state.timeFrom}`);
+    }
+    if (state.timeTo !== null) {
+      params.push(`timeTo=${state.timeTo}`);
     }
     
     return params.length > 0 ? `#${params.join('&')}` : '';
@@ -259,6 +307,18 @@ export class URLFilterManager {
     }
     if (updates.videoPanel !== undefined) {
       newState.videoPanel = updates.videoPanel;
+    }
+    if (updates.from !== undefined) {
+      newState.from = updates.from;
+    }
+    if (updates.to !== undefined) {
+      newState.to = updates.to;
+    }
+    if (updates.timeFrom !== undefined) {
+      newState.timeFrom = updates.timeFrom;
+    }
+    if (updates.timeTo !== undefined) {
+      newState.timeTo = updates.timeTo;
     }
     
     const hash = this.buildHash(newState);

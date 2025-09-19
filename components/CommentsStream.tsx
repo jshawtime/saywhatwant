@@ -79,7 +79,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     hasActiveFilters,
     urlSearchTerms,
     addSearchTermToURL,
-    removeSearchTermFromURL
+    removeSearchTermFromURL,
+    dateTimeFilter,
+    clearDateTimeFilter
   } = useFilters({ displayedComments, searchTerm });
 
   // Storage key for localStorage
@@ -654,10 +656,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             isFilterEnabled={isFilterEnabled}
             hasActiveFilters={hasActiveFilters}
             userColor={userColor}
+            dateTimeFilter={dateTimeFilter}
             onToggleFilter={toggleFilter}
             onRemoveUsernameFilter={removeFromFilter}
             onRemoveWordFilter={removeWordFromFilter}
             onRemoveNegativeFilter={removeNegativeWordFilter}
+            onClearDateTimeFilter={clearDateTimeFilter}
             getDarkerColor={getDarkerColor}
           />
 

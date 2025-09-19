@@ -56,8 +56,10 @@ The app supports powerful URL-based filtering that makes filtered views shareabl
 | `-word=` | Exclude word filters | `#-word=spam+inappropriate` |
 | `wordremove=` | Silently hide words | `#wordremove=spoiler+leak` |
 | `video=` | Control video playlist | `#video=sample1+sample2` |
-| `time=` | Relative time range (planned) | `#time=1h`, `#time=today` |
-| `date=` | Absolute dates (planned) | `#date=2024-01-19` |
+| `from=` | Start date/time | `#from=T60` or `#from=2025-01-19` |
+| `to=` | End date/time | `#to=now` or `#to=2025-01-20T14:30` |
+| `timeFrom=` | Minutes ago (alt syntax) | `#timeFrom=60` |
+| `timeTo=` | Minutes ago (alt syntax) | `#timeTo=0` |
 
 #### URL Syntax Rules
 
@@ -65,6 +67,22 @@ The app supports powerful URL-based filtering that makes filtered views shareabl
 - **`&`** - Separates different filter types (AND logic)
 - **`+`** - Joins multiple values within same type (OR logic)
 - **`=`** - Assigns values to parameters
+
+#### Date/Time Filtering
+
+The system supports flexible date/time filtering with multiple formats:
+
+**Relative Time** (T notation):
+- `T60` = 60 minutes ago
+- `T1440` = 24 hours ago 
+- `T0` or `now` = Current time
+
+**Absolute Dates**:
+- `2025-01-19` = January 19, 2025
+- `2025-01-19T14:30` = January 19, 2025 at 2:30 PM
+
+**Keywords**:
+- `now`, `today`, `yesterday`, `week`, `month`
 
 #### URL Examples
 
@@ -80,7 +98,21 @@ http://localhost:3000/#u=teacher&search=question&-word=spam&wordremove=inappropr
 
 # Study session
 http://localhost:3000/#u=instructor+assistant&search=homework&video=lesson1
+
+# Last hour of messages
+http://localhost:3000/#from=T60&to=now
+
+# Specific date range
+http://localhost:3000/#from=2025-01-19&to=2025-01-20
+
+# Yesterday's messages from Alice
+http://localhost:3000/#from=yesterday&to=today&u=alice
+
+# Complex with date/time
+http://localhost:3000/#from=T1440&to=now&u=team&search=bug&word=critical
 ```
+
+📚 See [Date & Time Filtering Guide](./README/DATE-TIME-FILTERING.md) for complete documentation.
 
 #### Special Features
 
@@ -290,13 +322,6 @@ NEXT_PUBLIC_R2_BUCKET_URL=https://your-bucket.r2.dev
 ```
 
 ## 🚧 Planned Features & Roadmap
-
-### Date Range Filtering (Coming Soon)
-Two approaches being considered:
-1. **Relative Time** (`time=1h`, `time=today`) - Human-friendly, always current
-2. **Absolute Dates** (`date=2024-01-19`) - Precise, historical reference
-
-See [Date Range Proposals](./README/DATE-RANGE-PROPOSALS.md) for detailed specifications.
 
 ### Additional URL Parameters (Planned)
 - **Message Length**: `length=short/medium/long` - Filter by comment length
