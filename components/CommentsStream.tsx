@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Send, ChevronDown, User, X } from 'lucide-react';
+import { Search, Send, ChevronDown, User, X, Filter } from 'lucide-react';
 import { Comment, CommentsResponse } from '@/types';
 
 // Configuration
@@ -44,6 +44,8 @@ const CommentsStream: React.FC = () => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [userColor, setUserColor] = useState('#60A5FA'); // Default blue-400
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
+  const [filterUsernames, setFilterUsernames] = useState<string[]>([]);
+  const [isFilterEnabled, setIsFilterEnabled] = useState(false);
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
@@ -56,10 +58,12 @@ const CommentsStream: React.FC = () => {
   // Storage key for localStorage
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
 
-  // Load username and color from localStorage
+  // Load username, color, and filters from localStorage
   useEffect(() => {
     const savedUsername = localStorage.getItem('sww-username');
     const savedColor = localStorage.getItem('sww-color');
+    const savedFilters = localStorage.getItem('sww-filters');
+    const savedFilterEnabled = localStorage.getItem('sww-filter-enabled');
     
     if (savedUsername) {
       setUsername(savedUsername);
@@ -68,6 +72,21 @@ const CommentsStream: React.FC = () => {
     
     if (savedColor && COLOR_PALETTE.includes(savedColor)) {
       setUserColor(savedColor);
+    }
+    
+    if (savedFilters) {
+      try {
+        const filters = JSON.parse(savedFilters);
+        if (Array.isArray(filters)) {
+          setFilterUsernames(filters);
+        }
+      } catch (e) {
+        console.error('Error loading saved filters:', e);
+      }
+    }
+    
+    if (savedFilterEnabled) {
+      setIsFilterEnabled(savedFilterEnabled === 'true');
     }
   }, []);
 
@@ -457,16 +476,51 @@ const CommentsStream: React.FC = () => {
     setShowColorPicker(!showColorPicker);
   };
 
-  // Filter comments based on search
+  // Filter comments based on username filters and search
   const filteredComments = useMemo(() => {
-    if (!searchTerm) return displayedComments;
+    let filtered = displayedComments;
     
-    const searchLower = searchTerm.toLowerCase();
-    return displayedComments.filter(comment => 
-      comment.text.toLowerCase().includes(searchLower) ||
-      (comment.username && comment.username.toLowerCase().includes(searchLower))
-    );
-  }, [displayedComments, searchTerm]);
+    // Apply username filters first (if enabled)
+    if (isFilterEnabled && filterUsernames.length > 0) {
+      filtered = filtered.filter(comment => 
+        comment.username && filterUsernames.includes(comment.username)
+      );
+    }
+    
+    // Then apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(comment => 
+        comment.text.toLowerCase().includes(searchLower) ||
+        (comment.username && comment.username.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    return filtered;
+  }, [displayedComments, searchTerm, filterUsernames, isFilterEnabled]);
+
+  // Add username to filter
+  const addToFilter = (username: string) => {
+    if (!filterUsernames.includes(username)) {
+      const newFilters = [...filterUsernames, username];
+      setFilterUsernames(newFilters);
+      localStorage.setItem('sww-filters', JSON.stringify(newFilters));
+    }
+  };
+
+  // Remove username from filter
+  const removeFromFilter = (username: string) => {
+    const newFilters = filterUsernames.filter(u => u !== username);
+    setFilterUsernames(newFilters);
+    localStorage.setItem('sww-filters', JSON.stringify(newFilters));
+  };
+  
+  // Toggle filter enabled state
+  const toggleFilter = () => {
+    const newState = !isFilterEnabled;
+    setIsFilterEnabled(newState);
+    localStorage.setItem('sww-filter-enabled', String(newState));
+  };
 
   return (
     <div className="flex flex-col h-full bg-black text-white">
@@ -478,7 +532,7 @@ const CommentsStream: React.FC = () => {
             <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
             
             {/* Username Input - Always Visible */}
-            <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 35px)' }} ref={colorPickerRef}>
+            <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 65px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
@@ -557,6 +611,51 @@ const CommentsStream: React.FC = () => {
             </div>
           </div>
 
+          {/* Filter Bar */}
+          <div className="relative flex items-center gap-2">
+            <div className="flex-1 relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 z-10 pointer-events-none" />
+              <div className={`w-full min-h-[34px] pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-center gap-2 flex-wrap transition-colors ${
+                isFilterEnabled && filterUsernames.length > 0 ? 'border-blue-500/50' : 'border-white/10'
+              }`}>
+                {filterUsernames.length === 0 ? (
+                  <span className="text-white/40">Click usernames to filter...</span>
+                ) : (
+                  filterUsernames.map((name) => (
+                    <span
+                      key={name}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md"
+                    >
+                      <span className="text-xs">{name}</span>
+                      <button
+                        onClick={() => removeFromFilter(name)}
+                        className="hover:text-white/60"
+                        tabIndex={-1}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+            {/* Filter Toggle Switch */}
+            <button
+              onClick={toggleFilter}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                isFilterEnabled 
+                  ? 'bg-blue-600' 
+                  : 'bg-white/20'
+              }`}
+              title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
+              tabIndex={-1}
+            >
+              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                isFilterEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </div>
+
           {/* Search Bar - Instant Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -608,15 +707,17 @@ const CommentsStream: React.FC = () => {
             >
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
-                <span 
-                  className="text-xs font-medium flex-shrink-0" 
+                <button 
+                  onClick={() => comment.username && addToFilter(comment.username)}
+                  className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer" 
                   style={{ 
                     lineHeight: '20px',
                     color: getDarkerColor(comment.color || '#60A5FA', 0.6) // Darker username
                   }}
+                  tabIndex={-1}
                 >
                   {comment.username || 'Anonymous'}:
-                </span>
+                </button>
                 
                 {/* Message with right margin for timestamp */}
                 <div className="flex-1 pr-12">
