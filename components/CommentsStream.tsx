@@ -478,7 +478,7 @@ const CommentsStream: React.FC = () => {
             <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
             
             {/* Username Input - Always Visible */}
-            <div className="relative flex items-center gap-2" style={{ width: 'calc(20ch + 30px)' }} ref={colorPickerRef}>
+            <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 35px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
