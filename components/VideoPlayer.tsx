@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
-import { Shuffle, Repeat, Palette, Share2, ChevronDown } from 'lucide-react';
+import { Shuffle, Repeat, Palette, ArrowUp, ChevronDown } from 'lucide-react';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -392,7 +392,7 @@ const VideoPlayer: React.FC = () => {
               onChange={(e) => handleBrightnessChange(parseFloat(e.target.value))}
               className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
               style={{
-                background: `linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(255,255,255,0.8) ${videoBrightness * 100}%, rgba(255,255,255,0.2) ${videoBrightness * 100}%, rgba(255,255,255,0.2) 100%)`,
+                background: `linear-gradient(to right, ${getDarkerColor(userColor, 0.2)} 0%, ${userColor} ${videoBrightness * 100}%, rgba(255,255,255,0.2) ${videoBrightness * 100}%, rgba(255,255,255,0.2) 100%)`,
               }}
               title="Brightness"
             />
@@ -426,21 +426,24 @@ const VideoPlayer: React.FC = () => {
                 className="flex items-center gap-1 px-3 py-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/60 transition-all"
                 title="Change blend mode"
               >
-                <span className="text-xs text-white/60">{blendMode}</span>
-                <ChevronDown className="w-3 h-3 text-white/60" />
+                <span className="text-xs" style={{ color: getDarkerColor(userColor, 0.6) }}>{blendMode}</span>
+                <ChevronDown className="w-3 h-3" style={{ color: getDarkerColor(userColor, 0.6) }} />
               </button>
               
               {showBlendMenu && (
-                <div className="absolute bottom-full mb-2 right-0 bg-black/90 backdrop-blur-md rounded-lg p-1 min-w-[140px] max-h-[300px] overflow-y-auto">
+                <div className="absolute bottom-full mb-2 right-0 bg-black/90 backdrop-blur-md rounded-lg p-1 min-w-[140px] grid grid-cols-2 gap-0.5">
                   {blendModes.map(mode => (
                     <button
                       key={mode}
                       onClick={() => handleBlendModeChange(mode)}
-                      className={`block w-full text-left px-3 py-1.5 text-xs rounded transition-colors ${
+                      className={`text-left px-2 py-1.5 text-xs rounded transition-colors ${
                         mode === blendMode
-                          ? 'bg-white/20 text-white'
-                          : 'text-white/60 hover:bg-white/10 hover:text-white'
+                          ? 'bg-white/20'
+                          : 'hover:bg-white/10'
                       }`}
+                      style={{
+                        color: mode === blendMode ? userColor : getDarkerColor(userColor, 0.6)
+                      }}
                     >
                       {mode}
                     </button>
@@ -468,37 +471,35 @@ const VideoPlayer: React.FC = () => {
           </button>
 
           {/* Random/Loop Switch */}
-          <div className="flex items-center bg-black/50 backdrop-blur-sm rounded-full p-1">
+          <div className="flex bg-black/50 backdrop-blur-sm rounded-full p-1">
             {/* Random Mode (Left) */}
             <button
-              onClick={() => !isLoopMode ? null : togglePlayMode()}
-              className={`p-2 rounded-full transition-all ${
-                !isLoopMode ? 'bg-black/50' : 'bg-transparent hover:bg-black/30'
+              onClick={togglePlayMode}
+              className={`px-3 py-2 rounded-full transition-all ${
+                !isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
               }`}
               title="Random mode - play videos randomly"
             >
               <Shuffle 
                 className="w-4 h-4"
                 style={{ 
-                  color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.4),
-                  opacity: !isLoopMode ? 1 : 0.6
+                  color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
                 }}
               />
             </button>
 
             {/* Loop Mode (Right) */}
             <button
-              onClick={() => isLoopMode ? null : togglePlayMode()}
-              className={`p-2 rounded-full transition-all ${
-                isLoopMode ? 'bg-black/50' : 'bg-transparent hover:bg-black/30'
+              onClick={togglePlayMode}
+              className={`px-3 py-2 rounded-full transition-all ${
+                isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
               }`}
               title="Loop mode - repeat current video"
             >
               <Repeat 
                 className="w-4 h-4"
                 style={{ 
-                  color: isLoopMode ? userColor : getDarkerColor(userColor, 0.4),
-                  opacity: isLoopMode ? 1 : 0.6
+                  color: isLoopMode ? userColor : getDarkerColor(userColor, 0.3)
                 }}
               />
             </button>
@@ -510,7 +511,7 @@ const VideoPlayer: React.FC = () => {
             className="p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/60 transition-all"
             title="Share this video in chat"
           >
-            <Share2 
+            <ArrowUp 
               className="w-4 h-4"
               style={{ 
                 color: userColor,
