@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Send, ChevronDown, User, X, Filter, Tv } from 'lucide-react';
+import { Search, Send, ChevronDown, User, X, Tv } from 'lucide-react';
 import { Comment, CommentsResponse } from '@/types';
+import { useFilters } from '@/hooks/useFilters';
+import FilterBar from '@/components/FilterBar';
+import { parseCommentText, getDarkerColor } from '@/utils/textParsing';
 
 // Configuration
 const INITIAL_LOAD_COUNT = 500;
@@ -49,9 +52,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [userColor, setUserColor] = useState('#60A5FA'); // Default blue-400
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
-  const [filterUsernames, setFilterUsernames] = useState<{username: string, color: string}[]>([]);
-  const [isFilterEnabled, setIsFilterEnabled] = useState(false);
-  const [filterByColorToo, setFilterByColorToo] = useState(true); // New option to filter by color as well
   const [pendingVideoKey, setPendingVideoKey] = useState<string | null>(null);
 
   // Refs
@@ -61,17 +61,42 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const lastFetchTimeRef = useRef<number>(Date.now());
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  
+  // Use the filters hook
+  const {
+    filterUsernames,
+    filterWords,
+    negativeFilterWords,
+    isFilterEnabled,
+    filteredComments,
+    addToFilter,
+    removeFromFilter,
+    addWordToFilter,
+    removeWordFromFilter,
+    addNegativeWordFilter,
+    removeNegativeWordFilter,
+    toggleFilter,
+    hasActiveFilters,
+    urlSearchTerms,
+    addSearchTermToURL,
+    removeSearchTermFromURL
+  } = useFilters({ displayedComments, searchTerm });
 
   // Storage key for localStorage
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
+  
+  // Sync search bar with URL search terms
+  useEffect(() => {
+    if (urlSearchTerms.length > 0) {
+      // Join multiple search terms with space
+      setSearchTerm(urlSearchTerms.join(' '));
+    }
+  }, [urlSearchTerms]);
 
   // Load username, color, and filters from localStorage
   useEffect(() => {
     const savedUsername = localStorage.getItem('sww-username');
     const savedColor = localStorage.getItem('sww-color');
-    const savedFilters = localStorage.getItem('sww-filters');
-    const savedFilterEnabled = localStorage.getItem('sww-filter-enabled');
-    
     if (savedUsername) {
       setUsername(savedUsername);
       setHasClickedUsername(true); // If there's a saved username, treat it as if they've clicked
@@ -80,31 +105,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     if (savedColor && COLOR_PALETTE.includes(savedColor)) {
       setUserColor(savedColor);
     }
-    
-    if (savedFilters) {
-      try {
-        const filters = JSON.parse(savedFilters);
-        if (Array.isArray(filters)) {
-          // Handle both old format (strings) and new format (objects)
-          const processedFilters = filters.map(f => 
-            typeof f === 'string' ? {username: f, color: '#60A5FA'} : f
-          );
-          setFilterUsernames(processedFilters);
-        }
-      } catch (e) {
-        console.error('Error loading saved filters:', e);
-      }
-    }
-    
-    if (savedFilterEnabled) {
-      setIsFilterEnabled(savedFilterEnabled === 'true');
-    }
   }, []);
 
   // Listen for video share events
   useEffect(() => {
     const handleShareVideo = (event: CustomEvent) => {
       const { videoKey } = event.detail;
+      
+      if (!videoKey) {
+        return;
+      }
       
       // Store the video key internally
       setPendingVideoKey(videoKey);
@@ -172,61 +182,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     };
   }, []);
 
-  // Parse URLs in comment text
-  const parseCommentText = useCallback((text: string): React.ReactNode[] => {
-    // Check for video links first
-    const videoRegex = /\[video:([^\]]+)\] <-- video/g;
-    const urlRegex = /(https?:\/\/[^\s]+)/gi;
-    
-    // Split by video links first
-    const videoParts = text.split(videoRegex);
-    const result: React.ReactNode[] = [];
-    
-    for (let i = 0; i < videoParts.length; i++) {
-      if (i % 2 === 1) {
-        // This is a video key
-        const videoKey = videoParts[i];
-        result.push(
-          <button
-            key={`video-${i}`}
-            onClick={() => {
-              // Dispatch event to play this video
-              const playEvent = new CustomEvent('playSharedVideo', {
-                detail: { videoKey }
-              });
-              window.dispatchEvent(playEvent);
-            }}
-            className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 underline"
-            title={`Play video: ${videoKey}`}
-          >
-            <span>←</span> video
-          </button>
-        );
-      } else {
-        // This is regular text, parse for URLs
-        const urlParts = videoParts[i].split(urlRegex);
-        urlParts.forEach((part, urlIndex) => {
-          if (part.match(urlRegex)) {
-            result.push(
-              <a
-                key={`url-${i}-${urlIndex}`}
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 underline break-all"
-              >
-                {part}
-              </a>
-            );
-          } else if (part) {
-            result.push(<span key={`text-${i}-${urlIndex}`}>{part}</span>);
-          }
+  // Create wrapped parse function with handlers
+  const parseCommentTextWithHandlers = useCallback((text: string): React.ReactNode[] => {
+    return parseCommentText(text, {
+      onWordClick: addWordToFilter,
+      onWordRightClick: addNegativeWordFilter,
+      onVideoClick: (videoKey) => {
+        const playEvent = new CustomEvent('playSharedVideo', {
+          detail: { videoKey }
         });
+        window.dispatchEvent(playEvent);
       }
-    }
-    
-    return result;
-  }, []);
+    });
+  }, [addWordToFilter, addNegativeWordFilter]);
 
   // Format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -436,9 +404,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // Create new comment
       let commentText = inputText.trim();
       
-      // If there's a pending video, insert the full video link
-      if (pendingVideoKey && commentText === '<-- video') {
-        commentText = `[video:${pendingVideoKey}] <-- video`;
+      // If there's a pending video, replace '<-- video' with the full video link
+      if (pendingVideoKey && commentText.includes('<-- video')) {
+        commentText = commentText.replace('<-- video', `[video:${pendingVideoKey}] <-- video`);
       }
       
       const newComment: Comment = {
@@ -524,19 +492,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setShowColorPicker(false);
   };
 
-  // Get darker version of color for placeholder and inputs
-  const getDarkerColor = (color: string, factor: number = 0.6) => {
-    // Convert hex to RGB, reduce brightness by factor
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    
-    const darkerR = Math.floor(r * factor);
-    const darkerG = Math.floor(g * factor);
-    const darkerB = Math.floor(b * factor);
-    
-    return `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
-  };
 
   // Shuffle colors array
   const shuffleColors = () => {
@@ -552,37 +507,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setShowColorPicker(!showColorPicker);
   };
 
-  // Filter comments based on username filters and search
-  const filteredComments = useMemo(() => {
-    let filtered = displayedComments;
-    
-    // Apply username filters first (if enabled)
-    if (isFilterEnabled && filterUsernames.length > 0) {
-      filtered = filtered.filter(comment => {
-        if (!comment.username) return false;
-        
-        // Check if this username/color combination is in our filters
-        return filterUsernames.some(filter => {
-          const usernameMatches = filter.username === comment.username;
-          const colorMatches = filter.color === (comment.color || '#60A5FA');
-          
-          // Filter by both username AND color to differentiate users
-          return filterByColorToo ? (usernameMatches && colorMatches) : usernameMatches;
-        });
-      });
-    }
-    
-    // Then apply search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(comment => 
-        comment.text.toLowerCase().includes(searchLower) ||
-        (comment.username && comment.username.toLowerCase().includes(searchLower))
-      );
-    }
-    
-    return filtered;
-  }, [displayedComments, searchTerm, filterUsernames, isFilterEnabled]);
 
   // Scroll to bottom when filters are turned off
   useEffect(() => {
@@ -612,35 +536,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [searchTerm]);
 
-  // Add username to filter
-  const addToFilter = (username: string, color: string) => {
-    // Check if this exact username/color combo already exists
-    const exists = filterUsernames.some(f => 
-      f.username === username && f.color === color
-    );
-    
-    if (!exists) {
-      const newFilters = [...filterUsernames, {username, color}];
-      setFilterUsernames(newFilters);
-      localStorage.setItem('sww-filters', JSON.stringify(newFilters));
-    }
-  };
-
-  // Remove username from filter (now includes color for exact match)
-  const removeFromFilter = (username: string, color: string) => {
-    const newFilters = filterUsernames.filter(f => 
-      !(f.username === username && f.color === color)
-    );
-    setFilterUsernames(newFilters);
-    localStorage.setItem('sww-filters', JSON.stringify(newFilters));
-  };
-  
-  // Toggle filter enabled state
-  const toggleFilter = () => {
-    const newState = !isFilterEnabled;
-    setIsFilterEnabled(newState);
-    localStorage.setItem('sww-filter-enabled', String(newState));
-  };
 
   return (
     <div className="flex flex-col h-full bg-black text-white">
@@ -752,59 +647,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           </div>
 
           {/* Filter Bar */}
-          <div className="relative flex items-center gap-2">
-            <div className="flex-1 relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none" 
-                style={{ color: getDarkerColor(userColor, 0.6) }} />
-              <div className={`w-full min-h-[34px] pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-center gap-2 flex-wrap transition-colors`}
-                style={{ 
-                  borderColor: isFilterEnabled && filterUsernames.length > 0 
-                    ? getDarkerColor(userColor, 0.5) 
-                    : 'rgba(255,255,255,0.1)'
-                }}>
-                {filterUsernames.length === 0 ? (
-                  <span style={{ color: getDarkerColor(userColor, 0.4) }}>Click usernames to filter...</span>
-                ) : (
-                  filterUsernames.map((filter) => (
-                    <span
-                      key={`${filter.username}-${filter.color}`}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md"
-                      style={{ backgroundColor: getDarkerColor(filter.color, 0.1) }}
-                    >
-                      <span className="text-xs" style={{ color: filter.color }}>{filter.username}</span>
-                      <button
-                        onClick={() => removeFromFilter(filter.username, filter.color)}
-                        className="hover:opacity-80"
-                        style={{ color: filter.color }}
-                        tabIndex={-1}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))
-                )}
-              </div>
-            </div>
-            {/* Filter Toggle Switch */}
-            <button
-              onClick={toggleFilter}
-              className={`relative w-9 h-5 rounded-full transition-colors`}
-              style={{ 
-                backgroundColor: isFilterEnabled 
-                  ? getDarkerColor(userColor, 0.35)  // Darker than username
-                  : getDarkerColor(userColor, 0.2)
-              }}
-              title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
-              tabIndex={-1}
-            >
-              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform`}
-                style={{ 
-                  backgroundColor: isFilterEnabled ? userColor : getDarkerColor(userColor, 0.4),  // Darker when off
-                  transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)'
-                }}
-              />
-            </button>
-          </div>
+          <FilterBar 
+            filterUsernames={filterUsernames}
+            filterWords={filterWords}
+            negativeFilterWords={negativeFilterWords}
+            isFilterEnabled={isFilterEnabled}
+            hasActiveFilters={hasActiveFilters}
+            userColor={userColor}
+            onToggleFilter={toggleFilter}
+            onRemoveUsernameFilter={removeFromFilter}
+            onRemoveWordFilter={removeWordFromFilter}
+            onRemoveNegativeFilter={removeNegativeWordFilter}
+            getDarkerColor={getDarkerColor}
+          />
 
           {/* Search Bar - Instant Search */}
           <div className="relative">
@@ -886,7 +741,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     lineHeight: '20px',
                     color: comment.color || '#60A5FA'
                   }}>
-                    {parseCommentText(comment.text)}
+                    {parseCommentTextWithHandlers(comment.text)}
                   </div>
                 </div>
                 
@@ -942,14 +797,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 const newText = e.target.value.substring(0, MAX_COMMENT_LENGTH);
                 setInputText(newText);
                 
-                // Clear pending video if user modifies the text
-                if (pendingVideoKey && newText !== '<-- video') {
+                // Clear pending video if user removes the video text completely
+                if (pendingVideoKey && !newText.includes('<-- video')) {
                   setPendingVideoKey(null);
                 }
               }}
               onClick={(e) => {
                 // If clicking on a video link in the input, play it
-                if (pendingVideoKey && inputText === '<-- video') {
+                if (pendingVideoKey && inputText.includes('<-- video')) {
                   const playEvent = new CustomEvent('playSharedVideo', {
                     detail: { videoKey: pendingVideoKey }
                   });
@@ -962,9 +817,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
                 '--scrollbar-color': getDarkerColor(userColor, 0.6), // Match username color
                 '--scrollbar-bg': getDarkerColor(userColor, 0.1), // Very subtle background
-                color: pendingVideoKey && inputText === '<-- video' ? '#60A5FA' : userColor, // Blue for video link
-                cursor: pendingVideoKey && inputText === '<-- video' ? 'pointer' : 'text',
-                textDecoration: pendingVideoKey && inputText === '<-- video' ? 'underline' : 'none',
+                color: userColor, // Always use user's color
+                cursor: pendingVideoKey && inputText.includes('<-- video') ? 'pointer' : 'text',
+                textDecoration: pendingVideoKey && inputText.includes('<-- video') ? 'underline' : 'none',
                 backgroundColor: getDarkerColor(userColor, 0.05), // Very dark version of user color
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}

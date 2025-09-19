@@ -63,8 +63,10 @@ const VideoPlayer: React.FC = () => {
       // Process video URLs based on source type
       const processedVideos = manifest.videos.map(video => {
         const processedVideo = { ...video };
-        if (videoSource.type === 'local') {
-          processedVideo.url = `${videoSource.videosPath}/${video.key}`;
+        // For local videos, the manifest already contains the full path
+        // For R2, we might need to prepend the base URL if not already included
+        if (videoSource.type === 'r2' && !video.url.startsWith('http')) {
+          processedVideo.url = `${videoSource.baseUrl}${video.url}`;
         }
         return processedVideo;
       });
@@ -452,7 +454,6 @@ const VideoPlayer: React.FC = () => {
                 <Sun 
                   className="w-4 h-4 flex-shrink-0"
                   style={{ color: getDarkerColor(userColor, 0.6) }}
-                  title="Brightness"
                 />
                 <input
                   type="range"
