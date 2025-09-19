@@ -4,8 +4,8 @@
 
 | Parameter | Value | Location | Description |
 |-----------|-------|----------|-------------|
-| **MAX_COMMENT_LENGTH** | 1000 chars | Frontend & Backend | Maximum total characters per comment message |
-| **MAX_USERNAME_LENGTH** | 12 chars | Frontend & Backend | Maximum characters for username |
+| **MAX_COMMENT_LENGTH** | 201 chars | Frontend & Backend | Maximum total characters per comment message |
+| **MAX_USERNAME_LENGTH** | 16 chars | Frontend & Backend | Maximum characters for username |
 | **INITIAL_LOAD_COUNT** | 500 comments | Frontend | Number of comments loaded on initial page load |
 | **LAZY_LOAD_BATCH** | 50 comments | Frontend | Number of additional comments loaded when scrolling |
 | **RECENT_CACHE_SIZE** | 5000 comments | Backend (Worker) | Maximum comments kept in recent cache |
@@ -65,8 +65,8 @@ const limit = Math.min(parseInt(params.get('limit') || '500'), 1000);
 
 | Feature | Reference Project | Our Project | Action Needed |
 |---------|------------------|-------------|---------------|
-| Comment Length | 1000 chars | 1000 chars | ✅ Same |
-| Username Length | 12 chars | 12 chars | ✅ Same |
+| Comment Length | 1000 chars | 201 chars | 📝 Shorter for conciseness |
+| Username Length | 12 chars | 16 chars | 📝 Longer for flexibility |
 | Initial Load | 500 comments | 500 comments | ✅ Same |
 | Lazy Load Batch | 50 comments | 50 comments | ✅ Same |
 | Polling Interval | 5 seconds | 5 seconds | ✅ Same |
@@ -75,8 +75,8 @@ const limit = Math.min(parseInt(params.get('limit') || '500'), 1000);
 
 ## Notes
 
-1. **Comment Text**: Maximum 1000 characters, enforced both client and server side
-2. **Username**: Maximum 12 characters, optional, trimmed and sanitized
+1. **Comment Text**: Maximum 201 characters (reduced from 1000 for more concise communication)
+2. **Username**: Maximum 16 characters (increased from 12 for more flexibility)
 3. **Performance**: Reference project keeps 5000 comments in cache but only displays 500 initially
 4. **Rate Limiting**: 10 comments per minute per IP address
 5. **Polling**: Checks for new comments every 5 seconds

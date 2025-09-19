@@ -105,14 +105,38 @@ textarea::placeholder {
 
 /* Say What Want Title */
 .sww-title {
-  font-size: 1.125rem; /* 18px */
-  font-weight: 300; /* light */
+  font-size: 1.725rem; /* 18px */
+  font-weight: 800; /* light */
   text-transform: uppercase;
-  opacity: 0.5;
-  letter-spacing: 0.05em; /* slight spacing for uppercase */
+  opacity: 0.2;
+  letter-spacing: -0.1em; /* slight spacing for uppercase */
   line-height: 1.75rem;
   color: inherit;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Custom scrollbar for message input */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-color) var(--scrollbar-bg);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px; /* Small width */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--scrollbar-bg);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-color);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  opacity: 0.8;
 }
 
 @layer base {

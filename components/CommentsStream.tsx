@@ -8,7 +8,7 @@ import { Comment, CommentsResponse } from '@/types';
 const INITIAL_LOAD_COUNT = 500;
 const LAZY_LOAD_BATCH = 50;
 const POLLING_INTERVAL = 5000;
-const MAX_COMMENT_LENGTH = 1000;
+const MAX_COMMENT_LENGTH = 201;
 const MAX_USERNAME_LENGTH = 16;
 
 // Predefined color palette for usernames
@@ -633,9 +633,11 @@ const CommentsStream: React.FC = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value.substring(0, MAX_COMMENT_LENGTH))}
               placeholder="Say what you want..."
-              className="w-full h-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm"
+              className="w-full h-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
               style={{
                 '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
+                '--scrollbar-color': getDarkerColor(userColor, 0.6), // Match username color
+                '--scrollbar-bg': getDarkerColor(userColor, 0.1), // Very subtle background
                 color: userColor, // Match message text color
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}

@@ -76,6 +76,7 @@ Comments are stored directly in the browser during development:
 - **Persistence**: Comments persist across page refreshes
 - **Username Required**: Must enter username before posting
 - **Storage Key**: `sww-comments-local`
+- **Comment Length**: Maximum 201 characters per comment
 - **Limit**: Maximum 1000 comments stored locally
 - **Cross-Tab**: Updates sync between tabs automatically
 
