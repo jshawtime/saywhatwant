@@ -87,6 +87,36 @@ const CommentsStream: React.FC = () => {
     };
   }, [showColorPicker]);
 
+  // Keyboard shortcut for random color (r key)
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Check if 'r' is pressed without modifiers and not in an input/textarea
+      if (event.key === 'r' && 
+          !event.ctrlKey && 
+          !event.metaKey && 
+          !event.altKey && 
+          !event.shiftKey) {
+        
+        const target = event.target as HTMLElement;
+        const tagName = target.tagName.toLowerCase();
+        
+        // Don't trigger if typing in input or textarea
+        if (tagName !== 'input' && tagName !== 'textarea') {
+          event.preventDefault();
+          // Pick a random color from the palette
+          const randomColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+          setUserColor(randomColor);
+          localStorage.setItem('sww-color', randomColor);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
   // Parse URLs in comment text
   const parseCommentText = useCallback((text: string): React.ReactNode[] => {
     const urlRegex = /(https?:\/\/[^\s]+)/gi;
@@ -444,17 +474,22 @@ const CommentsStream: React.FC = () => {
         <div className="p-3 space-y-2">
           {/* Title and Username */}
           <div className="flex items-center justify-between gap-4">
-            <h2 className="sww-title">Say What Want</h2>
+            <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
             
             {/* Username Input - Always Visible */}
             <div className="relative flex items-center gap-2" style={{ width: 'calc(16ch * 1.5 + 60px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10 group"
                 style={{ color: userColor }}
                 aria-label="Choose color"
+                title="Click to pick color or press 'R' for random"
               >
                 <User className="w-4 h-4" />
+                {/* Tooltip */}
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                  Click or press 'R' for random color
+                </span>
               </button>
               
               {/* Color Picker Dropdown */}
