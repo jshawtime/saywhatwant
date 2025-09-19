@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Filter, X, Calendar } from 'lucide-react';
 import { UsernameFilter } from '@/hooks/useFilters';
 import { describeDateRange } from '@/utils/dateTimeParser';
@@ -39,6 +39,13 @@ const FilterBar: React.FC<FilterBarProps> = ({
   onClearDateTimeFilter,
   getDarkerColor
 }) => {
+  // Use state to avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
   const hasDateTimeFilter = dateTimeFilter && (
     dateTimeFilter.from !== null || 
     dateTimeFilter.to !== null || 
@@ -62,7 +69,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
             '--scrollbar-bg': getDarkerColor(userColor, 0.05),
           } as React.CSSProperties}
         >
-          {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && !hasDateTimeFilter ? (
+          {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && (!mounted || !hasDateTimeFilter) ? (
             <span style={{ color: getDarkerColor(userColor, 0.4) }}>
               Click usernames or words to filter...
             </span>
@@ -140,8 +147,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 </span>
               ))}
               
-              {/* Date/Time filter */}
-              {hasDateTimeFilter && dateTimeFilter && (
+              {/* Date/Time filter - only render on client to avoid hydration issues */}
+              {mounted && hasDateTimeFilter && dateTimeFilter && (
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
                   style={{ 
