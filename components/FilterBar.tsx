@@ -188,7 +188,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         style={{ 
           backgroundColor: isFilterEnabled 
             ? getDarkerColor(userColor, OPACITY_LEVELS.DARK * 0.875) // 35% opacity
-            : getDarkerColor(userColor, OPACITY_LEVELS.DARKER) // 20% opacity
+            : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST) // 10% opacity - 2 steps darker
         }}
         title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
         tabIndex={-1}

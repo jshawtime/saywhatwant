@@ -927,14 +927,33 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="flex gap-2 items-stretch">
-          <div className="flex-1 relative">
+        <form onSubmit={handleSubmit}>
+          <div className="relative">
             {/* Character counter at top of textarea */}
             <StyledCharCounter 
               current={inputText.length}
               max={MAX_COMMENT_LENGTH}
               userColor={userColor}
             />
+            
+            {/* Send button inside field, under character count */}
+            <button
+              type="submit"
+              disabled={isSubmitting || !inputText.trim()}
+              className={`absolute top-6 right-2 p-1 rounded transition-all z-10 ${
+                isSubmitting || !inputText.trim()
+                  ? 'opacity-30 cursor-not-allowed'
+                  : 'hover:opacity-80 cursor-pointer'
+              }`}
+              style={{ 
+                color: userColor // Message text color
+              }}
+              tabIndex={-1}
+              aria-label="Send message"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+            
             <textarea
               ref={inputRef}
               value={inputText}
@@ -957,7 +976,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 }
               }}
               placeholder="Say what you want..."
-              className="w-full h-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
+              className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
               style={{
                 '--placeholder-color': getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
                 '--scrollbar-color': getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
@@ -985,23 +1004,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               }}
             />
           </div>
-          <button
-            type="submit"
-            disabled={isSubmitting || !inputText.trim()}
-            className={`aspect-square flex items-center justify-center rounded-lg transition-colors self-stretch ${
-              isSubmitting || !inputText.trim()
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:opacity-90'
-            }`}
-            style={{ 
-              minWidth: '56px', // Square based on min-height
-              backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
-              color: userColor // Message text color
-            }}
-            tabIndex={-1}
-          >
-            <Send className="w-7 h-7" /> {/* Oversized icon */}
-          </button>
         </form>
       </div>
     </div>

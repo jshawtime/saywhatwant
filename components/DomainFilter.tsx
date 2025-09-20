@@ -24,7 +24,7 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
     <button
       onClick={onClick}
       className="relative p-1 transition-all"
-      title="Show messages from this site only"
+      title={isEnabled ? "Show messages across all domains" : "Show messages from this domain only"}
     >
       {/* LED Indicator Only */}
       <div className="relative">
