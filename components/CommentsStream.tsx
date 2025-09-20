@@ -6,11 +6,12 @@ import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import FilterBar from '@/components/FilterBar';
 import { parseCommentText, getDarkerColor } from '@/utils/textParsing';
+import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
 
-// Configuration
-const INITIAL_LOAD_COUNT = 500;
-const LAZY_LOAD_BATCH = 50;
-const POLLING_INTERVAL = 5000;
+// Configuration - Now using config file
+const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount;
+const LAZY_LOAD_BATCH = COMMENTS_CONFIG.lazyLoadBatch;
+const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const MAX_USERNAME_LENGTH = 16;
 
@@ -263,9 +264,45 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, []);
 
-  // Fetch comments (simulates API call using localStorage)
+  // Fetch comments from cloud API
+  const fetchCommentsFromCloud = useCallback(async (offset = 0, limit = INITIAL_LOAD_COUNT) => {
+    try {
+      const url = new URL(COMMENTS_CONFIG.apiUrl);
+      url.searchParams.append('offset', offset.toString());
+      url.searchParams.append('limit', limit.toString());
+      
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: CommentsResponse = await response.json();
+      
+      if (COMMENTS_CONFIG.debugMode) {
+        console.log('[Cloud API] Fetched comments:', {
+          count: data.comments?.length || 0,
+          total: data.total,
+          hasMore: data.hasMore
+        });
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('[Cloud API] Error fetching comments:', err);
+      throw err;
+    }
+  }, []);
+
+  // Fetch comments (supports both localStorage and cloud API)
   const fetchComments = useCallback(async (offset = 0, limit = INITIAL_LOAD_COUNT) => {
     try {
+      if (!COMMENTS_CONFIG.useLocalStorage) {
+        // Use cloud API
+        return await fetchCommentsFromCloud(offset, limit);
+      }
+      
+      // Use localStorage (existing implementation)
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 100));
       
@@ -290,7 +327,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.error('[Comments] Error fetching comments:', err);
       throw err;
     }
-  }, [loadCommentsFromStorage]);
+  }, [loadCommentsFromStorage, fetchCommentsFromCloud]);
 
   // Initial load
   useEffect(() => {
@@ -319,25 +356,47 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     loadInitialComments();
   }, [fetchComments]);
 
-  // Polling for new comments (checks localStorage for updates)
+  // Polling for new comments (supports both localStorage and cloud API)
   useEffect(() => {
     const checkForNewComments = async () => {
       try {
-        const storedComments = loadCommentsFromStorage();
+        let newComments: Comment[] = [];
         
-        // Find truly new comments
-        const latestTimestamp = allComments.length > 0 
-          ? Math.max(...allComments.map(c => c.timestamp))
-          : 0;
+        if (!COMMENTS_CONFIG.useLocalStorage) {
+          // Poll cloud API for new comments
+          const data = await fetchComments(0, INITIAL_LOAD_COUNT);
           
-        const newComments = storedComments.filter(c => c.timestamp > latestTimestamp);
+          // Find truly new comments
+          const latestTimestamp = allComments.length > 0 
+            ? Math.max(...allComments.map(c => c.timestamp))
+            : 0;
+            
+          newComments = data.comments.filter(c => c.timestamp > latestTimestamp);
+          
+          if (newComments.length > 0) {
+            console.log(`[Cloud API] Found ${newComments.length} new comments`);
+            // Update all comments
+            setAllComments(data.comments);
+          }
+        } else {
+          // Use localStorage polling (existing implementation)
+          const storedComments = loadCommentsFromStorage();
+          
+          // Find truly new comments
+          const latestTimestamp = allComments.length > 0 
+            ? Math.max(...allComments.map(c => c.timestamp))
+            : 0;
+            
+          newComments = storedComments.filter(c => c.timestamp > latestTimestamp);
+          
+          if (newComments.length > 0) {
+            console.log(`[LocalStorage] Found ${newComments.length} new comments`);
+            // Update all comments
+            setAllComments(storedComments);
+          }
+        }
         
         if (newComments.length > 0) {
-          console.log(`[Comments] Found ${newComments.length} new comments`);
-          
-          // Update all comments
-          setAllComments(storedComments);
-          
           // Check if user is near bottom
           const isNearBottom = streamRef.current 
             ? streamRef.current.scrollHeight - (streamRef.current.scrollTop + streamRef.current.clientHeight) < 100
@@ -366,24 +425,37 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Start polling after initial load
     if (!isLoading) {
-      // Also listen for storage events (updates from other tabs)
-      const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === COMMENTS_STORAGE_KEY) {
-          checkForNewComments();
-        }
-      };
-      
-      window.addEventListener('storage', handleStorageChange);
-      pollingIntervalRef.current = setInterval(checkForNewComments, POLLING_INTERVAL);
-      
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-        }
-      };
+      // Only listen for storage events when using localStorage
+      if (COMMENTS_CONFIG.useLocalStorage) {
+        const handleStorageChange = (e: StorageEvent) => {
+          if (e.key === COMMENTS_STORAGE_KEY) {
+            console.log('[LocalStorage] Storage changed from another tab');
+            checkForNewComments();
+          }
+        };
+        
+        window.addEventListener('storage', handleStorageChange);
+        
+        pollingIntervalRef.current = setInterval(checkForNewComments, POLLING_INTERVAL);
+        
+        return () => {
+          window.removeEventListener('storage', handleStorageChange);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+          }
+        };
+      } else {
+        // For cloud API, just poll at regular intervals
+        pollingIntervalRef.current = setInterval(checkForNewComments, POLLING_INTERVAL);
+        
+        return () => {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+          }
+        };
+      }
     }
-  }, [isLoading, allComments, loadCommentsFromStorage]);
+  }, [isLoading, allComments, loadCommentsFromStorage, fetchComments]);
 
   // Handle comment submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -403,10 +475,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setError(null);
     
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Create new comment
+      // Create comment text
       let commentText = inputText.trim();
       
       // If there's a pending video, replace '<-- video' with the full video link
@@ -422,16 +491,52 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         color: userColor,
       };
       
-      // Load existing comments
-      const existingComments = loadCommentsFromStorage();
-      
-      // Add new comment and save
-      const updatedComments = [...existingComments, newComment];
-      saveCommentsToStorage(updatedComments);
-      
-      // Add to local state immediately
-      setAllComments(prev => [...prev, newComment]);
-      setDisplayedComments(prev => [...prev, newComment]);
+      if (!COMMENTS_CONFIG.useLocalStorage) {
+        // Submit to cloud API
+        const response = await fetch(COMMENTS_CONFIG.apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: newComment.text,
+            username: newComment.username,
+            color: newComment.color,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const savedComment = await response.json();
+        
+        if (COMMENTS_CONFIG.debugMode) {
+          console.log('[Cloud API] Posted comment:', savedComment);
+        }
+        
+        // Add to local state immediately
+        setAllComments(prev => [...prev, savedComment]);
+        setDisplayedComments(prev => [...prev, savedComment]);
+        
+      } else {
+        // Use localStorage (existing implementation)
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Load existing comments
+        const existingComments = loadCommentsFromStorage();
+        
+        // Add new comment and save
+        const updatedComments = [...existingComments, newComment];
+        saveCommentsToStorage(updatedComments);
+        
+        // Add to local state immediately
+        setAllComments(prev => [...prev, newComment]);
+        setDisplayedComments(prev => [...prev, newComment]);
+        
+        console.log('[LocalStorage] Posted comment:', newComment.id);
+      }
       
       // Clear input and pending video
       setInputText('');
@@ -448,8 +553,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           streamRef.current.scrollTop = streamRef.current.scrollHeight;
         }
       }, 50);
-      
-      console.log('[Comments] Posted comment:', newComment.id);
       
     } catch (err) {
       console.error('[Comments] Error posting comment:', err);

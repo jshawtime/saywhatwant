@@ -40,6 +40,7 @@ next-env.d.ts
 # wrangler
 .wrangler/
 .dev.vars
+workers/node_modules/
 
 # video files (if adding locally)
 public/sww-videos/*.mp4
