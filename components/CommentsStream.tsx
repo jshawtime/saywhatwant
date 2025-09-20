@@ -829,7 +829,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           </div>
         ) : filteredComments.length === 0 ? (
           <div className="text-center text-white/40 py-8">
-            <p>{searchTerm ? 'No matching comments' : 'No comments yet. Be the first!'}</p>
+            <p>{searchTerm ? 'No matching comments' : "Apparently there's nothing to see here. Try changing filters, search term or check what link got you here. Maybe someone fucked something up. 99.9% chance it's not a server issue."}</p>
           </div>
         ) : (
           filteredComments.map((comment) => (
@@ -840,11 +840,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
                 <button 
-                  onClick={() => comment.username && addToFilter(comment.username, comment.color || '#60A5FA')}
+                  onClick={() => comment.username && addToFilter(comment.username, comment.color || userColor)}
                   className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer" 
                   style={{ 
                     lineHeight: '20px',
-                    color: getDarkerColor(comment.color || '#60A5FA', OPACITY_LEVELS.LIGHT) // 60% opacity username
+                    color: getDarkerColor(comment.color || userColor, OPACITY_LEVELS.LIGHT) // 60% opacity username
                   }}
                   tabIndex={-1}
                 >
@@ -855,7 +855,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 <div className="flex-1 pr-12">
                   <div className="text-sm leading-snug break-words" style={{ 
                     lineHeight: '20px',
-                    color: comment.color || '#60A5FA'
+                    color: comment.color || userColor
                   }}>
                     {parseCommentTextWithHandlers(comment.text)}
                   </div>
@@ -865,9 +865,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 <span 
                   className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
                   style={{ 
-                    color: getDarkerColor(comment.color || '#60A5FA', 0.7), // 70% opacity text (custom for readability)
-                    borderColor: getDarkerColor(comment.color || '#60A5FA', OPACITY_LEVELS.DARK), // 40% opacity border
-                    backgroundColor: getDarkerColor(comment.color || '#60A5FA', OPACITY_LEVELS.DARKEST) // 10% opacity background
+                    color: getDarkerColor(comment.color || userColor, 0.7), // 70% opacity text (custom for readability)
+                    borderColor: getDarkerColor(comment.color || userColor, OPACITY_LEVELS.DARK), // 40% opacity border
+                    backgroundColor: getDarkerColor(comment.color || userColor, OPACITY_LEVELS.DARKEST) // 10% opacity background
                   }}
                 >
                   {mounted ? formatTimestamp(comment.timestamp) : '...'}
