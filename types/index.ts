@@ -6,6 +6,8 @@ export interface Comment {
   username?: string;
   domain?: string; // Domain where comment was posted
   color?: string; // User's chosen color
+  language?: string; // Language of the comment (default: "en")
+  misc?: string; // Miscellaneous data field for future use
   // userAgent removed - not needed
 }
 

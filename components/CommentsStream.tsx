@@ -513,6 +513,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         timestamp: Date.now(),
         username: username || undefined,
         color: userColor,
+        language: 'en', // Default to English for now
+        misc: '', // Empty for now, can be used for future features
       };
       
       if (!COMMENTS_CONFIG.useLocalStorage) {
@@ -527,6 +529,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             username: newComment.username,
             color: newComment.color,
             domain: currentDomain,
+            language: newComment.language,
+            misc: newComment.misc,
           }),
         });
         

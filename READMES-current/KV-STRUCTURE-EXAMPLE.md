@@ -13,7 +13,9 @@
   "timestamp": 1726800123456,
   "username": "god",
   "color": "rgb(185, 142, 40)",
-  "domain": "saywhatwant.app"
+  "domain": "saywhatwant.app",
+  "language": "en",
+  "misc": ""
 }
 ```
 
@@ -27,6 +29,8 @@
 | `username` | string | User's display name (max 16 chars) | `"god"` |
 | `color` | string | User's chosen RGB color | `"rgb(185, 142, 40)"` |
 | `domain` | string | Origin domain | `"saywhatwant.app"` |
+| `language` | string | Language code (ISO 639-1) | `"en"` |
+| `misc` | string | Miscellaneous data field | `""` |
 
 ## Cache Entry
 
@@ -41,7 +45,9 @@
     "timestamp": 1726800000000,
     "username": "user1",
     "color": "rgb(96, 165, 250)",
-    "domain": "localhost:3000"
+    "domain": "localhost:3000",
+    "language": "en",
+    "misc": ""
   },
   {
     "id": "1726800123456-def456",
@@ -49,7 +55,9 @@
     "timestamp": 1726800123456,
     "username": "god",
     "color": "rgb(185, 142, 40)",
-    "domain": "saywhatwant.app"
+    "domain": "saywhatwant.app",
+    "language": "en",
+    "misc": "test-data"
   },
   {
     "id": "1726800234567-ghi789",
@@ -57,17 +65,20 @@
     "timestamp": 1726800234567,
     "username": "anonymous",
     "color": "rgb(200, 100, 150)",
-    "domain": "shittosay.app"
+    "domain": "shittosay.app",
+    "language": "en",
+    "misc": ""
   }
 ]
 ```
 
 ## Rate Limit Entry
 
-**Key Format**: `rate:limit:{ip-address}`  
-**Example Key**: `rate:limit:192.168.1.1`  
-**Value**: `"1"`  
-**TTL**: 60 seconds
+**Key Format**: `rate:{ip-address}`  
+**Example Key**: `rate:192.168.1.1`  
+**Value**: `"1"` to `"10"` (increments with each post)  
+**TTL**: 60 seconds  
+**Limit**: 10 messages per minute per IP
 
 ## Storage Statistics
 
@@ -75,8 +86,10 @@
 - **Max Username Length**: 16 characters
 - **Cache Size**: Last 1000 comments
 - **KV List Limit**: 1000 keys per request
-- **Rate Limit**: 1 post per minute per IP
+- **Rate Limit**: 10 posts per minute per IP
 - **Key Prefix Pattern**: `comment:` for all comments
+- **Default Language**: `en` (English)
+- **Misc Field**: Open for future use
 
 ## Color Format Evolution
 
@@ -134,3 +147,6 @@ Any word in the message can be clicked to filter by it:
 - **Sanitization**: Text and username are sanitized before storage
 - **Sorting**: Comments always sorted by timestamp (oldest to newest)
 - **Backwards Compatibility**: System handles both old hex colors and new RGB format
+- **Language Field**: Currently defaults to 'en', ready for i18n support
+- **Misc Field**: Flexible string field for future features or metadata
+- **Rate Limit**: 10 messages per minute per IP (increased from 1)

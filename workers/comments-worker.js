@@ -170,6 +170,8 @@ async function handlePostComment(request, env) {
     const username = sanitizeUsername(body.username);
     const color = body.color || '#60A5FA'; // Default to blue if not provided
     const domain = body.domain || request.headers.get('Origin')?.replace(/^https?:\/\//, '') || 'unknown';
+    const language = body.language || 'en'; // Default to English
+    const misc = body.misc || ''; // Optional misc field
 
     // Validate input
     if (!text) {
@@ -191,7 +193,9 @@ async function handlePostComment(request, env) {
       timestamp: Date.now(),
       username: username,
       color: color,  // Include the color field
-      domain: domain  // Store the domain
+      domain: domain,  // Store the domain
+      language: language, // Store the language
+      misc: misc  // Store misc data
       // Removed userAgent - not needed
     };
 
