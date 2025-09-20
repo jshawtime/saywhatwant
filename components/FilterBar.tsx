@@ -195,7 +195,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
             <div
               className="absolute inset-0 rounded-full blur-sm animate-pulse"
               style={{
-                backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
+                backgroundColor: userColor, // Use full color for glow
                 width: '12px',
                 height: '12px',
               }}
@@ -207,10 +207,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
             className="relative w-3 h-3 rounded-full transition-all cursor-pointer"
             style={{
               backgroundColor: isFilterEnabled 
-                ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity when active
-                : 'rgba(255,255,255,0.2)', // Same as domain filter when off
+                ? userColor // Use FULL color when active (100% opacity)
+                : getDarkerColor(userColor, OPACITY_LEVELS.DARKER), // 30% when off
               boxShadow: isFilterEnabled 
-                ? `0 0 10px ${getDarkerColor(userColor, OPACITY_LEVELS.LIGHT)}` 
+                ? `0 0 10px ${userColor}` 
                 : 'none',
             }}
           />
