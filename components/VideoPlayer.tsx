@@ -65,8 +65,19 @@ const VideoPlayer: React.FC = () => {
         const processedVideo = { ...video };
         // For local videos, the manifest already contains the full path
         // For R2, we might need to prepend the base URL if not already included
-        if (videoSource.type === 'r2' && !video.url.startsWith('http')) {
-          processedVideo.url = `${videoSource.baseUrl}${video.url}`;
+        if (videoSource.type === 'r2') {
+          if (video.url.startsWith('http')) {
+            // Already a full URL, use as-is
+            processedVideo.url = video.url;
+          } else {
+            // Remove /sww-videos/ prefix if present (cached manifest issue)
+            let cleanPath = video.url;
+            if (cleanPath.startsWith('/sww-videos/')) {
+              cleanPath = cleanPath.replace('/sww-videos/', '/');
+            }
+            // Prepend R2 base URL
+            processedVideo.url = `${videoSource.baseUrl}${cleanPath}`;
+          }
         }
         return processedVideo;
       });
