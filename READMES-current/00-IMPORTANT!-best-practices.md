@@ -1,6 +1,8 @@
 # SoundTrip Best Practices
 *Engineering Philosophy, Technical Standards, and Development Guidelines*
 
+**NOTE TO READERS: This document and all README files in this project are written exclusively for AI agents. No humans read these READMEs - only AI agents working on the codebase.**
+
 ## Understanding the Vision - Core Questions & Answers
 
 ### 1. **Audience & Purpose**

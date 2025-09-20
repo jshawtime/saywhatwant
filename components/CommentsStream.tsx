@@ -764,7 +764,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 maxLength={MAX_USERNAME_LENGTH}
                 style={{ 
                   width: '100%',
-                  color: getDarkerColor(userColor, 0.6) // Match darker username in comments
+                  color: userColor
                 }}
               />
               {username && (
@@ -775,7 +775,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   }}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
                   aria-label="Clear username"
-                  style={{ color: getDarkerColor(userColor, 0.6) }}
+                  style={{ color: userColor }}
                   tabIndex={-1}
                 >
                   <X className="w-3 h-3" />
@@ -823,7 +823,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           {/* Search Bar - Instant Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none" 
-              style={{ color: getDarkerColor(userColor, 0.6) }} />
+              style={{ color: userColor }} />
             <input
               type="text"
               value={searchTerm}
@@ -832,7 +832,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               className="w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none placeholder-current"
               style={{ 
                 borderColor: searchTerm ? getDarkerColor(userColor, 0.5) : 'rgba(255,255,255,0.1)',
-                color: searchTerm ? userColor : getDarkerColor(userColor, 0.4),
+                color: userColor,
               }}
               tabIndex={-1}
             />
@@ -841,7 +841,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 onClick={() => setSearchTerm('')}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-colors"
                 aria-label="Clear search"
-                style={{ color: getDarkerColor(userColor, 0.6) }}
+                style={{ color: userColor }}
                 tabIndex={-1}
               >
                 <X className="w-3 h-3" />
@@ -944,7 +944,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             {/* Character counter at top of textarea */}
             <div 
               className="absolute top-2 right-2 text-[10px] pointer-events-none z-10"
-              style={{ color: getDarkerColor(userColor, 0.6) }}
+              style={{ color: userColor }}
             >
               {inputText.length}/{MAX_COMMENT_LENGTH}
             </div>

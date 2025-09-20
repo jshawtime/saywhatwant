@@ -1,280 +1,198 @@
-# Say What Want (SWW) - Version 0.1
+# Say What Want (SWW) v0.1 - AI Agent Reference
 
-## 📌 Version Information
-- **Version**: 0.1
+**NOTE: This README is for AI agents only. No humans read these files.**
+
+## 🤖 Quick Context
+- **Version**: 0.1.4
+- **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
-- **Branch**: SWW-v0.1
-- **Status**: Development Release
+- **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
 
-## 🎯 What's Working in v0.1
+## 🏗️ Architecture Overview
 
-### Core Features
-✅ **Video Player System**
-- Auto-playing video content with seamless transitions
-- Loop/Random playback modes
-- Video sharing in comments via `[video:key]` links
-- R2 bucket integration for cloud video storage
-- Local video fallback support
-
-✅ **Comments System with Dual Storage Modes**
-- **NEW**: Toggle between localStorage and Cloud API
-- Real-time comment streaming
-- Anonymous posting with customizable usernames (16 char max)
-- Color personalization for each user
-- Cross-tab synchronization (localStorage mode)
-- Multi-user support (Cloud API mode)
-
-✅ **Advanced Filtering System**
-- Interactive click-based filtering (left-click include, right-click exclude)
-- URL-based shareable filters
-- Username filtering
-- Word include/exclude filters
-- Date/time range filtering
-- Search bar integration
-- Persistent filter states
-
-✅ **Cloud Worker Integration**
-- Cloudflare Worker running locally at `http://localhost:8787`
-- KV storage for comments persistence
-- REST API endpoints (GET/POST)
-- Rate limiting ready (10 comments/min per IP)
-- 5000-comment cache for performance
-
-### Configuration System
-✅ **New Toggle Configuration** (`config/comments-source.ts`)
+### Storage System
 ```javascript
-export const COMMENTS_CONFIG = {
-  useLocalStorage: false,  // false = Cloud API, true = localStorage
-  apiUrl: 'http://localhost:8787/api/comments',
-  pollingInterval: 5000,
-  debugMode: true,
-};
+// config/comments-source.ts
+useLocalStorage: false  // Cloud KV is source of truth
 ```
+- **KV Structure**: `{id, text, timestamp, username, color, domain}`
+- **No userAgent** - removed for pre-v1 development
+- **Cache**: 5000 comments in-memory
 
-## 📁 Project Structure
-
+### Color System (RGB-Based)
+```javascript
+// 77,106 unique colors via sophisticated algorithm
+MAIN: 150-220 (71 values)
+SECONDARY: 40-220 (181 values)  
+THIRD: 40 (fixed)
+// 6 permutations = 71 × 181 × 6 = 77,106 unique colors
 ```
-saywhatwant/
-├── app/                    # Next.js app directory
-├── components/            
-│   ├── CommentsStream.tsx  # Main comments (NOW SUPPORTS CLOUD/LOCAL)
-│   ├── FilterBar.tsx       # Filter UI component
-│   ├── ColorPicker.tsx     # NEW: Color selection component
-│   └── VideoPlayer.tsx     # Video player
-├── modules/                # NEW: Business logic modules
-│   ├── colorSystem.ts      # Color management utilities
-│   └── filterSystem.ts     # Centralized filter logic
-├── config/
-│   ├── comments-source.ts  # Toggle cloud/local storage
-│   └── video-source.ts     # Toggle R2/local videos
-├── hooks/                  # Custom React hooks
-│   ├── useFilters.ts       # Original filter hook
-│   └── useFilterSystem.ts  # NEW: Refactored filter hook
-├── workers/               
-│   └── comments-worker.js  # Cloudflare Worker (RUNNING)
-├── READMES-current/       # Current documentation
-└── READMES-old/          # Archived docs
+- **Purpose**: Hidden user differentiation (same username, different color = different user)
+- **Storage**: RGB format `rgb(185, 142, 40)` not hex
+
+### UI Color Hierarchy
+```javascript
+userColor // 100% - All UI elements now inherit directly
+getDarkerColor(userColor, 0.5) // 50% - Borders, inactive states
+// No other opacity values used
 ```
+**ALL these elements use userColor at 100%:**
+- Message text
+- Username input field
+- Filter icon
+- Search icon  
+- Search placeholder
+- Clear buttons (X)
+- Character counter
+- Active domain LED
 
-## 🚀 Quick Start
+### Multi-Domain System
+```javascript
+// config/domain-config.ts
+DOMAIN_CONFIGS = {
+  'saywhatwant.app': { title: 'Say What Want' },
+  'shittosay.app': { title: 'Shit To Say' },
+  // Add domains here
+}
+```
+- **Domain captured** in every message
+- **LED filter**: Show only current domain messages
+- **State saved** in localStorage
 
-### 1. Development Server
+### Filter System (Refactored)
+```javascript
+// modules/filterSystem.ts
+applyWordFilters() // AND logic for includes (all words required)
+applyUsernameFilters()
+applyNegativeFilters()  
+applyDateTimeFilter()
+```
+- **Left-click**: Add word to include filter
+- **Right-click**: Add word to exclude filter
+- **URL state**: Shareable filter links
+
+## 🚀 Running The Project
+
+### Frontend
 ```bash
 cd saywhatwant
-npm run dev:clean  # Kills existing servers and starts fresh
+npm install
+npm run dev  # Runs on localhost:3000
 ```
-Visit: http://localhost:3000
 
-### 2. Cloudflare Worker (for Cloud Comments)
+### Cloudflare Worker
 ```bash
-# In a separate terminal
-cd workers
+cd saywhatwant/workers
 npx wrangler dev --local --port 8787 comments-worker.js
 ```
-Worker API: http://localhost:8787/api/comments
 
-## 🔄 Storage Modes
-
-### Cloud API Mode (Current Setting)
-- Comments stored in Cloudflare KV
-- Multi-user real-time updates
-- Polling every 5 seconds
-- Persistent across all users
-- Console shows: `[Cloud API]` logs
-
-### localStorage Mode
-- Comments stored in browser
-- Single browser only
-- Instant cross-tab sync
-- Max 1000 comments
-- Console shows: `[LocalStorage]` logs
-
-### How to Switch
-Edit `config/comments-source.ts`:
-```javascript
-useLocalStorage: true   // for localStorage
-useLocalStorage: false  // for Cloud API
-```
-
-## 📊 Current Status
-
-| Component | Status | Mode |
-|-----------|--------|------|
-| Frontend | ✅ Running | Next.js Dev Server |
-| Comments Storage | ✅ Active | Cloud API |
-| Worker | ✅ Running | Local Wrangler |
-| Video Source | ✅ Working | Local/R2 |
-| Filtering | ✅ Functional | All modes |
-
-## 🧪 Testing Cloud Comments
-
-1. **Verify Worker is Running**: Check terminal for `[wrangler:info] Ready on http://localhost:8787`
-2. **Open Multiple Browsers**: Test multi-user functionality
-3. **Check Console**: Look for `[Cloud API]` messages
-4. **Post Comments**: Should appear in all browsers within 5 seconds
-
-## 📝 Environment Variables
-
-### Current `.env.local`
+### Environment Setup
 ```bash
-# Comments API (for cloud mode)
+# .env.local
 NEXT_PUBLIC_COMMENTS_API=http://localhost:8787/api/comments
-
-# R2 Bucket Configuration
-NEXT_PUBLIC_R2_BUCKET_URL=https://pub-56b43531787b4783b546dd45f31651a7.r2.dev
-R2_ACCOUNT_ID=85eadfbdf07c02e77aa5dc3b46beb0f9
-R2_BUCKET_NAME=sww-videos
 ```
 
-## 💾 **Storage Architecture - How Messages Flow**
+## 📁 Key Files
 
-### **The Complete Message Journey**
+### Core Components
+- `components/CommentsStream.tsx` - Main comment UI
+- `components/FilterBar.tsx` - Filter management
+- `components/DomainFilter.tsx` - LED domain toggle
+- `components/ColorPicker.tsx` - Color selection UI
 
-#### **When You Send a Message**
+### Modules (Logic)
+- `modules/colorSystem.ts` - RGB generation, brightness adjustment
+- `modules/filterSystem.ts` - Filter algorithms
+- `hooks/useFilterSystem.ts` - React integration
+
+### Configuration
+- `config/comments-source.ts` - Storage toggle
+- `config/domain-config.ts` - Multi-domain setup
+- `workers/comments-worker.js` - KV backend
+
+## 🐛 Known Issues & Solutions
+
+### Common Problems
+1. **Worker not running**: Check port 8787
+2. **Colors not saving**: RGB format required, not hex
+3. **Filters not working**: AND logic for includes (all words required)
+4. **Domain LED**: No white dot, just colored circle
+
+### Debug Commands
+```javascript
+// Check KV contents (in worker console)
+await env.COMMENTS_KV.list()
+
+// Clear localStorage
+localStorage.clear()
+
+// Toggle storage mode
+// Edit config/comments-source.ts -> useLocalStorage
 ```
-YOUR BROWSER → CLOUDFLARE WORKER → CLOUDFLARE KV (Permanent Storage)
-     │              (Edge Server)         (Global Database)
-     │                    │                      │
-[1] Type & Send          │                      │
-[2] POST /api/comments ──►│                      │
-[3]                      Generate ID             │
-[4]                      Store in KV ────────────►
-[5]                      Update Cache            │
-[6] ◄──── 200 OK Response│                      │
-[7] Display in UI        │                      │
+
+## 📊 Data Flow
+
+```
+User Input → CommentsStream.tsx
+    ↓
+useLocalStorage check
+    ↓
+false: POST to Worker → KV Storage
+true: Save to localStorage
+    ↓
+Polling (5s) → Update UI
 ```
 
-#### **When New Users Load Messages**
+## 🎨 Color System Details
+
+### Why RGB Over Hex?
+- 77,106 unique combinations
+- Subtle differentiation (users can't see difference)
+- System can track unique users
+- No backwards compatibility needed (pre-v1)
+
+### Color Assignment
+```javascript
+getRandomColor() // Generates from algorithm
+saveUserColor() // Stores in localStorage  
+// Each user gets persistent unique color
 ```
-NEW USER → CLOUDFLARE WORKER → CLOUDFLARE KV
-    │         (Edge Server)      (Database)
-    │              │                 │
-[1] Page Load      │                 │
-[2] GET /api/comments───►│            │
-[3]                Check Cache First  │
-[4]                If miss, fetch from KV──►
-[5]                ◄─── Return all messages
-[6] ◄──── JSON Response               │
-[7] Display Messages                  │
-```
 
-### **Storage Technical Details**
+## 🔧 Recent Updates (v0.1.4)
 
-| Aspect | Implementation |
-|--------|---------------|
-| **Storage Solution** | Cloudflare KV (Key-Value Store) |
-| **Persistence** | Permanent until manually deleted |
-| **Global Reach** | Replicated to 300+ edge locations |
-| **Key Format** | `comment:timestamp:uniqueid` |
-| **Value Format** | JSON with text, username, color, timestamp |
-| **Cache Layer** | 5000 messages in memory (5 min TTL) |
-| **Consistency** | Eventually consistent (~60 seconds globally) |
+### UI Simplification
+- **All UI elements** now use `userColor` at 100%
+- **No more opacity variations** except borders (50%)
+- **Domain LED** simplified (no white highlight)
+- **Character counter** uses full color
 
-### **Performance Metrics**
-- **Write Speed**: 8-10ms per message
-- **Read Speed (Cached)**: 2-5ms  
-- **Read Speed (Uncached)**: 50-200ms
-- **Polling Interval**: 5 seconds
-- **Max Cache Size**: 5000 messages
+### Documentation
+- **READMEs are AI-only** - noted in best practices
+- **Concise format** - just what AI agents need
+- **No human-readable fluff**
 
-### **Scalability Roadmap**
+## 💡 For Next AI Agent
 
-| Messages/Day | Current Performance | Next Step |
-|--------------|-------------------|-----------|
-| 0-100K | ✅ Excellent (< 100ms) | Current setup works |
-| 100K-500K | ⚠️ Slower list ops | Add pagination |
-| 500K+ | ❌ Need upgrade | Move to D1 Database |
+### Critical Understanding
+1. **Color = Identity**: Same username + different color = different person
+2. **KV is truth**: Cloud storage primary, localStorage secondary
+3. **Domain matters**: Messages tagged with origin domain
+4. **Filters are AND**: Include filters require ALL words
 
-## 🐛 Known Issues in v0.1
-
-1. **Worker Must Be Started Manually**: Need to run wrangler separately
-2. **No Production Deployment**: Currently local development only
-3. **Limited Error Handling**: Cloud API errors need better UX
-4. **No User Authentication**: All posts are anonymous
-5. **No Pagination**: All messages load at once (will slow at scale)
-
-## 📚 Documentation Structure
-
-### Consolidated Docs (READMES-current/)
-1. `00-IMPORTANT!-best-practices.md` - Sacred best practices doc
-2. `01-PROJECT-OVERVIEW.md` - Project overview and quick start
-3. `02-DEPLOYMENT-GUIDE.md` - All deployment documentation
-4. `03-FEATURES-DOCUMENTATION.md` - Feature details
-5. `04-TECHNICAL-ARCHITECTURE.md` - Technical implementation
-6. `05-FILTER-SYSTEM-REFERENCE.md` - Complete filter system docs
-7. `SWW-readme-v0.1.md` - This version documentation
-
-## 🔮 Next Steps for v0.2
-
-- [ ] Auto-start worker with dev server
-- [ ] Production deployment to Cloudflare
-- [ ] User authentication/profiles
-- [ ] Message persistence beyond 1000 items
-- [ ] Enhanced error handling
-- [ ] WebSocket support for instant updates
-- [ ] Mobile responsive improvements
-
-## 🛠️ Development Commands
-
+### Quick Checks
 ```bash
-# Development
-npm run dev              # Standard dev server
-npm run dev:clean        # Clean start (recommended)
-
-# Worker Commands
-cd workers
-wrangler dev            # Start worker
-wrangler deploy         # Deploy to Cloudflare
-
-# Utilities
-npm run manifest:local   # Generate local video manifest
-npm run manifest:generate # Generate R2 manifest
+git status  # Should be on SWW-v0.1
+npm run dev  # Frontend on :3000
+npx wrangler dev  # Worker on :8787
 ```
 
-## 💡 Tips
-
-1. **Always use `dev:clean`** to avoid port conflicts
-2. **Check console logs** with debugMode enabled
-3. **Worker must be running** for cloud comments to work
-4. **Use Chrome DevTools** to inspect localStorage
-5. **Test with incognito** for multi-user simulation
-
-## 📄 Version History
-
-### v0.1.1 - September 20, 2025 (Latest)
-- ✨ **Filter System Refactored**: Centralized filter logic into dedicated module
-- ✨ **Color System Refactored**: Modularized color management and picker component
-- 📚 Added comprehensive storage architecture documentation
-- 🔧 Improved code organization and maintainability
-
-### v0.1 - September 20, 2025
-- Initial working version
-- Dual storage mode implementation
-- Cloud Worker integration
-- Complete filtering system
-- Documentation consolidation
+### Architecture Philosophy
+- **Simple > Complex**
+- **Logic > Rules**
+- **User experience > Technical elegance**
+- **Scale to 10M+ users**
 
 ---
 
-**Branch**: `SWW-v0.1`  
-**Commit**: Version 0.1 - Cloud/Local storage toggle implementation
+**Last AI Update**: Claude (Anthropic)
+**Next Agent**: Think deeply, code carefully. The humans trust us when we deliver solid code.
