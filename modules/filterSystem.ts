@@ -156,8 +156,8 @@ function applyWordFilters(
     
     switch (mode) {
       case 'include':
-        // Include only comments containing at least one word
-        return words.some(word => commentLower.includes(word.toLowerCase()));
+        // Include only comments containing ALL words (AND logic)
+        return words.every(word => commentLower.includes(word.toLowerCase()));
       
       case 'exclude':
       case 'remove':

@@ -245,8 +245,8 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     if (isFilterEnabled && mergedFilterWords.length > 0) {
       filtered = filtered.filter(comment => {
         const commentLower = comment.text.toLowerCase();
-        // Check if any filter word is in the comment
-        return mergedFilterWords.some(word => commentLower.includes(word.toLowerCase()));
+        // Check if ALL filter words are in the comment (AND logic)
+        return mergedFilterWords.every(word => commentLower.includes(word.toLowerCase()));
       });
     }
     

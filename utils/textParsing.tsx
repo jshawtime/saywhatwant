@@ -73,7 +73,7 @@ export const parseCommentText = (
                       e.preventDefault();
                       onWordRightClick(word);
                     } : undefined}
-                    className="hover:underline hover:cursor-pointer"
+                    className="hover:underline cursor-pointer"
                     style={{ color: 'inherit' }}
                     title={`Click to filter by: ${word} | Right-click to exclude`}
                   >
