@@ -1,9 +1,9 @@
 name = "sww-comments"
-account_id = "99ffb024723930ef9a74ee7bbd09c82c"
+account_id = "85eadfbdf07c02e77aa5dc3b46beb0f9"
 main = "comments-worker.js"
 compatibility_date = "2024-01-01"
 
 # KV Namespace binding
 [[kv_namespaces]]
 binding = "COMMENTS_KV"
-id = "4de0b8ce5f47423b9711d41987b71533"
+id = "ddf6162d4c874d52bb6e41d1c3889a0f"
