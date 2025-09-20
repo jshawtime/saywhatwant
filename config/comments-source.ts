@@ -8,8 +8,8 @@ export const COMMENTS_CONFIG = {
   useLocalStorage: false, // Changed to false to test cloud messages
   
   // Cloud API endpoint (uses environment variable or fallback)
-  // Production: https://sww-comments.workers.dev/api/comments
-  apiUrl: process.env.NEXT_PUBLIC_COMMENTS_API || 'https://sww-comments.workers.dev/api/comments',
+  // Production: https://sww-comments.bootloaders.workers.dev/api/comments
+  apiUrl: process.env.NEXT_PUBLIC_COMMENTS_API || 'https://sww-comments.bootloaders.workers.dev/api/comments',
   
   // Polling interval in milliseconds
   pollingInterval: 5000,
