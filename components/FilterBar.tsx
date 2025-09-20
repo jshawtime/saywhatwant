@@ -181,27 +181,27 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
       
-      {/* Filter Toggle Switch */}
+      {/* Filter Toggle Switch - Option C: Outline Style */}
       <button
         onClick={onToggleFilter}
         className="relative w-9 h-5 rounded-full transition-all duration-200"
         style={{ 
           backgroundColor: isFilterEnabled 
-            ? getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM) // 50% opacity when on
-            : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 20% opacity when off - visible on black
-          border: `1px solid ${getDarkerColor(userColor, isFilterEnabled ? OPACITY_LEVELS.LIGHT : OPACITY_LEVELS.DARK)}`, // 40% opacity border when off
+            ? getDarkerColor(userColor, OPACITY_LEVELS.DARKER) // 30% opacity fill when on
+            : 'transparent', // Transparent when off
+          border: `2px solid ${getDarkerColor(userColor, isFilterEnabled ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK)}`, // Full opacity border when on, 40% when off
+          boxShadow: isFilterEnabled ? `0 0 8px ${getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM)}` : 'none',
         }}
         title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
         tabIndex={-1}
       >
         <div 
-          className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform duration-200"
+          className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full transition-all duration-200"
           style={{ 
             backgroundColor: isFilterEnabled 
               ? userColor // Full color when on
-              : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 20% opacity when off (now more visible)
+              : getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity when off (visible against transparent bg)
             transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)',
-            boxShadow: isFilterEnabled ? `0 0 4px ${userColor}` : 'none'
           }}
         />
       </button>
