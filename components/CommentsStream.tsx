@@ -7,7 +7,7 @@ import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
-import { parseCommentText, getDarkerColor } from '@/utils/textParsing';
+import { parseCommentText } from '@/utils/textParsing';
 import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
 import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggleDomainFilter } from '@/config/domain-config';
 
@@ -19,7 +19,8 @@ const MAX_COMMENT_LENGTH = 201;
 const MAX_USERNAME_LENGTH = 16;
 
 // Import color functions from the color system
-import { getRandomColor, COLOR_PALETTE } from '@/modules/colorSystem';
+import { getRandomColor, getDarkerColor, COLOR_PALETTE } from '@/modules/colorSystem';
+import { getCommentColor } from '@/modules/usernameColorGenerator';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
@@ -854,11 +855,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
                 <button 
-                  onClick={() => comment.username && addToFilter(comment.username, comment.color || userColor)}
+                  onClick={() => comment.username && addToFilter(comment.username, getCommentColor(comment))}
                   className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer" 
                   style={{ 
                     lineHeight: '20px',
-                    color: getDarkerColor(comment.color || userColor, OPACITY_LEVELS.LIGHT)  // Use userColor as fallback
+                    color: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.LIGHT)  // Use generated color for consistency
                   }}
                   tabIndex={-1}
                 >
@@ -869,7 +870,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 <div className="flex-1 pr-12">
                   <div className="text-sm leading-snug break-words" style={{ 
                     lineHeight: '20px',
-                    color: comment.color || userColor // Use userColor as fallback
+                    color: getCommentColor(comment) // Use actual or generated color
                   }}>
                     {parseCommentTextWithHandlers(comment.text)}
                   </div>
@@ -879,9 +880,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 <span 
                   className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
                   style={{ 
-                    color: getDarkerColor(comment.color || userColor, 0.7),  // Use userColor as fallback
-                    borderColor: getDarkerColor(comment.color || userColor, OPACITY_LEVELS.DARK),  // Use userColor as fallback
-                    backgroundColor: getDarkerColor(comment.color || userColor, OPACITY_LEVELS.DARKEST)  // Use userColor as fallback
+                    color: getDarkerColor(getCommentColor(comment), 0.7),  // Use actual or generated color
+                    borderColor: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.DARK),  // Use actual or generated color
+                    backgroundColor: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.DARKEST)  // Use actual or generated color
                   }}
                 >
                   {formatTimestamp(comment.timestamp)}
