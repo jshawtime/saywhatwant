@@ -184,21 +184,24 @@ const FilterBar: React.FC<FilterBarProps> = ({
       {/* Filter Toggle Switch */}
       <button
         onClick={onToggleFilter}
-        className="relative w-9 h-5 rounded-full transition-colors border"
+        className="relative w-9 h-5 rounded-full transition-all duration-200"
         style={{ 
           backgroundColor: isFilterEnabled 
-            ? getDarkerColor(userColor, OPACITY_LEVELS.DARK * 0.875) // 35% opacity
-            : 'rgba(0, 0, 0, 0.8)', // Nearly black when off
-          borderColor: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity border always visible
+            ? getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM) // 50% opacity when on
+            : 'rgba(0, 0, 0, 0.95)', // Almost pure black when off
+          border: `1px solid ${getDarkerColor(userColor, isFilterEnabled ? OPACITY_LEVELS.LIGHT : OPACITY_LEVELS.DARKER)}`, // Brighter border when on
         }}
         title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
         tabIndex={-1}
       >
         <div 
-          className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
+          className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform duration-200"
           style={{ 
-            backgroundColor: isFilterEnabled ? userColor : getDarkerColor(userColor, OPACITY_LEVELS.DARKER), // 20% opacity when disabled
-            transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)'
+            backgroundColor: isFilterEnabled 
+              ? userColor // Full color when on
+              : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity when off
+            transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)',
+            boxShadow: isFilterEnabled ? `0 0 4px ${userColor}` : 'none'
           }}
         />
       </button>

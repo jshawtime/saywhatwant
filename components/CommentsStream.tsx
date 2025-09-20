@@ -979,7 +979,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               placeholder="Say what you want..."
               className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
               style={{
-                '--placeholder-color': getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
+                '--placeholder-color': getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity - darker placeholder
                 '--scrollbar-color': getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
                 '--scrollbar-bg': getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
                 color: userColor, // Always use user's color
