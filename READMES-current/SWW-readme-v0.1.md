@@ -58,12 +58,18 @@ saywhatwant/
 ├── app/                    # Next.js app directory
 ├── components/            
 │   ├── CommentsStream.tsx  # Main comments (NOW SUPPORTS CLOUD/LOCAL)
-│   ├── FilterBar.tsx       # Filter UI
+│   ├── FilterBar.tsx       # Filter UI component
+│   ├── ColorPicker.tsx     # NEW: Color selection component
 │   └── VideoPlayer.tsx     # Video player
+├── modules/                # NEW: Business logic modules
+│   ├── colorSystem.ts      # Color management utilities
+│   └── filterSystem.ts     # Centralized filter logic
 ├── config/
-│   ├── comments-source.ts  # NEW: Toggle cloud/local storage
+│   ├── comments-source.ts  # Toggle cloud/local storage
 │   └── video-source.ts     # Toggle R2/local videos
 ├── hooks/                  # Custom React hooks
+│   ├── useFilters.ts       # Original filter hook
+│   └── useFilterSystem.ts  # NEW: Refactored filter hook
 ├── workers/               
 │   └── comments-worker.js  # Cloudflare Worker (RUNNING)
 ├── READMES-current/       # Current documentation
@@ -254,6 +260,12 @@ npm run manifest:generate # Generate R2 manifest
 5. **Test with incognito** for multi-user simulation
 
 ## 📄 Version History
+
+### v0.1.1 - September 20, 2025 (Latest)
+- ✨ **Filter System Refactored**: Centralized filter logic into dedicated module
+- ✨ **Color System Refactored**: Modularized color management and picker component
+- 📚 Added comprehensive storage architecture documentation
+- 🔧 Improved code organization and maintainability
 
 ### v0.1 - September 20, 2025
 - Initial working version
