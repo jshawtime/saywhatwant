@@ -3,7 +3,7 @@
 **NOTE: This README is for AI agents only. No humans read these files.**
 
 ## 🤖 Quick Context
-- **Version**: 0.1.6
+- **Version**: 0.1.15
 - **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
 - **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
@@ -167,14 +167,19 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.1.6)
+## 🔧 Recent Updates (v0.1.15)
 
-### All UI Elements Now Use Opacity Module
+### LED Button Visibility Fix (CRITICAL)
+- **Problem**: LEDs invisible on page reload (30% blue on black = can't see)
+- **Solution**: Inactive state now uses 30% WHITE for guaranteed visibility
+- **Active**: Full userColor (100% opacity) with glow
+- **Inactive**: 30% white with subtle inset shadow
+- **Both LEDs match**: Filter and Domain use same styling
+
+### Previous Updates
 - **Replaced ALL hardcoded colors** with UIElements components
 - **No more white UI elements** - properly inheriting userColor
-- **Domain LED** now uses LIGHT (60%) when active
 - **Every UI element** audited and using OPACITY_LEVELS constants
-- **No more hardcoded 0.x values** anywhere in codebase
 - **Video state clarification**: localStorage is source of truth, false is init default
 
 ### Documentation

@@ -208,10 +208,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
             style={{
               backgroundColor: isFilterEnabled 
                 ? userColor // Use FULL color when active (100% opacity)
-                : getDarkerColor(userColor, OPACITY_LEVELS.DARKER), // 30% when off
+                : 'rgba(255, 255, 255, 0.3)', // 30% white when off for visibility
               boxShadow: isFilterEnabled 
                 ? `0 0 10px ${userColor}` 
-                : 'none',
+                : 'inset 0 0 2px rgba(255, 255, 255, 0.1)', // Subtle inset glow when off
             }}
           />
         </div>
