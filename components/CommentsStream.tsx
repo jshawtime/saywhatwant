@@ -175,27 +175,32 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     };
   }, [showColorPicker]);
 
-  // Keyboard shortcut for random color (r key)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      // Check if 'r' is pressed without modifiers and not in an input/textarea
+      const target = event.target as HTMLElement;
+      const tagName = target.tagName.toLowerCase();
+      const isInInput = tagName === 'input' || tagName === 'textarea';
+      
+      // Tab key handling - if no field is focused, go to message field first
+      if (event.key === 'Tab' && !isInInput && !event.shiftKey) {
+        event.preventDefault();
+        inputRef.current?.focus();
+        return;
+      }
+      
+      // 'R' key for random color
       if (event.key === 'r' && 
           !event.ctrlKey && 
           !event.metaKey && 
           !event.altKey && 
-          !event.shiftKey) {
-        
-        const target = event.target as HTMLElement;
-        const tagName = target.tagName.toLowerCase();
-        
-        // Don't trigger if typing in input or textarea
-        if (tagName !== 'input' && tagName !== 'textarea') {
-          event.preventDefault();
-          // Generate a sophisticated random color
-          const randomColor = getRandomColor();
-          setUserColor(randomColor);
-          localStorage.setItem('sww-color', randomColor);
-        }
+          !event.shiftKey && 
+          !isInInput) {
+        event.preventDefault();
+        // Generate a sophisticated random color
+        const randomColor = getRandomColor();
+        setUserColor(randomColor);
+        localStorage.setItem('sww-color', randomColor);
       }
     };
 

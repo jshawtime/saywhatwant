@@ -3,7 +3,7 @@
 **NOTE: This README is for AI agents only. No humans read these files.**
 
 ## 🤖 Quick Context
-- **Version**: 0.1.4
+- **Version**: 0.1.5
 - **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
 - **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
@@ -30,21 +30,30 @@ THIRD: 40 (fixed)
 - **Purpose**: Hidden user differentiation (same username, different color = different user)
 - **Storage**: RGB format `rgb(185, 142, 40)` not hex
 
+### Opacity Levels (CORRECTED)
+```javascript
+// Lower % = MORE transparent (darker/fainter)
+DARKEST: 10%   // Most transparent
+DARKER: 20%    // Very transparent  
+DARK: 40%      // More transparent
+MEDIUM: 50%    // Half transparent
+LIGHT: 60%     // Slightly transparent
+FULL: 100%     // No transparency
+```
+
 ### UI Color Hierarchy
 ```javascript
-userColor // 100% - All UI elements now inherit directly
-getDarkerColor(userColor, 0.5) // 50% - Borders, inactive states
-// No other opacity values used
+// UI elements with their opacity levels
+userColor // 100% (FULL) - Message text, active elements
+getDarkerColor(userColor, 0.6) // 60% (LIGHT) - Icons, secondary text
+getDarkerColor(userColor, 0.5) // 50% (MEDIUM) - Borders, inactive states
+getDarkerColor(userColor, 0.4) // 40% (DARK) - Placeholder text
 ```
-**ALL these elements use userColor at 100%:**
-- Message text
-- Username input field
-- Filter icon
-- Search icon  
-- Search placeholder
-- Clear buttons (X)
-- Character counter
-- Active domain LED
+**Element Opacity Mapping:**
+- **100% (FULL)**: Message text, active domain LED
+- **60% (LIGHT)**: Username input, filter icon, search icon, clear buttons, character counter
+- **50% (MEDIUM)**: Active borders, inactive filters
+- **40% (DARK)**: Search placeholder, filter placeholder
 
 ### Multi-Domain System
 ```javascript
@@ -158,13 +167,15 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.1.4)
+## 🔧 Recent Updates (v0.1.5)
 
-### UI Simplification
-- **All UI elements** now use `userColor` at 100%
-- **No more opacity variations** except borders (50%)
-- **Domain LED** simplified (no white highlight)
-- **Character counter** uses full color
+### Opacity System Corrected
+- **6 standard opacity levels** defined in colorOpacity module
+- **Correct naming**: DARKEST (10%) to FULL (100%)
+- **UI elements** use appropriate opacity levels (60% for icons, 40% for placeholders)
+- **Tab navigation** fixed: goes to message field first when no field focused
+- **Initial video state** set to false (hidden by default)
+- **UIElements.tsx** created for robust color application
 
 ### Documentation
 - **READMEs are AI-only** - noted in best practices

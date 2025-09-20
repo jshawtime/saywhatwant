@@ -5,7 +5,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
 
 export default function Home() {
-  const [showVideo, setShowVideo] = useState(true);
+  const [showVideo, setShowVideo] = useState(false);
 
   // Load video preference from localStorage
   useEffect(() => {

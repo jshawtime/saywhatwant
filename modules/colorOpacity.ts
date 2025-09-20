@@ -14,16 +14,20 @@
 import { getDarkerColor } from './colorSystem';
 
 /**
- * Standard opacity levels from lightest to darkest
+ * Standard opacity levels - CORRECTLY NAMED
+ * 
+ * IMPORTANT: Lower percentage = MORE TRANSPARENT (darker/fainter)
+ * Higher percentage = LESS TRANSPARENT (brighter/fuller)
+ * 
  * NEVER add new levels - only use these 6
  */
 export const OPACITY_LEVELS = {
-  LIGHTEST: 0.1,  // 10% - Very faint backgrounds
-  LIGHTER: 0.2,   // 20% - Faint backgrounds, inactive states
-  LIGHT: 0.4,     // 40% - Placeholder text, very subtle elements  
-  MEDIUM: 0.5,    // 50% - Borders, inactive filters
-  DARK: 0.6,      // 60% - Icons, usernames, secondary text
-  FULL: 1.0,      // 100% - Primary text, active elements
+  DARKEST: 0.1,   // 10% opacity - Most transparent, very faint
+  DARKER: 0.2,    // 20% opacity - Faint backgrounds, inactive states
+  DARK: 0.4,      // 40% opacity - Placeholder text, subtle elements  
+  MEDIUM: 0.5,    // 50% opacity - Borders, inactive filters
+  LIGHT: 0.6,     // 60% opacity - Icons, usernames, secondary text
+  FULL: 1.0,      // 100% opacity - Primary text, fully visible
 } as const;
 
 /**
@@ -52,33 +56,33 @@ export function applyOpacity(color: string, level: number): string {
  * DO NOT create custom opacity values
  */
 export const UI_ELEMENT_OPACITY = {
-  // FULL (100%)
+  // FULL (100% opacity - fully visible)
   MESSAGE_TEXT: OPACITY_LEVELS.FULL,
   ACTIVE_FILTER: OPACITY_LEVELS.FULL,
   ACTIVE_DOMAIN_LED: OPACITY_LEVELS.FULL,
   
-  // DARK (60%)
-  USERNAME: OPACITY_LEVELS.DARK,
-  FILTER_ICON: OPACITY_LEVELS.DARK,
-  SEARCH_ICON: OPACITY_LEVELS.DARK,
-  CLEAR_BUTTON: OPACITY_LEVELS.DARK,
-  CHARACTER_COUNTER: OPACITY_LEVELS.DARK,
+  // LIGHT (60% opacity - slightly transparent)
+  USERNAME: OPACITY_LEVELS.LIGHT,
+  FILTER_ICON: OPACITY_LEVELS.LIGHT,
+  SEARCH_ICON: OPACITY_LEVELS.LIGHT,
+  CLEAR_BUTTON: OPACITY_LEVELS.LIGHT,
+  CHARACTER_COUNTER: OPACITY_LEVELS.LIGHT,
   
-  // MEDIUM (50%)
+  // MEDIUM (50% opacity - half transparent)
   BORDER_ACTIVE: OPACITY_LEVELS.MEDIUM,
   INACTIVE_FILTER: OPACITY_LEVELS.MEDIUM,
   
-  // LIGHT (40%)
-  PLACEHOLDER_TEXT: OPACITY_LEVELS.LIGHT,
-  SEARCH_PLACEHOLDER: OPACITY_LEVELS.LIGHT,
+  // DARK (40% opacity - more transparent)
+  PLACEHOLDER_TEXT: OPACITY_LEVELS.DARK,
+  SEARCH_PLACEHOLDER: OPACITY_LEVELS.DARK,
   
-  // LIGHTER (20%)
-  INACTIVE_DOMAIN_LED: OPACITY_LEVELS.LIGHTER,
-  FAINT_BACKGROUND: OPACITY_LEVELS.LIGHTER,
+  // DARKER (20% opacity - very transparent)
+  INACTIVE_DOMAIN_LED: OPACITY_LEVELS.DARKER,
+  FAINT_BACKGROUND: OPACITY_LEVELS.DARKER,
   
-  // LIGHTEST (10%)
-  VERY_FAINT_BACKGROUND: OPACITY_LEVELS.LIGHTEST,
-  HOVER_BACKGROUND: OPACITY_LEVELS.LIGHTEST,
+  // DARKEST (10% opacity - almost invisible)
+  VERY_FAINT_BACKGROUND: OPACITY_LEVELS.DARKEST,
+  HOVER_BACKGROUND: OPACITY_LEVELS.DARKEST,
 } as const;
 
 /**
@@ -90,21 +94,24 @@ export function getOpacityLevelName(level: number): string {
 }
 
 /**
- * Quick reference for AI agents:
+ * Quick reference for AI agents - CORRECTED:
  * 
  * When user says:
- * - "Make it lightest" → OPACITY_LEVELS.LIGHTEST (10%)
- * - "Make it lighter" → OPACITY_LEVELS.LIGHTER (20%)
- * - "Make it light" → OPACITY_LEVELS.LIGHT (40%)
- * - "Make it medium" → OPACITY_LEVELS.MEDIUM (50%)
- * - "Make it dark" → OPACITY_LEVELS.DARK (60%)
- * - "Make it full/darkest" → OPACITY_LEVELS.FULL (100%)
+ * - "Make it darkest/faintest" → OPACITY_LEVELS.DARKEST (10% opacity - most transparent)
+ * - "Make it darker" → OPACITY_LEVELS.DARKER (20% opacity)
+ * - "Make it dark" → OPACITY_LEVELS.DARK (40% opacity)
+ * - "Make it medium" → OPACITY_LEVELS.MEDIUM (50% opacity)
+ * - "Make it light/lighter" → OPACITY_LEVELS.LIGHT (60% opacity)
+ * - "Make it full/brightest" → OPACITY_LEVELS.FULL (100% opacity - no transparency)
+ * 
+ * REMEMBER: Lower % = MORE transparent (darker/fainter)
+ *           Higher % = LESS transparent (brighter/more visible)
  * 
  * Example usage in components:
  * ```
  * import { applyOpacity, OPACITY_LEVELS } from '@/modules/colorOpacity';
  * 
- * style={{ color: applyOpacity(userColor, OPACITY_LEVELS.DARK) }}
+ * style={{ color: applyOpacity(userColor, OPACITY_LEVELS.LIGHT) }} // 60% opacity
  * ```
  */
 
