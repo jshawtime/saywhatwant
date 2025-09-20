@@ -3,7 +3,7 @@
 **NOTE: This README is for AI agents only. No humans read these files.**
 
 ## 🤖 Quick Context
-- **Version**: 0.1.5
+- **Version**: 0.1.6
 - **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
 - **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
@@ -167,15 +167,15 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.1.5)
+## 🔧 Recent Updates (v0.1.6)
 
-### Opacity System Corrected
-- **6 standard opacity levels** defined in colorOpacity module
-- **Correct naming**: DARKEST (10%) to FULL (100%)
-- **UI elements** use appropriate opacity levels (60% for icons, 40% for placeholders)
-- **Tab navigation** fixed: goes to message field first when no field focused
-- **Initial video state** set to false (hidden by default)
-- **UIElements.tsx** created for robust color application
+### All UI Elements Now Use Opacity Module
+- **Replaced ALL hardcoded colors** with UIElements components
+- **No more white UI elements** - properly inheriting userColor
+- **Domain LED** now uses LIGHT (60%) when active
+- **Every UI element** audited and using OPACITY_LEVELS constants
+- **No more hardcoded 0.x values** anywhere in codebase
+- **Video state clarification**: localStorage is source of truth, false is init default
 
 ### Documentation
 - **READMEs are AI-only** - noted in best practices
