@@ -125,7 +125,7 @@
 textarea::placeholder,
 input::placeholder {
   color: var(--placeholder-color);
-  opacity: 1;
+  opacity: 1; /* Keep at 1 because color already has opacity applied */
 }
 
 /* Say What Want Title */

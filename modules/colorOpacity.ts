@@ -22,8 +22,8 @@ import { getDarkerColor } from './colorSystem';
  * NEVER add new levels - only use these 6
  */
 export const OPACITY_LEVELS = {
-  DARKEST: 0.1,   // 10% opacity - Most transparent, very faint
-  DARKER: 0.2,    // 20% opacity - Faint backgrounds, inactive states
+  DARKEST: 0.2,   // 20% opacity - Most transparent, visible on black
+  DARKER: 0.3,    // 30% opacity - Faint backgrounds, inactive states
   DARK: 0.4,      // 40% opacity - Placeholder text, subtle elements  
   MEDIUM: 0.5,    // 50% opacity - Borders, inactive filters
   LIGHT: 0.6,     // 60% opacity - Icons, usernames, secondary text
@@ -76,13 +76,14 @@ export const UI_ELEMENT_OPACITY = {
   PLACEHOLDER_TEXT: OPACITY_LEVELS.DARK,
   SEARCH_PLACEHOLDER: OPACITY_LEVELS.DARK,
   
-  // DARKER (20% opacity - very transparent)
+  // DARKER (30% opacity - subtle but visible)
   INACTIVE_DOMAIN_LED: OPACITY_LEVELS.DARKER,
   FAINT_BACKGROUND: OPACITY_LEVELS.DARKER,
   
-  // DARKEST (10% opacity - almost invisible)
+  // DARKEST (20% opacity - faint but visible on black)
   VERY_FAINT_BACKGROUND: OPACITY_LEVELS.DARKEST,
   HOVER_BACKGROUND: OPACITY_LEVELS.DARKEST,
+  INACTIVE_FILTER_SWITCH_BG: OPACITY_LEVELS.DARKEST,
 } as const;
 
 /**
@@ -97,8 +98,8 @@ export function getOpacityLevelName(level: number): string {
  * Quick reference for AI agents - CORRECTED:
  * 
  * When user says:
- * - "Make it darkest/faintest" → OPACITY_LEVELS.DARKEST (10% opacity - most transparent)
- * - "Make it darker" → OPACITY_LEVELS.DARKER (20% opacity)
+ * - "Make it darkest/faintest" → OPACITY_LEVELS.DARKEST (20% opacity - most transparent)
+ * - "Make it darker" → OPACITY_LEVELS.DARKER (30% opacity)
  * - "Make it dark" → OPACITY_LEVELS.DARK (40% opacity)
  * - "Make it medium" → OPACITY_LEVELS.MEDIUM (50% opacity)
  * - "Make it light/lighter" → OPACITY_LEVELS.LIGHT (60% opacity)

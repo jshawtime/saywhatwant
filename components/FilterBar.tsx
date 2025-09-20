@@ -188,8 +188,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
         style={{ 
           backgroundColor: isFilterEnabled 
             ? getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM) // 50% opacity when on
-            : 'rgba(0, 0, 0, 0.95)', // Almost pure black when off
-          border: `1px solid ${getDarkerColor(userColor, isFilterEnabled ? OPACITY_LEVELS.LIGHT : OPACITY_LEVELS.DARKER)}`, // Brighter border when on
+            : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 20% opacity when off - visible on black
+          border: `1px solid ${getDarkerColor(userColor, isFilterEnabled ? OPACITY_LEVELS.LIGHT : OPACITY_LEVELS.DARK)}`, // 40% opacity border when off
         }}
         title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
         tabIndex={-1}
@@ -199,7 +199,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
           style={{ 
             backgroundColor: isFilterEnabled 
               ? userColor // Full color when on
-              : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity when off
+              : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 20% opacity when off (now more visible)
             transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)',
             boxShadow: isFilterEnabled ? `0 0 4px ${userColor}` : 'none'
           }}

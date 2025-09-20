@@ -105,6 +105,7 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
   const baseColor = userColor || 'rgb(96, 165, 250)';
   const textColor = value ? baseColor : getDarkerColor(baseColor, OPACITY_LEVELS.DARK);
   const borderColor = value ? getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM) : 'rgba(255,255,255,0.1)';
+  const placeholderColor = getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM); // 50% opacity - 1 step lighter
   
   return (
     <input
@@ -112,10 +113,11 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className={`${className} placeholder-current`}
+      className={className}
       style={{ 
         color: textColor,
         borderColor: borderColor,
+        '--placeholder-color': placeholderColor,
       }}
       tabIndex={-1}
     />
