@@ -1,6 +1,7 @@
-import React from 'react';
-import { Filter, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Filter, X, Calendar } from 'lucide-react';
 import { UsernameFilter } from '@/hooks/useFilters';
+import { describeDateRange } from '@/utils/dateTimeParser';
 
 interface FilterBarProps {
   filterUsernames: UsernameFilter[];
@@ -9,10 +10,17 @@ interface FilterBarProps {
   isFilterEnabled: boolean;
   hasActiveFilters: boolean;
   userColor: string;
+  dateTimeFilter?: {
+    from: string | null;
+    to: string | null;
+    timeFrom: number | null;
+    timeTo: number | null;
+  };
   onToggleFilter: () => void;
   onRemoveUsernameFilter: (username: string, color: string) => void;
   onRemoveWordFilter: (word: string) => void;
   onRemoveNegativeFilter: (word: string) => void;
+  onClearDateTimeFilter?: () => void;
   getDarkerColor: (color: string, factor?: number) => string;
 }
 
@@ -23,12 +31,27 @@ const FilterBar: React.FC<FilterBarProps> = ({
   isFilterEnabled,
   hasActiveFilters,
   userColor,
+  dateTimeFilter,
   onToggleFilter,
   onRemoveUsernameFilter,
   onRemoveWordFilter,
   onRemoveNegativeFilter,
+  onClearDateTimeFilter,
   getDarkerColor
 }) => {
+  // Use state to avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  const hasDateTimeFilter = dateTimeFilter && (
+    dateTimeFilter.from !== null || 
+    dateTimeFilter.to !== null || 
+    dateTimeFilter.timeFrom !== null || 
+    dateTimeFilter.timeTo !== null
+  );
   return (
     <div className="relative flex items-center gap-2">
       <div className="flex-1 relative">
@@ -46,7 +69,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
             '--scrollbar-bg': getDarkerColor(userColor, 0.05),
           } as React.CSSProperties}
         >
-          {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 ? (
+          {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && (!mounted || !hasDateTimeFilter) ? (
             <span style={{ color: getDarkerColor(userColor, 0.4) }}>
               Click usernames or words to filter...
             </span>
@@ -123,6 +146,37 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   </button>
                 </span>
               ))}
+              
+              {/* Date/Time filter - only render on client to avoid hydration issues */}
+              {mounted && hasDateTimeFilter && dateTimeFilter && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
+                  style={{ 
+                    backgroundColor: getDarkerColor('#9333EA', 0.15),
+                    opacity: isFilterEnabled ? 1 : 0.4
+                  }}
+                >
+                  <Calendar className="w-3 h-3" style={{ color: '#9333EA' }} />
+                  <span className="text-xs" style={{ color: '#9333EA' }}>
+                    {describeDateRange(
+                      dateTimeFilter.from, 
+                      dateTimeFilter.to, 
+                      dateTimeFilter.timeFrom, 
+                      dateTimeFilter.timeTo
+                    )}
+                  </span>
+                  {onClearDateTimeFilter && (
+                    <button
+                      onClick={onClearDateTimeFilter}
+                      className="hover:opacity-80"
+                      style={{ color: '#9333EA' }}
+                      tabIndex={-1}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
+              )}
             </>
           )}
         </div>

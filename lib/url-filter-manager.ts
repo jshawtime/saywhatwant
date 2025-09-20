@@ -11,23 +11,33 @@ export interface SWWFilterState {
   wordRemove: string[];        // Words to remove/hide from display
   videoPlaylist: string[];     // Video keys to play
   videoPanel: boolean | null;  // Panel visibility state
+  from: string | null;         // Start time (YYYY-MM-DD, YYYY-MM-DDTHH:MM, T[minutes], keywords)
+  to: string | null;           // End time (YYYY-MM-DD, YYYY-MM-DDTHH:MM, T[minutes], keywords)
+  timeFrom: number | null;     // Alternative: minutes ago (number only)
+  timeTo: number | null;       // Alternative: minutes ago (number only)
 }
 
 export class URLFilterManager {
   private static instance: URLFilterManager;
   private subscribers: Set<(state: SWWFilterState) => void> = new Set();
   private currentState: SWWFilterState = this.getEmptyState();
+  private initialized = false;
   
   private constructor() {
-    // Only run in browser environment
-    if (typeof window !== 'undefined') {
-      // Listen for URL changes
-      window.addEventListener('hashchange', () => this.handleHashChange());
-      window.addEventListener('popstate', () => this.handleHashChange());
-      
-      // Parse initial URL
-      this.handleHashChange();
-    }
+    // Don't do anything in constructor - wait for explicit initialization
+  }
+  
+  private initialize() {
+    if (this.initialized || typeof window === 'undefined') return;
+    
+    this.initialized = true;
+    
+    // Listen for URL changes
+    window.addEventListener('hashchange', () => this.handleHashChange());
+    window.addEventListener('popstate', () => this.handleHashChange());
+    
+    // Parse initial URL
+    this.handleHashChange();
   }
   
   static getInstance(): URLFilterManager {
@@ -58,7 +68,11 @@ export class URLFilterManager {
       negativeWords: [],
       wordRemove: [],
       videoPlaylist: [],
-      videoPanel: null
+      videoPanel: null,
+      from: null,
+      to: null,
+      timeFrom: null,
+      timeTo: null
     };
   }
   
@@ -133,6 +147,32 @@ export class URLFilterManager {
             state.videoPanel = true;
           }
           break;
+          
+        case 'from':
+          // Store raw value - will be parsed when filtering
+          state.from = values[0];
+          break;
+          
+        case 'to':
+          // Store raw value - will be parsed when filtering
+          state.to = values[0];
+          break;
+          
+        case 'timeFrom':
+          // Parse as number (minutes)
+          const timeFromNum = parseInt(values[0], 10);
+          if (!isNaN(timeFromNum)) {
+            state.timeFrom = timeFromNum;
+          }
+          break;
+          
+        case 'timeTo':
+          // Parse as number (minutes)
+          const timeToNum = parseInt(values[0], 10);
+          if (!isNaN(timeToNum)) {
+            state.timeTo = timeToNum;
+          }
+          break;
       }
     }
     
@@ -180,6 +220,20 @@ export class URLFilterManager {
       params.push(`video=${state.videoPanel}`);
     }
     
+    // Add date/time filters
+    if (state.from) {
+      params.push(`from=${encodeURIComponent(state.from)}`);
+    }
+    if (state.to) {
+      params.push(`to=${encodeURIComponent(state.to)}`);
+    }
+    if (state.timeFrom !== null) {
+      params.push(`timeFrom=${state.timeFrom}`);
+    }
+    if (state.timeTo !== null) {
+      params.push(`timeTo=${state.timeTo}`);
+    }
+    
     return params.length > 0 ? `#${params.join('&')}` : '';
   }
   
@@ -203,6 +257,7 @@ export class URLFilterManager {
    * Subscribe to state changes
    */
   subscribe(callback: (state: SWWFilterState) => void): () => void {
+    this.initialize(); // Ensure initialized before subscribing
     this.subscribers.add(callback);
     // Immediately call with current state
     callback(this.currentState);
@@ -218,6 +273,7 @@ export class URLFilterManager {
    */
   updateURL(updates: Partial<SWWFilterState>): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     const newState = { ...this.currentState, ...updates };
     const hash = this.buildHash(newState);
@@ -235,6 +291,7 @@ export class URLFilterManager {
    */
   mergeURL(updates: Partial<SWWFilterState>): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     const newState = { ...this.currentState };
     
@@ -260,6 +317,18 @@ export class URLFilterManager {
     if (updates.videoPanel !== undefined) {
       newState.videoPanel = updates.videoPanel;
     }
+    if (updates.from !== undefined) {
+      newState.from = updates.from;
+    }
+    if (updates.to !== undefined) {
+      newState.to = updates.to;
+    }
+    if (updates.timeFrom !== undefined) {
+      newState.timeFrom = updates.timeFrom;
+    }
+    if (updates.timeTo !== undefined) {
+      newState.timeTo = updates.timeTo;
+    }
     
     const hash = this.buildHash(newState);
     
@@ -275,6 +344,7 @@ export class URLFilterManager {
    */
   removeFromURL(filterType: keyof SWWFilterState, value?: string): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     const newState = { ...this.currentState };
     
@@ -303,6 +373,7 @@ export class URLFilterManager {
    */
   clearAll(): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     window.history.pushState(null, '', '#');
     this.currentState = this.getEmptyState();
@@ -313,6 +384,7 @@ export class URLFilterManager {
    * Get current state
    */
   getCurrentState(): SWWFilterState {
+    this.initialize(); // Ensure initialized before getting state
     return { ...this.currentState };
   }
 }

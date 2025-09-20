@@ -53,6 +53,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [userColor, setUserColor] = useState('#60A5FA'); // Default blue-400
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [pendingVideoKey, setPendingVideoKey] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false); // For hydration safety
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
@@ -79,7 +80,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     hasActiveFilters,
     urlSearchTerms,
     addSearchTermToURL,
-    removeSearchTermFromURL
+    removeSearchTermFromURL,
+    dateTimeFilter,
+    clearDateTimeFilter
   } = useFilters({ displayedComments, searchTerm });
 
   // Storage key for localStorage
@@ -95,6 +98,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Load username, color, and filters from localStorage
   useEffect(() => {
+    setMounted(true); // Mark as mounted for hydration safety
+    
     const savedUsername = localStorage.getItem('sww-username');
     const savedColor = localStorage.getItem('sww-color');
     if (savedUsername) {
@@ -654,10 +659,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             isFilterEnabled={isFilterEnabled}
             hasActiveFilters={hasActiveFilters}
             userColor={userColor}
+            dateTimeFilter={dateTimeFilter}
             onToggleFilter={toggleFilter}
             onRemoveUsernameFilter={removeFromFilter}
             onRemoveWordFilter={removeWordFromFilter}
             onRemoveNegativeFilter={removeNegativeWordFilter}
+            onClearDateTimeFilter={clearDateTimeFilter}
             getDarkerColor={getDarkerColor}
           />
 
@@ -754,7 +761,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     backgroundColor: getDarkerColor(comment.color || '#60A5FA', 0.08) // Darker background
                   }}
                 >
-                  {formatTimestamp(comment.timestamp)}
+                  {mounted ? formatTimestamp(comment.timestamp) : '...'}
                 </span>
               </div>
             </div>

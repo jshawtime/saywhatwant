@@ -56,8 +56,10 @@ The app supports powerful URL-based filtering that makes filtered views shareabl
 | `-word=` | Exclude word filters | `#-word=spam+inappropriate` |
 | `wordremove=` | Silently hide words | `#wordremove=spoiler+leak` |
 | `video=` | Control video playlist | `#video=sample1+sample2` |
-| `time=` | Relative time range (planned) | `#time=1h`, `#time=today` |
-| `date=` | Absolute dates (planned) | `#date=2024-01-19` |
+| `from=` | Start date/time | `#from=T60` or `#from=2025-01-19` |
+| `to=` | End date/time | `#to=now` or `#to=2025-01-20T14:30` |
+| `timeFrom=` | Minutes ago (alt syntax) | `#timeFrom=60` |
+| `timeTo=` | Minutes ago (alt syntax) | `#timeTo=0` |
 
 #### URL Syntax Rules
 
@@ -65,6 +67,22 @@ The app supports powerful URL-based filtering that makes filtered views shareabl
 - **`&`** - Separates different filter types (AND logic)
 - **`+`** - Joins multiple values within same type (OR logic)
 - **`=`** - Assigns values to parameters
+
+#### Date/Time Filtering
+
+The system supports flexible date/time filtering with multiple formats:
+
+**Relative Time** (T notation):
+- `T60` = 60 minutes ago
+- `T1440` = 24 hours ago 
+- `T0` or `now` = Current time
+
+**Absolute Dates**:
+- `2025-01-19` = January 19, 2025
+- `2025-01-19T14:30` = January 19, 2025 at 2:30 PM
+
+**Keywords**:
+- `now`, `today`, `yesterday`, `week`, `month`
 
 #### URL Examples
 
@@ -80,7 +98,21 @@ http://localhost:3000/#u=teacher&search=question&-word=spam&wordremove=inappropr
 
 # Study session
 http://localhost:3000/#u=instructor+assistant&search=homework&video=lesson1
+
+# Last hour of messages
+http://localhost:3000/#from=T60&to=now
+
+# Specific date range
+http://localhost:3000/#from=2025-01-19&to=2025-01-20
+
+# Yesterday's messages from Alice
+http://localhost:3000/#from=yesterday&to=today&u=alice
+
+# Complex with date/time
+http://localhost:3000/#from=T1440&to=now&u=team&search=bug&word=critical
 ```
+
+📚 See [Date & Time Filtering Guide](./README/DATE-TIME-FILTERING.md) for complete documentation.
 
 #### Special Features
 
@@ -95,6 +127,69 @@ http://localhost:3000/#u=instructor+assistant&search=homework&video=lesson1
 - **Individual Remove**: Click X on any filter to remove it
 - **Persistent**: All filters save to localStorage
 - **Visual States**: Active filters are bright, inactive filters are 40% opacity
+
+## 🔧 Technical Implementation: SSR & Hydration
+
+### The Challenge: URL Filters with Server-Side Rendering
+
+When implementing URL-based filtering in a Next.js app with SSR, we encountered hydration mismatches. Here's why and how we solved it:
+
+#### The Problem
+- **Server**: Cannot access `window.location.hash`, renders with empty filter state
+- **Client**: Can access URL, initializes with parsed filters
+- **Result**: Different initial renders = React hydration error ❌
+
+#### The Solution: Deferred Initialization
+
+1. **Consistent Initial State**
+   ```javascript
+   // ALWAYS start with empty state on both server and client
+   const [urlState] = useState(emptyState);
+   
+   // Parse URL ONLY after mount
+   useEffect(() => {
+     if (typeof window === 'undefined') return;
+     const manager = URLFilterManager.getInstance();
+     setUrlState(manager.getCurrentState());
+   }, []);
+   ```
+
+2. **Lazy URLFilterManager Initialization**
+   ```javascript
+   class URLFilterManager {
+     private initialized = false;
+     
+     private initialize() {
+       if (this.initialized || typeof window === 'undefined') return;
+       // Only parse URL and set up listeners after explicit initialization
+       this.handleHashChange();
+     }
+   }
+   ```
+
+3. **Time-Sensitive Content Handling**
+   ```javascript
+   // Timestamps that change between server/client renders
+   const [mounted, setMounted] = useState(false);
+   
+   useEffect(() => setMounted(true), []);
+   
+   // Render placeholder during SSR
+   <span>{mounted ? formatTimestamp(time) : '...'}</span>
+   ```
+
+#### Key Insights
+
+- **Never parse URLs in constructors or initial state functions**
+- **Always defer browser-specific code until after mount**
+- **Use placeholder content for dynamic/time-based values**
+- **Ensure both server and client start with identical state**
+
+This approach ensures:
+- ✅ No hydration errors
+- ✅ URL filters work correctly
+- ✅ SEO-friendly server rendering
+- ✅ Clean separation of concerns
 
 ## 📁 Project Structure
 
@@ -172,27 +267,86 @@ Comments are stored directly in the browser during development:
 
 ### Production (Cloudflare Workers)
 
-To switch to Cloudflare Workers for production:
+#### 🚀 Your App is Ready for Cloudflare!
 
-1. **Update Environment Variable**:
+The application has **everything prepared** for Cloudflare integration:
+
+✅ **Frontend placeholder code** exists (CommentsStream.tsx line 267)  
+✅ **Complete Worker API** ready (comments-worker.js)  
+✅ **Rate limiting** implemented (10 comments/minute per IP)  
+✅ **KV storage** with 5000-comment cache  
+✅ **Search & pagination** built-in  
+
+#### Quick Start (15 minutes to production)
+
 ```bash
-# .env.production
-NEXT_PUBLIC_COMMENTS_API=https://your-worker.workers.dev/api/comments
+# 1. Create KV namespace
+wrangler kv:namespace create COMMENTS_KV
+
+# 2. Copy namespace ID to workers/wrangler.toml
+
+# 3. Deploy worker
+cd workers && wrangler deploy
+
+# 4. Set environment variable
+echo "NEXT_PUBLIC_COMMENTS_API=https://sww-comments.workers.dev/api/comments" >> .env.production
+
+# 5. Deploy frontend
+npm run build && npm run deploy
 ```
 
-2. **Deploy Cloudflare Worker**:
-```bash
-cd workers
-wrangler deploy comments-worker.js
+**That's it!** No code changes needed - just set one environment variable.
+
+#### 📊 Scaling to 1M Messages/Day
+
+| Messages/Day | Architecture | Cost/Month | Changes Needed |
+|-------------|--------------|------------|----------------|
+| **0-100K** | Current (KV only) | $5 | Just deploy |
+| **100K-500K** | Add D1 Database | $15 | Add database writes |
+| **500K-1M** | Add Durable Objects | $45 | Add WebSocket support |
+| **1M-10M** | Add sharding | $100+ | Partition data |
+
+#### Recommended Architecture for Scale
+
+```
+┌─────────────────────────────────────────────┐
+│             Users (1M/day)                  │
+└─────────────────┬───────────────────────────┘
+                  ▼
+┌─────────────────────────────────────────────┐
+│      Cloudflare Workers (Global Edge)       │
+│       • Rate Limiting • Validation          │
+│       • WebSocket Support • Caching         │
+└─────────────────┬───────────────────────────┘
+        ┌─────────┼─────────┐
+        ▼         ▼         ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Durable  │ │    D1    │ │    R2    │
+│ Objects  │ │ Database │ │  Storage │
+│ (Live)   │ │ (Index)  │ │ (Archive)│
+└──────────┘ └──────────┘ └──────────┘
 ```
 
-3. **Configure KV Storage**:
-```bash
-# Create KV namespace
-wrangler kv:namespace create "COMMENTS_KV"
+#### Current Capabilities
 
-# Update wrangler.toml with namespace ID
-```
+The existing `workers/comments-worker.js` provides:
+- Full REST API (`GET /api/comments`, `POST /api/comments`)
+- IP-based rate limiting with KV storage
+- 5000-comment in-memory cache for performance
+- Search functionality with query parameters
+- Pagination support (offset/limit)
+- CORS headers configured
+- Input sanitization (1000 char limit)
+
+#### 📚 Full Documentation
+
+See [**CLOUDFLARE-SCALING-ARCHITECTURE.md**](./README/CLOUDFLARE-SCALING-ARCHITECTURE.md) for:
+- Complete placeholder code walkthrough
+- Three scaling options with pros/cons
+- Detailed cost analysis
+- Performance optimization strategies
+- Monitoring & analytics setup
+- Implementation checklists
 
 ## 🎨 Color System
 
@@ -290,13 +444,6 @@ NEXT_PUBLIC_R2_BUCKET_URL=https://your-bucket.r2.dev
 ```
 
 ## 🚧 Planned Features & Roadmap
-
-### Date Range Filtering (Coming Soon)
-Two approaches being considered:
-1. **Relative Time** (`time=1h`, `time=today`) - Human-friendly, always current
-2. **Absolute Dates** (`date=2024-01-19`) - Precise, historical reference
-
-See [Date Range Proposals](./README/DATE-RANGE-PROPOSALS.md) for detailed specifications.
 
 ### Additional URL Parameters (Planned)
 - **Message Length**: `length=short/medium/long` - Filter by comment length

@@ -8,26 +8,29 @@ import { useEffect, useState, useCallback } from 'react';
 import { URLFilterManager, SWWFilterState } from '../lib/url-filter-manager';
 
 export function useURLFilter() {
-  const [urlState, setUrlState] = useState<SWWFilterState>(() => {
-    // Initialize with empty state during SSR
-    if (typeof window === 'undefined') {
-      return {
-        users: [],
-        searchTerms: [],
-        words: [],
-        negativeWords: [],
-        wordRemove: [],
-        videoPlaylist: [],
-        videoPanel: null
-      };
-    }
-    // Initialize with current URL state on client
-    const manager = URLFilterManager.getInstance();
-    return manager.getCurrentState();
+  // ALWAYS initialize with empty state to avoid hydration mismatch
+  const [urlState, setUrlState] = useState<SWWFilterState>({
+    users: [],
+    searchTerms: [],
+    words: [],
+    negativeWords: [],
+    wordRemove: [],
+    videoPlaylist: [],
+    videoPanel: null,
+    from: null,
+    to: null,
+    timeFrom: null,
+    timeTo: null
   });
   
   useEffect(() => {
+    // Only access URLFilterManager on client side
+    if (typeof window === 'undefined') return;
+    
     const manager = URLFilterManager.getInstance();
+    
+    // Set initial state from URL
+    setUrlState(manager.getCurrentState());
     
     // Subscribe to URL changes
     const unsubscribe = manager.subscribe((newState) => {
@@ -115,6 +118,28 @@ export function useURLFilter() {
     manager.removeFromURL('negativeWords', word);
   }, []);
   
+  // Update date/time filters
+  const setDateTimeFilter = useCallback((from: string | null, to: string | null) => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ from, to });
+  }, []);
+  
+  const setTimeFilter = useCallback((timeFrom: number | null, timeTo: number | null) => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ timeFrom, timeTo });
+  }, []);
+  
+  // Clear date/time filter
+  const clearDateTimeFilter = useCallback(() => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ 
+      from: null, 
+      to: null, 
+      timeFrom: null, 
+      timeTo: null 
+    });
+  }, []);
+  
   // Clear all URL filters
   const clearURLFilters = useCallback(() => {
     const manager = URLFilterManager.getInstance();
@@ -127,7 +152,12 @@ export function useURLFilter() {
     urlState.searchTerms.length > 0 ||
     urlState.words.length > 0 ||
     urlState.negativeWords.length > 0 ||
-    urlState.videoPlaylist.length > 0;
+    urlState.wordRemove.length > 0 ||
+    urlState.videoPlaylist.length > 0 ||
+    urlState.from !== null ||
+    urlState.to !== null ||
+    urlState.timeFrom !== null ||
+    urlState.timeTo !== null;
   
   return {
     urlState,
@@ -148,6 +178,11 @@ export function useURLFilter() {
     // Negative word filters
     addNegativeWordToURL,
     removeNegativeWordFromURL,
+    
+    // Date/time filters
+    setDateTimeFilter,
+    setTimeFilter,
+    clearDateTimeFilter,
     
     // Clear all
     clearURLFilters

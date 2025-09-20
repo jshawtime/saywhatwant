@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Comment } from '@/types';
 import { useURLFilter } from './useURLFilter';
 import { URLFilterManager } from '@/lib/url-filter-manager';
+import { parseDateTime, parseMinutesAgo, correctDateRange, isWithinDateRange } from '@/utils/dateTimeParser';
 
 export interface UsernameFilter {
   username: string;
@@ -31,7 +32,8 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     addNegativeWordToURL,
     removeNegativeWordFromURL,
     addSearchTermToURL,
-    removeSearchTermFromURL
+    removeSearchTermFromURL,
+    clearDateTimeFilter
   } = useURLFilter();
 
   // Load filters from localStorage on initial mount (client-side only)
@@ -266,6 +268,37 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       });
     }
     
+    // Apply date/time filters
+    if (isFilterEnabled && (urlState.from || urlState.to || urlState.timeFrom !== null || urlState.timeTo !== null)) {
+      // Parse date/time values
+      let fromTimestamp: number | null = null;
+      let toTimestamp: number | null = null;
+      
+      // Prefer from/to over timeFrom/timeTo
+      if (urlState.from || urlState.to) {
+        const fromParsed = parseDateTime(urlState.from);
+        const toParsed = parseDateTime(urlState.to);
+        
+        fromTimestamp = fromParsed?.isValid ? fromParsed.timestamp : null;
+        toTimestamp = toParsed?.isValid ? toParsed.timestamp : null;
+      } else if (urlState.timeFrom !== null || urlState.timeTo !== null) {
+        fromTimestamp = parseMinutesAgo(urlState.timeFrom);
+        toTimestamp = parseMinutesAgo(urlState.timeTo);
+      }
+      
+      // Auto-correct backwards ranges
+      const corrected = correctDateRange(fromTimestamp, toTimestamp);
+      
+      // Filter comments by date range
+      if (corrected.from !== null || corrected.to !== null) {
+        filtered = filtered.filter(comment => {
+          // Comment timestamp is already in milliseconds
+          const commentTime = comment.timestamp || Date.now();
+          return isWithinDateRange(commentTime, corrected.from, corrected.to);
+        });
+      }
+    }
+    
     // Apply search bar filter (from UI or URL)
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -276,7 +309,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     }
     
     return filtered;
-  }, [displayedComments, searchTerm, mergedUserFilters, mergedFilterWords, mergedNegativeWords, isFilterEnabled, filterByColorToo, urlState.wordRemove]);
+  }, [displayedComments, searchTerm, mergedUserFilters, mergedFilterWords, mergedNegativeWords, isFilterEnabled, filterByColorToo, urlState.wordRemove, urlState.from, urlState.to, urlState.timeFrom, urlState.timeTo]);
 
   return {
     filterUsernames: mergedUserFilters,
@@ -291,10 +324,25 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     addNegativeWordFilter,
     removeNegativeWordFilter,
     toggleFilter,
-    hasActiveFilters: mergedUserFilters.length > 0 || mergedFilterWords.length > 0 || mergedNegativeWords.length > 0 || urlState.wordRemove.length > 0,
+    hasActiveFilters: mergedUserFilters.length > 0 || 
+                      mergedFilterWords.length > 0 || 
+                      mergedNegativeWords.length > 0 || 
+                      urlState.wordRemove.length > 0 || 
+                      urlState.from !== null || 
+                      urlState.to !== null || 
+                      urlState.timeFrom !== null || 
+                      urlState.timeTo !== null,
     // URL-specific exports
     urlSearchTerms: urlState.searchTerms,
     addSearchTermToURL,
-    removeSearchTermFromURL
+    removeSearchTermFromURL,
+    // Date/time filters
+    dateTimeFilter: {
+      from: urlState.from,
+      to: urlState.to,
+      timeFrom: urlState.timeFrom,
+      timeTo: urlState.timeTo
+    },
+    clearDateTimeFilter
   };
 };
