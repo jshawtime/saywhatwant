@@ -27,7 +27,7 @@ export const StyledSearchIcon: React.FC<StyledIconProps> = ({
   opacity = OPACITY_LEVELS.LIGHT,
   style = {}
 }) => {
-  const color = getDarkerColor(userColor || 'rgb(96, 165, 250)', opacity);
+  const color = getDarkerColor(userColor, opacity);
   return (
     <Search 
       className={className}
@@ -43,7 +43,7 @@ export const StyledFilterIcon: React.FC<StyledIconProps> = ({
   opacity = OPACITY_LEVELS.LIGHT,
   style = {}
 }) => {
-  const color = getDarkerColor(userColor || 'rgb(96, 165, 250)', opacity);
+  const color = getDarkerColor(userColor, opacity);
   return (
     <Filter 
       className={className}
@@ -59,7 +59,7 @@ export const StyledClearIcon: React.FC<StyledIconProps> = ({
   opacity = OPACITY_LEVELS.LIGHT,
   style = {}
 }) => {
-  const color = getDarkerColor(userColor || 'rgb(96, 165, 250)', opacity);
+  const color = getDarkerColor(userColor, opacity);
   return (
     <X 
       className={className}
@@ -76,8 +76,8 @@ export const StyledUserIcon: React.FC<StyledIconProps> = ({
   style = {}
 }) => {
   const color = opacity === OPACITY_LEVELS.FULL 
-    ? (userColor || 'rgb(96, 165, 250)')
-    : getDarkerColor(userColor || 'rgb(96, 165, 250)', opacity);
+    ? (userColor)
+    : getDarkerColor(userColor, opacity);
   return (
     <User 
       className={className}
@@ -102,7 +102,7 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
   placeholder = "Search...",
   className = "w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none"
 }) => {
-  const baseColor = userColor || 'rgb(96, 165, 250)';
+  const baseColor = userColor;
   const textColor = value ? baseColor : getDarkerColor(baseColor, OPACITY_LEVELS.DARK);
   const borderColor = value ? getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM) : 'rgba(255,255,255,0.1)';
   const placeholderColor = getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM); // 50% opacity - 1 step lighter
@@ -148,7 +148,7 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
   inputRef,
   usernameFlash = false
 }) => {
-  const baseColor = userColor || 'rgb(96, 165, 250)';
+  const baseColor = userColor;
   const textColor = getDarkerColor(baseColor, OPACITY_LEVELS.LIGHT); // 60% opacity
   
   return (
@@ -186,7 +186,7 @@ export const StyledCharCounter: React.FC<StyledCharCounterProps> = ({
   max,
   userColor
 }) => {
-  const baseColor = userColor || 'rgb(96, 165, 250)';
+  const baseColor = userColor;
   const color = getDarkerColor(baseColor, OPACITY_LEVELS.LIGHT); // 60% opacity
   
   return (

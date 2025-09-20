@@ -20,6 +20,35 @@ const MAX_USERNAME_LENGTH = 12;
 const CACHE_SIZE = 5000;      // Keep last 5000 comments in cache
 
 /**
+ * Generate a random RGB color using sophisticated range-based generation
+ * Matches the client-side color generation logic
+ */
+function generateRandomRGB() {
+  // Color ranges matching client-side
+  const MAIN_MIN = 150, MAIN_MAX = 220;
+  const SECONDARY_MIN = 40, SECONDARY_MAX = 220;
+  const THIRD = 40;
+  
+  const mainValue = Math.floor(Math.random() * (MAIN_MAX - MAIN_MIN + 1)) + MAIN_MIN;
+  const secondaryValue = Math.floor(Math.random() * (SECONDARY_MAX - SECONDARY_MIN + 1)) + SECONDARY_MIN;
+  
+  // 6 permutations for variety
+  const permutation = Math.floor(Math.random() * 6);
+  let r, g, b;
+  
+  switch (permutation) {
+    case 0: r = mainValue; g = secondaryValue; b = THIRD; break;
+    case 1: r = mainValue; g = THIRD; b = secondaryValue; break;
+    case 2: r = secondaryValue; g = mainValue; b = THIRD; break;
+    case 3: r = THIRD; g = mainValue; b = secondaryValue; break;
+    case 4: r = secondaryValue; g = THIRD; b = mainValue; break;
+    case 5: r = THIRD; g = secondaryValue; b = mainValue; break;
+  }
+  
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
  * Main request handler
  */
 export default {
@@ -168,7 +197,7 @@ async function handlePostComment(request, env) {
     const body = await request.json();
     const text = sanitizeText(body.text);
     const username = sanitizeUsername(body.username);
-    const color = body.color || 'rgb(156, 163, 175)'; // Default to gray if not provided
+    const color = body.color || generateRandomRGB(); // Generate random color if not provided
     const domain = body.domain || request.headers.get('Origin')?.replace(/^https?:\/\//, '') || 'unknown';
     const language = body.language || 'en'; // Default to English
     const misc = body.misc || ''; // Optional misc field
