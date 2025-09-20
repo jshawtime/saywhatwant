@@ -167,7 +167,15 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.2.4)
+## 🔧 Recent Updates (v0.2.6)
+
+### v0.2.6: Complete Removal of Hardcoded Colors
+- **NO HARDCODED COLORS**: Removed ALL hardcoded color fallbacks
+- **Dynamic Everything**: All colors now use userColor or comment colors
+- **Keyboard Fix**: 'r' key no longer interferes with Cmd+R/Ctrl+R refresh
+- **Worker Update**: Generates random colors instead of gray fallback
+- **Simplified Code**: Removed mounted checks, cleaner initialization
+- **Truth**: System is now 100% dynamic, no hardcoded defaults
 
 ### v0.2.4: UI Improvements and Color Fixes
 - **Ban Icon**: Added no-smoking style icon to empty state
