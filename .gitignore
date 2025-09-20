@@ -1,43 +1,47 @@
-# Dependencies
-node_modules/
-.pnp
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
 .pnp.js
+.yarn/install-state.gz
 
-# Testing
-coverage/
+# testing
+/coverage
 
-# Next.js
-.next/
-out/
+# next.js
+/.next/
+/out/
 
-# Production
-build/
-dist/
+# production
+/build
 
-# Misc
+# misc
 .DS_Store
 *.pem
 
-# Debug
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Local env files
+# local env files
 .env*.local
+.env.local
+.env.r2
 
-# Vercel
+# vercel
 .vercel
 
-# TypeScript
+# typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# Videos - Large media files should not be in version control
+# wrangler
+.wrangler/
+.dev.vars
+
+# video files (if adding locally)
 public/sww-videos/*.mp4
 public/sww-videos/*.webm
 public/sww-videos/*.mov
-public/sww-videos/*.avi
-public/sww-videos/*.mkv
-# Keep the manifest
-!public/sww-videos/video-manifest.json
