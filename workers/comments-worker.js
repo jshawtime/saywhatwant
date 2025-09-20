@@ -168,6 +168,7 @@ async function handlePostComment(request, env) {
     const body = await request.json();
     const text = sanitizeText(body.text);
     const username = sanitizeUsername(body.username);
+    const color = body.color || '#60A5FA'; // Default to blue if not provided
 
     // Validate input
     if (!text) {
@@ -188,6 +189,7 @@ async function handlePostComment(request, env) {
       text: text,
       timestamp: Date.now(),
       username: username,
+      color: color,  // Include the color field
       userAgent: request.headers.get('User-Agent')?.substring(0, 100) || 'unknown'
     };
 
