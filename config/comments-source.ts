@@ -8,7 +8,8 @@ export const COMMENTS_CONFIG = {
   useLocalStorage: false, // Changed to false to test cloud messages
   
   // Cloud API endpoint (uses environment variable or fallback)
-  apiUrl: process.env.NEXT_PUBLIC_COMMENTS_API || 'http://localhost:8787/api/comments',
+  // Production: https://sww-comments.workers.dev/api/comments
+  apiUrl: process.env.NEXT_PUBLIC_COMMENTS_API || 'https://sww-comments.workers.dev/api/comments',
   
   // Polling interval in milliseconds
   pollingInterval: 5000,
@@ -23,7 +24,7 @@ export const COMMENTS_CONFIG = {
   lazyLoadBatch: 50,
   
   // Enable console logging for debugging
-  debugMode: true,
+  debugMode: false,
 };
 
 export const getCommentsConfig = () => {
