@@ -75,9 +75,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
           ) : (
             <>
               {/* Username filters */}
-              {filterUsernames.map((filter) => (
+              {filterUsernames.map((filter, idx) => (
                 <span
-                  key={`user-${filter.username}-${filter.color}`}
+                  key={`user-${filter.username}-${idx}`}
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
                   style={{ 
                     backgroundColor: getDarkerColor(filter.color, OPACITY_LEVELS.DARKEST), // 10% opacity
@@ -208,10 +208,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
             style={{
               backgroundColor: isFilterEnabled 
                 ? userColor // Use FULL color when active (100% opacity)
-                : 'rgba(255, 255, 255, 0.3)', // 30% white when off for visibility
+                : `rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST})`, // DARKEST level white when off
               boxShadow: isFilterEnabled 
                 ? `0 0 10px ${userColor}` 
-                : 'inset 0 0 2px rgba(255, 255, 255, 0.1)', // Subtle inset glow when off
+                : `inset 0 0 2px rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST * 0.5})`, // Even subtler inset
             }}
           />
         </div>

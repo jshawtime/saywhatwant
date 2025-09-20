@@ -46,10 +46,10 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
           style={{
             backgroundColor: isEnabled 
               ? color // Use FULL color when active (100% opacity)
-              : 'rgba(255, 255, 255, 0.3)', // 30% white when off for visibility
+              : `rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST})`, // DARKEST level white when off
             boxShadow: isEnabled 
               ? `0 0 10px ${color}` 
-              : 'inset 0 0 2px rgba(255, 255, 255, 0.1)', // Subtle inset glow when off
+              : `inset 0 0 2px rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST * 0.5})`, // Even subtler inset
           }}
         />
       </div>
