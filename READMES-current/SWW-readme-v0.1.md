@@ -3,7 +3,7 @@
 **NOTE: This README is for AI agents only. No humans read these files.**
 
 ## 🤖 Quick Context
-- **Version**: 0.2.1
+- **Version**: 0.2.4
 - **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
 - **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
@@ -167,14 +167,19 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.2.1)
+## 🔧 Recent Updates (v0.2.4)
 
-### Phase 1.1: Cloud API Client Module COMPLETE ✅
+### v0.2.4: UI Improvements and Color Fixes
+- **Ban Icon**: Added no-smoking style icon to empty state
+- **Color Preservation**: Fixed new comments losing color from API
+- **Worker Update**: Changed default from hex blue to RGB gray
+- **Result**: Consistent color handling across all comment states
+
+### v0.2.1: Cloud API Client Module COMPLETE ✅
 - **Extracted**: All cloud API logic into `/modules/cloudApiClient.ts`
 - **Functions**: `fetchCommentsFromCloud`, `postCommentToCloud`, `isCloudAPIEnabled`
 - **Benefits**: Single responsibility, reusable, testable, maintainable
 - **CommentsStream**: Reduced by ~50 lines, now imports from module
-- **Next**: Storage Manager module extraction
 
 ### v0.1.17: Critical Initialization Timing Fix
 - **Problem**: Hydration mismatches causing visual chaos on refresh
