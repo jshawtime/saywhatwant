@@ -168,7 +168,7 @@ async function handlePostComment(request, env) {
     const body = await request.json();
     const text = sanitizeText(body.text);
     const username = sanitizeUsername(body.username);
-    const color = body.color || '#60A5FA'; // Default to blue if not provided
+    const color = body.color || 'rgb(156, 163, 175)'; // Default to gray if not provided
     const domain = body.domain || request.headers.get('Origin')?.replace(/^https?:\/\//, '') || 'unknown';
     const language = body.language || 'en'; // Default to English
     const misc = body.misc || ''; // Optional misc field

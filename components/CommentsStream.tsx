@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Send, ChevronDown, Tv } from 'lucide-react';
+import { Send, ChevronDown, Tv, Ban } from 'lucide-react';
 import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter } from '@/components/UIElements';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
@@ -502,9 +502,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           misc: newComment.misc,
         });
         
+        // Ensure color is preserved (in case API doesn't return it)
+        const commentWithColor = {
+          ...savedComment,
+          color: savedComment.color || newComment.color
+        };
+        
         // Add to local state immediately
-        setAllComments(prev => [...prev, savedComment]);
-        setDisplayedComments(prev => [...prev, savedComment]);
+        setAllComments(prev => [...prev, commentWithColor]);
+        setDisplayedComments(prev => [...prev, commentWithColor]);
         
       } else {
         // Use localStorage (existing implementation)
@@ -829,14 +835,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           </div>
         ) : filteredComments.length === 0 ? (
           <div className="text-center py-8">
+            {!searchTerm && (
+              <Ban 
+                className="w-12 h-12 mx-auto mb-4" 
+                style={{ color: userColor }}
+              />
+            )}
             <p style={{ color: userColor }}>
               {searchTerm ? 'No matching comments' : (
                 <>
                   Apparently there's nothing to see here.
                   <br /><br />
-                  Try turning filters off, changing filters, search term or check what link got you here.
-                  <br /><br />
-                  Maybe someone fucked something up. 99.9% chance it's not a server issue.
+                  Try turning filters off, changing filters, search term<br />or check what link got you here.<br /><br />Maybe someone fucked something up. <br /><br />99.9% chance it's not a server issue.
                 </>
               )}
             </p>
