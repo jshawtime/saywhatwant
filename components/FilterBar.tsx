@@ -181,29 +181,40 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
       
-      {/* Filter Toggle Switch - Option C: Outline Style */}
+      {/* Filter Toggle LED - Same style as Domain Filter */}
       <button
         onClick={onToggleFilter}
-        className="relative w-9 h-5 rounded-full transition-all duration-200"
-        style={{ 
-          backgroundColor: isFilterEnabled 
-            ? getDarkerColor(userColor, OPACITY_LEVELS.DARKER) // 30% opacity fill when on
-            : 'transparent', // Transparent when off
-          border: `2px solid ${getDarkerColor(userColor, isFilterEnabled ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK)}`, // Full opacity border when on, 40% when off
-          boxShadow: isFilterEnabled ? `0 0 8px ${getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM)}` : 'none',
-        }}
+        className="relative p-1 transition-all"
         title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
         tabIndex={-1}
       >
-        <div 
-          className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full transition-all duration-200"
-          style={{ 
-            backgroundColor: isFilterEnabled 
-              ? userColor // Full color when on
-              : getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity when off (visible against transparent bg)
-            transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)',
-          }}
-        />
+        {/* LED Indicator Only */}
+        <div className="relative">
+          {/* LED Glow Effect when ON */}
+          {isFilterEnabled && (
+            <div
+              className="absolute inset-0 rounded-full blur-sm animate-pulse"
+              style={{
+                backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
+                width: '12px',
+                height: '12px',
+              }}
+            />
+          )}
+          
+          {/* LED Core */}
+          <div
+            className="relative w-3 h-3 rounded-full transition-all cursor-pointer"
+            style={{
+              backgroundColor: isFilterEnabled 
+                ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity when active
+                : 'rgba(255,255,255,0.2)', // Same as domain filter when off
+              boxShadow: isFilterEnabled 
+                ? `0 0 10px ${getDarkerColor(userColor, OPACITY_LEVELS.LIGHT)}` 
+                : 'none',
+            }}
+          />
+        </div>
       </button>
     </div>
   );
