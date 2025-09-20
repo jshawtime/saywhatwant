@@ -3,7 +3,7 @@
 **NOTE: This README is for AI agents only. No humans read these files.**
 
 ## 🤖 Quick Context
-- **Version**: 0.1.15
+- **Version**: 0.1.16
 - **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
 - **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
@@ -167,14 +167,15 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.1.15)
+## 🔧 Recent Updates (v0.1.16)
 
-### LED Button Visibility Fix (CRITICAL)
-- **Problem**: LEDs invisible on page reload (30% blue on black = can't see)
-- **Solution**: Inactive state now uses 30% WHITE for guaranteed visibility
-- **Active**: Full userColor (100% opacity) with glow
-- **Inactive**: 30% white with subtle inset shadow
-- **Both LEDs match**: Filter and Domain use same styling
+### LED Button System Finalized
+- **Inactive state**: Now uses OPACITY_LEVELS.DARKEST (20% white)
+- **Active state**: Full userColor (100% opacity) with glow
+- **Inset shadow**: Uses opacity system (10% for subtlety)
+- **Both LEDs match**: Filter and Domain use identical styling
+- **No hardcoded values**: Everything uses opacity constants
+- **Always visible**: White fallback ensures visibility on page load
 
 ### Previous Updates
 - **Replaced ALL hardcoded colors** with UIElements components
