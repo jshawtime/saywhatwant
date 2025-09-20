@@ -114,10 +114,10 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
       onChange={onChange}
       placeholder={placeholder}
       className={className}
-      style={{ 
+      style={{
         color: textColor,
         borderColor: borderColor,
-        '--placeholder-color': placeholderColor,
+        ['--placeholder-color' as any]: placeholderColor,
       }}
       tabIndex={-1}
     />

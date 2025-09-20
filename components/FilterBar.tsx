@@ -64,8 +64,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
             borderColor: isFilterEnabled && hasActiveFilters 
               ? getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM) // 50% opacity 
               : 'rgba(255,255,255,0.1)',
-            '--scrollbar-color': getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
-            '--scrollbar-bg': getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
+            ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
+            ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
           } as React.CSSProperties}
         >
           {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && (!mounted || !hasDateTimeFilter) ? (

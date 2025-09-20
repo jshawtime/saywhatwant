@@ -42,7 +42,7 @@ export const OPACITY_LEVELS = {
  * applyOpacity(userColor, OPACITY_LEVELS.LIGHT) // 40% opacity
  */
 export function applyOpacity(color: string, level: number): string {
-  if (!Object.values(OPACITY_LEVELS).includes(level)) {
+  if (!Object.values(OPACITY_LEVELS).includes(level as any)) {
     console.warn(`[ColorOpacity] Invalid opacity level: ${level}. Using FULL (1.0)`);
     return color;
   }
