@@ -829,12 +829,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none"
+              className="w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none placeholder-current"
               style={{ 
                 borderColor: searchTerm ? getDarkerColor(userColor, 0.5) : 'rgba(255,255,255,0.1)',
-                color: searchTerm ? userColor : 'rgba(255,255,255,0.6)',
-                '--placeholder-color': getDarkerColor(userColor, 0.4)
-              } as React.CSSProperties}
+                color: searchTerm ? userColor : getDarkerColor(userColor, 0.4),
+              }}
               tabIndex={-1}
             />
             {searchTerm && (

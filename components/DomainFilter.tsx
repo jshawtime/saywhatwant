@@ -44,17 +44,8 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
           style={{
             backgroundColor: isEnabled ? color : 'rgba(255,255,255,0.2)',
             boxShadow: isEnabled ? `0 0 10px ${color}` : 'none',
-            border: `1px solid ${isEnabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
           }}
-        >
-          {/* LED Highlight */}
-          <div
-            className="absolute top-0.5 left-0.5 w-1 h-1 rounded-full"
-            style={{
-              backgroundColor: isEnabled ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)',
-            }}
-          />
-        </div>
+        />
       </div>
     </button>
   );
