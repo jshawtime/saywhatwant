@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, X, Calendar } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
+import { StyledFilterIcon } from '@/components/UIElements';
+import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { UsernameFilter } from '@/hooks/useFilters';
 import { describeDateRange } from '@/utils/dateTimeParser';
 
@@ -55,22 +57,19 @@ const FilterBar: React.FC<FilterBarProps> = ({
   return (
     <div className="relative flex items-center gap-2">
       <div className="flex-1 relative">
-        <Filter 
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none" 
-          style={{ color: getDarkerColor(userColor, 0.6) }} 
-        />
+        <StyledFilterIcon userColor={userColor} />
         <div 
           className="w-full min-h-[34px] max-h-[100px] overflow-y-auto custom-scrollbar pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-start gap-2 flex-wrap transition-colors"
           style={{ 
             borderColor: isFilterEnabled && hasActiveFilters 
-              ? getDarkerColor(userColor, 0.5) 
+              ? getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM) // 50% opacity 
               : 'rgba(255,255,255,0.1)',
-            '--scrollbar-color': getDarkerColor(userColor, 0.3),
-            '--scrollbar-bg': getDarkerColor(userColor, 0.05),
+            '--scrollbar-color': getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
+            '--scrollbar-bg': getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
           } as React.CSSProperties}
         >
           {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && (!mounted || !hasDateTimeFilter) ? (
-            <span style={{ color: getDarkerColor(userColor, 0.4) }}>
+            <span style={{ color: getDarkerColor(userColor, OPACITY_LEVELS.DARK) }}> {/* 40% opacity */}
               Click usernames or words to filter...
             </span>
           ) : (
@@ -81,7 +80,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   key={`user-${filter.username}-${filter.color}`}
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
                   style={{ 
-                    backgroundColor: getDarkerColor(filter.color, 0.1),
+                    backgroundColor: getDarkerColor(filter.color, OPACITY_LEVELS.DARKEST), // 10% opacity
                     opacity: isFilterEnabled ? 1 : 0.4
                   }}
                 >
@@ -105,7 +104,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   key={`word-${word}`}
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
                   style={{ 
-                    backgroundColor: getDarkerColor(userColor, 0.1),
+                    backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
                     opacity: isFilterEnabled ? 1 : 0.4
                   }}
                 >
@@ -152,7 +151,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
                   style={{ 
-                    backgroundColor: getDarkerColor('#9333EA', 0.15),
+                    backgroundColor: getDarkerColor('#9333EA', OPACITY_LEVELS.DARKEST * 1.5), // 15% opacity
                     opacity: isFilterEnabled ? 1 : 0.4
                   }}
                 >
@@ -188,8 +187,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
         className="relative w-9 h-5 rounded-full transition-colors"
         style={{ 
           backgroundColor: isFilterEnabled 
-            ? getDarkerColor(userColor, 0.35)
-            : getDarkerColor(userColor, 0.2)
+            ? getDarkerColor(userColor, OPACITY_LEVELS.DARK * 0.875) // 35% opacity
+            : getDarkerColor(userColor, OPACITY_LEVELS.DARKER) // 20% opacity
         }}
         title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
         tabIndex={-1}
@@ -197,7 +196,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         <div 
           className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
           style={{ 
-            backgroundColor: isFilterEnabled ? userColor : getDarkerColor(userColor, 0.4),
+            backgroundColor: isFilterEnabled ? userColor : getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity when disabled
             transform: isFilterEnabled ? 'translateX(16px)' : 'translateX(0)'
           }}
         />

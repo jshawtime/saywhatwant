@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Send, ChevronDown, User, X, Tv } from 'lucide-react';
+import { Send, ChevronDown, Tv } from 'lucide-react';
+import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter } from '@/components/UIElements';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import FilterBar from '@/components/FilterBar';
@@ -19,6 +20,7 @@ const MAX_USERNAME_LENGTH = 16;
 
 // Import color functions from the color system
 import { getRandomColor, COLOR_PALETTE } from '@/modules/colorSystem';
+import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -692,7 +694,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 className="sww-title transition-opacity" 
                 style={{ 
                   color: userColor,
-                  opacity: domainFilterEnabled ? 0.4 : 0.25 
+                  opacity: domainFilterEnabled ? OPACITY_LEVELS.DARK : 0.25 // 40% when active, 25% when inactive
                 }}
               >
                 {domainConfig.title}
@@ -714,12 +716,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               <button
                 onClick={toggleColorPicker}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
-                style={{ color: userColor }}
                 aria-label="Choose color"
                 title="Click to pick color or press 'R' for random"
                 tabIndex={-1}
               >
-                <User className="w-4 h-4" />
+                <StyledUserIcon userColor={userColor} />
               </button>
               
               {/* Color Picker Dropdown */}
@@ -730,17 +731,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                       key={color}
                       onClick={() => selectColor(color)}
                       className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                      style={{ color }}
                       aria-label={`Select color ${color}`}
                     >
-                      <User className="w-4 h-4" />
+                      <StyledUserIcon userColor={color} />
                     </button>
                   ))}
                 </div>
               )}
-              <input
-                ref={usernameRef}
-                type="text"
+              <StyledUsernameInput
+                inputRef={usernameRef}
                 value={username}
                 onChange={(e) => {
                   // Remove spaces and limit length
@@ -760,17 +759,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     inputRef.current?.focus();
                   }
                 }}
+                userColor={userColor}
                 placeholder={hasClickedUsername && username ? "" : "..."}
-                className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40 transition-all duration-300 ${
-                  usernameFlash 
-                    ? 'border-cyan-400 animate-pulse shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
-                    : 'border-white/10'
-                }`}
                 maxLength={MAX_USERNAME_LENGTH}
-                style={{ 
-                  width: '100%',
-                  color: getDarkerColor(userColor, 0.6)
-                }}
+                usernameFlash={usernameFlash}
               />
               {username && (
                 <button
@@ -780,10 +772,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   }}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
                   aria-label="Clear username"
-                  style={{ color: getDarkerColor(userColor, 0.6) }}
                   tabIndex={-1}
                 >
-                  <X className="w-3 h-3" />
+                  <StyledClearIcon userColor={userColor} />
                 </button>
               )}
             </div>
@@ -795,9 +786,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 className="p-2 hover:opacity-80 transition-opacity"
                 style={{ 
                   color: showVideo 
-                    ? getDarkerColor(userColor, 0.6)  // Username color when active
-                    : userColor,  // Same as title when off
-                  opacity: showVideo ? 1 : 0.5  // Same opacity as title when off
+                    ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT)  // 60% opacity when active
+                    : userColor,  // Full color when off
+                  opacity: showVideo ? 1 : OPACITY_LEVELS.MEDIUM  // 50% opacity when off
                 }}
                 title={showVideo ? 'Hide video' : 'Show video'}
                 tabIndex={-1}
@@ -827,29 +818,21 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
           {/* Search Bar - Instant Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none" 
-              style={{ color: getDarkerColor(userColor, 0.6) }} />
-            <input
-              type="text"
+            <StyledSearchIcon userColor={userColor} />
+            <StyledSearchInput 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              userColor={userColor}
               placeholder="Search..."
-              className="w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none placeholder-current"
-              style={{ 
-                borderColor: searchTerm ? getDarkerColor(userColor, 0.5) : 'rgba(255,255,255,0.1)',
-                color: searchTerm ? userColor : getDarkerColor(userColor, 0.4),
-              }}
-              tabIndex={-1}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-colors"
                 aria-label="Clear search"
-                style={{ color: getDarkerColor(userColor, 0.6) }}
                 tabIndex={-1}
               >
-                <X className="w-3 h-3" />
+                <StyledClearIcon userColor={userColor} />
               </button>
             )}
           </div>
@@ -862,8 +845,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1"
         style={{
-          '--scrollbar-color': getDarkerColor(userColor, 0.3),
-          '--scrollbar-bg': getDarkerColor(userColor, 0.05),
+          '--scrollbar-color': getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
+          '--scrollbar-bg': getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
         } as React.CSSProperties}
       >
         {isLoading ? (
@@ -891,7 +874,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer" 
                   style={{ 
                     lineHeight: '20px',
-                    color: getDarkerColor(comment.color || '#60A5FA', 0.6) // Darker username
+                    color: getDarkerColor(comment.color || '#60A5FA', OPACITY_LEVELS.LIGHT) // 60% opacity username
                   }}
                   tabIndex={-1}
                 >
@@ -912,9 +895,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 <span 
                   className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
                   style={{ 
-                    color: getDarkerColor(comment.color || '#60A5FA', 0.7), // Darker text
-                    borderColor: getDarkerColor(comment.color || '#60A5FA', 0.3), // Darker border
-                    backgroundColor: getDarkerColor(comment.color || '#60A5FA', 0.08) // Darker background
+                    color: getDarkerColor(comment.color || '#60A5FA', 0.7), // 70% opacity text (custom for readability)
+                    borderColor: getDarkerColor(comment.color || '#60A5FA', OPACITY_LEVELS.DARK), // 40% opacity border
+                    backgroundColor: getDarkerColor(comment.color || '#60A5FA', OPACITY_LEVELS.DARKEST) // 10% opacity background
                   }}
                 >
                   {mounted ? formatTimestamp(comment.timestamp) : '...'}
@@ -947,12 +930,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         <form onSubmit={handleSubmit} className="flex gap-2 items-stretch">
           <div className="flex-1 relative">
             {/* Character counter at top of textarea */}
-            <div 
-              className="absolute top-2 right-2 text-[10px] pointer-events-none z-10"
-              style={{ color: getDarkerColor(userColor, 0.6) }}
-            >
-              {inputText.length}/{MAX_COMMENT_LENGTH}
-            </div>
+            <StyledCharCounter 
+              current={inputText.length}
+              max={MAX_COMMENT_LENGTH}
+              userColor={userColor}
+            />
             <textarea
               ref={inputRef}
               value={inputText}
@@ -977,13 +959,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               placeholder="Say what you want..."
               className="w-full h-full px-3 pt-6 pb-2 pr-16 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
               style={{
-                '--placeholder-color': getDarkerColor(userColor, 0.6), // Match username color
-                '--scrollbar-color': getDarkerColor(userColor, 0.6), // Match username color
-                '--scrollbar-bg': getDarkerColor(userColor, 0.1), // Very subtle background
+                '--placeholder-color': getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
+                '--scrollbar-color': getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
+                '--scrollbar-bg': getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
                 color: userColor, // Always use user's color
                 cursor: pendingVideoKey && inputText.includes('<-- video') ? 'pointer' : 'text',
                 textDecoration: pendingVideoKey && inputText.includes('<-- video') ? 'underline' : 'none',
-                backgroundColor: getDarkerColor(userColor, 0.05), // Very dark version of user color
+                backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity - even darker than darkest
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}
               disabled={isSubmitting}
@@ -1013,7 +995,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             }`}
             style={{ 
               minWidth: '56px', // Square based on min-height
-              backgroundColor: getDarkerColor(userColor, 0.6), // Username color
+              backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
               color: userColor // Message text color
             }}
             tabIndex={-1}
