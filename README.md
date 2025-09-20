@@ -267,27 +267,86 @@ Comments are stored directly in the browser during development:
 
 ### Production (Cloudflare Workers)
 
-To switch to Cloudflare Workers for production:
+#### 🚀 Your App is Ready for Cloudflare!
 
-1. **Update Environment Variable**:
+The application has **everything prepared** for Cloudflare integration:
+
+✅ **Frontend placeholder code** exists (CommentsStream.tsx line 267)  
+✅ **Complete Worker API** ready (comments-worker.js)  
+✅ **Rate limiting** implemented (10 comments/minute per IP)  
+✅ **KV storage** with 5000-comment cache  
+✅ **Search & pagination** built-in  
+
+#### Quick Start (15 minutes to production)
+
 ```bash
-# .env.production
-NEXT_PUBLIC_COMMENTS_API=https://your-worker.workers.dev/api/comments
+# 1. Create KV namespace
+wrangler kv:namespace create COMMENTS_KV
+
+# 2. Copy namespace ID to workers/wrangler.toml
+
+# 3. Deploy worker
+cd workers && wrangler deploy
+
+# 4. Set environment variable
+echo "NEXT_PUBLIC_COMMENTS_API=https://sww-comments.workers.dev/api/comments" >> .env.production
+
+# 5. Deploy frontend
+npm run build && npm run deploy
 ```
 
-2. **Deploy Cloudflare Worker**:
-```bash
-cd workers
-wrangler deploy comments-worker.js
+**That's it!** No code changes needed - just set one environment variable.
+
+#### 📊 Scaling to 1M Messages/Day
+
+| Messages/Day | Architecture | Cost/Month | Changes Needed |
+|-------------|--------------|------------|----------------|
+| **0-100K** | Current (KV only) | $5 | Just deploy |
+| **100K-500K** | Add D1 Database | $15 | Add database writes |
+| **500K-1M** | Add Durable Objects | $45 | Add WebSocket support |
+| **1M-10M** | Add sharding | $100+ | Partition data |
+
+#### Recommended Architecture for Scale
+
+```
+┌─────────────────────────────────────────────┐
+│             Users (1M/day)                  │
+└─────────────────┬───────────────────────────┘
+                  ▼
+┌─────────────────────────────────────────────┐
+│      Cloudflare Workers (Global Edge)       │
+│       • Rate Limiting • Validation          │
+│       • WebSocket Support • Caching         │
+└─────────────────┬───────────────────────────┘
+        ┌─────────┼─────────┐
+        ▼         ▼         ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Durable  │ │    D1    │ │    R2    │
+│ Objects  │ │ Database │ │  Storage │
+│ (Live)   │ │ (Index)  │ │ (Archive)│
+└──────────┘ └──────────┘ └──────────┘
 ```
 
-3. **Configure KV Storage**:
-```bash
-# Create KV namespace
-wrangler kv:namespace create "COMMENTS_KV"
+#### Current Capabilities
 
-# Update wrangler.toml with namespace ID
-```
+The existing `workers/comments-worker.js` provides:
+- Full REST API (`GET /api/comments`, `POST /api/comments`)
+- IP-based rate limiting with KV storage
+- 5000-comment in-memory cache for performance
+- Search functionality with query parameters
+- Pagination support (offset/limit)
+- CORS headers configured
+- Input sanitization (1000 char limit)
+
+#### 📚 Full Documentation
+
+See [**CLOUDFLARE-SCALING-ARCHITECTURE.md**](./README/CLOUDFLARE-SCALING-ARCHITECTURE.md) for:
+- Complete placeholder code walkthrough
+- Three scaling options with pros/cons
+- Detailed cost analysis
+- Performance optimization strategies
+- Monitoring & analytics setup
+- Implementation checklists
 
 ## 🎨 Color System
 
