@@ -72,4 +72,5 @@ To update production:
 4. Auto-deploys to Cloudflare
 
 ---
-*Deployed: Saturday, September 20, 2025*
+*Deployed: Saturday, September 20, 2025*  
+*Build Settings Fixed: 21:40 UTC - Triggering auto-deploy with corrected commands*
