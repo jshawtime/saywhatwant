@@ -21,17 +21,23 @@ export class URLFilterManager {
   private static instance: URLFilterManager;
   private subscribers: Set<(state: SWWFilterState) => void> = new Set();
   private currentState: SWWFilterState = this.getEmptyState();
+  private initialized = false;
   
   private constructor() {
-    // Only run in browser environment
-    if (typeof window !== 'undefined') {
-      // Listen for URL changes
-      window.addEventListener('hashchange', () => this.handleHashChange());
-      window.addEventListener('popstate', () => this.handleHashChange());
-      
-      // Parse initial URL
-      this.handleHashChange();
-    }
+    // Don't do anything in constructor - wait for explicit initialization
+  }
+  
+  private initialize() {
+    if (this.initialized || typeof window === 'undefined') return;
+    
+    this.initialized = true;
+    
+    // Listen for URL changes
+    window.addEventListener('hashchange', () => this.handleHashChange());
+    window.addEventListener('popstate', () => this.handleHashChange());
+    
+    // Parse initial URL
+    this.handleHashChange();
   }
   
   static getInstance(): URLFilterManager {
@@ -251,6 +257,7 @@ export class URLFilterManager {
    * Subscribe to state changes
    */
   subscribe(callback: (state: SWWFilterState) => void): () => void {
+    this.initialize(); // Ensure initialized before subscribing
     this.subscribers.add(callback);
     // Immediately call with current state
     callback(this.currentState);
@@ -266,6 +273,7 @@ export class URLFilterManager {
    */
   updateURL(updates: Partial<SWWFilterState>): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     const newState = { ...this.currentState, ...updates };
     const hash = this.buildHash(newState);
@@ -283,6 +291,7 @@ export class URLFilterManager {
    */
   mergeURL(updates: Partial<SWWFilterState>): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     const newState = { ...this.currentState };
     
@@ -335,6 +344,7 @@ export class URLFilterManager {
    */
   removeFromURL(filterType: keyof SWWFilterState, value?: string): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     const newState = { ...this.currentState };
     
@@ -363,6 +373,7 @@ export class URLFilterManager {
    */
   clearAll(): void {
     if (typeof window === 'undefined') return;
+    this.initialize(); // Ensure initialized
     
     window.history.pushState(null, '', '#');
     this.currentState = this.getEmptyState();
@@ -373,6 +384,7 @@ export class URLFilterManager {
    * Get current state
    */
   getCurrentState(): SWWFilterState {
+    this.initialize(); // Ensure initialized before getting state
     return { ...this.currentState };
   }
 }
