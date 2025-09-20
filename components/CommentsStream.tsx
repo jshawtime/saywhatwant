@@ -694,7 +694,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 className="sww-title transition-opacity" 
                 style={{ 
                   color: userColor,
-                  opacity: domainFilterEnabled ? OPACITY_LEVELS.DARK : 0.25 // 40% when active, 25% when inactive
+                  opacity: domainFilterEnabled ? 0.4 : 0.25 // Simple opacity change, no glow
                 }}
               >
                 {domainConfig.title}
@@ -942,11 +942,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               disabled={isSubmitting || !inputText.trim()}
               className={`absolute top-6 right-2 p-1 rounded transition-all z-10 ${
                 isSubmitting || !inputText.trim()
-                  ? 'opacity-30 cursor-not-allowed'
+                  ? 'cursor-not-allowed'
                   : 'hover:opacity-80 cursor-pointer'
               }`}
               style={{ 
-                color: userColor // Message text color
+                color: userColor, // Message text color
+                opacity: (isSubmitting || !inputText.trim()) ? OPACITY_LEVELS.DARK : 1 // 40% when disabled
               }}
               tabIndex={-1}
               aria-label="Send message"

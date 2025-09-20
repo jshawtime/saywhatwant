@@ -18,7 +18,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   const [filterUsernames, setFilterUsernames] = useState<UsernameFilter[]>([]);
   const [filterWords, setFilterWords] = useState<string[]>([]);
   const [negativeFilterWords, setNegativeFilterWords] = useState<string[]>([]);
-  const [isFilterEnabled, setIsFilterEnabled] = useState(false);
+  const [isFilterEnabled, setIsFilterEnabled] = useState(false); // Default: OFF
   const [filterByColorToo, setFilterByColorToo] = useState(true);
   
   // Get URL filter state and methods
@@ -83,14 +83,15 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       }
     }
     
-    if (savedFilterEnabled) {
+    // Load saved filter enabled state from localStorage
+    // Priority: 1. localStorage, 2. URL filters present, 3. default (false)
+    if (savedFilterEnabled !== null) {
       setIsFilterEnabled(savedFilterEnabled === 'true');
-    }
-    
-    // Enable filter if URL has filters
-    if (hasURLFilters) {
+    } else if (hasURLFilters) {
+      // Only auto-enable if no saved preference and URL has filters
       setIsFilterEnabled(true);
     }
+    // Otherwise keeps the default false state
   }, [hasURLFilters]); // Re-run if URL filter state changes
   
   // Merge URL filters with existing filters
