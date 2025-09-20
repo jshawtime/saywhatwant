@@ -128,6 +128,69 @@ http://localhost:3000/#from=T1440&to=now&u=team&search=bug&word=critical
 - **Persistent**: All filters save to localStorage
 - **Visual States**: Active filters are bright, inactive filters are 40% opacity
 
+## 🔧 Technical Implementation: SSR & Hydration
+
+### The Challenge: URL Filters with Server-Side Rendering
+
+When implementing URL-based filtering in a Next.js app with SSR, we encountered hydration mismatches. Here's why and how we solved it:
+
+#### The Problem
+- **Server**: Cannot access `window.location.hash`, renders with empty filter state
+- **Client**: Can access URL, initializes with parsed filters
+- **Result**: Different initial renders = React hydration error ❌
+
+#### The Solution: Deferred Initialization
+
+1. **Consistent Initial State**
+   ```javascript
+   // ALWAYS start with empty state on both server and client
+   const [urlState] = useState(emptyState);
+   
+   // Parse URL ONLY after mount
+   useEffect(() => {
+     if (typeof window === 'undefined') return;
+     const manager = URLFilterManager.getInstance();
+     setUrlState(manager.getCurrentState());
+   }, []);
+   ```
+
+2. **Lazy URLFilterManager Initialization**
+   ```javascript
+   class URLFilterManager {
+     private initialized = false;
+     
+     private initialize() {
+       if (this.initialized || typeof window === 'undefined') return;
+       // Only parse URL and set up listeners after explicit initialization
+       this.handleHashChange();
+     }
+   }
+   ```
+
+3. **Time-Sensitive Content Handling**
+   ```javascript
+   // Timestamps that change between server/client renders
+   const [mounted, setMounted] = useState(false);
+   
+   useEffect(() => setMounted(true), []);
+   
+   // Render placeholder during SSR
+   <span>{mounted ? formatTimestamp(time) : '...'}</span>
+   ```
+
+#### Key Insights
+
+- **Never parse URLs in constructors or initial state functions**
+- **Always defer browser-specific code until after mount**
+- **Use placeholder content for dynamic/time-based values**
+- **Ensure both server and client start with identical state**
+
+This approach ensures:
+- ✅ No hydration errors
+- ✅ URL filters work correctly
+- ✅ SEO-friendly server rendering
+- ✅ Clean separation of concerns
+
 ## 📁 Project Structure
 
 ```
