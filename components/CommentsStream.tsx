@@ -17,21 +17,8 @@ const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const MAX_USERNAME_LENGTH = 16;
 
-// Predefined color palette for usernames
-const COLOR_PALETTE = [
-  '#60A5FA', // blue-400
-  '#34D399', // emerald-400
-  '#FBBF24', // amber-400
-  '#F87171', // red-400
-  '#A78BFA', // violet-400
-  '#FB923C', // orange-400
-  '#4ADE80', // green-400
-  '#F472B6', // pink-400
-  '#38BDF8', // sky-400
-  '#A3E635', // lime-400
-  '#E879F9', // fuchsia-400
-  '#94A3B8', // slate-400
-];
+// Import color functions from the color system
+import { getRandomColor, COLOR_PALETTE } from '@/modules/colorSystem';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -58,7 +45,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [usernameFlash, setUsernameFlash] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [userColor, setUserColor] = useState('#60A5FA'); // Default blue-400
+  const [userColor, setUserColor] = useState('rgb(96, 165, 250)'); // Default blue-400 in RGB
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [pendingVideoKey, setPendingVideoKey] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false); // For hydration safety
@@ -124,8 +111,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       setHasClickedUsername(true); // If there's a saved username, treat it as if they've clicked
     }
     
-    if (savedColor && COLOR_PALETTE.includes(savedColor)) {
-      setUserColor(savedColor);
+    if (savedColor) {
+      // Handle both old hex format and new RGB format
+      if (savedColor.startsWith('#')) {
+        // Convert old hex to RGB
+        const hexMatch = savedColor.match(/^#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})$/i);
+        if (hexMatch) {
+          const r = parseInt(hexMatch[1], 16);
+          const g = parseInt(hexMatch[2], 16);
+          const b = parseInt(hexMatch[3], 16);
+          const rgbColor = `rgb(${r}, ${g}, ${b})`;
+          setUserColor(rgbColor);
+          localStorage.setItem('sww-color', rgbColor); // Update to new format
+        }
+      } else if (savedColor.startsWith('rgb')) {
+        setUserColor(savedColor);
+      }
     }
   }, []);
 
@@ -190,8 +191,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Don't trigger if typing in input or textarea
         if (tagName !== 'input' && tagName !== 'textarea') {
           event.preventDefault();
-          // Pick a random color from the palette
-          const randomColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+          // Generate a sophisticated random color
+          const randomColor = getRandomColor();
           setUserColor(randomColor);
           localStorage.setItem('sww-color', randomColor);
         }
@@ -620,8 +621,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Shuffle colors array
   const shuffleColors = () => {
-    const shuffled = [...COLOR_PALETTE].sort(() => Math.random() - 0.5);
-    setRandomizedColors(shuffled);
+    // Generate 12 unique random colors for the color picker
+    const colors: string[] = [];
+    const usedColors = new Set<string>();
+    
+    while (colors.length < 12) {
+      const color = getRandomColor();
+      // Ensure we don't have duplicates
+      if (!usedColors.has(color)) {
+        colors.push(color);
+        usedColors.add(color);
+      }
+    }
+    
+    setRandomizedColors(colors);
   };
 
   // Toggle color picker with randomization

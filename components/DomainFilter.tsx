@@ -21,14 +21,10 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all group"
-      style={{
-        backgroundColor: isEnabled ? `${color}20` : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${isEnabled ? color : 'rgba(255,255,255,0.1)'}`,
-      }}
-      title={`Filter: ${domain} only (${isEnabled ? 'ON' : 'OFF'})`}
+      className="relative p-1 transition-all"
+      title="Show messages from this site only"
     >
-      {/* LED Indicator */}
+      {/* LED Indicator Only */}
       <div className="relative">
         {/* LED Glow Effect when ON */}
         {isEnabled && (
@@ -44,7 +40,7 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
         
         {/* LED Core */}
         <div
-          className="relative w-3 h-3 rounded-full transition-all"
+          className="relative w-3 h-3 rounded-full transition-all cursor-pointer"
           style={{
             backgroundColor: isEnabled ? color : 'rgba(255,255,255,0.2)',
             boxShadow: isEnabled ? `0 0 10px ${color}` : 'none',
@@ -60,17 +56,6 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
           />
         </div>
       </div>
-      
-      {/* Domain Label */}
-      <span 
-        className="text-xs font-medium transition-all"
-        style={{
-          color: isEnabled ? color : 'rgba(255,255,255,0.4)',
-          opacity: isEnabled ? 1 : 0.6,
-        }}
-      >
-        {domain.split('.')[0].toUpperCase()}
-      </span>
     </button>
   );
 };
