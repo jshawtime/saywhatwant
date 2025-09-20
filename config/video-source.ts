@@ -7,7 +7,7 @@ export const VIDEO_SOURCE_CONFIG = {
   // ============================================
   // TOGGLE THIS TO SWITCH BETWEEN LOCAL AND R2
   // ============================================
-  useLocal: true,  // true = local folder, false = R2 bucket
+  useLocal: false,  // Using R2 bucket now!
   
   // Local configuration
   local: {
@@ -17,7 +17,7 @@ export const VIDEO_SOURCE_CONFIG = {
   
   // R2 configuration (will be used when useLocal = false)
   r2: {
-    bucketUrl: process.env.NEXT_PUBLIC_R2_BUCKET_URL || 'https://your-bucket.r2.dev',
+    bucketUrl: 'https://pub-56b43531787b4783b546dd45f31651a7.r2.dev',
     manifestPath: '/video-manifest.json'
   },
   
