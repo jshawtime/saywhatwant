@@ -5,8 +5,10 @@ import { Search, Send, ChevronDown, User, X, Tv } from 'lucide-react';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import FilterBar from '@/components/FilterBar';
+import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText, getDarkerColor } from '@/utils/textParsing';
 import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
+import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggleDomainFilter } from '@/config/domain-config';
 
 // Configuration - Now using config file
 const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount;
@@ -37,6 +39,11 @@ interface CommentsStreamProps {
 }
 
 const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, toggleVideo }) => {
+  // Domain configuration
+  const [domainConfig] = useState(() => getCurrentDomainConfig());
+  const [currentDomain] = useState(() => getCurrentDomain());
+  const [domainFilterEnabled, setDomainFilterEnabled] = useState(() => isDomainFilterEnabled());
+  
   // State management
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
@@ -64,7 +71,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
   const colorPickerRef = useRef<HTMLDivElement>(null);
   
-  // Use the filters hook
+  // Apply domain filtering if enabled
+  const domainFilteredComments = useMemo(() => {
+    if (!domainFilterEnabled) return displayedComments;
+    return displayedComments.filter(comment => 
+      comment.domain === currentDomain || 
+      !comment.domain // Show old comments without domain field
+    );
+  }, [displayedComments, domainFilterEnabled, currentDomain]);
+
+  // Use the filters hook with domain-filtered comments
   const {
     filterUsernames,
     filterWords,
@@ -84,7 +100,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     removeSearchTermFromURL,
     dateTimeFilter,
     clearDateTimeFilter
-  } = useFilters({ displayedComments, searchTerm });
+  } = useFilters({ displayedComments: domainFilteredComments, searchTerm });
 
   // Storage key for localStorage
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
@@ -502,6 +518,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             text: newComment.text,
             username: newComment.username,
             color: newComment.color,
+            domain: currentDomain,
           }),
         });
         
@@ -650,9 +667,28 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       {/* Header */}
       <div className="flex-shrink-0 border-b border-white/10 bg-black/50 backdrop-blur-sm">
         <div className="p-3 space-y-2">
-          {/* Title and Username */}
+          {/* Title and Domain Filter */}
           <div className="flex items-center justify-between gap-4">
-            <h2 className="sww-title" style={{ color: userColor }}>Say What Want</h2>
+            <div className="flex items-center gap-3">
+              <h2 
+                className="sww-title transition-opacity" 
+                style={{ 
+                  color: userColor,
+                  opacity: domainFilterEnabled ? 0.4 : 0.25 
+                }}
+              >
+                {domainConfig.title}
+              </h2>
+              <DomainFilter
+                isEnabled={domainFilterEnabled}
+                domain={currentDomain}
+                color={userColor}
+                onClick={() => {
+                  const newState = toggleDomainFilter();
+                  setDomainFilterEnabled(newState);
+                }}
+              />
+            </div>
             
             {/* Username Input and TV Toggle - Always Visible */}
             <div className="flex items-center gap-4">

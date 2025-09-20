@@ -4,8 +4,9 @@ export interface Comment {
   text: string;
   timestamp: number;
   username?: string;
-  userAgent?: string;
+  domain?: string; // Domain where comment was posted
   color?: string; // User's chosen color
+  // userAgent removed - not needed
 }
 
 export interface CommentsResponse {

@@ -169,6 +169,7 @@ async function handlePostComment(request, env) {
     const text = sanitizeText(body.text);
     const username = sanitizeUsername(body.username);
     const color = body.color || '#60A5FA'; // Default to blue if not provided
+    const domain = body.domain || request.headers.get('Origin')?.replace(/^https?:\/\//, '') || 'unknown';
 
     // Validate input
     if (!text) {
@@ -190,7 +191,8 @@ async function handlePostComment(request, env) {
       timestamp: Date.now(),
       username: username,
       color: color,  // Include the color field
-      userAgent: request.headers.get('User-Agent')?.substring(0, 100) || 'unknown'
+      domain: domain  // Store the domain
+      // Removed userAgent - not needed
     };
 
     // Store in KV
