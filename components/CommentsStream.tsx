@@ -21,6 +21,8 @@ const MAX_USERNAME_LENGTH = 16;
 // Import color functions from the color system
 import { getRandomColor, COLOR_PALETTE } from '@/modules/colorSystem';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
+// Import cloud API functions
+import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -288,40 +290,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, []);
 
-  // Fetch comments from cloud API
-  const fetchCommentsFromCloud = useCallback(async (offset = 0, limit = INITIAL_LOAD_COUNT) => {
-    try {
-      const url = new URL(COMMENTS_CONFIG.apiUrl);
-      url.searchParams.append('offset', offset.toString());
-      url.searchParams.append('limit', limit.toString());
-      
-      const response = await fetch(url.toString());
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data: CommentsResponse = await response.json();
-      
-      if (COMMENTS_CONFIG.debugMode) {
-        console.log('[Cloud API] Fetched comments:', {
-          count: data.comments?.length || 0,
-          total: data.total,
-          hasMore: data.hasMore
-        });
-      }
-      
-      return data;
-    } catch (err) {
-      console.error('[Cloud API] Error fetching comments:', err);
-      throw err;
-    }
-  }, []);
+  // Fetch comments from cloud API is now imported from cloudApiClient module
 
   // Fetch comments (supports both localStorage and cloud API)
   const fetchComments = useCallback(async (offset = 0, limit = INITIAL_LOAD_COUNT) => {
     try {
-      if (!COMMENTS_CONFIG.useLocalStorage) {
+      if (isCloudAPIEnabled()) {
         // Use cloud API
         return await fetchCommentsFromCloud(offset, limit);
       }
@@ -351,7 +325,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.error('[Comments] Error fetching comments:', err);
       throw err;
     }
-  }, [loadCommentsFromStorage, fetchCommentsFromCloud]);
+  }, [loadCommentsFromStorage]);
 
   // Initial load
   useEffect(() => {
@@ -386,7 +360,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       try {
         let newComments: Comment[] = [];
         
-        if (!COMMENTS_CONFIG.useLocalStorage) {
+        if (isCloudAPIEnabled()) {
           // Poll cloud API for new comments
           const data = await fetchComments(0, INITIAL_LOAD_COUNT);
           
@@ -517,32 +491,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         misc: '', // Empty for now, can be used for future features
       };
       
-      if (!COMMENTS_CONFIG.useLocalStorage) {
+      if (isCloudAPIEnabled()) {
         // Submit to cloud API
-        const response = await fetch(COMMENTS_CONFIG.apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: newComment.text,
-            username: newComment.username,
-            color: newComment.color,
-            domain: currentDomain,
-            language: newComment.language,
-            misc: newComment.misc,
-          }),
+        const savedComment = await postCommentToCloud({
+          text: newComment.text,
+          username: newComment.username,
+          color: newComment.color,
+          domain: currentDomain,
+          language: newComment.language,
+          misc: newComment.misc,
         });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const savedComment = await response.json();
-        
-        if (COMMENTS_CONFIG.debugMode) {
-          console.log('[Cloud API] Posted comment:', savedComment);
-        }
         
         // Add to local state immediately
         setAllComments(prev => [...prev, savedComment]);

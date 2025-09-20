@@ -3,7 +3,7 @@
 **NOTE: This README is for AI agents only. No humans read these files.**
 
 ## 🤖 Quick Context
-- **Version**: 0.1.17
+- **Version**: 0.2.1
 - **Branch**: SWW-v0.1  
 - **Date**: September 20, 2025
 - **Purpose**: Anonymous messaging platform with sophisticated color-based user differentiation
@@ -167,15 +167,19 @@ saveUserColor() // Stores in localStorage
 // Each user gets persistent unique color
 ```
 
-## 🔧 Recent Updates (v0.1.17)
+## 🔧 Recent Updates (v0.2.1)
 
-### Critical Initialization Timing Fix
+### Phase 1.1: Cloud API Client Module COMPLETE ✅
+- **Extracted**: All cloud API logic into `/modules/cloudApiClient.ts`
+- **Functions**: `fetchCommentsFromCloud`, `postCommentToCloud`, `isCloudAPIEnabled`
+- **Benefits**: Single responsibility, reusable, testable, maintainable
+- **CommentsStream**: Reduced by ~50 lines, now imports from module
+- **Next**: Storage Manager module extraction
+
+### v0.1.17: Critical Initialization Timing Fix
 - **Problem**: Hydration mismatches causing visual chaos on refresh
-- **Root Cause**: userColor loaded from localStorage AFTER initial render
 - **Solution**: Proper use of 'mounted' state for all color-dependent UI
-- **Components**: Title, LEDs, icons, inputs all wait for localStorage
 - **Result**: Clean page loads, no flashing, no hydration errors
-- **Title**: Explicitly has textShadow: 'none' to prevent glow
 
 ### Previous Updates
 - **Replaced ALL hardcoded colors** with UIElements components
