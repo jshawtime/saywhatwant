@@ -33,12 +33,14 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: workers
+          wranglerVersion: '3.114.14'
           command: deploy
           
       - name: Deploy Main Site to Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          wranglerVersion: '3.114.14'
           command: deploy --compatibility-date=2024-01-01
           
       - name: Display URLs
