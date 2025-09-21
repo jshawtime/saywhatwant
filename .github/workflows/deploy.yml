@@ -35,14 +35,15 @@ jobs:
           workingDirectory: workers
           command: deploy
           
-      - name: Deploy Main Site
+      - name: Deploy Main Site to Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy
+          command: deploy --compatibility-date=2024-01-01
           
       - name: Display URLs
         run: |
           echo "✅ Deployment complete!"
-          echo "Main site: https://say-what-want.${{ vars.CF_ACCOUNT_SUBDOMAIN }}.workers.dev"
-          echo "Comments API: https://sww-comments.${{ vars.CF_ACCOUNT_SUBDOMAIN }}.workers.dev"
+          echo "Main site: https://saywhatwant.app"
+          echo "Workers URL: https://say-what-want.bootloaders.workers.dev"
+          echo "Comments API: https://sww-comments.bootloaders.workers.dev"
