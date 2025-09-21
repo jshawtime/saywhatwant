@@ -10,15 +10,18 @@ bucket = "./out"
 # KV Namespace binding (shared with comments worker)
 [[kv_namespaces]]
 binding = "COMMENTS_KV"
-id = "YOUR_KV_NAMESPACE_ID_HERE" # Same ID as in workers/wrangler.toml
+id = "ddf6162d4c874d52bb6e41d1c3889a0f" # Same ID as in workers/wrangler.toml
 
 # Environment variables
 [vars]
 COMMENTS_WORKER_URL = "https://sww-comments.workers.dev"
 R2_BUCKET_URL = "https://YOUR-R2-BUCKET.r2.dev"
 
-# Routes (optional custom domain)
-# route = "yourdomain.com/*"
+# Routes (custom domains)
+routes = [
+  { pattern = "saywhatwant.app/*", zone_name = "saywhatwant.app" },
+  { pattern = "www.saywhatwant.app/*", zone_name = "saywhatwant.app" }
+]
 
 # Development configuration
 [env.development]
