@@ -28,20 +28,20 @@ jobs:
           NEXT_PUBLIC_COMMENTS_API: ${{ vars.NEXT_PUBLIC_COMMENTS_API }}
           NEXT_PUBLIC_R2_BUCKET_URL: ${{ vars.NEXT_PUBLIC_R2_BUCKET_URL }}
         
+      - name: Install Wrangler
+        run: npm install -g wrangler@3.114.14
+        
       - name: Deploy Comments Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: workers
-          wranglerVersion: '3.114.14'
-          command: deploy
+        run: |
+          cd workers
+          wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           
       - name: Deploy Main Site to Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          wranglerVersion: '3.114.14'
-          command: deploy --compatibility-date=2024-01-01
+        run: wrangler deploy --compatibility-date=2024-01-01
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           
       - name: Display URLs
         run: |
