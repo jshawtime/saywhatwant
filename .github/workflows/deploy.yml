@@ -37,11 +37,13 @@ jobs:
           wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 85eadfbdf07c02e77aa5dc3b46beb0f9
           
       - name: Deploy Main Site to Workers
         run: wrangler deploy --compatibility-date=2024-01-01
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 85eadfbdf07c02e77aa5dc3b46beb0f9
           
       - name: Display URLs
         run: |
