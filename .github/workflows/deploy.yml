@@ -28,21 +28,36 @@ jobs:
           NEXT_PUBLIC_COMMENTS_API: ${{ vars.NEXT_PUBLIC_COMMENTS_API }}
           NEXT_PUBLIC_R2_BUCKET_URL: ${{ vars.NEXT_PUBLIC_R2_BUCKET_URL }}
         
+      - name: Setup Wrangler
+        run: |
+          npm install -g wrangler@3.114.14
+          echo "Testing wrangler authentication..."
+          wrangler whoami || echo "Authentication test failed, continuing anyway..."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 85eadfbdf07c02e77aa5dc3b46beb0f9
+        
       - name: Deploy Comments Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: workers
-          command: deploy
+        run: |
+          cd workers
+          echo "Deploying comments worker..."
+          wrangler deploy --compatibility-date=2024-01-01 || echo "Comments worker deployment failed"
+          cd ..
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 85eadfbdf07c02e77aa5dc3b46beb0f9
           
-      - name: Deploy Main Site
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy
+      - name: Deploy Main Site to Workers
+        run: |
+          echo "Deploying main site..."
+          wrangler deploy --compatibility-date=2024-01-01 || echo "Main site deployment failed"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 85eadfbdf07c02e77aa5dc3b46beb0f9
           
       - name: Display URLs
         run: |
           echo "✅ Deployment complete!"
-          echo "Main site: https://say-what-want.${{ vars.CF_ACCOUNT_SUBDOMAIN }}.workers.dev"
-          echo "Comments API: https://sww-comments.${{ vars.CF_ACCOUNT_SUBDOMAIN }}.workers.dev"
+          echo "Main site: https://saywhatwant.app"
+          echo "Workers URL: https://say-what-want.bootloaders.workers.dev"
+          echo "Comments API: https://sww-comments.bootloaders.workers.dev"

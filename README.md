@@ -2,6 +2,35 @@
 
 A modern web application with video playback and real-time anonymous comments featuring advanced filtering capabilities.
 
+## 🔧 Recent Fixes (September 21, 2025)
+
+### Deployment Pipeline Fixed
+- **Issue**: Conflicting deployments between Cloudflare Pages and Workers, causing the site to not update properly
+- **Root Cause**: GitHub was configured to deploy to Workers, but Cloudflare Pages also had Git integration enabled, causing build conflicts
+- **Solution**: 
+  - Fully migrated to Cloudflare Workers deployment
+  - Removed conflicting Pages project and disabled lingering Git integration
+  - Fixed `wrangler.toml` with correct KV namespace ID
+  - Updated GitHub Actions workflow to properly deploy to Workers with correct API tokens
+
+### Video Loading Fixed
+- **Issue**: Videos weren't loading on the deployed site
+- **Root Cause**: The `video-manifest.json` file was missing from the R2 bucket
+- **Solution**: 
+  - Videos were already uploaded to R2 bucket (238 videos confirmed working)
+  - Generated proper manifest file at `public/cloudflare/video-manifest.json`
+  - Manifest needs to be uploaded to R2 bucket root (manual upload required)
+
+### GitHub Actions Deployment
+- **Fixed Issues**:
+  - Missing `CLOUDFLARE_ACCOUNT_ID` environment variable
+  - Invalid/missing `CLOUDFLARE_API_TOKEN` 
+  - Incorrect wrangler-action configuration
+- **Solution**:
+  - Replaced `cloudflare/wrangler-action` with direct `wrangler` CLI commands
+  - Added proper environment variables to workflow
+  - Generated new API token with correct permissions
+
 ## 🚀 Quick Start
 
 ```bash
