@@ -18,10 +18,11 @@ COMMENTS_WORKER_URL = "https://sww-comments.workers.dev"
 R2_BUCKET_URL = "https://YOUR-R2-BUCKET.r2.dev"
 
 # Routes (custom domains)
-routes = [
-  { pattern = "saywhatwant.app/*", zone_name = "saywhatwant.app" },
-  { pattern = "www.saywhatwant.app/*", zone_name = "saywhatwant.app" }
-]
+# Temporarily disabled - configure manually in Cloudflare Dashboard
+# routes = [
+#   { pattern = "saywhatwant.app/*", zone_name = "saywhatwant.app" },
+#   { pattern = "www.saywhatwant.app/*", zone_name = "saywhatwant.app" }
+# ]
 
 # Development configuration
 [env.development]
