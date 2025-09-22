@@ -79,7 +79,9 @@ The app supports powerful URL-based filtering that makes filtered views shareabl
 
 | Parameter | Purpose | Example |
 |-----------|---------|---------|
-| `u=` | Filter by username | `#u=alice+bob` (alice OR bob) |
+| `u=` | Filter by username with color | `#u=alice:255000000+bob:000255000` |
+| `uss=` | Server-side user search (entire KV) | `#uss=alice:255000000+bob:000255000` |
+| `c=` | Filter by color only | `#c=255000000+000255000` |
 | `search=` | Populate search bar | `#search=hello+world` |
 | `word=` | Include word filters | `#word=react+javascript` |
 | `-word=` | Exclude word filters | `#-word=spam+inappropriate` |
@@ -119,14 +121,27 @@ The system supports flexible date/time filtering with multiple formats:
 # Simple search
 http://localhost:3000/#search=hello
 
-# Multiple filters
-http://localhost:3000/#u=alice+bob&word=javascript
+# User filter with color (9-digit RGB format)
+http://localhost:3000/#u=alice:255000000
+
+# Multiple users with colors
+http://localhost:3000/#u=alice:255000000+bob:000255000
+
+# Server-side user search (searches entire KV history)
+# Use when you want to find messages from users not currently displayed
+http://localhost:3000/#uss=alice:255000000+bob:000255000
+
+# Filter by colors only (any user with these colors)
+http://localhost:3000/#c=255000000+000255000
+
+# Multiple filter types
+http://localhost:3000/#u=alice:255000000&word=javascript
 
 # Complex filtering
-http://localhost:3000/#u=teacher&search=question&-word=spam&wordremove=inappropriate
+http://localhost:3000/#u=teacher:100100100&search=question&-word=spam&wordremove=inappropriate
 
 # Study session
-http://localhost:3000/#u=instructor+assistant&search=homework&video=lesson1
+http://localhost:3000/#u=instructor:200000000+assistant:000200000&search=homework&video=lesson1
 
 # Last hour of messages
 http://localhost:3000/#from=T60&to=now
@@ -135,10 +150,10 @@ http://localhost:3000/#from=T60&to=now
 http://localhost:3000/#from=2025-01-19&to=2025-01-20
 
 # Yesterday's messages from Alice
-http://localhost:3000/#from=yesterday&to=today&u=alice
+http://localhost:3000/#from=yesterday&to=today&u=alice:255000000
 
 # Complex with date/time
-http://localhost:3000/#from=T1440&to=now&u=team&search=bug&word=critical
+http://localhost:3000/#from=T1440&to=now&u=team:050050050&search=bug&word=critical
 ```
 
 📚 See [Date & Time Filtering Guide](./README/DATE-TIME-FILTERING.md) for complete documentation.

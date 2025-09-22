@@ -26,7 +26,9 @@ The app supports powerful URL-based filtering that makes filtered views shareabl
 
 | Parameter | Purpose | Example |
 |-----------|---------|---------|
-| `u=` | Filter by username | `#u=alice+bob` (alice OR bob) |
+| `u=` | Filter by username with color | `#u=alice:255000000+bob:000255000` |
+| `uss=` | Server-side user search (entire KV) | `#uss=alice:255000000+bob:000255000` |
+| `c=` | Filter by color only | `#c=255000000+000255000` |
 | `search=` | Populate search bar | `#search=hello+world` |
 | `word=` | Include word filters | `#word=react+javascript` |
 | `-word=` | Exclude word filters | `#-word=spam+inappropriate` |

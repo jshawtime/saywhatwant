@@ -11,6 +11,7 @@ export function useURLFilter() {
   // ALWAYS initialize with empty state to avoid hydration mismatch
   const [urlState, setUrlState] = useState<SWWFilterState>({
     users: [],
+    serverSideUsers: [],
     colors: [],
     searchTerms: [],
     words: [],

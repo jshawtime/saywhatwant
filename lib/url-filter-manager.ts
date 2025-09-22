@@ -9,7 +9,8 @@ export interface UserWithColor {
 }
 
 export interface SWWFilterState {
-  users: UserWithColor[];      // Usernames with colors to filter
+  users: UserWithColor[];      // Usernames with colors to filter (client-side)
+  serverSideUsers: UserWithColor[];  // Users to search server-side in entire KV
   colors: string[];            // Colors to filter (any user with these colors)
   searchTerms: string[];        // Search terms for search bar
   words: string[];             // Positive word filters
@@ -119,6 +120,7 @@ export class URLFilterManager {
   private getEmptyState(): SWWFilterState {
     return {
       users: [],
+      serverSideUsers: [],
       colors: [],
       searchTerms: [],
       words: [],
@@ -175,6 +177,24 @@ export class URLFilterManager {
         case 'u':
           // Parse users with colors (format: username:RRRGGGBBB or just username)
           state.users = values.map(v => {
+            const parts = v.split(':');
+            if (parts.length === 2) {
+              return {
+                username: this.normalize(parts[0]),
+                color: this.nineDigitToRgb(parts[1])
+              };
+            }
+            // Fallback for old format without color
+            return {
+              username: this.normalize(v),
+              color: 'rgb(255, 255, 255)'  // Default white color
+            };
+          });
+          break;
+          
+        case 'uss':
+          // Parse server-side user search (format: username:RRRGGGBBB)
+          state.serverSideUsers = values.map(v => {
             const parts = v.split(':');
             if (parts.length === 2) {
               return {
@@ -267,6 +287,14 @@ export class URLFilterManager {
         `${u.username}:${this.rgbToNineDigit(u.color)}`
       );
       params.push(`u=${userStrings.join('+')}`);
+    }
+    
+    // Add server-side user search filters (converted to 9-digit format)
+    if (state.serverSideUsers.length > 0) {
+      const userStrings = state.serverSideUsers.map(u => 
+        `${u.username}:${this.rgbToNineDigit(u.color)}`
+      );
+      params.push(`uss=${userStrings.join('+')}`);
     }
     
     // Add color-only filters (converted to 9-digit format)
@@ -394,6 +422,20 @@ export class URLFilterManager {
       }
       newState.users = merged;
     }
+    // Merge serverSideUsers array (handle UserWithColor objects)
+    if (updates.serverSideUsers) {
+      const existingUsers = newState.serverSideUsers || [];
+      const newUsers = updates.serverSideUsers;
+      
+      // Merge by checking usernames to avoid duplicates
+      const merged = [...existingUsers];
+      for (const newUser of newUsers) {
+        if (!merged.some(u => u.username === newUser.username)) {
+          merged.push(newUser);
+        }
+      }
+      newState.serverSideUsers = merged;
+    }
     if (updates.colors) {
       newState.colors = Array.from(new Set([...newState.colors, ...updates.colors]));
     }
@@ -456,6 +498,15 @@ export class URLFilterManager {
       } else {
         // Clear all users
         newState.users = [];
+      }
+    } else if (filterType === 'serverSideUsers' && Array.isArray(newState.serverSideUsers)) {
+      if (value) {
+        // Remove specific server-side user by username
+        const normalized = this.normalize(value);
+        newState.serverSideUsers = newState.serverSideUsers.filter(u => u.username !== normalized);
+      } else {
+        // Clear all server-side users
+        newState.serverSideUsers = [];
       }
     } else if (filterType === 'colors' && Array.isArray(newState.colors)) {
       if (value) {

@@ -352,6 +352,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     addSearchTermToURL,
     removeSearchTermFromURL,
     urlColors: urlState.colors,  // Color-only filters from URL
+    serverSideUsers: urlState.serverSideUsers,  // Server-side user search from URL
     // Date/time filters
     dateTimeFilter: {
       from: urlState.from,
