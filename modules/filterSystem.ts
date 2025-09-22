@@ -346,8 +346,8 @@ export class FilterManager {
     };
 
     // Add URL filters to existing filters
-    urlState.users.forEach(username => {
-      this.addUsernameFilter(username, '#60A5FA');
+    urlState.users.forEach(user => {
+      this.addUsernameFilter(user.username, user.color);
     });
 
     urlState.words.forEach(word => {

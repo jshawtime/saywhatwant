@@ -143,7 +143,7 @@ async function recordActiveFilters(): Promise<void> {
     const filters: Partial<FilterState> = {};
     
     if (urlState.users.length > 0) {
-      filters.users = urlState.users;
+      filters.users = urlState.users.map(u => u.username);
     }
     
     if (urlState.words.length > 0) {
