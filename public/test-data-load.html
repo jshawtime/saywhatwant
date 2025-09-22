@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Data Loading</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #0f0;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #0f0;
+            overflow: auto;
+        }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+    </style>
+</head>
+<body>
+    <h1>Data Loading Test</h1>
+    
+    <h2>1. Check kv-data-export.json</h2>
+    <pre id="json-check">Loading...</pre>
+    
+    <h2>2. Check localStorage</h2>
+    <pre id="storage-check">Loading...</pre>
+    
+    <h2>3. Quick Fix</h2>
+    <button onclick="loadDataDirectly()">Load Data Directly to localStorage</button>
+    <pre id="fix-result"></pre>
+    
+    <script>
+        // Check JSON file
+        fetch('/kv-data-export.json')
+            .then(r => r.json())
+            .then(data => {
+                const info = {
+                    source: data.source,
+                    totalComments: data.totalComments,
+                    firstComment: data.comments[0],
+                    timestampType: typeof data.comments[0].timestamp,
+                    sampleTimestamp: data.comments[0].timestamp
+                };
+                document.getElementById('json-check').innerHTML = 
+                    '<span class="success">✓ JSON file found</span>\n' + 
+                    JSON.stringify(info, null, 2);
+            })
+            .catch(err => {
+                document.getElementById('json-check').innerHTML = 
+                    '<span class="error">✗ Error: ' + err.message + '</span>';
+            });
+        
+        // Check localStorage
+        const stored = localStorage.getItem('sww-comments-local');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                document.getElementById('storage-check').innerHTML = 
+                    '<span class="success">✓ Data in localStorage</span>\n' +
+                    `Count: ${parsed.length} comments\n` +
+                    `First timestamp: ${parsed[0]?.timestamp} (${typeof parsed[0]?.timestamp})`;
+            } catch (e) {
+                document.getElementById('storage-check').innerHTML = 
+                    '<span class="error">✗ Parse error: ' + e.message + '</span>';
+            }
+        } else {
+            document.getElementById('storage-check').innerHTML = 
+                '<span class="error">✗ No data in localStorage</span>';
+        }
+        
+        // Direct load function
+        async function loadDataDirectly() {
+            try {
+                const response = await fetch('/kv-data-export.json');
+                const data = await response.json();
+                const comments = data.comments || [];
+                
+                // Ensure timestamps are numbers
+                const fixed = comments.map(c => ({
+                    ...c,
+                    timestamp: typeof c.timestamp === 'string' ? 
+                        new Date(c.timestamp).getTime() : c.timestamp
+                }));
+                
+                localStorage.setItem('sww-comments-local', JSON.stringify(fixed));
+                
+                document.getElementById('fix-result').innerHTML = 
+                    '<span class="success">✓ Loaded ' + fixed.length + ' comments to localStorage!</span>\n' +
+                    'Now refresh the main app page.';
+            } catch (err) {
+                document.getElementById('fix-result').innerHTML = 
+                    '<span class="error">✗ Error: ' + err.message + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>

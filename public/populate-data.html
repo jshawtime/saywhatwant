@@ -90,7 +90,7 @@
                 // Transform to localStorage format
                 const transformed = comments.map(c => ({
                     id: c.id || `${c.timestamp || Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    timestamp: new Date(c.timestamp || Date.now()).toISOString(),
+                    timestamp: typeof c.timestamp === 'string' ? new Date(c.timestamp).getTime() : (c.timestamp || Date.now()),
                     username: c.username || 'anonymous',
                     text: c.text || '',
                     userColor: c.userColor || `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`,
@@ -98,7 +98,7 @@
                 }));
                 
                 // Sort newest first
-                transformed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                transformed.sort((a, b) => b.timestamp - a.timestamp);
                 
                 // Save to localStorage
                 localStorage.setItem('sww-comments-local', JSON.stringify(transformed));

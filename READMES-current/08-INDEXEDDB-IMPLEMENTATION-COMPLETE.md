@@ -4,6 +4,14 @@
 
 A **fully modular IndexedDB storage system** that seamlessly replaces localStorage while adding powerful features like filter memory and automatic data retention management.
 
+### 🚀 **Auto-Sync Now Active!**
+The IndexedDB system now **automatically captures all displayed messages**:
+- Any message that appears on screen is immediately saved to IndexedDB
+- Works with data from localStorage, Cloudflare KV, or any source  
+- Maintains the 24-hour rolling window for all messages
+- Applies lifetime filter memory for permanent retention
+- **No manual intervention needed - fully automatic!**
+
 ### ✅ **Core Requirements Met**
 
 1. **Zero Behavioral Changes** - The app works exactly as before
@@ -56,6 +64,10 @@ IndexedDB Database: 'SayWhatWant'
 ### 2. **Message Flow**
 
 ```
+App Displays Messages (from any source)
+                ↓
+    useIndexedDBSync Hook (Automatic)
+                ↓
 New Message → Check Lifetime Filters
                 ↓                ↓
            Matches?          No Match?
@@ -64,6 +76,8 @@ New Message → Check Lifetime Filters
                 ↓                ↓
           Update Stats    Auto-cleanup
 ```
+
+**Integration Point:** The `useIndexedDBSync` hook in `CommentsStream.tsx` automatically captures all messages (`allComments`) as they appear in the app. No manual triggering required!
 
 ### 3. **Filter Memory Logic**
 
