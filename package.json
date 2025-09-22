@@ -18,7 +18,9 @@
     "worker:dev": "cd workers && wrangler dev",
     "worker:deploy": "cd workers && wrangler deploy",
     "manifest:generate": "node scripts/r2-manifest-generator.js",
-    "manifest:local": "node scripts/local-video-manifest-generator.js"
+    "manifest:local": "node scripts/local-video-manifest-generator.js",
+    "fetch-kv": "node scripts/fetch-kv-data.js",
+    "import-kv": "echo 'Open http://localhost:3000/import-kv-data.html to import the data'"
   },
   "dependencies": {
     "next": "14.2.5",
