@@ -2,6 +2,9 @@
  * Polling System Module
  * Handles automatic data polling with smart features
  * Part of Phase 2 modularization - extracted from CommentsStream.tsx
+ * 
+ * Note: By default, polling continues even when tab is hidden
+ * to ensure no messages are missed. Set pauseOnHidden: true to change this.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
@@ -11,7 +14,7 @@ export interface PollingConfig {
   interval: number;
   enabled?: boolean;
   onError?: (error: Error) => void;
-  pauseOnHidden?: boolean;
+  pauseOnHidden?: boolean;  // Default false - keeps polling when tab hidden
   exponentialBackoff?: boolean;
   maxRetries?: number;
   dependencies?: React.DependencyList;
@@ -46,7 +49,7 @@ export const usePolling = (
     interval, 
     enabled = true, 
     onError, 
-    pauseOnHidden = true,
+    pauseOnHidden = false,  // Don't pause by default - keep polling when tab hidden
     exponentialBackoff = false,
     maxRetries = 3,
     dependencies = []
