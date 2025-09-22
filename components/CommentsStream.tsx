@@ -674,7 +674,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
 
   return (
-    <div className="flex flex-col h-full bg-black text-white">
+    <div className="flex flex-col h-full bg-black text-white overflow-x-hidden">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-white/10 bg-black/50 backdrop-blur-sm">
         <div className="p-3 space-y-2">
@@ -837,7 +837,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       <div 
         ref={streamRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1"
+        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-1"
         style={{
           ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
           ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
@@ -891,7 +891,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 
                 {/* Message with right margin for timestamp */}
                 <div className="flex-1 pr-12">
-                  <div className="text-sm leading-snug break-words" style={{ 
+                  <div className="text-sm leading-snug break-all overflow-wrap-anywhere" style={{ 
                     lineHeight: '20px',
                     color: getCommentColor(comment) // Use actual or generated color
                   }}>
