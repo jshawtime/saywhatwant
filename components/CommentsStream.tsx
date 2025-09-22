@@ -98,6 +98,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     urlSearchTerms,
     addSearchTermToURL,
     removeSearchTermFromURL,
+    serverSideUsers,  // Server-side user search from #uss= parameter
     dateTimeFilter,
     clearDateTimeFilter
   } = useFilters({ displayedComments: domainFilteredComments, searchTerm });
@@ -187,6 +188,56 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showColorPicker]);
+
+  // Handle server-side user search when URL has #uss= parameter
+  useEffect(() => {
+    // Only trigger if we have server-side users and cloud API is enabled
+    if (!serverSideUsers || serverSideUsers.length === 0 || !isCloudAPIEnabled()) {
+      return;
+    }
+
+    // Build the uss query parameter from users
+    const ussQuery = serverSideUsers
+      .map(user => {
+        // Convert RGB to 9-digit format for URL
+        const rgbToNineDigit = (color: string): string => {
+          const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (rgbMatch) {
+            const r = rgbMatch[1].padStart(3, '0');
+            const g = rgbMatch[2].padStart(3, '0');
+            const b = rgbMatch[3].padStart(3, '0');
+            return `${r}${g}${b}`;
+          }
+          // If already 9 digits or other format, return as-is
+          if (/^\d{9}$/.test(color)) return color;
+          return '255255255'; // Default white
+        };
+
+        const colorDigits = rgbToNineDigit(user.color || '#60A5FA');
+        return `${user.username}:${colorDigits}`;
+      })
+      .join('+');
+
+    console.log('[Comments] Performing server-side search for:', ussQuery);
+    setIsLoading(true);
+
+    // Fetch from API with server-side search
+    fetch(`${COMMENTS_CONFIG.apiUrl}?uss=${encodeURIComponent(ussQuery)}`)
+      .then(res => res.json())
+      .then((data: CommentsResponse) => {
+        if (data.serverSideSearch && data.comments) {
+          console.log(`[Comments] Server-side search returned ${data.comments.length} results`);
+          // Replace current comments with server search results
+          setAllComments(data.comments);
+          setDisplayedComments(data.comments.slice(0, LAZY_LOAD_BATCH));
+          setIsLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error('[Comments] Server-side search failed:', err);
+        setIsLoading(false);
+      });
+  }, [serverSideUsers]); // Only re-run when serverSideUsers changes
 
   // Keyboard shortcuts using the new modular system
   // IMPORTANT: Never use modifier keys (ctrl, alt, shift, cmd) for shortcuts in this app

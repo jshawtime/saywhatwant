@@ -16,6 +16,8 @@ export interface CommentsResponse {
   total: number;
   hasMore: boolean;
   nextCursor?: string;
+  serverSideSearch?: boolean;  // Flag to indicate server-side search results
+  searchedUsers?: Array<{username: string; color: string | null}>;  // Users that were searched for
 }
 
 // Video types

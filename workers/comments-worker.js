@@ -92,6 +92,12 @@ async function handleGetComments(env, url) {
   const offset = parseInt(params.get('offset') || '0');
   const limit = Math.min(parseInt(params.get('limit') || '500'), 1000);
   const search = params.get('search')?.toLowerCase();
+  const uss = params.get('uss'); // Server-side user search
+
+  // Handle server-side user search
+  if (uss) {
+    return await handleServerSideUserSearch(uss, env);
+  }
 
   try {
     // Try to get from cache first
@@ -159,6 +165,115 @@ async function handleGetComments(env, url) {
       hasMore: false
     }), {
       status: 200, // Return 200 with empty results to avoid breaking frontend
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+}
+
+/**
+ * Convert 9-digit format (RRRGGGBBB) to rgb(r, g, b) format
+ */
+function nineDigitToRgb(digits) {
+  if (!digits || !/^\d{9}$/.test(digits)) {
+    return 'rgb(255, 255, 255)'; // Default to white
+  }
+  
+  const r = parseInt(digits.slice(0, 3), 10);
+  const g = parseInt(digits.slice(3, 6), 10);
+  const b = parseInt(digits.slice(6, 9), 10);
+  
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * Handle server-side user search (#uss= parameter)
+ * Searches entire KV for specific users with colors
+ */
+async function handleServerSideUserSearch(ussParam, env) {
+  try {
+    // Parse users from parameter
+    // Format: "alice:255000000+bob:000255000"
+    const requestedUsers = ussParam.split('+').map(userStr => {
+      const [username, colorCode] = userStr.split(':');
+      return {
+        username: username.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        color: colorCode ? nineDigitToRgb(colorCode) : null
+      };
+    });
+    
+    console.log('[Comments] Server-side search for users:', requestedUsers);
+    
+    // Get all comments (try cache first for efficiency)
+    let allComments = [];
+    const cacheKey = 'recent:comments';
+    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    
+    if (cachedData) {
+      allComments = JSON.parse(cachedData);
+      console.log(`[Comments] Using ${allComments.length} cached comments for search`);
+    } else {
+      // Fetch all comments from KV
+      const list = await env.COMMENTS_KV.list({ prefix: 'comment:', limit: 1000 });
+      
+      for (const key of list.keys) {
+        const commentData = await env.COMMENTS_KV.get(key.name);
+        if (commentData) {
+          allComments.push(JSON.parse(commentData));
+        }
+      }
+      
+      // Sort by timestamp (newest first for search results)
+      allComments.sort((a, b) => b.timestamp - a.timestamp);
+    }
+    
+    // Filter comments by requested users
+    const results = allComments.filter(comment => {
+      if (!comment.username) return false;
+      
+      // Normalize username for comparison
+      const normalizedUsername = comment.username.toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Check if this comment matches any requested user
+      return requestedUsers.some(requestedUser => {
+        const usernameMatch = normalizedUsername === requestedUser.username;
+        // Check color match - look for either 'color' or 'userColor' field
+        const commentColor = comment.color || comment.userColor;
+        const colorMatch = !requestedUser.color || commentColor === requestedUser.color;
+        return usernameMatch && colorMatch;
+      });
+    });
+    
+    console.log(`[Comments] Server-side search found ${results.length} matching comments`);
+    
+    // Return results with server-side search flag
+    return new Response(JSON.stringify({
+      comments: results,
+      total: results.length,
+      hasMore: false,
+      serverSideSearch: true,
+      searchedUsers: requestedUsers
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    });
+    
+  } catch (error) {
+    console.error('[Comments] Server-side search error:', error);
+    return new Response(JSON.stringify({
+      error: 'Server-side search failed',
+      message: error.message,
+      comments: [],
+      total: 0,
+      hasMore: false
+    }), {
+      status: 200, // Return 200 to avoid breaking frontend
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
