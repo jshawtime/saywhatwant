@@ -28,6 +28,8 @@ import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@
 import { formatTimestamp } from '@/modules/timestampSystem';
 // Import keyboard shortcuts
 import { useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
+// Import polling system
+import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -64,8 +66,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const lastFetchTimeRef = useRef<number>(Date.now());
-  const pollingIntervalRef = useRef<NodeJS.Timeout>();
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll detection using the new modular system
+  const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
   
   // Apply domain filtering if enabled
   const domainFilteredComments = useMemo(() => {
@@ -342,106 +346,71 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     loadInitialComments();
   }, [fetchComments]);
 
-  // Polling for new comments (supports both localStorage and cloud API)
-  useEffect(() => {
-    const checkForNewComments = async () => {
-      try {
-        let newComments: Comment[] = [];
+  // Check for new comments function (simplified with new polling system)
+  const checkForNewComments = useCallback(async () => {
+    try {
+      let newComments: Comment[] = [];
+      
+      if (isCloudAPIEnabled()) {
+        // Poll cloud API for new comments
+        const data = await fetchComments(0, INITIAL_LOAD_COUNT);
         
-        if (isCloudAPIEnabled()) {
-          // Poll cloud API for new comments
-          const data = await fetchComments(0, INITIAL_LOAD_COUNT);
+        // Find truly new comments
+        const latestTimestamp = allComments.length > 0 
+          ? Math.max(...allComments.map(c => c.timestamp))
+          : 0;
           
-          // Find truly new comments
-          const latestTimestamp = allComments.length > 0 
-            ? Math.max(...allComments.map(c => c.timestamp))
-            : 0;
-            
-          newComments = data.comments.filter(c => c.timestamp > latestTimestamp);
-          
-          if (newComments.length > 0) {
-            console.log(`[Cloud API] Found ${newComments.length} new comments`);
-            // Update all comments
-            setAllComments(data.comments);
-          }
-        } else {
-          // Use localStorage polling (existing implementation)
-          const storedComments = loadCommentsFromStorage();
-          
-          // Find truly new comments
-          const latestTimestamp = allComments.length > 0 
-            ? Math.max(...allComments.map(c => c.timestamp))
-            : 0;
-            
-          newComments = storedComments.filter(c => c.timestamp > latestTimestamp);
-          
-          if (newComments.length > 0) {
-            console.log(`[LocalStorage] Found ${newComments.length} new comments`);
-            // Update all comments
-            setAllComments(storedComments);
-          }
-        }
+        newComments = data.comments.filter(c => c.timestamp > latestTimestamp);
         
         if (newComments.length > 0) {
-          // Check if user is near bottom
-          const isNearBottom = streamRef.current 
-            ? streamRef.current.scrollHeight - (streamRef.current.scrollTop + streamRef.current.clientHeight) < 100
-            : false;
-          
-          // Update displayed comments with just the new ones
-          setDisplayedComments(prev => [...prev, ...newComments]);
-          
-          // Smart auto-scroll
-          if (isNearBottom && streamRef.current) {
-            setTimeout(() => {
-              if (streamRef.current) {
-                streamRef.current.scrollTop = streamRef.current.scrollHeight;
-              }
-            }, 50);
-          } else {
-            setHasNewComments(true);
-          }
+          console.log(`[Cloud API] Found ${newComments.length} new comments`);
+          // Update all comments
+          setAllComments(data.comments);
         }
-        
-        lastFetchTimeRef.current = Date.now();
-      } catch (err) {
-        console.error('[Comments] Polling error:', err);
-      }
-    };
-    
-    // Start polling after initial load
-    if (!isLoading) {
-      // Only listen for storage events when using localStorage
-      if (COMMENTS_CONFIG.useLocalStorage) {
-        const handleStorageChange = (e: StorageEvent) => {
-          if (e.key === COMMENTS_STORAGE_KEY) {
-            console.log('[LocalStorage] Storage changed from another tab');
-            checkForNewComments();
-          }
-        };
-        
-        window.addEventListener('storage', handleStorageChange);
-        
-        pollingIntervalRef.current = setInterval(checkForNewComments, POLLING_INTERVAL);
-        
-        return () => {
-          window.removeEventListener('storage', handleStorageChange);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-          }
-        };
       } else {
-        // For cloud API, just poll at regular intervals
-        pollingIntervalRef.current = setInterval(checkForNewComments, POLLING_INTERVAL);
+        // Use localStorage polling
+        const storedComments = loadCommentsFromStorage();
         
-        return () => {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-          }
-        };
+        // Find truly new comments
+        const latestTimestamp = allComments.length > 0 
+          ? Math.max(...allComments.map(c => c.timestamp))
+          : 0;
+          
+        newComments = storedComments.filter(c => c.timestamp > latestTimestamp);
+        
+        if (newComments.length > 0) {
+          console.log(`[LocalStorage] Found ${newComments.length} new comments`);
+          // Update all comments
+          setAllComments(storedComments);
+        }
       }
+      
+      if (newComments.length > 0) {
+        // Update displayed comments with just the new ones
+        setDisplayedComments(prev => [...prev, ...newComments]);
+        
+        // Smart auto-scroll using the new system
+        if (isNearBottom) {
+          setTimeout(() => smoothScrollToBottom(), 50);
+        } else {
+          setHasNewComments(true);
+        }
+      }
+      
+      lastFetchTimeRef.current = Date.now();
+    } catch (err) {
+      console.error('[Comments] Polling error:', err);
     }
-  }, [isLoading, allComments, loadCommentsFromStorage, fetchComments]);
+  }, [allComments, fetchComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom]);
+  
+  // Use the modular polling system
+  useCommentsPolling({
+    checkForNewComments,
+    isLoading,
+    pollingInterval: POLLING_INTERVAL,
+    useLocalStorage: COMMENTS_CONFIG.useLocalStorage,
+    storageKey: COMMENTS_STORAGE_KEY
+  });
 
   // Handle comment submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -566,10 +535,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Scroll to bottom
   const scrollToBottom = () => {
-    if (streamRef.current) {
-      streamRef.current.scrollTop = streamRef.current.scrollHeight;
-      setHasNewComments(false);
-    }
+    smoothScrollToBottom(false); // Use instant scroll for click
+    setHasNewComments(false);
   };
 
   // Username is now auto-saved on change, no need for save function

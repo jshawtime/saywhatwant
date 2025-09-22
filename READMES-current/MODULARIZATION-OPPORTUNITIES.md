@@ -50,15 +50,20 @@ Currently lines 291-319, 518-541
 ```
 **Benefits**: Single source of truth for API calls, easier to mock for testing
 
-### 5. **Polling System** (`/modules/pollingSystem.ts`)
-Currently lines 383-482
+### 5. **Polling System** (`/modules/pollingSystem.ts`) ✅
+~~Currently lines 383-482~~ **EXTRACTED!**
 ```typescript
-// Custom hook:
-- usePolling(callback, interval, dependencies)
-- useStorageListener(key, callback)
-- useSmartPolling() // with exponential backoff
+// Features extracted:
+✓ usePolling(pollFunction, config) - Generic polling with retry logic
+✓ useComparisonPolling() - For detecting new items
+✓ useStorageListener() - Cross-tab sync
+✓ useCommentsPolling() - Comments-specific polling
+✓ useAutoScrollDetection() - Smart scroll management
+✓ Exponential backoff support
+✓ Pause when tab hidden
 ```
 **Benefits**: Reusable polling logic, performance optimizations, easier debugging
+**Result**: Reduced CommentsStream.tsx by 33 lines (987 → 954)
 
 ### 6. **Comment Submission Handler** (`/modules/commentSubmission.ts`)
 Currently lines 484-588
@@ -141,8 +146,8 @@ Currently using parseCommentText from utils
 
 ### Phase 2: UX Enhancements (v0.3) 🚧 IN PROGRESS
 - Keyboard Shortcuts ✅
-- Polling System
-- Auto-scroll Manager
+- Polling System ✅
+- Auto-scroll Manager ✅ (integrated with Polling System)
 
 ### Phase 3: Advanced Features (v0.4)
 - Video Sharing System
@@ -168,7 +173,8 @@ Currently using parseCommentText from utils
 `CommentsStream.tsx` status:
 - Started at: **1012 lines** (way too large!)
 - After Phase 1: **995 lines** (-27 lines)
-- Current: **987 lines** (after Keyboard Shortcuts)
+- After Keyboard Shortcuts: **987 lines** (-8 lines)
+- Current: **954 lines** (after Polling System)
 - Target: **< 300 lines** (after all phases)
 
-**Progress: -35 lines saved total**
+**Progress: -68 lines saved total** (Phase 2 nearly complete!)
