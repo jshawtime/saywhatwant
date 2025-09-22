@@ -26,6 +26,8 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
 import { formatTimestamp } from '@/modules/timestampSystem';
+// Import keyboard shortcuts
+import { useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -182,39 +184,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     };
   }, [showColorPicker]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      const tagName = target.tagName.toLowerCase();
-      const isInInput = tagName === 'input' || tagName === 'textarea';
-      
-      // Tab key handling - if no field is focused, go to message field first
-      if (event.key === 'Tab' && !isInInput && !event.shiftKey) {
-        event.preventDefault();
+  // Keyboard shortcuts using the new modular system
+  useKeyboardShortcuts([
+    {
+      key: 'Tab',
+      handler: () => {
         inputRef.current?.focus();
-        return;
-      }
-      
-      // 'r' key for random color (no modifiers)
-      if (event.key === 'r' && 
-          !isInInput) {
-        // Only prevent default if NO modifiers (allow Cmd+R / Ctrl+R to pass through)
-        if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
-          event.preventDefault();
-          // Generate a sophisticated random color
-          const randomColor = getRandomColor();
-          setUserColor(randomColor);
-          localStorage.setItem('sww-color', randomColor);
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyPress);
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress);
-    };
-  }, []);
+      },
+      description: 'Focus message input',
+      allowInInput: false,
+      modifiers: { shiftKey: false }
+    },
+    {
+      key: 'r',
+      handler: () => {
+        const randomColor = getRandomColor();
+        setUserColor(randomColor);
+        localStorage.setItem('sww-color', randomColor);
+      },
+      description: 'Random color',
+      allowInInput: false,
+      preventDefault: true
+    }
+  ]);
 
   // Create wrapped parse function with handlers
   const parseCommentTextWithHandlers = useCallback((text: string): React.ReactNode[] => {

@@ -81,15 +81,19 @@ Currently lines 590-609, scroll handling
 ```
 **Benefits**: Performance optimization, reusable for other lists
 
-### 8. **Keyboard Shortcuts Manager** (`/modules/keyboardShortcuts.ts`)
-Currently lines 181-213
+### 8. **Keyboard Shortcuts Manager** (`/modules/keyboardShortcuts.ts`) ✅
+~~Currently lines 181-213~~ **EXTRACTED!**
 ```typescript
-// Custom hook:
-- useKeyboardShortcuts(shortcuts: ShortcutMap)
-- registerGlobalShortcut()
-- unregisterShortcut()
+// Features extracted:
+✓ useKeyboardShortcuts(shortcuts, dependencies)
+✓ useCommonShortcuts(options)
+✓ useRegisteredShortcuts(componentId, shortcuts)
+✓ ShortcutRegistry for conflict detection
+✓ getShortcutsHelp() for documentation
+✓ Full TypeScript types and interfaces
 ```
 **Benefits**: Centralized keyboard handling, no conflicts, easy to document
+**Result**: Reduced CommentsStream.tsx by 8 lines (995 → 987)
 
 ### 9. **Auto-scroll Manager** (`/modules/autoScrollManager.ts`)
 Currently scattered throughout
@@ -135,8 +139,8 @@ Currently using parseCommentText from utils
 - Storage Manager ✅
 - Timestamp System ✅
 
-### Phase 2: UX Enhancements (v0.3)
-- Keyboard Shortcuts
+### Phase 2: UX Enhancements (v0.3) 🚧 IN PROGRESS
+- Keyboard Shortcuts ✅
 - Polling System
 - Auto-scroll Manager
 
@@ -163,7 +167,8 @@ Currently using parseCommentText from utils
 
 `CommentsStream.tsx` status:
 - Started at: **1012 lines** (way too large!)
-- Current: **995 lines** (after Phase 1)
+- After Phase 1: **995 lines** (-27 lines)
+- Current: **987 lines** (after Keyboard Shortcuts)
 - Target: **< 300 lines** (after all phases)
 
-**Phase 1 Complete: -27 lines saved**
+**Progress: -35 lines saved total**
