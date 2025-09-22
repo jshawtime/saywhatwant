@@ -120,8 +120,14 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       !existingUsernames.includes(u.username.toLowerCase())
     );
     
-    return [...filterUsernames, ...urlUserFilters];
-  }, [filterUsernames, urlState.users]);
+    // Server-side search users (from #uss=) also need to be in filter bar
+    const serverUserFilters = urlState.serverSideUsers.filter(u =>
+      !existingUsernames.includes(u.username.toLowerCase()) &&
+      !urlUserFilters.some(uf => uf.username.toLowerCase() === u.username.toLowerCase())
+    );
+    
+    return [...filterUsernames, ...urlUserFilters, ...serverUserFilters];
+  }, [filterUsernames, urlState.users, urlState.serverSideUsers]);
 
   // Add username to filter
   const addToFilter = useCallback((username: string, color: string) => {
@@ -142,9 +148,10 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
 
   // Remove username from filter
   const removeFromFilter = useCallback((username: string, color: string) => {
-    // Check if this is a URL user or a local user
+    // Check if this is a URL user, server-side user, or local user
     const normalizedUsername = username.toLowerCase();
     const isUrlUser = urlState.users.some(u => u.username.toLowerCase() === normalizedUsername);
+    const isServerSideUser = urlState.serverSideUsers.some(u => u.username.toLowerCase() === normalizedUsername);
     const isLocalUser = filterUsernames.some(f => f.username === username && f.color === color);
     
     if (isLocalUser) {
@@ -158,7 +165,14 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     if (isUrlUser) {
       removeUserFromURL(username);
     }
-  }, [filterUsernames, urlState.users, removeUserFromURL]);
+    
+    if (isServerSideUser) {
+      // For server-side users, we need to remove them from the URL
+      // This would require adding a removeServerSideUserFromURL function
+      // For now, removing from filter bar won't remove from URL
+      // TODO: Implement removeServerSideUserFromURL
+    }
+  }, [filterUsernames, urlState.users, urlState.serverSideUsers, removeUserFromURL]);
 
   // Add word to filter
   const addWordToFilter = useCallback((word: string) => {
