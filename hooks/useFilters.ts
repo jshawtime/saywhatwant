@@ -114,12 +114,11 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   const mergedUserFilters = useMemo(() => {
     // Merge URL users with existing filter usernames
     const existingUsernames = filterUsernames.map(f => f.username.toLowerCase());
-    const urlUsers = urlState.users.filter(u => !existingUsernames.includes(u.toLowerCase()));
     
-    const urlUserFilters = urlUsers.map(u => ({
-      username: u,
-      color: '#60A5FA' // Default color for URL users
-    }));
+    // URL users now come with colors
+    const urlUserFilters = urlState.users.filter(u => 
+      !existingUsernames.includes(u.username.toLowerCase())
+    );
     
     return [...filterUsernames, ...urlUserFilters];
   }, [filterUsernames, urlState.users]);
@@ -136,8 +135,8 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       setFilterUsernames(newFilters);
       localStorage.setItem('sww-filters', JSON.stringify(newFilters));
       
-      // Also update URL
-      addUserToURL(username);
+      // Also update URL with color
+      addUserToURL(username, color);
     }
   }, [filterUsernames, addUserToURL]);
 
@@ -145,7 +144,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   const removeFromFilter = useCallback((username: string, color: string) => {
     // Check if this is a URL user or a local user
     const normalizedUsername = username.toLowerCase();
-    const isUrlUser = urlState.users.some(u => u.toLowerCase() === normalizedUsername);
+    const isUrlUser = urlState.users.some(u => u.username.toLowerCase() === normalizedUsername);
     const isLocalUser = filterUsernames.some(f => f.username === username && f.color === color);
     
     if (isLocalUser) {

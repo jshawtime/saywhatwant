@@ -57,7 +57,15 @@ const FilterBar: React.FC<FilterBarProps> = ({
   return (
     <div className="relative flex items-center gap-2">
       <div className="flex-1 relative">
-        <StyledFilterIcon userColor={userColor} />
+        {/* Filter icon - clickable and synced with LED button */}
+        <button
+          onClick={onToggleFilter}
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 cursor-pointer"
+          title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
+          tabIndex={-1}
+        >
+          <StyledFilterIcon userColor={userColor} />
+        </button>
         <div 
           className="w-full min-h-[34px] max-h-[100px] overflow-y-auto custom-scrollbar pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-start gap-2 flex-wrap transition-colors"
           style={{ 

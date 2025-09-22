@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { URLFilterManager, SWWFilterState } from '../lib/url-filter-manager';
+import { URLFilterManager, SWWFilterState, UserWithColor } from '../lib/url-filter-manager';
 
 export function useURLFilter() {
   // ALWAYS initialize with empty state to avoid hydration mismatch
@@ -40,15 +40,17 @@ export function useURLFilter() {
     return unsubscribe;
   }, []);
   
-  // Add a user to filter
-  const addUserToURL = useCallback((username: string) => {
+  // Add a user with color to filter
+  const addUserToURL = useCallback((username: string, color: string = '#60A5FA') => {
     const manager = URLFilterManager.getInstance();
     const currentState = manager.getCurrentState();
     const normalized = manager.normalize(username);
     
-    if (!currentState.users.includes(normalized)) {
+    // Check if user already exists
+    const exists = currentState.users.some(u => u.username === normalized);
+    if (!exists) {
       manager.mergeURL({ 
-        users: [...currentState.users, normalized] 
+        users: [...currentState.users, { username: normalized, color }] 
       });
     }
   }, []);

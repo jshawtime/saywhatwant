@@ -39,7 +39,7 @@ export const StyledSearchIcon: React.FC<StyledIconProps> = ({
 // Filter Icon - Always 60% opacity
 export const StyledFilterIcon: React.FC<StyledIconProps> = ({ 
   userColor,
-  className = "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 pointer-events-none",
+  className = "w-4 h-4",  // Simplified default - positioning handled by parent button
   opacity = OPACITY_LEVELS.LIGHT,
   style = {}
 }) => {

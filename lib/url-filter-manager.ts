@@ -3,8 +3,13 @@
  * Handles parsing, building, and syncing filter state with URL hash
  */
 
+export interface UserWithColor {
+  username: string;
+  color: string;
+}
+
 export interface SWWFilterState {
-  users: string[];              // Usernames to filter
+  users: UserWithColor[];      // Usernames with colors to filter
   searchTerms: string[];        // Search terms for search bar
   words: string[];             // Positive word filters
   negativeWords: string[];    // Negative word filters  
@@ -116,7 +121,21 @@ export class URLFilterManager {
       
       switch (key) {
         case 'u':
-          state.users = values.map(v => this.normalize(v));
+          // Parse users with colors (format: username:color or just username)
+          state.users = values.map(v => {
+            const parts = v.split(':');
+            if (parts.length === 2) {
+              return {
+                username: this.normalize(parts[0]),
+                color: decodeURIComponent(parts[1])
+              };
+            }
+            // Fallback for old format without color
+            return {
+              username: this.normalize(v),
+              color: '#ffffff'  // Default white color
+            };
+          });
           break;
           
         case 'search':
@@ -185,9 +204,12 @@ export class URLFilterManager {
   buildHash(state: SWWFilterState): string {
     const params: string[] = [];
     
-    // Add user filters
+    // Add user filters with colors
     if (state.users.length > 0) {
-      params.push(`u=${state.users.join('+')}`);
+      const userStrings = state.users.map(u => 
+        `${u.username}:${encodeURIComponent(u.color)}`
+      );
+      params.push(`u=${userStrings.join('+')}`);
     }
     
     // Add search filters
@@ -295,9 +317,19 @@ export class URLFilterManager {
     
     const newState = { ...this.currentState };
     
-    // Merge arrays (don't replace)
+    // Merge users array (handle UserWithColor objects)
     if (updates.users) {
-      newState.users = Array.from(new Set([...newState.users, ...updates.users]));
+      const existingUsers = newState.users || [];
+      const newUsers = updates.users;
+      
+      // Merge by checking usernames to avoid duplicates
+      const merged = [...existingUsers];
+      for (const newUser of newUsers) {
+        if (!merged.some(u => u.username === newUser.username)) {
+          merged.push(newUser);
+        }
+      }
+      newState.users = merged;
     }
     if (updates.searchTerms) {
       newState.searchTerms = Array.from(new Set([...newState.searchTerms, ...updates.searchTerms]));
@@ -350,10 +382,19 @@ export class URLFilterManager {
     
     if (filterType === 'videoPanel') {
       newState.videoPanel = null;
+    } else if (filterType === 'users' && Array.isArray(newState.users)) {
+      if (value) {
+        // Remove specific user by username
+        const normalized = this.normalize(value);
+        newState.users = newState.users.filter(u => u.username !== normalized);
+      } else {
+        // Clear all users
+        newState.users = [];
+      }
     } else if (Array.isArray(newState[filterType])) {
       if (value) {
         // Remove specific value
-        const normalized = filterType === 'users' ? this.normalize(value) : value.toLowerCase();
+        const normalized = value.toLowerCase();
         (newState[filterType] as string[]) = (newState[filterType] as string[])
           .filter(v => v !== normalized);
       } else {
