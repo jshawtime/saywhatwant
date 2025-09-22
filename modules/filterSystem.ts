@@ -349,6 +349,9 @@ export class FilterManager {
     urlState.users.forEach(user => {
       this.addUsernameFilter(user.username, user.color);
     });
+    
+    // Note: Color-only filters (urlState.colors) are handled directly
+    // in the filter logic and don't need to be added here
 
     urlState.words.forEach(word => {
       this.addWordFilter(word);

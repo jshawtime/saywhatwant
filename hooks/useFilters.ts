@@ -231,12 +231,20 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   const filteredComments = useMemo(() => {
     let filtered = displayedComments;
     
-    // Apply merged username filters first (if enabled)
-    if (isFilterEnabled && mergedUserFilters.length > 0) {
+    // Apply merged username filters AND color-only filters (if enabled)
+    if (isFilterEnabled && (mergedUserFilters.length > 0 || urlState.colors.length > 0)) {
       filtered = filtered.filter(comment => {
         if (!comment.username) return false;
         
-        // Check if this username/color combination is in our filters
+        // First check color-only filters
+        if (urlState.colors.length > 0) {
+          const commentColor = comment.color || '#60A5FA';
+          if (urlState.colors.includes(commentColor)) {
+            return true;
+          }
+        }
+        
+        // Then check username/color combination filters
         return mergedUserFilters.some(filter => {
           const usernameMatches = filter.username === comment.username;
           const colorMatches = filter.color === (comment.color || '#60A5FA');
@@ -315,7 +323,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     }
     
     return filtered;
-  }, [displayedComments, searchTerm, mergedUserFilters, mergedFilterWords, mergedNegativeWords, isFilterEnabled, filterByColorToo, urlState.wordRemove, urlState.from, urlState.to, urlState.timeFrom, urlState.timeTo]);
+  }, [displayedComments, searchTerm, mergedUserFilters, mergedFilterWords, mergedNegativeWords, isFilterEnabled, filterByColorToo, urlState.colors, urlState.wordRemove, urlState.from, urlState.to, urlState.timeFrom, urlState.timeTo]);
 
   return {
     filterUsernames: mergedUserFilters,
@@ -333,15 +341,17 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     hasActiveFilters: mergedUserFilters.length > 0 || 
                       mergedFilterWords.length > 0 || 
                       mergedNegativeWords.length > 0 || 
+                      urlState.colors.length > 0 ||
                       urlState.wordRemove.length > 0 || 
                       urlState.from !== null || 
-                      urlState.to !== null || 
-                      urlState.timeFrom !== null || 
+                      urlState.to !== null ||
+                      urlState.timeFrom !== null ||
                       urlState.timeTo !== null,
     // URL-specific exports
     urlSearchTerms: urlState.searchTerms,
     addSearchTermToURL,
     removeSearchTermFromURL,
+    urlColors: urlState.colors,  // Color-only filters from URL
     // Date/time filters
     dateTimeFilter: {
       from: urlState.from,

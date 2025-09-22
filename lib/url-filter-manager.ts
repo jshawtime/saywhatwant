@@ -10,6 +10,7 @@ export interface UserWithColor {
 
 export interface SWWFilterState {
   users: UserWithColor[];      // Usernames with colors to filter
+  colors: string[];            // Colors to filter (any user with these colors)
   searchTerms: string[];        // Search terms for search bar
   words: string[];             // Positive word filters
   negativeWords: string[];    // Negative word filters  
@@ -118,6 +119,7 @@ export class URLFilterManager {
   private getEmptyState(): SWWFilterState {
     return {
       users: [],
+      colors: [],
       searchTerms: [],
       words: [],
       negativeWords: [],
@@ -186,6 +188,11 @@ export class URLFilterManager {
               color: 'rgb(255, 255, 255)'  // Default white color
             };
           });
+          break;
+          
+        case 'c':
+          // Parse color-only filters (format: RRRGGGBBB)
+          state.colors = values.map(v => this.nineDigitToRgb(v));
           break;
           
         case 'search':
@@ -260,6 +267,12 @@ export class URLFilterManager {
         `${u.username}:${this.rgbToNineDigit(u.color)}`
       );
       params.push(`u=${userStrings.join('+')}`);
+    }
+    
+    // Add color-only filters (converted to 9-digit format)
+    if (state.colors.length > 0) {
+      const colorStrings = state.colors.map(c => this.rgbToNineDigit(c));
+      params.push(`c=${colorStrings.join('+')}`);
     }
     
     // Add search filters
@@ -381,6 +394,9 @@ export class URLFilterManager {
       }
       newState.users = merged;
     }
+    if (updates.colors) {
+      newState.colors = Array.from(new Set([...newState.colors, ...updates.colors]));
+    }
     if (updates.searchTerms) {
       newState.searchTerms = Array.from(new Set([...newState.searchTerms, ...updates.searchTerms]));
     }
@@ -440,6 +456,14 @@ export class URLFilterManager {
       } else {
         // Clear all users
         newState.users = [];
+      }
+    } else if (filterType === 'colors' && Array.isArray(newState.colors)) {
+      if (value) {
+        // Remove specific color
+        newState.colors = newState.colors.filter(c => c !== value);
+      } else {
+        // Clear all colors
+        newState.colors = [];
       }
     } else if (Array.isArray(newState[filterType])) {
       if (value) {
