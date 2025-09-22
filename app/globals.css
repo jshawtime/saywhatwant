@@ -32,6 +32,12 @@
   */
 }
 
+/* Word breaking utility */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Custom animations */
 @keyframes pulse-cyan {
   0%, 100% {
