@@ -3,6 +3,8 @@ import { Comment } from '@/types';
 import { useURLFilter } from './useURLFilter';
 import { URLFilterManager } from '@/lib/url-filter-manager';
 import { parseDateTime, parseMinutesAgo, correctDateRange, isWithinDateRange } from '@/utils/dateTimeParser';
+import { initializeIndexedDBSystem } from '@/modules/storage/init';
+import { recordUserFilters } from '@/modules/storage';
 
 export interface UsernameFilter {
   username: string;
@@ -36,10 +38,15 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     clearDateTimeFilter
   } = useURLFilter();
 
-  // Load filters from localStorage on initial mount (client-side only)
+  // Initialize IndexedDB and load filters on mount
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
+    
+    // Initialize IndexedDB system
+    initializeIndexedDBSystem().catch(error => {
+      console.error('[Filters] Failed to initialize IndexedDB:', error);
+    });
     
     const savedFilters = localStorage.getItem('sww-filters');
     const savedWordFilters = localStorage.getItem('sww-word-filters');
@@ -94,6 +101,33 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     // Otherwise keeps the default false state
   }, [hasURLFilters]); // Re-run if URL filter state changes
   
+  // Record URL filters to IndexedDB when they're present
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Record any URL filters to IndexedDB
+    const filtersToRecord: any = {};
+    
+    if (urlState.users.length > 0) {
+      filtersToRecord.users = urlState.users;
+    }
+    
+    if (urlState.words.length > 0) {
+      filtersToRecord.words = urlState.words;
+    }
+    
+    if (urlState.searchTerms.length > 0) {
+      filtersToRecord.searchTerms = urlState.searchTerms;
+    }
+    
+    // Only record if there are filters to record
+    if (Object.keys(filtersToRecord).length > 0) {
+      recordUserFilters(filtersToRecord).catch(error => {
+        console.error('[Filters] Failed to record URL filters:', error);
+      });
+    }
+  }, [urlState.users, urlState.words, urlState.searchTerms]);
+  
   // Merge URL filters with existing filters
   const mergedFilterWords = useMemo(() => {
     const merged = Array.from(new Set([...filterWords, ...urlState.words]));
@@ -132,6 +166,11 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       
       // Also update URL
       addUserToURL(username);
+      
+      // Record to IndexedDB for lifetime filter memory
+      recordUserFilters({ users: [username] }).catch(error => {
+        console.error('[Filters] Failed to record user filter:', error);
+      });
     }
   }, [filterUsernames, addUserToURL]);
 
@@ -165,6 +204,11 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       
       // Also update URL
       addWordToURL(cleanWord);
+      
+      // Record to IndexedDB for lifetime filter memory
+      recordUserFilters({ words: [cleanWord] }).catch(error => {
+        console.error('[Filters] Failed to record word filter:', error);
+      });
     }
   }, [filterWords, addWordToURL]);
 

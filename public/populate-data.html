@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Populate Data - Say What Want</title>
+    <style>
+        body {
+            font-family: 'Monaco', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+        
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 12px 24px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #003300;
+            border: 1px solid #00ff00;
+        }
+        
+        .error {
+            background: #330000;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Quick Data Population Tool</h1>
+    
+    <h2>Option 1: Load KV Data into localStorage</h2>
+    <p>This will load the 54 comments from Cloudflare KV into localStorage so they appear in the app immediately.</p>
+    <button onclick="loadToLocalStorage()">Load KV Data → localStorage</button>
+    
+    <h2>Option 2: Load KV Data into IndexedDB</h2>
+    <p>This loads data into IndexedDB for testing the new storage system.</p>
+    <button onclick="loadToIndexedDB()">Load KV Data → IndexedDB</button>
+    
+    <h2>Option 3: Clear All Data</h2>
+    <button onclick="clearAll()">Clear Everything</button>
+    
+    <div id="status"></div>
+    
+    <script>
+        async function loadToLocalStorage() {
+            try {
+                showStatus('Loading KV data...', 'info');
+                
+                const response = await fetch('/kv-data-export.json');
+                if (!response.ok) throw new Error('Could not load data file');
+                
+                const data = await response.json();
+                const comments = data.comments || [];
+                
+                // Transform to localStorage format
+                const transformed = comments.map(c => ({
+                    id: c.id || `${c.timestamp || Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    timestamp: new Date(c.timestamp || Date.now()).toISOString(),
+                    username: c.username || 'anonymous',
+                    text: c.text || '',
+                    userColor: c.userColor || `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`,
+                    videoRef: c.videoRef
+                }));
+                
+                // Sort newest first
+                transformed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Save to localStorage
+                localStorage.setItem('sww-comments-local', JSON.stringify(transformed));
+                
+                showStatus(`✅ Loaded ${transformed.length} comments into localStorage!<br><br>
+                    <strong>Go back to the main app tab and refresh the page to see them.</strong><br><br>
+                    Sample users: ${[...new Set(transformed.map(c => c.username))].slice(0, 5).join(', ')}`, 'success');
+                    
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loadToIndexedDB() {
+            try {
+                showStatus('Opening IndexedDB...', 'info');
+                
+                const db = await openDatabase();
+                const response = await fetch('/kv-data-export.json');
+                if (!response.ok) throw new Error('Could not load data file');
+                
+                const data = await response.json();
+                const comments = data.comments || [];
+                
+                // Clear old data first
+                const transaction = db.transaction(['messages_temp'], 'readwrite');
+                const store = transaction.objectStore('messages_temp');
+                await new Promise((resolve, reject) => {
+                    const clearReq = store.clear();
+                    clearReq.onsuccess = resolve;
+                    clearReq.onerror = reject;
+                });
+                
+                // Add new data
+                const addTransaction = db.transaction(['messages_temp'], 'readwrite');
+                const addStore = addTransaction.objectStore('messages_temp');
+                
+                for (const comment of comments) {
+                    const message = {
+                        timestamp: new Date(comment.timestamp || Date.now()).toISOString(),
+                        username: comment.username || 'anonymous',
+                        text: comment.text || '',
+                        userColor: comment.userColor || '#00ff00',
+                        videoRef: comment.videoRef
+                    };
+                    addStore.add(message);
+                }
+                
+                await new Promise((resolve, reject) => {
+                    addTransaction.oncomplete = resolve;
+                    addTransaction.onerror = reject;
+                });
+                
+                showStatus(`✅ Loaded ${comments.length} comments into IndexedDB!<br><br>
+                    Open the <a href="/indexedDB-analysis.html" target="_blank">Analysis Tool</a> to verify.`, 'success');
+                    
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearAll() {
+            if (!confirm('Clear all localStorage and IndexedDB data?')) return;
+            
+            // Clear localStorage
+            localStorage.removeItem('sww-comments-local');
+            
+            // Clear IndexedDB
+            indexedDB.deleteDatabase('SayWhatWant');
+            
+            showStatus('✅ All data cleared! Refresh the main app.', 'success');
+        }
+        
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('SayWhatWant', 1);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('messages_temp')) {
+                        const store = db.createObjectStore('messages_temp', {
+                            keyPath: 'id',
+                            autoIncrement: true
+                        });
+                        store.createIndex('timestamp', 'timestamp');
+                        store.createIndex('username', 'username');
+                    }
+                    if (!db.objectStoreNames.contains('messages_perm')) {
+                        const store = db.createObjectStore('messages_perm', {
+                            keyPath: 'id',
+                            autoIncrement: true
+                        });
+                        store.createIndex('timestamp', 'timestamp');
+                        store.createIndex('username', 'username');
+                    }
+                    if (!db.objectStoreNames.contains('lifetime_filters')) {
+                        db.createObjectStore('lifetime_filters', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('filter_stats')) {
+                        db.createObjectStore('filter_stats', { keyPath: 'filter' });
+                    }
+                };
+            });
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.innerHTML = message;
+        }
+    </script>
+</body>
+</html>
