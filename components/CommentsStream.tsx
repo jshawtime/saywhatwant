@@ -227,9 +227,26 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       .then((data: CommentsResponse) => {
         if (data.serverSideSearch && data.comments) {
           console.log(`[Comments] Server-side search returned ${data.comments.length} results`);
-          // Replace current comments with server search results
-          setAllComments(data.comments);
-          setDisplayedComments(data.comments.slice(0, LAZY_LOAD_BATCH));
+          
+          // MERGE server results with existing comments (don't replace)
+          // This is for catching up on messages missed while tab was closed
+          const existingIds = new Set(allComments.map(c => c.id));
+          const newMessages = data.comments.filter(c => !existingIds.has(c.id));
+          
+          if (newMessages.length > 0) {
+            console.log(`[Comments] Adding ${newMessages.length} new messages from server`);
+            
+            // Merge and sort by timestamp (newest first) 
+            const mergedComments = [...allComments, ...newMessages]
+              .sort((a, b) => b.timestamp - a.timestamp);
+            
+            setAllComments(mergedComments);
+            // Update displayed comments to show the merged results
+            setDisplayedComments(mergedComments.slice(0, Math.max(displayedComments.length, LAZY_LOAD_BATCH)));
+          } else {
+            console.log('[Comments] No new messages from server search');
+          }
+          
           setIsLoading(false);
         }
       })
