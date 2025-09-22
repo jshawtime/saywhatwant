@@ -158,6 +158,21 @@ http://localhost:3000/#from=T1440&to=now&u=team:050050050&search=bug&word=critic
 
 📚 See [Date & Time Filtering Guide](./README/DATE-TIME-FILTERING.md) for complete documentation.
 
+#### Important: Server-Side Search
+
+The `#uss=` parameter triggers a **server-side search** of the entire Cloudflare KV store:
+
+- **How it works**: Makes an API call to the Worker to search all historical messages
+- **Use case**: Find messages from users when your tab wasn't open
+- **Behavior**: Replaces current messages with search results (not additive)
+- **Format**: `#uss=username:color` - same format as regular user filter
+- **Filter bar**: Results automatically show in the filter bar for visibility
+- **Performance**: May take longer as it searches the entire KV store
+
+**Example**: `https://saywhatwant.app/#uss=alice:255000000+bob:000255000`
+
+This searches the entire message history for alice and bob with their specific colors.
+
 #### Special Features
 
 - **Search Bar Integration**: `search=` populates the search bar, not filter tags
