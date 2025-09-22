@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Analysis Tool - Say What Want</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timestamp {
+            font-size: 14px;
+            color: #008800;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .stat-card h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            color: #00ffff;
+            margin: 10px 0;
+        }
+
+        .stat-detail {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .section {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #00ff00;
+            margin-bottom: 15px;
+            font-size: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        button.danger {
+            border-color: #ff0000;
+            color: #ff0000;
+            background: #330000;
+        }
+
+        button.danger:hover {
+            background: #ff0000;
+            color: #fff;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #00ff00;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .data-table th {
+            background: #003300;
+            color: #00ff00;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: #0a0a0a;
+        }
+
+        .data-table tr:hover {
+            background: #002200;
+        }
+
+        .filter-item {
+            display: inline-block;
+            background: #003300;
+            border: 1px solid #00ff00;
+            padding: 4px 8px;
+            margin: 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .filter-count {
+            color: #00ffff;
+            margin-left: 8px;
+        }
+
+        .message-text {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .message-text:hover {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #00ff00;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom-color: #00ff00;
+            background: #003300;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            font-size: 12px;
+            font-family: 'Monaco', monospace;
+        }
+
+        .log-entry.error {
+            color: #ff0000;
+        }
+
+        .log-entry.success {
+            color: #00ff00;
+        }
+
+        .log-entry.info {
+            color: #00ffff;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ffff);
+            transition: width 0.3s;
+        }
+
+        .json-display {
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 8px;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+
+        .loading {
+            text-align: center;
+            color: #00ffff;
+            padding: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            IndexedDB Analysis Tool
+            <span class="timestamp" id="lastUpdate">Last updated: Never</span>
+        </h1>
+
+        <!-- Statistics Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>📊 Storage Usage</h3>
+                <div class="stat-value" id="storageUsage">0 MB</div>
+                <div class="stat-detail" id="storageDetail">0% of 1 GB limit</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="storageProgress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <h3>💬 Messages</h3>
+                <div class="stat-value" id="messageCount">0</div>
+                <div class="stat-detail">
+                    <span id="permCount">0 permanent</span> | 
+                    <span id="tempCount">0 temporary</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <h3>🔍 Lifetime Filters</h3>
+                <div class="stat-value" id="filterCount">0</div>
+                <div class="stat-detail" id="filterBreakdown">0 users, 0 words, 0 search</div>
+            </div>
+
+            <div class="stat-card">
+                <h3>⏱️ Database Status</h3>
+                <div class="stat-value" id="dbStatus">Not Connected</div>
+                <div class="stat-detail" id="dbVersion">Version: N/A</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('filters')">Filters</button>
+            <button class="tab" onclick="switchTab('messages')">Messages</button>
+            <button class="tab" onclick="switchTab('raw')">Raw Data</button>
+            <button class="tab" onclick="switchTab('tools')">Tools</button>
+            <button class="tab" onclick="switchTab('logs')">Logs</button>
+        </div>
+
+        <!-- Filters Tab -->
+        <div id="filters-tab" class="tab-content active">
+            <div class="section">
+                <h2>
+                    Lifetime Filters
+                    <div class="button-group">
+                        <button onclick="refreshFilters()">Refresh</button>
+                        <button onclick="exportFilters()">Export JSON</button>
+                        <button class="danger" onclick="clearAllFilters()">Clear All</button>
+                    </div>
+                </h2>
+                
+                <div id="filterDisplay">
+                    <div class="loading">Loading filters...</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Filter Statistics</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Filter</th>
+                            <th>Type</th>
+                            <th>Match Count</th>
+                            <th>Last Match</th>
+                            <th>Efficiency Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filterStatsTable">
+                        <tr><td colspan="6" class="empty-state">No filter statistics available</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div id="messages-tab" class="tab-content">
+            <div class="section">
+                <h2>
+                    Message Browser
+                    <div class="button-group">
+                        <button onclick="loadMessages('temp')">Temporary (24h)</button>
+                        <button onclick="loadMessages('perm')">Permanent</button>
+                        <button onclick="loadMessages('all')">All Messages</button>
+                    </div>
+                </h2>
+                
+                <input type="text" class="search-box" id="messageSearch" placeholder="Search messages..." onkeyup="searchMessages()">
+                
+                <div id="messageStats" style="margin-bottom: 10px; color: #888; font-size: 12px;">
+                    Showing: 0 messages
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>Username</th>
+                            <th>Message</th>
+                            <th>Color</th>
+                            <th>Type</th>
+                            <th>Matched Filters</th>
+                        </tr>
+                    </thead>
+                    <tbody id="messageTable">
+                        <tr><td colspan="7" class="empty-state">Select a message source above</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Raw Data Tab -->
+        <div id="raw-tab" class="tab-content">
+            <div class="section">
+                <h2>
+                    Raw Database Contents
+                    <div class="button-group">
+                        <button onclick="dumpStore('messages_temp')">Dump Temp</button>
+                        <button onclick="dumpStore('messages_perm')">Dump Perm</button>
+                        <button onclick="dumpStore('lifetime_filters')">Dump Filters</button>
+                        <button onclick="dumpStore('filter_stats')">Dump Stats</button>
+                    </div>
+                </h2>
+                
+                <div class="json-display" id="rawDataDisplay">
+                    Select a store to dump its contents
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Tab -->
+        <div id="tools-tab" class="tab-content">
+            <div class="section">
+                <h2>Database Operations</h2>
+                
+                <div class="button-group" style="margin-bottom: 20px;">
+                    <button onclick="runCleanup()">Run 24h Cleanup</button>
+                    <button onclick="simulateStorage()">Simulate Storage Full</button>
+                    <button onclick="analyzeEfficiency()">Analyze Filter Efficiency</button>
+                    <button onclick="rebuildIndexes()">Rebuild Indexes</button>
+                </div>
+
+                <div class="button-group" style="margin-bottom: 20px;">
+                    <button onclick="exportDatabase()">Export Full Database</button>
+                    <button onclick="importDatabase()">Import Database</button>
+                    <button onclick="validateIntegrity()">Validate Integrity</button>
+                </div>
+
+                <div class="button-group">
+                    <button class="danger" onclick="clearTemp()">Clear Temp Messages</button>
+                    <button class="danger" onclick="clearPerm()">Clear Permanent Messages</button>
+                    <button class="danger" onclick="resetDatabase()">Reset Entire Database</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Test Data Generation</h2>
+                
+                <div class="button-group">
+                    <button onclick="generateTestMessages(100)">Generate 100 Messages</button>
+                    <button onclick="generateTestMessages(1000)">Generate 1,000 Messages</button>
+                    <button onclick="generateTestMessages(10000)">Generate 10,000 Messages</button>
+                    <button onclick="generateTestFilters()">Generate Test Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs-tab" class="tab-content">
+            <div class="section">
+                <h2>
+                    Activity Log
+                    <button onclick="clearLogs()" style="float: right;">Clear Logs</button>
+                </h2>
+                
+                <div id="logDisplay" style="max-height: 500px; overflow-y: auto; background: #000; padding: 10px; border-radius: 4px;">
+                    <div class="log-entry info">System ready. Waiting for database connection...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Database configuration
+        const DB_NAME = 'SayWhatWant';
+        const DB_VERSION = 1;
+        let db = null;
+        let currentTab = 'filters';
+
+        // Logging system
+        function log(message, type = 'info') {
+            const logDisplay = document.getElementById('logDisplay');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDisplay.insertBefore(entry, logDisplay.firstChild);
+            
+            // Keep only last 100 log entries
+            while (logDisplay.children.length > 100) {
+                logDisplay.removeChild(logDisplay.lastChild);
+            }
+        }
+
+        // Initialize IndexedDB
+        async function initDB() {
+            log('Attempting to connect to IndexedDB...', 'info');
+            
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => {
+                    log('Failed to open database: ' + request.error, 'error');
+                    document.getElementById('dbStatus').textContent = 'Error';
+                    reject(request.error);
+                };
+                
+                request.onsuccess = () => {
+                    db = request.result;
+                    log('Successfully connected to database', 'success');
+                    document.getElementById('dbStatus').textContent = 'Connected';
+                    document.getElementById('dbVersion').textContent = `Version: ${db.version}`;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    log('Creating/upgrading database schema...', 'info');
+                    const db = event.target.result;
+                    
+                    // Create object stores if they don't exist
+                    if (!db.objectStoreNames.contains('messages_temp')) {
+                        const tempStore = db.createObjectStore('messages_temp', { keyPath: 'id', autoIncrement: true });
+                        tempStore.createIndex('timestamp', 'timestamp');
+                        tempStore.createIndex('username', 'username');
+                        log('Created messages_temp store', 'success');
+                    }
+                    
+                    if (!db.objectStoreNames.contains('messages_perm')) {
+                        const permStore = db.createObjectStore('messages_perm', { keyPath: 'id', autoIncrement: true });
+                        permStore.createIndex('timestamp', 'timestamp');
+                        permStore.createIndex('username', 'username');
+                        log('Created messages_perm store', 'success');
+                    }
+                    
+                    if (!db.objectStoreNames.contains('lifetime_filters')) {
+                        db.createObjectStore('lifetime_filters', { keyPath: 'id' });
+                        log('Created lifetime_filters store', 'success');
+                    }
+                    
+                    if (!db.objectStoreNames.contains('filter_stats')) {
+                        const statsStore = db.createObjectStore('filter_stats', { keyPath: 'filter' });
+                        statsStore.createIndex('matchCount', 'matchCount');
+                        log('Created filter_stats store', 'success');
+                    }
+                };
+            });
+        }
+
+        // Update storage statistics
+        async function updateStorageStats() {
+            try {
+                const estimate = await navigator.storage.estimate();
+                const usageMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+                const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
+                const percent = ((estimate.usage / estimate.quota) * 100).toFixed(1);
+                
+                document.getElementById('storageUsage').textContent = `${usageMB} MB`;
+                document.getElementById('storageDetail').textContent = `${percent}% of ${(quotaMB / 1024).toFixed(1)} GB available`;
+                document.getElementById('storageProgress').style.width = `${Math.min(percent, 100)}%`;
+                
+                // Color code based on usage
+                const progressBar = document.getElementById('storageProgress');
+                if (percent > 80) {
+                    progressBar.style.background = 'linear-gradient(90deg, #ff0000, #ff6600)';
+                } else if (percent > 60) {
+                    progressBar.style.background = 'linear-gradient(90deg, #ffff00, #ff9900)';
+                } else {
+                    progressBar.style.background = 'linear-gradient(90deg, #00ff00, #00ffff)';
+                }
+            } catch (error) {
+                log('Failed to get storage estimate: ' + error, 'error');
+            }
+        }
+
+        // Count messages in stores
+        async function updateMessageCounts() {
+            if (!db) return;
+            
+            try {
+                const transaction = db.transaction(['messages_temp', 'messages_perm'], 'readonly');
+                
+                const tempCount = await new Promise((resolve, reject) => {
+                    const request = transaction.objectStore('messages_temp').count();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                const permCount = await new Promise((resolve, reject) => {
+                    const request = transaction.objectStore('messages_perm').count();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                document.getElementById('messageCount').textContent = (tempCount + permCount).toLocaleString();
+                document.getElementById('tempCount').textContent = `${tempCount.toLocaleString()} temporary`;
+                document.getElementById('permCount').textContent = `${permCount.toLocaleString()} permanent`;
+                
+                log(`Message counts updated: ${tempCount} temp, ${permCount} perm`, 'info');
+            } catch (error) {
+                log('Failed to count messages: ' + error, 'error');
+            }
+        }
+
+        // Load and display filters
+        async function refreshFilters() {
+            if (!db) {
+                log('Database not connected', 'error');
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction(['lifetime_filters'], 'readonly');
+                const store = transaction.objectStore('lifetime_filters');
+                const request = store.get('filters');
+                
+                request.onsuccess = () => {
+                    const filters = request.result?.data || { users: [], words: [], searchTerms: [] };
+                    displayFilters(filters);
+                    updateFilterCounts(filters);
+                };
+                
+                request.onerror = () => {
+                    log('Failed to load filters: ' + request.error, 'error');
+                };
+            } catch (error) {
+                log('Error loading filters: ' + error, 'error');
+            }
+        }
+
+        // Display filters in UI
+        function displayFilters(filters) {
+            const display = document.getElementById('filterDisplay');
+            
+            let html = '';
+            
+            // Users
+            if (filters.users && filters.users.length > 0) {
+                html += '<h3 style="color: #00ff00; margin-top: 15px;">Users (' + filters.users.length + ')</h3>';
+                html += '<div>';
+                filters.users.forEach(user => {
+                    html += `<span class="filter-item">@${user}</span>`;
+                });
+                html += '</div>';
+            }
+            
+            // Words
+            if (filters.words && filters.words.length > 0) {
+                html += '<h3 style="color: #00ff00; margin-top: 15px;">Words (' + filters.words.length + ')</h3>';
+                html += '<div>';
+                filters.words.forEach(word => {
+                    html += `<span class="filter-item">${word}</span>`;
+                });
+                html += '</div>';
+            }
+            
+            // Search Terms
+            if (filters.searchTerms && filters.searchTerms.length > 0) {
+                html += '<h3 style="color: #00ff00; margin-top: 15px;">Search Terms (' + filters.searchTerms.length + ')</h3>';
+                html += '<div>';
+                filters.searchTerms.forEach(term => {
+                    html += `<span class="filter-item">🔍 ${term}</span>`;
+                });
+                html += '</div>';
+            }
+            
+            if (html === '') {
+                html = '<div class="empty-state">No lifetime filters recorded yet</div>';
+            }
+            
+            display.innerHTML = html;
+        }
+
+        // Update filter counts
+        function updateFilterCounts(filters) {
+            const userCount = filters.users?.length || 0;
+            const wordCount = filters.words?.length || 0;
+            const searchCount = filters.searchTerms?.length || 0;
+            const total = userCount + wordCount + searchCount;
+            
+            document.getElementById('filterCount').textContent = total.toLocaleString();
+            document.getElementById('filterBreakdown').textContent = 
+                `${userCount} users, ${wordCount} words, ${searchCount} search`;
+        }
+
+        // Load messages
+        async function loadMessages(type) {
+            if (!db) {
+                log('Database not connected', 'error');
+                return;
+            }
+            
+            log(`Loading ${type} messages...`, 'info');
+            
+            try {
+                const stores = type === 'all' ? ['messages_temp', 'messages_perm'] :
+                              type === 'temp' ? ['messages_temp'] : ['messages_perm'];
+                
+                let allMessages = [];
+                
+                for (const storeName of stores) {
+                    const transaction = db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+                    
+                    const messages = await new Promise((resolve, reject) => {
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    // Add store type to each message
+                    messages.forEach(msg => {
+                        msg._store = storeName === 'messages_temp' ? 'Temporary' : 'Permanent';
+                    });
+                    
+                    allMessages = allMessages.concat(messages);
+                }
+                
+                // Sort by timestamp descending
+                allMessages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Limit to 1000 for performance
+                if (allMessages.length > 1000) {
+                    allMessages = allMessages.slice(0, 1000);
+                    log(`Showing first 1000 of ${allMessages.length} messages`, 'info');
+                }
+                
+                displayMessages(allMessages);
+                document.getElementById('messageStats').textContent = `Showing: ${allMessages.length} messages`;
+                
+                log(`Loaded ${allMessages.length} ${type} messages`, 'success');
+            } catch (error) {
+                log('Failed to load messages: ' + error, 'error');
+            }
+        }
+
+        // Display messages in table
+        function displayMessages(messages) {
+            const tbody = document.getElementById('messageTable');
+            
+            if (messages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No messages found</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            messages.forEach(msg => {
+                const timestamp = new Date(msg.timestamp).toLocaleString();
+                const matchedFilters = msg.matchedFilters ? msg.matchedFilters.join(', ') : 'N/A';
+                
+                html += '<tr>';
+                html += `<td>${msg.id || 'N/A'}</td>`;
+                html += `<td>${timestamp}</td>`;
+                html += `<td style="color: ${msg.userColor || '#00ff00'}">${msg.username || 'Anonymous'}</td>`;
+                html += `<td class="message-text">${msg.text || ''}</td>`;
+                html += `<td><span style="color: ${msg.userColor || '#00ff00'}">⬤</span> ${msg.userColor || 'N/A'}</td>`;
+                html += `<td>${msg._store || 'Unknown'}</td>`;
+                html += `<td>${matchedFilters}</td>`;
+                html += '</tr>';
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        // Search messages
+        function searchMessages() {
+            const searchTerm = document.getElementById('messageSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#messageTable tr');
+            
+            rows.forEach(row => {
+                if (row.textContent.toLowerCase().includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Dump store contents
+        async function dumpStore(storeName) {
+            if (!db) {
+                log('Database not connected', 'error');
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const data = request.result;
+                    const display = document.getElementById('rawDataDisplay');
+                    display.textContent = JSON.stringify(data, null, 2);
+                    log(`Dumped ${data.length} items from ${storeName}`, 'success');
+                };
+                
+                request.onerror = () => {
+                    log('Failed to dump store: ' + request.error, 'error');
+                };
+            } catch (error) {
+                log('Error dumping store: ' + error, 'error');
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Refresh data for the new tab
+            if (tabName === 'filters') {
+                refreshFilters();
+            }
+        }
+
+        // Export filters
+        function exportFilters() {
+            if (!db) return;
+            
+            const transaction = db.transaction(['lifetime_filters'], 'readonly');
+            const request = transaction.objectStore('lifetime_filters').get('filters');
+            
+            request.onsuccess = () => {
+                const filters = request.result?.data || {};
+                const blob = new Blob([JSON.stringify(filters, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sww-filters-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                log('Filters exported successfully', 'success');
+            };
+        }
+
+        // Clear all filters
+        async function clearAllFilters() {
+            if (!confirm('Are you sure you want to clear ALL lifetime filters? This cannot be undone.')) {
+                return;
+            }
+            
+            if (!db) return;
+            
+            try {
+                const transaction = db.transaction(['lifetime_filters'], 'readwrite');
+                const store = transaction.objectStore('lifetime_filters');
+                const request = store.clear();
+                
+                request.onsuccess = () => {
+                    log('All filters cleared', 'success');
+                    refreshFilters();
+                };
+                
+                request.onerror = () => {
+                    log('Failed to clear filters: ' + request.error, 'error');
+                };
+            } catch (error) {
+                log('Error clearing filters: ' + error, 'error');
+            }
+        }
+
+        // Generate test messages
+        async function generateTestMessages(count) {
+            if (!db) return;
+            
+            const users = ['alice', 'bob', 'charlie', 'david', 'emma'];
+            const words = ['javascript', 'react', 'node', 'css', 'html', 'awesome', 'great', 'help', 'question'];
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            
+            const messages = [];
+            const now = Date.now();
+            
+            for (let i = 0; i < count; i++) {
+                const user = users[Math.floor(Math.random() * users.length)];
+                const word1 = words[Math.floor(Math.random() * words.length)];
+                const word2 = words[Math.floor(Math.random() * words.length)];
+                
+                messages.push({
+                    timestamp: new Date(now - Math.random() * 86400000).toISOString(), // Random time in last 24h
+                    username: user,
+                    text: `Test message ${i}: ${word1} ${word2}`,
+                    userColor: colors[Math.floor(Math.random() * colors.length)]
+                });
+            }
+            
+            try {
+                const transaction = db.transaction(['messages_temp'], 'readwrite');
+                const store = transaction.objectStore('messages_temp');
+                
+                for (const msg of messages) {
+                    store.add(msg);
+                }
+                
+                transaction.oncomplete = () => {
+                    log(`Generated ${count} test messages`, 'success');
+                    updateMessageCounts();
+                };
+                
+                transaction.onerror = () => {
+                    log('Failed to generate test messages', 'error');
+                };
+            } catch (error) {
+                log('Error generating messages: ' + error, 'error');
+            }
+        }
+
+        // Generate test filters
+        async function generateTestFilters() {
+            if (!db) return;
+            
+            const testFilters = {
+                users: ['alice', 'bob', 'charlie', 'testuser1', 'testuser2'],
+                words: ['javascript', 'react', 'important', 'urgent', 'help'],
+                searchTerms: ['tutorial', 'how to', 'question', 'problem']
+            };
+            
+            try {
+                const transaction = db.transaction(['lifetime_filters'], 'readwrite');
+                const store = transaction.objectStore('lifetime_filters');
+                
+                store.put({
+                    id: 'filters',
+                    data: testFilters,
+                    created: new Date().toISOString()
+                });
+                
+                transaction.oncomplete = () => {
+                    log('Test filters generated', 'success');
+                    refreshFilters();
+                };
+            } catch (error) {
+                log('Error generating test filters: ' + error, 'error');
+            }
+        }
+
+        // Run cleanup
+        async function runCleanup() {
+            if (!db) return;
+            
+            log('Running 24-hour cleanup...', 'info');
+            
+            try {
+                const transaction = db.transaction(['messages_temp'], 'readwrite');
+                const store = transaction.objectStore('messages_temp');
+                const index = store.index('timestamp');
+                
+                const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                const range = IDBKeyRange.upperBound(cutoffTime);
+                
+                let deletedCount = 0;
+                const request = index.openCursor(range);
+                
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        cursor.delete();
+                        deletedCount++;
+                        cursor.continue();
+                    } else {
+                        log(`Cleanup complete: Deleted ${deletedCount} old messages`, 'success');
+                        updateMessageCounts();
+                    }
+                };
+                
+                request.onerror = () => {
+                    log('Cleanup failed: ' + request.error, 'error');
+                };
+            } catch (error) {
+                log('Error during cleanup: ' + error, 'error');
+            }
+        }
+
+        // Export database
+        async function exportDatabase() {
+            if (!db) return;
+            
+            const exportData = {
+                version: DB_VERSION,
+                timestamp: new Date().toISOString(),
+                stores: {}
+            };
+            
+            const storeNames = ['messages_temp', 'messages_perm', 'lifetime_filters', 'filter_stats'];
+            
+            for (const storeName of storeNames) {
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                
+                const data = await new Promise((resolve) => {
+                    request.onsuccess = () => resolve(request.result);
+                });
+                
+                exportData.stores[storeName] = data;
+            }
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sww-database-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            log('Database exported successfully', 'success');
+        }
+
+        // Clear logs
+        function clearLogs() {
+            const logDisplay = document.getElementById('logDisplay');
+            logDisplay.innerHTML = '<div class="log-entry info">Logs cleared</div>';
+        }
+
+        // Reset database
+        async function resetDatabase() {
+            if (!confirm('Are you sure you want to RESET the entire database? This will delete ALL data and cannot be undone!')) {
+                return;
+            }
+            
+            if (!confirm('This is your last chance. Really delete everything?')) {
+                return;
+            }
+            
+            try {
+                db.close();
+                const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+                
+                deleteRequest.onsuccess = () => {
+                    log('Database reset successfully', 'success');
+                    document.getElementById('dbStatus').textContent = 'Reset - Reload Page';
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                };
+                
+                deleteRequest.onerror = () => {
+                    log('Failed to reset database', 'error');
+                };
+            } catch (error) {
+                log('Error resetting database: ' + error, 'error');
+            }
+        }
+
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date().toLocaleString();
+            document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
+        }
+
+        // Auto-refresh
+        setInterval(() => {
+            updateTimestamp();
+            updateStorageStats();
+            if (currentTab === 'filters') {
+                updateMessageCounts();
+            }
+        }, 5000);
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initDB();
+                await updateStorageStats();
+                await updateMessageCounts();
+                await refreshFilters();
+                updateTimestamp();
+            } catch (error) {
+                log('Initialization error: ' + error, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

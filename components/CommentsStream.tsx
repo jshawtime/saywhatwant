@@ -12,8 +12,8 @@ import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
 import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggleDomainFilter } from '@/config/domain-config';
 
 // Configuration - Now using config file
-const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount;
-const LAZY_LOAD_BATCH = COMMENTS_CONFIG.lazyLoadBatch;
+const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount; // 500
+const LAZY_LOAD_BATCH = 100; // Changed from 50 to 100 for ham radio mode
 const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const MAX_USERNAME_LENGTH = 16;
@@ -259,7 +259,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     return date.toLocaleDateString();
   };
 
-  // Load comments from localStorage
+  // Load comments from localStorage or fallback to static JSON
   const loadCommentsFromStorage = useCallback((): Comment[] => {
     if (typeof window === 'undefined') return [];
     
@@ -334,6 +334,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       setError(null);
       
       try {
+        // In dev mode with localStorage enabled, try to load from static JSON first
+        if (COMMENTS_CONFIG.useLocalStorage) {
+          try {
+            const response = await fetch('/kv-data-export.json');
+            if (response.ok) {
+              const exportData = await response.json();
+              const comments = exportData.comments || [];
+              
+              // Store in localStorage for consistency
+              localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(comments));
+              
+              setAllComments(comments);
+              setDisplayedComments(comments.slice(-LAZY_LOAD_BATCH));
+              console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
+              setIsLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.log('[Dev Mode] Static JSON not found, falling back to localStorage');
+          }
+        }
+        
+        // Default behavior - use fetchComments (either cloud API or localStorage)
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
         setAllComments(data.comments);
         setDisplayedComments(data.comments.slice(-LAZY_LOAD_BATCH));

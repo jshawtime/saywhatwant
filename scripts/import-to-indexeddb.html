@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import KV Data to IndexedDB</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 40px;
+            line-height: 1.8;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #003300;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+
+        .status.error {
+            background: #330000;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .status.info {
+            background: #003333;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+        }
+
+        .progress {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ffff);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: #0a0a0a;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            color: #00ffff;
+            display: block;
+            margin: 5px 0;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+
+        pre {
+            background: #000;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Import KV Data to IndexedDB</h1>
+
+        <div class="section">
+            <h2>Step 1: Load Data File</h2>
+            <p>Select the kv-data-export.json file created by fetch-kv-data.js</p>
+            <button onclick="document.getElementById('fileInput').click()">
+                📁 Choose File
+            </button>
+            <button onclick="fetchFromServer()">
+                🌐 Load from Server
+            </button>
+            <input type="file" id="fileInput" class="file-input" accept=".json">
+            
+            <div id="fileStatus"></div>
+        </div>
+
+        <div class="section" id="dataSection" style="display: none;">
+            <h2>Step 2: Data Preview</h2>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <span class="stat-label">Total Messages</span>
+                    <span class="stat-value" id="totalMessages">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Date Range</span>
+                    <span class="stat-value" id="dateRange" style="font-size: 14px;">N/A</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Unique Users</span>
+                    <span class="stat-value" id="uniqueUsers">0</span>
+                </div>
+            </div>
+            
+            <h3>Sample Data:</h3>
+            <pre id="sampleData"></pre>
+        </div>
+
+        <div class="section" id="importSection" style="display: none;">
+            <h2>Step 3: Import to IndexedDB</h2>
+            
+            <button onclick="importToIndexedDB()" id="importBtn">
+                💾 Import All Messages
+            </button>
+            
+            <button onclick="clearIndexedDB()" id="clearBtn">
+                🗑️ Clear IndexedDB First
+            </button>
+            
+            <div class="progress" id="progressSection" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                </div>
+            </div>
+            
+            <div id="importStatus"></div>
+        </div>
+
+        <div class="section">
+            <h2>Quick Actions</h2>
+            <button onclick="window.open('/indexedDB-analysis.html', '_blank')">
+                🔍 Open Analysis Tool
+            </button>
+            <button onclick="checkIndexedDBStatus()">
+                📊 Check Database Status
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let loadedData = null;
+        const DB_NAME = 'SayWhatWant';
+        const DB_VERSION = 1;
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                handleLoadedData(data, `Loaded from file: ${file.name}`);
+            } catch (error) {
+                showStatus('fileStatus', `Error loading file: ${error.message}`, 'error');
+            }
+        });
+
+        // Fetch from server (if kv-data-export.json is in public folder)
+        async function fetchFromServer() {
+            try {
+                showStatus('fileStatus', 'Fetching from server...', 'info');
+                const response = await fetch('/kv-data-export.json');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: File not found. Run "node scripts/fetch-kv-data.js" first.`);
+                }
+                
+                const data = await response.json();
+                handleLoadedData(data, 'Loaded from server');
+            } catch (error) {
+                showStatus('fileStatus', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Handle loaded data
+        function handleLoadedData(data, source) {
+            loadedData = data;
+            
+            // Show status
+            showStatus('fileStatus', `✅ ${source}`, 'success');
+            
+            // Analyze data
+            const comments = data.comments || [];
+            document.getElementById('totalMessages').textContent = comments.length.toLocaleString();
+            
+            // Date range
+            if (comments.length > 0) {
+                const dates = comments.map(c => new Date(c.timestamp)).filter(d => !isNaN(d));
+                if (dates.length > 0) {
+                    const oldest = new Date(Math.min(...dates));
+                    const newest = new Date(Math.max(...dates));
+                    document.getElementById('dateRange').innerHTML = 
+                        `${oldest.toLocaleDateString()}<br>to<br>${newest.toLocaleDateString()}`;
+                }
+            }
+            
+            // Unique users
+            const users = new Set(comments.map(c => c.username || 'anonymous'));
+            document.getElementById('uniqueUsers').textContent = users.size.toLocaleString();
+            
+            // Sample data
+            const sample = comments.slice(0, 3);
+            document.getElementById('sampleData').textContent = JSON.stringify(sample, null, 2);
+            
+            // Show sections
+            document.getElementById('dataSection').style.display = 'block';
+            document.getElementById('importSection').style.display = 'block';
+        }
+
+        // Import to IndexedDB
+        async function importToIndexedDB() {
+            if (!loadedData || !loadedData.comments) {
+                showStatus('importStatus', 'No data loaded', 'error');
+                return;
+            }
+            
+            const comments = loadedData.comments;
+            const importBtn = document.getElementById('importBtn');
+            importBtn.disabled = true;
+            
+            try {
+                showStatus('importStatus', 'Initializing IndexedDB...', 'info');
+                
+                // Open database
+                const db = await openDatabase();
+                
+                // Show progress
+                document.getElementById('progressSection').style.display = 'block';
+                
+                // Import in batches
+                const BATCH_SIZE = 100;
+                let imported = 0;
+                
+                for (let i = 0; i < comments.length; i += BATCH_SIZE) {
+                    const batch = comments.slice(i, i + BATCH_SIZE);
+                    
+                    // Save to temporary store (they'll be moved to permanent based on filters)
+                    const transaction = db.transaction(['messages_temp'], 'readwrite');
+                    const store = transaction.objectStore('messages_temp');
+                    
+                    for (const comment of batch) {
+                        // Ensure required fields
+                        const message = {
+                            timestamp: comment.timestamp || new Date().toISOString(),
+                            username: comment.username || 'anonymous',
+                            text: comment.text || '',
+                            userColor: comment.userColor || '#00ff00',
+                            videoRef: comment.videoRef
+                        };
+                        
+                        store.add(message);
+                    }
+                    
+                    await new Promise((resolve, reject) => {
+                        transaction.oncomplete = resolve;
+                        transaction.onerror = () => reject(transaction.error);
+                    });
+                    
+                    imported += batch.length;
+                    
+                    // Update progress
+                    const progress = Math.round((imported / comments.length) * 100);
+                    const progressFill = document.getElementById('progressFill');
+                    progressFill.style.width = `${progress}%`;
+                    progressFill.textContent = `${progress}%`;
+                }
+                
+                showStatus('importStatus', 
+                    `✅ Successfully imported ${imported.toLocaleString()} messages to IndexedDB!`, 
+                    'success'
+                );
+                
+                // Show next steps
+                setTimeout(() => {
+                    showStatus('importStatus', 
+                        `✅ Import complete! Open the analysis tool to view the data.`, 
+                        'success'
+                    );
+                }, 2000);
+                
+            } catch (error) {
+                showStatus('importStatus', `Error: ${error.message}`, 'error');
+            } finally {
+                importBtn.disabled = false;
+            }
+        }
+
+        // Clear IndexedDB
+        async function clearIndexedDB() {
+            if (!confirm('This will delete ALL data in IndexedDB. Are you sure?')) {
+                return;
+            }
+            
+            try {
+                const db = await openDatabase();
+                
+                const stores = ['messages_temp', 'messages_perm', 'lifetime_filters', 'filter_stats'];
+                
+                for (const storeName of stores) {
+                    const transaction = db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    await new Promise((resolve, reject) => {
+                        const request = store.clear();
+                        request.onsuccess = resolve;
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+                
+                showStatus('importStatus', '✅ IndexedDB cleared', 'success');
+            } catch (error) {
+                showStatus('importStatus', `Error clearing: ${error.message}`, 'error');
+            }
+        }
+
+        // Check IndexedDB status
+        async function checkIndexedDBStatus() {
+            try {
+                const db = await openDatabase();
+                
+                // Count messages
+                const transaction = db.transaction(['messages_temp', 'messages_perm'], 'readonly');
+                
+                const tempCount = await new Promise((resolve, reject) => {
+                    const request = transaction.objectStore('messages_temp').count();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                const permCount = await new Promise((resolve, reject) => {
+                    const request = transaction.objectStore('messages_perm').count();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Get storage estimate
+                const estimate = await navigator.storage.estimate();
+                const usageMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+                
+                alert(`IndexedDB Status:\n\nTemporary Messages: ${tempCount}\nPermanent Messages: ${permCount}\nStorage Used: ${usageMB} MB`);
+                
+            } catch (error) {
+                alert(`Error checking status: ${error.message}`);
+            }
+        }
+
+        // Open database
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    // Create stores if they don't exist
+                    if (!db.objectStoreNames.contains('messages_temp')) {
+                        const tempStore = db.createObjectStore('messages_temp', { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                        tempStore.createIndex('timestamp', 'timestamp');
+                        tempStore.createIndex('username', 'username');
+                    }
+                    
+                    if (!db.objectStoreNames.contains('messages_perm')) {
+                        const permStore = db.createObjectStore('messages_perm', { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                        permStore.createIndex('timestamp', 'timestamp');
+                        permStore.createIndex('username', 'username');
+                    }
+                    
+                    if (!db.objectStoreNames.contains('lifetime_filters')) {
+                        db.createObjectStore('lifetime_filters', { keyPath: 'id' });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('filter_stats')) {
+                        const statsStore = db.createObjectStore('filter_stats', { keyPath: 'filter' });
+                        statsStore.createIndex('matchCount', 'matchCount');
+                    }
+                };
+            });
+        }
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        // Auto-load if file exists on server
+        window.addEventListener('DOMContentLoaded', () => {
+            // Try to auto-load from server
+            // fetchFromServer();
+        });
+    </script>
+</body>
+</html>

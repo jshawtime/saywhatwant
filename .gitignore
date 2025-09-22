@@ -37,6 +37,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local data
+kv-data-export.json
+public/kv-data-export.json
+public/indexedDB-analysis.html
+public/import-kv-data.html
+
 # wrangler
 .wrangler/
 .dev.vars

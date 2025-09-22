@@ -3,6 +3,7 @@ import { Comment } from '@/types';
 import { useURLFilter } from './useURLFilter';
 import { URLFilterManager } from '@/lib/url-filter-manager';
 import { parseDateTime, parseMinutesAgo, correctDateRange, isWithinDateRange } from '@/utils/dateTimeParser';
+// Removed IndexedDB imports - ham radio mode: filters are ephemeral
 
 export interface UsernameFilter {
   username: string;
@@ -36,10 +37,12 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     clearDateTimeFilter
   } = useURLFilter();
 
-  // Load filters from localStorage on initial mount (client-side only)
+  // Initialize IndexedDB and load filters on mount
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
+    
+    // Ham radio mode - no persistent storage initialization needed
     
     const savedFilters = localStorage.getItem('sww-filters');
     const savedWordFilters = localStorage.getItem('sww-word-filters');
@@ -93,6 +96,9 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     }
     // Otherwise keeps the default false state
   }, [hasURLFilters]); // Re-run if URL filter state changes
+  
+  // Ham radio mode - no filter recording to IndexedDB
+  // Filters are ephemeral - only active while tab is open
   
   // Merge URL filters with existing filters
   const mergedFilterWords = useMemo(() => {
