@@ -189,6 +189,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   }, [showColorPicker]);
 
   // Keyboard shortcuts using the new modular system
+  // IMPORTANT: Never use modifier keys (ctrl, alt, shift, cmd) for shortcuts in this app
+  // All shortcuts should work with single key presses only
   useKeyboardShortcuts([
     {
       key: 'Tab',
@@ -196,8 +198,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         inputRef.current?.focus();
       },
       description: 'Focus message input',
-      allowInInput: false,
-      modifiers: { shiftKey: false }
+      allowInInput: false
+      // NO MODIFIERS - single key press only
     },
     {
       key: 'r',
@@ -209,6 +211,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       description: 'Random color',
       allowInInput: false,
       preventDefault: true
+      // NO MODIFIERS - single key press only
     }
   ]);
 

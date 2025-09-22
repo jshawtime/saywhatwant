@@ -45,6 +45,56 @@ export class URLFilterManager {
     this.handleHashChange();
   }
   
+  /**
+   * Convert rgb(r, g, b) format to 9-digit format (RRRGGGBBB)
+   * Example: "rgb(76, 194, 40)" -> "076194040"
+   */
+  private rgbToNineDigit(color: string): string {
+    // Handle rgb() format
+    const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+      const r = rgbMatch[1].padStart(3, '0');
+      const g = rgbMatch[2].padStart(3, '0');
+      const b = rgbMatch[3].padStart(3, '0');
+      return `${r}${g}${b}`;
+    }
+    
+    // Handle hex format (#RRGGBB)
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      if (hex.length === 6) {
+        const r = parseInt(hex.slice(0, 2), 16).toString().padStart(3, '0');
+        const g = parseInt(hex.slice(2, 4), 16).toString().padStart(3, '0');
+        const b = parseInt(hex.slice(4, 6), 16).toString().padStart(3, '0');
+        return `${r}${g}${b}`;
+      }
+    }
+    
+    // If already 9 digits, return as-is
+    if (/^\d{9}$/.test(color)) {
+      return color;
+    }
+    
+    // Default fallback - white
+    return '255255255';
+  }
+  
+  /**
+   * Convert 9-digit format (RRRGGGBBB) to rgb(r, g, b) format
+   * Example: "076194040" -> "rgb(76, 194, 40)"
+   */
+  private nineDigitToRgb(digits: string): string {
+    if (!/^\d{9}$/.test(digits)) {
+      return 'rgb(255, 255, 255)'; // Default to white
+    }
+    
+    const r = parseInt(digits.slice(0, 3), 10);
+    const g = parseInt(digits.slice(3, 6), 10);
+    const b = parseInt(digits.slice(6, 9), 10);
+    
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  
   static getInstance(): URLFilterManager {
     if (!URLFilterManager.instance) {
       URLFilterManager.instance = new URLFilterManager();
@@ -121,19 +171,19 @@ export class URLFilterManager {
       
       switch (key) {
         case 'u':
-          // Parse users with colors (format: username:color or just username)
+          // Parse users with colors (format: username:RRRGGGBBB or just username)
           state.users = values.map(v => {
             const parts = v.split(':');
             if (parts.length === 2) {
               return {
                 username: this.normalize(parts[0]),
-                color: decodeURIComponent(parts[1])
+                color: this.nineDigitToRgb(parts[1])
               };
             }
             // Fallback for old format without color
             return {
               username: this.normalize(v),
-              color: '#ffffff'  // Default white color
+              color: 'rgb(255, 255, 255)'  // Default white color
             };
           });
           break;
@@ -204,10 +254,10 @@ export class URLFilterManager {
   buildHash(state: SWWFilterState): string {
     const params: string[] = [];
     
-    // Add user filters with colors
+    // Add user filters with colors (converted to 9-digit format)
     if (state.users.length > 0) {
       const userStrings = state.users.map(u => 
-        `${u.username}:${encodeURIComponent(u.color)}`
+        `${u.username}:${this.rgbToNineDigit(u.color)}`
       );
       params.push(`u=${userStrings.join('+')}`);
     }

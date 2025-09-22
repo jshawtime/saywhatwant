@@ -64,7 +64,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
           title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
           tabIndex={-1}
         >
-          <StyledFilterIcon userColor={userColor} />
+          <StyledFilterIcon 
+            userColor={userColor} 
+            opacity={isFilterEnabled ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.LIGHT}
+          />
         </button>
         <div 
           className="w-full min-h-[34px] max-h-[100px] overflow-y-auto custom-scrollbar pl-10 pr-3 py-1.5 bg-white/5 border rounded-lg text-sm flex items-start gap-2 flex-wrap transition-colors"
