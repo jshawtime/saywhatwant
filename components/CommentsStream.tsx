@@ -27,7 +27,7 @@ import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@
 // Import timestamp system
 import { formatTimestamp } from '@/modules/timestampSystem';
 // Import keyboard shortcuts
-import { useCommonShortcuts } from '@/modules/keyboardShortcuts';
+import { useCommonShortcuts, useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
 // Import polling system
 import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
 // Import video sharing system
@@ -313,19 +313,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Keyboard shortcuts using the common shortcuts module
   // ⚠️ CRITICAL: NEVER ADD MODIFIER KEYS TO SHORTCUTS IN THIS APP ⚠️
   // The 'r' shortcut is properly handled in the module with NO modifiers
-  useCommonShortcuts({
+  const shortcuts = useCommonShortcuts({
     onColorChange: (color) => {
       if (color === 'random') {
         const randomColor = getRandomColor();
-          setUserColor(randomColor);
-          localStorage.setItem('sww-color', randomColor);
-        }
+        setUserColor(randomColor);
+        localStorage.setItem('sww-color', randomColor);
+      }
     },
     onFocusInput: () => {
       inputRef.current?.focus();
     },
     inputRef
   });
+  
+  // Actually HOOK UP the shortcuts!
+  useKeyboardShortcuts(shortcuts);
 
   // Create wrapped parse function with handlers
   const parseCommentTextWithHandlers = useCallback((text: string): React.ReactNode[] => {
