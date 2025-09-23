@@ -1,15 +1,3 @@
-// Global type declarations
-declare global {
-  interface Window {
-    visualViewport?: {
-      height: number;
-      width: number;
-      addEventListener(event: string, callback: () => void): void;
-      removeEventListener(event: string, callback: () => void): void;
-    };
-  }
-}
-
 // Comment types
 export interface Comment {
   id: string;

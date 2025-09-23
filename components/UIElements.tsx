@@ -128,7 +128,7 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
 interface StyledUsernameInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onFocus?: () => void;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   userColor: string;
   placeholder?: string;
