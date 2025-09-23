@@ -317,8 +317,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     onColorChange: (color) => {
       if (color === 'random') {
         const randomColor = getRandomColor();
-        setUserColor(randomColor);
-        localStorage.setItem('sww-color', randomColor);
+          setUserColor(randomColor);
+          localStorage.setItem('sww-color', randomColor);
         window.dispatchEvent(new Event('colorChanged'));
       }
     },
@@ -411,6 +411,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               
               setAllComments(comments);
               console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
+              
+              // Scroll to bottom on initial load
+              setTimeout(() => {
+                if (streamRef.current) {
+                  streamRef.current.scrollTop = streamRef.current.scrollHeight;
+                }
+              }, 100);
+              
               setIsLoading(false);
               return;
             }
@@ -440,6 +448,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     loadInitialComments();
   }, [fetchComments]);
+
+  // Track if we've done initial scroll
+  const hasScrolledRef = useRef(false);
+  
+  // Scroll to bottom when initial comments load
+  useEffect(() => {
+    // Only scroll once when comments first arrive
+    if (allComments.length > 0 && !hasScrolledRef.current) {
+      hasScrolledRef.current = true;
+      
+      // Use double requestAnimationFrame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (streamRef.current) {
+            streamRef.current.scrollTop = streamRef.current.scrollHeight;
+            console.log('[Scroll] Initial scroll to bottom completed');
+          }
+        });
+      });
+    }
+  }, [allComments]);
 
   // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
