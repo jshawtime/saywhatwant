@@ -487,7 +487,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSubmitting || !inputText.trim()) return;
+    if (!inputText.trim()) return;
     
     // Check if username is empty
     if (!username) {
@@ -497,89 +497,94 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       return;
     }
     
+    // Only block if already submitting to prevent double-submit
+    if (isSubmitting) return;
+    
     setIsSubmitting(true);
     setError(null);
     
-    try {
-      // Create comment text
-      let commentText = inputText.trim();
-      
-      // If there's a pending video, replace '<-- video' with the full video link
-      if (pendingVideoKey && commentText.includes('<-- video')) {
-        commentText = commentText.replace('<-- video', `[video:${pendingVideoKey}] <-- video`);
+    // Create comment text
+    let commentText = inputText.trim();
+    
+    // If there's a pending video, replace '<-- video' with the full video link
+    if (pendingVideoKey && commentText.includes('<-- video')) {
+      commentText = commentText.replace('<-- video', `[video:${pendingVideoKey}] <-- video`);
+    }
+    
+    const newComment: Comment = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: commentText,
+      timestamp: Date.now(),
+      username: username || undefined,
+      color: userColor,
+      language: 'en', // Default to English for now
+      misc: '', // Empty for now, can be used for future features
+    };
+    
+    // INSTANT UI FEEDBACK - Show message immediately!
+    setAllComments(prev => [...prev, newComment]);
+    setDisplayedComments(prev => [...prev, newComment]);
+    
+    // Clear input and refocus IMMEDIATELY for rapid messaging
+    setInputText('');
+    setPendingVideoKey(null);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+    
+    // Scroll to bottom immediately
+    setTimeout(() => {
+      if (streamRef.current) {
+        streamRef.current.scrollTop = streamRef.current.scrollHeight;
       }
-      
-      const newComment: Comment = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text: commentText,
-        timestamp: Date.now(),
-        username: username || undefined,
-        color: userColor,
-        language: 'en', // Default to English for now
-        misc: '', // Empty for now, can be used for future features
-      };
-      
+    }, 10);
+    
+    // Reset submitting flag quickly (allow rapid fire messaging)
+    setIsSubmitting(false);
+    
+    // Handle server/storage in background (don't wait for it)
+    try {
       if (isCloudAPIEnabled()) {
-        // Submit to cloud API
-        const savedComment = await postCommentToCloud({
+        // Submit to cloud API in background
+        postCommentToCloud({
           text: newComment.text,
           username: newComment.username,
           color: newComment.color,
           domain: currentDomain,
           language: newComment.language,
           misc: newComment.misc,
+        }).then(savedComment => {
+          // If the server returns a different ID, update it
+          if (savedComment.id !== newComment.id) {
+            setAllComments(prev => prev.map(c => 
+              c.id === newComment.id ? {...savedComment, color: savedComment.color || newComment.color} : c
+            ));
+            setDisplayedComments(prev => prev.map(c => 
+              c.id === newComment.id ? {...savedComment, color: savedComment.color || newComment.color} : c
+            ));
+          }
+        }).catch(err => {
+          console.error('[Comments] Error posting to cloud:', err);
+          // Remove the optimistic comment on error
+          setAllComments(prev => prev.filter(c => c.id !== newComment.id));
+          setDisplayedComments(prev => prev.filter(c => c.id !== newComment.id));
+          setError('Failed to post comment. Please try again.');
         });
         
-        // Ensure color is preserved (in case API doesn't return it)
-        const commentWithColor = {
-          ...savedComment,
-          color: savedComment.color || newComment.color
-        };
-        
-        // Add to local state immediately
-        setAllComments(prev => [...prev, commentWithColor]);
-        setDisplayedComments(prev => [...prev, commentWithColor]);
-        
       } else {
-        // Use localStorage (existing implementation)
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Load existing comments
+        // Save to localStorage immediately (no delay!)
         const existingComments = loadCommentsFromStorage();
-        
-        // Add new comment and save
         const updatedComments = [...existingComments, newComment];
         saveCommentsToStorage(updatedComments);
-        
-        // Add to local state immediately
-        setAllComments(prev => [...prev, newComment]);
-        setDisplayedComments(prev => [...prev, newComment]);
-        
         console.log('[LocalStorage] Posted comment:', newComment.id);
       }
       
-      // Clear input and pending video
-      setInputText('');
-      setPendingVideoKey(null);
-      
-      // Keep focus in input field for rapid messaging
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-      
-      // Scroll to bottom
-      setTimeout(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-        }
-      }, 50);
-      
     } catch (err) {
       console.error('[Comments] Error posting comment:', err);
+      // Remove the optimistic comment on error
+      setAllComments(prev => prev.filter(c => c.id !== newComment.id));
+      setDisplayedComments(prev => prev.filter(c => c.id !== newComment.id));
       setError('Failed to post comment. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -999,7 +1004,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity - even darker than darkest
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}
-              disabled={isSubmitting}
+              // No disabled state - allow immediate typing for rapid messaging
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();

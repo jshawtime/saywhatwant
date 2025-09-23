@@ -191,42 +191,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
           )}
         </div>
       </div>
-      
-      {/* Filter Toggle LED - Same style as Domain Filter */}
-      <button
-        onClick={onToggleFilter}
-        className="relative p-1 transition-all"
-        title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
-        tabIndex={-1}
-      >
-        {/* LED Indicator Only */}
-        <div className="relative">
-          {/* LED Glow Effect when ON */}
-          {isFilterEnabled && (
-            <div
-              className="absolute inset-0 rounded-full blur-sm animate-pulse"
-              style={{
-                backgroundColor: userColor, // Use full color for glow
-                width: '12px',
-                height: '12px',
-              }}
-            />
-          )}
-          
-          {/* LED Core */}
-          <div
-            className="relative w-3 h-3 rounded-full transition-all cursor-pointer"
-            style={{
-              backgroundColor: isFilterEnabled 
-                ? userColor // Use FULL color when active (100% opacity)
-                : `rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST})`, // DARKEST level white when off
-              boxShadow: isFilterEnabled 
-                ? `0 0 10px ${userColor}` 
-                : `inset 0 0 2px rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST * 0.5})`, // Even subtler inset
-            }}
-          />
-        </div>
-      </button>
     </div>
   );
 };
