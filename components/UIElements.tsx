@@ -157,7 +157,12 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
       type="text"
       value={value}
       onChange={onChange}
-      onFocus={onFocus}
+      onFocus={(e) => {
+        // Prevent iPhone zoom on focus
+        window.scrollTo(0, 0);
+        // Call the original onFocus if provided
+        onFocus?.(e);
+      }}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40 transition-all duration-300 touch-manipulation ${

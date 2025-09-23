@@ -81,7 +81,17 @@
 
 /* Android keyboard handling */
 .mobile-input-form {
-  will-change: transform;
+  will-change: auto;
+  transition: none !important;
+}
+
+/* When keyboard is active */
+.mobile-input-form.keyboard-active {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 9999 !important;
 }
 
 /* Prevent input zoom and overflow */

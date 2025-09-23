@@ -600,45 +600,87 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   }, [searchTerm]);
 
 
-  // Handle Android keyboard visibility
+  // Handle mobile keyboard visibility - works for both iOS and Android
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     // Only for mobile devices
     if (window.innerWidth > 768) return;
     
-    const handleViewportChange = () => {
-      // Get visual viewport if available (better Android support)
-      const visualViewport = window.visualViewport;
-      if (visualViewport) {
-        const keyboardHeight = window.innerHeight - visualViewport.height;
-        const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
-        
-        if (inputForm && keyboardHeight > 50) {
-          // Keyboard is visible - adjust input position
-          inputForm.style.transform = `translateY(-${keyboardHeight}px)`;
-        } else if (inputForm) {
-          // Keyboard hidden - reset position
-          inputForm.style.transform = 'translateY(0)';
-        }
+    let previousHeight = window.innerHeight;
+    
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if it's an input or textarea
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        // For Android: scroll the input into view after a delay
+        setTimeout(() => {
+          // Ensure the input is visible
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // For Android specifically, also adjust the container
+          const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
+          const messagesContainer = streamRef.current;
+          
+          if (inputForm && messagesContainer) {
+            // Calculate keyboard height
+            const currentHeight = window.innerHeight;
+            const keyboardHeight = previousHeight - currentHeight;
+            
+            if (keyboardHeight > 50) {
+              // Keyboard is visible - adjust layout
+              inputForm.style.position = 'fixed';
+              inputForm.style.bottom = '0';
+              inputForm.style.left = '0';
+              inputForm.style.right = '0';
+              inputForm.style.zIndex = '9999';
+              
+              // Add padding to messages container
+              messagesContainer.style.paddingBottom = `${inputForm.offsetHeight + 20}px`;
+              
+              // Scroll to bottom to see latest messages
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }
+        }, 300); // Delay to let keyboard fully open
       }
     };
     
-    // Listen for visual viewport changes (Android keyboard)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportChange);
-      window.visualViewport.addEventListener('scroll', handleViewportChange);
-    }
+    const handleFocusOut = () => {
+      // Reset layout when keyboard closes
+      setTimeout(() => {
+        const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
+        const messagesContainer = streamRef.current;
+        
+        if (inputForm && messagesContainer) {
+          inputForm.style.position = '';
+          inputForm.style.bottom = '';
+          inputForm.style.left = '';
+          inputForm.style.right = '';
+          inputForm.style.zIndex = '';
+          messagesContainer.style.paddingBottom = '';
+        }
+        
+        previousHeight = window.innerHeight;
+      }, 100);
+    };
     
-    // Also listen for regular resize events
-    window.addEventListener('resize', handleViewportChange);
+    const handleResize = () => {
+      // Update height reference
+      setTimeout(() => {
+        previousHeight = window.innerHeight;
+      }, 500);
+    };
+    
+    // Listen for focus events
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    window.addEventListener('resize', handleResize);
     
     return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleViewportChange);
-        window.visualViewport.removeEventListener('scroll', handleViewportChange);
-      }
-      window.removeEventListener('resize', handleViewportChange);
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -915,7 +957,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       )}
 
       {/* Input Form - Always visible on mobile */}
-      <div className="mobile-input-form flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden transition-transform duration-200">
+      <div className="mobile-input-form flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden">
         {error && (
           <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
             {error}
@@ -964,6 +1006,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 if (inputText.includes('<-- video')) {
                   handleVideoLinkClick(showVideo || false, toggleVideo);
                 }
+              }}
+              onFocus={() => {
+                // Prevent zoom on iPhone
+                window.scrollTo(0, 0);
               }}
               placeholder="Say what you want..."
               className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
