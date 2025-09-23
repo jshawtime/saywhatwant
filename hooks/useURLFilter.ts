@@ -149,6 +149,41 @@ export function useURLFilter() {
     const manager = URLFilterManager.getInstance();
     manager.clearAll();
   }, []);
+
+  // Set URL from filter bar state (when toggling filters ON)
+  const setURLFromFilters = useCallback((filters: {
+    users?: Array<{username: string; color: string}>;
+    words?: string[];
+    negativeWords?: string[];
+  }) => {
+    const manager = URLFilterManager.getInstance();
+    
+    // Clear current state first, then set new filters
+    manager.clearAll();
+    
+    // Build the new state from provided filters
+    const newState: Partial<SWWFilterState> = {};
+    
+    if (filters.users && filters.users.length > 0) {
+      newState.users = filters.users.map(u => ({
+        username: manager.normalize(u.username),
+        color: u.color
+      }));
+    }
+    
+    if (filters.words && filters.words.length > 0) {
+      newState.words = filters.words;
+    }
+    
+    if (filters.negativeWords && filters.negativeWords.length > 0) {
+      newState.negativeWords = filters.negativeWords;
+    }
+    
+    // Update URL with these filters
+    if (Object.keys(newState).length > 0) {
+      manager.updateURL(newState);
+    }
+  }, []);
   
   // Check if URL has active filters
   const hasURLFilters = 
@@ -189,6 +224,9 @@ export function useURLFilter() {
     clearDateTimeFilter,
     
     // Clear all
-    clearURLFilters
+    clearURLFilters,
+    
+    // Set URL from filters (for toggle)
+    setURLFromFilters
   };
 }

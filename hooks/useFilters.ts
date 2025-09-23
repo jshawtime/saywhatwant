@@ -34,7 +34,9 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     removeNegativeWordFromURL,
     addSearchTermToURL,
     removeSearchTermFromURL,
-    clearDateTimeFilter
+    clearDateTimeFilter,
+    clearURLFilters,
+    setURLFromFilters
   } = useURLFilter();
 
   // Initialize IndexedDB and load filters on mount
@@ -244,7 +246,20 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     const newState = !isFilterEnabled;
     setIsFilterEnabled(newState);
     localStorage.setItem('sww-filter-enabled', String(newState));
-  }, [isFilterEnabled]);
+    
+    // Sync URL with filter state
+    if (newState) {
+      // Turning ON: Add all filters from filter bar to URL
+      setURLFromFilters({
+        users: filterUsernames,
+        words: filterWords,
+        negativeWords: negativeFilterWords
+      });
+    } else {
+      // Turning OFF: Clear URL (shows full feed, but keeps filters in bar)
+      clearURLFilters();
+    }
+  }, [isFilterEnabled, filterUsernames, filterWords, negativeFilterWords, setURLFromFilters, clearURLFilters]);
 
   // Apply filters to comments
   const filteredComments = useMemo(() => {

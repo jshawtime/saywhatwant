@@ -11,10 +11,17 @@ All URL-based filtering in Say What Want follows a strict merge-only policy. Thi
 - **URL WITHOUT filters** (`https://saywhatwant.app`) → Filter is **OFF** (inactive)
 - **Filters in bar** → **ALWAYS PRESERVED** (ready to reactivate)
 
-This matches user expectations:
+### Bi-directional Sync
+- **URL → Filter State**: URL controls whether filters are active
+- **Toggle ON → URL**: Manually turning filters ON adds them to URL
+- **Toggle OFF → URL**: Manually turning filters OFF clears the URL
+
+This creates a complete sync:
 - Visit plain URL = See full unfiltered feed
 - Add URL filters = See filtered view
 - Remove URL filters = Return to full feed (filters saved but inactive)
+- Toggle filters ON = URL updates to show active filters
+- Toggle filters OFF = URL clears (but filters stay in bar)
 
 ### Examples
 
@@ -29,10 +36,28 @@ This matches user expectations:
    - Filter state: OFF ❌
    - View: ALL messages (unfiltered)
    
-3. Add filter: https://saywhatwant.app/#u=bob:000255000
+3. Click LED button to toggle ON:
+   - URL changes to: https://saywhatwant.app/#u=alice:255000000
+   - Filter bar: [alice]
+   - Filter state: ON ✅
+   - View: Only alice's messages
+   
+4. Add another filter: https://saywhatwant.app/#u=bob:000255000
    - Filter bar: [alice, bob] (merged!)
    - Filter state: ON ✅
    - View: Only alice and bob's messages
+   
+5. Click LED button to toggle OFF:
+   - URL changes to: https://saywhatwant.app
+   - Filter bar: [alice, bob] (preserved!)
+   - Filter state: OFF ❌
+   - View: ALL messages
+   
+6. Click LED button to toggle ON again:
+   - URL changes to: https://saywhatwant.app/#u=alice:255000000+bob:000255000
+   - Filter bar: [alice, bob]
+   - Filter state: ON ✅
+   - View: Both users' messages
 ```
 
 ## 🔄 Filter Bar Merge Behavior
