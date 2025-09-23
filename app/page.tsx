@@ -55,7 +55,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex h-screen h-dvh bg-black relative">
+    <main className="flex h-screen h-dvh bg-black relative overflow-hidden">
       {/* Left Side - Video Player (9:16 aspect ratio container) */}
       <div 
         className={`relative h-full overflow-hidden transition-all duration-500 ease-in-out ${

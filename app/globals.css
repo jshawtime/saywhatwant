@@ -67,6 +67,30 @@
   touch-action: manipulation;
 }
 
+/* Prevent input width expansion on mobile */
+.box-border {
+  box-sizing: border-box;
+}
+
+/* Ensure input stays above keyboard */
+@supports (padding: env(keyboard-inset-height)) {
+  .sticky.bottom-0 {
+    bottom: env(keyboard-inset-height, 0);
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  
+  textarea:focus {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
 /* Custom animations */
 @keyframes pulse-cyan {
   0%, 100% {

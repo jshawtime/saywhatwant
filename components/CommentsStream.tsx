@@ -873,15 +873,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       )}
 
       {/* Input Form - Always visible on mobile */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom">
+      <div className="flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden">
         {error && (
           <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
             {error}
           </div>
         )}
         
-        <form onSubmit={handleSubmit}>
-          <div className="relative">
+        <form onSubmit={handleSubmit} className="w-full">
+          <div className="relative w-full max-w-full">
             {/* Character counter at top of textarea */}
             <StyledCharCounter 
               current={inputText.length}
@@ -924,7 +924,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 }
               }}
               placeholder="Say what you want..."
-              className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation"
+              className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
               style={{
                 ['--placeholder-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
                 ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
