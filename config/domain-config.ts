@@ -27,8 +27,13 @@ export const DOMAIN_CONFIGS: Record<string, DomainConfig> = {
   },
   'localhost:3000': {
     domain: 'localhost:3000',
-    title: 'Say What Want (Dev)',
-    description: 'Development environment',
+    title: 'Say What Want',
+    description: 'Express yourself',
+  },
+  'localhost:3001': {
+    domain: 'localhost:3001',
+    title: 'Say What Want',
+    description: 'Express yourself',
   },
   // Easy to add new domains here
 };

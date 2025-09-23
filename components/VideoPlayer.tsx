@@ -3,11 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
-import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings, Sun, Layers } from 'lucide-react';
+import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings, Sun, Layers, Tv } from 'lucide-react';
 import { getDarkerColor } from '@/utils/textParsing';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
-const VideoPlayer: React.FC = () => {
+interface VideoPlayerProps {
+  toggleVideo?: () => void;
+}
+
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo }) => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoItem | null>(null);
   const [availableVideos, setAvailableVideos] = useState<VideoItem[]>([]);
@@ -454,6 +458,24 @@ const VideoPlayer: React.FC = () => {
             </button>
           </div>
 
+          {/* TV Toggle (top right) - Same as main UI TV button */}
+          {toggleVideo && (
+            <div className="absolute top-4 right-4 z-20">
+              <button
+                onClick={toggleVideo}
+                className="p-2 hover:opacity-80 transition-opacity"
+                title="Close video area"
+              >
+                <Tv 
+                  className="w-5 h-5"
+                  style={{ 
+                    color: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // Always active (60% opacity)
+                  }}
+                />
+              </button>
+            </div>
+          )}
+
           {/* Settings Menu (slides up from bottom) */}
           <div 
             ref={settingsRef}
@@ -578,7 +600,7 @@ const VideoPlayer: React.FC = () => {
                     style={{ 
                       color: !isLoopMode 
                         ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity for active (lighter highlight)
-                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK) // 40% opacity for inactive
+                        : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST) // 20% opacity for inactive (2 steps darker)
                     }}
                   />
                 </button>
@@ -594,7 +616,7 @@ const VideoPlayer: React.FC = () => {
                     style={{ 
                       color: isLoopMode 
                         ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity for active (lighter highlight)
-                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK) // 40% opacity for inactive
+                        : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST) // 20% opacity for inactive (2 steps darker)
                     }}
                   />
                 </button>

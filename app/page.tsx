@@ -32,7 +32,7 @@ export default function Home() {
           width: showVideo ? 'calc(100vh * 9 / 16)' : '0',
         }}
       >
-        {showVideo && <VideoPlayer />}
+        {showVideo && <VideoPlayer toggleVideo={toggleVideo} />}
       </div>
 
       {/* Right Side - Comments Stream */}
