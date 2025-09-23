@@ -319,6 +319,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const randomColor = getRandomColor();
         setUserColor(randomColor);
         localStorage.setItem('sww-color', randomColor);
+        window.dispatchEvent(new Event('colorChanged'));
       }
     },
     onFocusInput: () => {
@@ -538,6 +539,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const selectColor = (color: string) => {
     setUserColor(color);
     localStorage.setItem('sww-color', color);
+    window.dispatchEvent(new Event('colorChanged'));
     setShowColorPicker(false);
   };
 

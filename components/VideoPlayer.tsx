@@ -9,16 +9,17 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface VideoPlayerProps {
   toggleVideo?: () => void;
+  userColor: string;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoItem | null>(null);
   const [availableVideos, setAvailableVideos] = useState<VideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoopMode, setIsLoopMode] = useState(false);
-  const [userColor, setUserColor] = useState('#60A5FA');
+  // userColor now comes from props - removed duplicate state
   const [showOverlay, setShowOverlay] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
   const [blendMode, setBlendMode] = useState('hue');  // Default, will read from CSS if available
@@ -241,23 +242,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo }) => {
     localStorage.setItem('sww-video-brightness', newBrightness.toString());
   };
 
-  // Load and watch for color changes
-  useEffect(() => {
-    const updateColor = () => {
-      const savedColor = localStorage.getItem('sww-color');
-      if (savedColor) {
-        setUserColor(savedColor);
-      }
-    };
-
-    // Initial load
-    updateColor();
-
-    // Check periodically for color changes (same tab)
-    const interval = setInterval(updateColor, 500);
-
-    return () => clearInterval(interval);
-  }, []);
+  // userColor now synced from parent component - no need for local updates
 
   // Close blend menu and settings on click outside
   useEffect(() => {
@@ -469,7 +454,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo }) => {
                 <Tv 
                   className="w-5 h-5"
                   style={{ 
-                    color: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // Always active (60% opacity)
+                    color: userColor // Use userColor directly, no fallbacks
                   }}
                 />
               </button>

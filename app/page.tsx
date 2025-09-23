@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
+import { getRandomColor } from '@/modules/colorSystem';
 
 export default function Home() {
   const [showVideo, setShowVideo] = useState(false);
+  const [userColor, setUserColor] = useState(() => getRandomColor());
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -13,6 +15,37 @@ export default function Home() {
     if (savedShowVideo !== null) {
       setShowVideo(savedShowVideo === 'true');
     }
+  }, []);
+
+  // Load and sync user color
+  useEffect(() => {
+    const loadColor = () => {
+      const savedColor = localStorage.getItem('sww-color');
+      if (savedColor) {
+        setUserColor(savedColor);
+      }
+    };
+
+    // Initial load
+    loadColor();
+
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sww-color' && e.newValue) {
+        setUserColor(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom event for same-tab changes
+    const handleColorChange = () => loadColor();
+    window.addEventListener('colorChanged', handleColorChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('colorChanged', handleColorChange);
+    };
   }, []);
 
   const toggleVideo = () => {
@@ -32,7 +65,7 @@ export default function Home() {
           width: showVideo ? 'calc(100vh * 9 / 16)' : '0',
         }}
       >
-        {showVideo && <VideoPlayer toggleVideo={toggleVideo} />}
+        {showVideo && <VideoPlayer toggleVideo={toggleVideo} userColor={userColor} />}
       </div>
 
       {/* Right Side - Comments Stream */}

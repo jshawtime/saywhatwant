@@ -88,21 +88,12 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       }
     }
     
-    // URL controls filter state:
-    // - If URL has filters -> filters are ON
-    // - If URL has NO filters -> filters are OFF
-    // - Filters in the bar are always preserved (merge behavior)
-    //
-    // This matches user expectations: visiting plain URL shows full feed
-    setIsFilterEnabled(hasURLFilters);
-    
-    // Save the state when URL has filters
-    if (hasURLFilters) {
-      localStorage.setItem('sww-filter-enabled', 'true');
+    // Load filter enabled state from localStorage
+    // User manually controls this - NOT auto-toggled by URL
+    if (savedFilterEnabled !== null) {
+      setIsFilterEnabled(savedFilterEnabled === 'true');
     }
-    // When URL has no filters, we turn filters OFF but don't save 'false'
-    // This allows the filters to reactivate when URL filters are added again
-  }, [hasURLFilters]); // Re-run if URL filter state changes
+  }, []); // Only run once on mount - no dependencies
   
   // Ham radio mode - no filter recording to IndexedDB
   // Filters are ephemeral - only active while tab is open
@@ -147,11 +138,9 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       const newFilters = [...filterUsernames, {username, color}];
       setFilterUsernames(newFilters);
       localStorage.setItem('sww-filters', JSON.stringify(newFilters));
-      
-      // Also update URL with color
-      addUserToURL(username, color);
+      // Don't auto-update URL - user controls filter activation
     }
-  }, [filterUsernames, addUserToURL]);
+  }, [filterUsernames]);
 
   // Remove username from filter
   const removeFromFilter = useCallback((username: string, color: string) => {
@@ -188,11 +177,9 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       const newWords = [...filterWords, cleanWord];
       setFilterWords(newWords);
       localStorage.setItem('sww-word-filters', JSON.stringify(newWords));
-      
-      // Also update URL
-      addWordToURL(cleanWord);
+      // Don't auto-update URL - user controls filter activation
     }
-  }, [filterWords, addWordToURL]);
+  }, [filterWords]);
 
   // Remove word from filter
   const removeWordFromFilter = useCallback((word: string) => {
@@ -241,25 +228,13 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     }
   }, [negativeFilterWords, urlState.negativeWords, removeNegativeWordFromURL]);
 
-  // Toggle filter enabled state
+  // Toggle filter enabled state - USER CONTROL ONLY
   const toggleFilter = useCallback(() => {
     const newState = !isFilterEnabled;
     setIsFilterEnabled(newState);
     localStorage.setItem('sww-filter-enabled', String(newState));
-    
-    // Sync URL with filter state
-    if (newState) {
-      // Turning ON: Add all filters from filter bar to URL
-      setURLFromFilters({
-        users: filterUsernames,
-        words: filterWords,
-        negativeWords: negativeFilterWords
-      });
-    } else {
-      // Turning OFF: Clear URL (shows full feed, but keeps filters in bar)
-      clearURLFilters();
-    }
-  }, [isFilterEnabled, filterUsernames, filterWords, negativeFilterWords, setURLFromFilters, clearURLFilters]);
+    // No automatic URL sync - user controls this manually
+  }, [isFilterEnabled]);
 
   // Apply filters to comments
   const filteredComments = useMemo(() => {
