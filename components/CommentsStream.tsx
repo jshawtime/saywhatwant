@@ -33,6 +33,8 @@ import { useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
 import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
 // Import video sharing system
 import { useVideoSharing } from '@/modules/videoSharingSystem';
+// Import comment submission system
+import { useCommentSubmission, useUsernameValidation } from '@/modules/commentSubmission';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -52,11 +54,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [username, setUsername] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasNewComments, setHasNewComments] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [usernameFlash, setUsernameFlash] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [userColor, setUserColor] = useState(() => getRandomColor()); // Start with random color
@@ -83,6 +82,49 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     getInputCursorStyle,
     clearVideoState,
   } = useVideoSharing(inputRef, setInputText);
+  
+  // Username validation
+  const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
+  
+  // Comment submission system
+  const currentDomain = getCurrentDomain();
+  const {
+    isSubmitting,
+    error,
+    handleSubmit: submitComment,
+    setError,
+  } = useCommentSubmission(
+    {
+      maxLength: MAX_COMMENT_LENGTH,
+      domain: currentDomain,
+      storageKey: COMMENTS_STORAGE_KEY,
+    },
+    {
+      onOptimisticUpdate: (comment) => {
+        setAllComments(prev => [...prev, comment]);
+        setDisplayedComments(prev => [...prev, comment]);
+      },
+      onOptimisticRemove: (commentId) => {
+        setAllComments(prev => prev.filter(c => c.id !== commentId));
+        setDisplayedComments(prev => prev.filter(c => c.id !== commentId));
+      },
+      onInputClear: () => setInputText(''),
+      onScrollToBottom: () => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = streamRef.current.scrollHeight;
+        }
+      },
+      onFocusInput: () => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      },
+      loadCommentsFromStorage,
+      saveCommentsToStorage,
+      processVideoInComment,
+      clearVideoState,
+    }
+  );
   
   // Apply domain filtering if enabled
   const domainFilteredComments = useMemo(() => {
@@ -492,100 +534,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     storageKey: COMMENTS_STORAGE_KEY
   });
 
-  // Handle comment submission
+  // Handle comment submission (using the new submission system)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!inputText.trim()) return;
-    
-    // Check if username is empty
-    if (!username) {
-      // Flash the username field to indicate it needs to be filled
-      setUsernameFlash(true);
-      setTimeout(() => setUsernameFlash(false), 1000);
-      return;
-    }
-    
-    // Only block if already submitting to prevent double-submit
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    setError(null);
-    
-    // Create comment text and process any pending video
-    let commentText = processVideoInComment(inputText.trim());
-    
-    const newComment: Comment = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: commentText,
-      timestamp: Date.now(),
-      username: username || undefined,
-      color: userColor,
-      language: 'en', // Default to English for now
-      misc: '', // Empty for now, can be used for future features
-    };
-    
-    // INSTANT UI FEEDBACK - Show message immediately!
-    setAllComments(prev => [...prev, newComment]);
-    setDisplayedComments(prev => [...prev, newComment]);
-    
-    // Clear input and refocus IMMEDIATELY for rapid messaging
-    setInputText('');
-    clearVideoState();
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-    
-    // Scroll to bottom immediately
-    setTimeout(() => {
-      if (streamRef.current) {
-        streamRef.current.scrollTop = streamRef.current.scrollHeight;
-      }
-    }, 10);
-    
-    // Reset submitting flag quickly (allow rapid fire messaging)
-    setIsSubmitting(false);
-    
-    // Handle server/storage in background (don't wait for it)
-    try {
-      if (isCloudAPIEnabled()) {
-        // Submit to cloud API in background
-        postCommentToCloud({
-          id: newComment.id,  // Send client-generated ID
-          timestamp: newComment.timestamp,  // Send client-generated timestamp
-          text: newComment.text,
-          username: newComment.username,
-          color: newComment.color,
-          domain: currentDomain,
-          language: newComment.language,
-          misc: newComment.misc,
-        }).then(savedComment => {
-          // Do nothing! The optimistic version IS the version
-          // We don't care about server response - it should echo our ID
-          console.log('[Comments] Server acknowledged:', savedComment.id);
-        }).catch(err => {
-          console.error('[Comments] Error posting to cloud:', err);
-          // Remove the optimistic comment on error
-          setAllComments(prev => prev.filter(c => c.id !== newComment.id));
-          setDisplayedComments(prev => prev.filter(c => c.id !== newComment.id));
-          setError('Failed to post comment. Please try again.');
-        });
-        
-      } else {
-        // Save to localStorage immediately (no delay!)
-        const existingComments = loadCommentsFromStorage();
-        const updatedComments = [...existingComments, newComment];
-        saveCommentsToStorage(updatedComments);
-        console.log('[LocalStorage] Posted comment:', newComment.id);
-      }
-      
-    } catch (err) {
-      console.error('[Comments] Error posting comment:', err);
-      // Remove the optimistic comment on error
-      setAllComments(prev => prev.filter(c => c.id !== newComment.id));
-      setDisplayedComments(prev => prev.filter(c => c.id !== newComment.id));
-      setError('Failed to post comment. Please try again.');
-    }
+    await submitComment(inputText, username, userColor, flashUsername);
   };
 
   // Handle scroll to load more
