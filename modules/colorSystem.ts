@@ -7,14 +7,14 @@
 // CONSTANTS
 // ==========================================
 
-// RGB-based color generation ranges
+// RGB-based color generation ranges (brightened for better visibility)
 export const RGB_RANGES = {
-  MAIN: { min: 150, max: 220 },      // 71 possible values
-  SECONDARY: { min: 40, max: 220 },  // 181 possible values
-  THIRD: { min: 40, max: 40 },       // Fixed at 40
+  MAIN: { min: 150, max: 230 },      // 81 possible values
+  SECONDARY: { min: 150, max: 230 }, // 81 possible values  
+  THIRD: { min: 80, max: 80 },       // Fixed at 80
 } as const;
 
-// Total unique colors: 71 × 181 × 6 permutations = 77,166 unique colors
+// Total unique colors: 81 × 81 × 6 permutations = 39,366 unique colors
 // (6 permutations because we can assign these ranges to R,G,B in 6 different ways)
 
 // Legacy palette for backwards compatibility
@@ -113,14 +113,14 @@ export const getDarkerColor = adjustColorBrightness;
 
 /**
  * Gets a random RGB color using sophisticated range-based generation
- * Creates subtle variations within a defined color space
- * Total possible colors: 71 × 181 × 6 = 77,166 unique combinations
+ * Creates bright, visible colors with good contrast on dark backgrounds
+ * Total possible colors: 81 × 81 × 6 = 39,366 unique combinations
  */
 export const getRandomColor = (): string => {
   // Get random values for each range
   const mainValue = Math.floor(Math.random() * (RGB_RANGES.MAIN.max - RGB_RANGES.MAIN.min + 1)) + RGB_RANGES.MAIN.min;
   const secondaryValue = Math.floor(Math.random() * (RGB_RANGES.SECONDARY.max - RGB_RANGES.SECONDARY.min + 1)) + RGB_RANGES.SECONDARY.min;
-  const thirdValue = RGB_RANGES.THIRD.min; // Fixed at 40
+  const thirdValue = RGB_RANGES.THIRD.min; // Fixed at 80
   
   // Randomly assign these values to R, G, B channels
   // This creates 6 different color families
