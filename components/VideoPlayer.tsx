@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
 import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings, Sun, Layers, Tv } from 'lucide-react';
-import { getDarkerColor } from '@/utils/textParsing';
+import { adjustColorBrightness as getDarkerColor } from '@/modules/colorSystem';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface VideoPlayerProps {
@@ -316,19 +316,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
     setError('Using demo video - Configure R2 bucket for full experience');
   };
 
-  // Darker color helper
-  const getDarkerColor = (color: string, factor: number) => {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    
-    const newR = Math.round(r * factor);
-    const newG = Math.round(g * factor);
-    const newB = Math.round(b * factor);
-    
-    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-  };
+  // Using getDarkerColor from colorSystem module now (handles RGB colors)
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
