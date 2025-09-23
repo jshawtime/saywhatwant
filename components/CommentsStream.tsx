@@ -290,13 +290,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       onWordClick: addWordToFilter,
       onWordRightClick: addNegativeWordFilter,
       onVideoClick: (videoKey) => {
+        // Open video area if it's closed
+        if (!showVideo && toggleVideo) {
+          toggleVideo();
+        }
+        
+        // Play the video
         const playEvent = new CustomEvent('playSharedVideo', {
           detail: { videoKey }
         });
         window.dispatchEvent(playEvent);
       }
     });
-  }, [addWordToFilter, addNegativeWordFilter]);
+  }, [addWordToFilter, addNegativeWordFilter, showVideo, toggleVideo]);
 
   // Timestamp formatting is now imported from timestampSystem module
 
@@ -993,6 +999,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               onClick={(e) => {
                 // If clicking on a video link in the input, play it
                 if (pendingVideoKey && inputText.includes('<-- video')) {
+                  // Open video area if it's closed
+                  if (!showVideo && toggleVideo) {
+                    toggleVideo();
+                  }
+                  
+                  // Play the video
                   const playEvent = new CustomEvent('playSharedVideo', {
                     detail: { videoKey: pendingVideoKey }
                   });

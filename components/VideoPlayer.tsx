@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { VideoItem, VideoManifest } from '@/types';
 import { getVideoSource } from '@/config/video-source';
 import { Shuffle, Repeat, Palette, Share2, ChevronDown, Settings, Sun, Layers } from 'lucide-react';
+import { getDarkerColor } from '@/utils/textParsing';
+import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 const VideoPlayer: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -567,28 +569,32 @@ const VideoPlayer: React.FC = () => {
                 <button
                   onClick={togglePlayMode}
                   className={`px-3 py-2 rounded-full transition-all ${
-                    !isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
+                    !isLoopMode ? 'bg-black/40' : 'hover:bg-black/20'
                   }`}
                   title="Random playback"
                 >
                   <Shuffle 
                     className="w-4 h-4"
                     style={{ 
-                      color: !isLoopMode ? userColor : getDarkerColor(userColor, 0.5)
+                      color: !isLoopMode 
+                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity for active (lighter highlight)
+                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK) // 40% opacity for inactive
                     }}
                   />
                 </button>
                 <button
                   onClick={togglePlayMode}
                   className={`px-3 py-2 rounded-full transition-all ${
-                    isLoopMode ? 'bg-black/60' : 'hover:bg-black/20'
+                    isLoopMode ? 'bg-black/40' : 'hover:bg-black/20'
                   }`}
                   title="Loop current video"
                 >
                   <Repeat 
                     className="w-4 h-4"
                     style={{ 
-                      color: isLoopMode ? userColor : getDarkerColor(userColor, 0.5)
+                      color: isLoopMode 
+                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity for active (lighter highlight)
+                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK) // 40% opacity for inactive
                     }}
                   />
                 </button>
