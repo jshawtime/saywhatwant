@@ -4,6 +4,37 @@
 
 All URL-based filtering in Say What Want follows a strict merge-only policy. This ensures users never lose their carefully curated filters.
 
+## 🎯 URL Controls Filter State
+
+### Filter State Logic
+- **URL WITH filters** (`#u=alice:255000000`) → Filter is **ON** (active)
+- **URL WITHOUT filters** (`https://saywhatwant.app`) → Filter is **OFF** (inactive)
+- **Filters in bar** → **ALWAYS PRESERVED** (ready to reactivate)
+
+This matches user expectations:
+- Visit plain URL = See full unfiltered feed
+- Add URL filters = See filtered view
+- Remove URL filters = Return to full feed (filters saved but inactive)
+
+### Examples
+
+```
+1. Visit: https://saywhatwant.app/#u=alice:255000000
+   - Filter bar: [alice] 
+   - Filter state: ON ✅
+   - View: Only alice's messages
+
+2. Navigate to: https://saywhatwant.app
+   - Filter bar: [alice] (still there!)
+   - Filter state: OFF ❌
+   - View: ALL messages (unfiltered)
+   
+3. Add filter: https://saywhatwant.app/#u=bob:000255000
+   - Filter bar: [alice, bob] (merged!)
+   - Filter state: ON ✅
+   - View: Only alice and bob's messages
+```
+
 ## 🔄 Filter Bar Merge Behavior
 
 ### Client-Side URL Filters (`#u=`, `#word=`, etc.)
@@ -118,19 +149,23 @@ const mergedComments = [...allComments, ...newMessages];
 
 ## 🚫 What Never Happens
 
-- ❌ URL never clears existing filters
+- ❌ URL never clears filters from the filter bar
 - ❌ Server search never replaces current messages
 - ❌ Filter bar never gets wiped by URL changes
 - ❌ Duplicate filters never appear in filter bar
 - ❌ Messages never get removed by new searches
+- ❌ Filters are never lost when URL changes
 
 ## ✅ What Always Happens
 
-- ✅ URL filters merge with existing filters
+- ✅ URL controls whether filters are active/inactive
+- ✅ URL filters merge with existing filter bar
 - ✅ Server messages merge with existing messages
-- ✅ Filter bar shows combined filters
+- ✅ Filter bar preserves all filters (even when inactive)
+- ✅ Plain URL (`https://saywhatwant.app`) shows full feed
+- ✅ URL with filters shows filtered view
 - ✅ Duplicates are automatically prevented
-- ✅ User's work is always preserved
+- ✅ User's curated filters are always preserved
 
 ---
 

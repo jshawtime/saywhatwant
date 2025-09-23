@@ -86,15 +86,20 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       }
     }
     
-    // Load saved filter enabled state from localStorage
-    // Priority: 1. localStorage, 2. URL filters present, 3. default (false)
-    if (savedFilterEnabled !== null) {
-      setIsFilterEnabled(savedFilterEnabled === 'true');
-    } else if (hasURLFilters) {
-      // Only auto-enable if no saved preference and URL has filters
-      setIsFilterEnabled(true);
+    // URL controls filter state:
+    // - If URL has filters -> filters are ON
+    // - If URL has NO filters -> filters are OFF
+    // - Filters in the bar are always preserved (merge behavior)
+    //
+    // This matches user expectations: visiting plain URL shows full feed
+    setIsFilterEnabled(hasURLFilters);
+    
+    // Save the state when URL has filters
+    if (hasURLFilters) {
+      localStorage.setItem('sww-filter-enabled', 'true');
     }
-    // Otherwise keeps the default false state
+    // When URL has no filters, we turn filters OFF but don't save 'false'
+    // This allows the filters to reactivate when URL filters are added again
   }, [hasURLFilters]); // Re-run if URL filter state changes
   
   // Ham radio mode - no filter recording to IndexedDB
