@@ -601,7 +601,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
 
   return (
-    <div className="flex flex-col h-full bg-black text-white overflow-x-hidden">
+    <div className="flex flex-col h-full bg-black text-white overflow-hidden relative">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-white/10 bg-black/50 backdrop-blur-sm">
         <div className="p-3 space-y-2">
@@ -763,7 +763,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       {/* Comments Stream */}
       <div 
         ref={streamRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-1"
+        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-1 min-h-0"
         style={{
           ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
           ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
@@ -872,8 +872,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         </button>
       )}
 
-      {/* Input Form */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-black/50 backdrop-blur-sm p-3">
+      {/* Input Form - Always visible on mobile */}
+      <div className="flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom">
         {error && (
           <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
             {error}
@@ -924,7 +924,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 }
               }}
               placeholder="Say what you want..."
-              className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm custom-scrollbar"
+              className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation"
               style={{
                 ['--placeholder-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
                 ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
