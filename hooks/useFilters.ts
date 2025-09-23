@@ -108,7 +108,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       // Default: filters OFF
       setIsFilterEnabled(false);
     }
-  }, [hasURLFilters]); // Re-run when URL filter state changes
+  }, []); // Only run once on mount - special cases apply to initial load only
   
   // Ham radio mode - no filter recording to IndexedDB
   // Filters are ephemeral - only active while tab is open
