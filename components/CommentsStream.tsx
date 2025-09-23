@@ -257,8 +257,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   }, [serverSideUsers]); // Only re-run when serverSideUsers changes
 
   // Keyboard shortcuts using the new modular system
-  // IMPORTANT: Never use modifier keys (ctrl, alt, shift, cmd) for shortcuts in this app
-  // All shortcuts should work with single key presses only
+  // ⚠️ CRITICAL: NEVER ADD MODIFIER KEYS TO SHORTCUTS IN THIS APP ⚠️
+  // All shortcuts MUST be single key presses only (no ctrl, alt, shift, cmd, meta)
+  // This is a hard requirement for the app's accessibility and user experience
   useKeyboardShortcuts([
     {
       key: 'Tab',
@@ -267,7 +268,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       },
       description: 'Focus message input',
       allowInInput: false
-      // NO MODIFIERS - single key press only
+      // ⚠️ NO MODIFIERS - single key press only
     },
     {
       key: 'r',
@@ -279,7 +280,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       description: 'Random color',
       allowInInput: false,
       preventDefault: true
-      // NO MODIFIERS - single key press only
+      // ⚠️ NO MODIFIERS - single key press only
     }
   ]);
 
@@ -554,8 +555,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           language: newComment.language,
           misc: newComment.misc,
         }).then(savedComment => {
-          // If the server returns a different ID, update it
-          if (savedComment.id !== newComment.id) {
+          // Only update if something meaningful changed (not just ID)
+          // This prevents the visual refresh/flicker
+          // We don't care about ID differences - the optimistic ID is fine
+          
+          // Only update if text, username, or color actually changed
+          if (savedComment.text !== newComment.text || 
+              savedComment.username !== newComment.username ||
+              savedComment.color !== newComment.color) {
             setAllComments(prev => prev.map(c => 
               c.id === newComment.id ? {...savedComment, color: savedComment.color || newComment.color} : c
             ));

@@ -35,6 +35,9 @@ const isInputElement = (target: EventTarget | null): boolean => {
 
 /**
  * Check if modifier keys match the requirements
+ * If modifiers.key is false, the key MUST NOT be pressed
+ * If modifiers.key is true, the key MUST be pressed
+ * If modifiers.key is undefined, the key state doesn't matter
  */
 const matchesModifiers = (event: KeyboardEvent, modifiers?: ModifierKeys): boolean => {
   if (!modifiers) return true;
@@ -132,18 +135,27 @@ export const useCommonShortcuts = ({
   }
   
   // 'r' for random color
+  // ⚠️ CRITICAL: This MUST work ONLY without modifiers ⚠️
+  // NEVER allow Ctrl+R, Cmd+R, Alt+R, Shift+R to trigger this
   if (onColorChange) {
     shortcuts.push({
       key: 'r',
       handler: (event) => {
-        // Only if NO modifiers (allow Cmd+R / Ctrl+R to refresh)
+        // Double-check: Only if NO modifiers (allow Cmd+R / Ctrl+R to refresh)
         if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
           onColorChange('random');
         }
       },
       description: 'Random color',
       allowInInput: false,
-      preventDefault: true
+      preventDefault: true,
+      // Explicitly require NO modifiers
+      modifiers: { 
+        ctrlKey: false, 
+        metaKey: false, 
+        altKey: false, 
+        shiftKey: false 
+      }
     });
   }
   
