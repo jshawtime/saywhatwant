@@ -607,80 +607,102 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Only for mobile devices
     if (window.innerWidth > 768) return;
     
-    let previousHeight = window.innerHeight;
+    let isKeyboardVisible = false;
+    let resizeTimer: NodeJS.Timeout;
+    
+    const adjustForKeyboard = () => {
+      const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
+      const messagesContainer = streamRef.current;
+      
+      if (!inputForm || !messagesContainer) return;
+      
+      // Use visualViewport if available (more reliable on Android)
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const windowHeight = window.innerHeight;
+      const keyboardHeight = windowHeight - viewportHeight;
+      
+      if (keyboardHeight > 50 && !isKeyboardVisible) {
+        // Keyboard is opening
+        isKeyboardVisible = true;
+        
+        // Make input fixed at bottom
+        inputForm.style.position = 'fixed';
+        inputForm.style.bottom = '0';
+        inputForm.style.left = '0';
+        inputForm.style.right = '0';
+        inputForm.style.zIndex = '9999';
+        
+        // Add padding to messages container
+        messagesContainer.style.paddingBottom = `${inputForm.offsetHeight + keyboardHeight}px`;
+        
+        // Scroll to bottom to see latest messages
+        setTimeout(() => {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 100);
+        
+      } else if (keyboardHeight <= 50 && isKeyboardVisible) {
+        // Keyboard is closing
+        isKeyboardVisible = false;
+        
+        // Reset styles
+        inputForm.style.position = '';
+        inputForm.style.bottom = '';
+        inputForm.style.left = '';
+        inputForm.style.right = '';
+        inputForm.style.zIndex = '';
+        messagesContainer.style.paddingBottom = '';
+      }
+    };
     
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
       // Check if it's an input or textarea
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        // For Android: scroll the input into view after a delay
+        // Small delay to let keyboard start opening
         setTimeout(() => {
-          // Ensure the input is visible
+          adjustForKeyboard();
+          // Ensure input is visible
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // For Android specifically, also adjust the container
-          const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
-          const messagesContainer = streamRef.current;
-          
-          if (inputForm && messagesContainer) {
-            // Calculate keyboard height
-            const currentHeight = window.innerHeight;
-            const keyboardHeight = previousHeight - currentHeight;
-            
-            if (keyboardHeight > 50) {
-              // Keyboard is visible - adjust layout
-              inputForm.style.position = 'fixed';
-              inputForm.style.bottom = '0';
-              inputForm.style.left = '0';
-              inputForm.style.right = '0';
-              inputForm.style.zIndex = '9999';
-              
-              // Add padding to messages container
-              messagesContainer.style.paddingBottom = `${inputForm.offsetHeight + 20}px`;
-              
-              // Scroll to bottom to see latest messages
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-          }
-        }, 300); // Delay to let keyboard fully open
+        }, 100);
+        
+        // Check again after keyboard should be fully open
+        setTimeout(adjustForKeyboard, 500);
       }
     };
     
     const handleFocusOut = () => {
-      // Reset layout when keyboard closes
-      setTimeout(() => {
-        const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
-        const messagesContainer = streamRef.current;
-        
-        if (inputForm && messagesContainer) {
-          inputForm.style.position = '';
-          inputForm.style.bottom = '';
-          inputForm.style.left = '';
-          inputForm.style.right = '';
-          inputForm.style.zIndex = '';
-          messagesContainer.style.paddingBottom = '';
-        }
-        
-        previousHeight = window.innerHeight;
-      }, 100);
+      // Delay to let keyboard close
+      setTimeout(adjustForKeyboard, 100);
     };
     
-    const handleResize = () => {
-      // Update height reference
-      setTimeout(() => {
-        previousHeight = window.innerHeight;
-      }, 500);
+    const handleViewportChange = () => {
+      // Clear any existing timer
+      clearTimeout(resizeTimer);
+      
+      // Debounce the adjustment
+      resizeTimer = setTimeout(adjustForKeyboard, 50);
     };
     
     // Listen for focus events
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);
-    window.addEventListener('resize', handleResize);
+    
+    // Listen for viewport changes (more reliable for Android)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+      window.visualViewport.addEventListener('scroll', handleViewportChange);
+    }
+    window.addEventListener('resize', handleViewportChange);
     
     return () => {
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
-      window.removeEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);  
+        window.visualViewport.removeEventListener('scroll', handleViewportChange);
+      }
+      window.removeEventListener('resize', handleViewportChange);
+      clearTimeout(resizeTimer);
     };
   }, []);
 
