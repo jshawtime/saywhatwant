@@ -262,6 +262,41 @@ if (request.method === 'GET') {
 - ✅ Instant performance
 - ✅ Infinite scalability
 
+## Implementation Plan (Active)
+
+### What We're Building
+Based on extensive discussion and analysis, we're implementing the cursor-based polling with these specifications:
+- **Initial load**: 50 messages (reduced from 500)
+- **Polling**: Only messages after last known timestamp
+- **No deduplication**: Cursor prevents re-fetching
+- **Ham Radio Mode**: Miss messages if tab closed (and that's OK)
+
+### Changes Being Made
+
+#### 1. Server Side (Cloudflare Worker)
+- Add `?after=timestamp` parameter support
+- Return only messages with timestamp > after
+- Keep existing behavior for backward compatibility
+
+#### 2. Client Side (CommentsStream)
+- Reduce `INITIAL_LOAD_COUNT` from 500 to 50
+- Implement cursor-based polling using last message timestamp
+- Remove duplicate checking logic (Set creation/checking)
+- Simplify to just append new messages
+
+#### 3. Configuration Updates
+```javascript
+// New constants
+const INITIAL_LOAD_COUNT = 50;    // Reduced from 500
+const POLL_BATCH_LIMIT = 50;      // Max new messages per poll
+```
+
+### Expected Results
+- **98.6% reduction in bandwidth costs**
+- **Zero duplicate checking overhead**
+- **Simple append-only client logic**
+- **Minimal server processing**
+
 ## Conclusion
 
 This cursor-based polling strategy transforms the app from a potential money pit ($26,250/month) to an efficiently run service ($360/month). By embracing the "Ham Radio Mode" philosophy and accepting that real-time presence matters more than perfect history, we achieve a system that is both technically elegant and economically viable.

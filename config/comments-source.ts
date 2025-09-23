@@ -5,7 +5,7 @@
 
 export const COMMENTS_CONFIG = {
   // Set to true for local development, false for cloud API
-  useLocalStorage: false, // Set to false for production (Cloudflare KV)
+  useLocalStorage: false, // Set to false for production (cursor-based polling)
   
   // Cloud API endpoint (uses environment variable or fallback)
   // Production: https://sww-comments.bootloaders.workers.dev/api/comments
@@ -17,8 +17,8 @@ export const COMMENTS_CONFIG = {
   // Maximum comments to store locally (when using localStorage)
   maxLocalComments: 1000,
   
-  // Initial load count
-  initialLoadCount: 500,
+  // Initial load count (reduced for efficiency - Ham Radio Mode)
+  initialLoadCount: 50,
   
   // Lazy load batch size
   lazyLoadBatch: 50,

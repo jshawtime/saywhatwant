@@ -90,13 +90,56 @@ export default {
 async function handleGetComments(env, url) {
   const params = url.searchParams;
   const offset = parseInt(params.get('offset') || '0');
-  const limit = Math.min(parseInt(params.get('limit') || '500'), 1000);
+  const limit = Math.min(parseInt(params.get('limit') || '50'), 1000);
   const search = params.get('search')?.toLowerCase();
   const uss = params.get('uss'); // Server-side user search
+  const after = params.get('after'); // Cursor-based polling
 
   // Handle server-side user search
   if (uss) {
     return await handleServerSideUserSearch(uss, env);
+  }
+
+  // Handle cursor-based polling (efficient!)
+  if (after) {
+    const afterTimestamp = parseInt(after);
+    
+    try {
+      // Get from cache first
+      const cacheKey = 'recent:comments';
+      const cachedData = await env.COMMENTS_KV.get(cacheKey);
+      
+      let newMessages = [];
+      
+      if (cachedData) {
+        const allComments = JSON.parse(cachedData);
+        // Filter only messages after the timestamp
+        newMessages = allComments
+          .filter(c => c.timestamp > afterTimestamp)
+          .sort((a, b) => b.timestamp - a.timestamp) // Newest first
+          .slice(0, limit);
+        
+        console.log(`[Comments] Cursor polling: ${newMessages.length} new messages after ${afterTimestamp}`);
+      }
+      
+      return new Response(JSON.stringify(newMessages), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+      });
+    } catch (error) {
+      console.error('[Comments] Cursor polling error:', error);
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
   }
 
   try {

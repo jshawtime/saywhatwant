@@ -12,10 +12,11 @@ import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
 import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggleDomainFilter } from '@/config/domain-config';
 
 // Configuration - Now using config file
-const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount; // 500
-const LAZY_LOAD_BATCH = 100; // Changed from 50 to 100 for ham radio mode
+const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount; // 50 (Ham Radio Mode)
+const LAZY_LOAD_BATCH = 50; // Reduced for efficient loading
 const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
+const POLL_BATCH_LIMIT = 50; // Max new messages per poll
 const MAX_USERNAME_LENGTH = 16;
 
 // Import color functions from the color system
@@ -405,8 +406,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         // Default behavior - use fetchComments (either cloud API or localStorage)
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
-        setAllComments(data.comments);
-        setDisplayedComments(data.comments.slice(-LAZY_LOAD_BATCH));
+        // Only keep the most recent messages (Ham Radio Mode)
+        const recentMessages = data.comments.slice(-INITIAL_LOAD_COUNT);
+        setAllComments(recentMessages);
+        setDisplayedComments(recentMessages);
         
         // Scroll to bottom on initial load
         setTimeout(() => {
@@ -424,46 +427,54 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     loadInitialComments();
   }, [fetchComments]);
 
-  // Check for new comments function (simplified with new polling system)
+  // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
     try {
       let newComments: Comment[] = [];
       
       if (isCloudAPIEnabled()) {
-        // Poll cloud API for new comments
-        const data = await fetchComments(0, INITIAL_LOAD_COUNT);
+        // Get the latest timestamp we have
+        const latestTimestamp = allComments.length > 0 
+          ? Math.max(...allComments.map(c => c.timestamp))
+          : Date.now() - 60000; // Start from 1 minute ago if no comments
         
-        // Build set of existing IDs for O(1) lookup
-        const existingIds = new Set(allComments.map(c => c.id));
+        // Use cursor-based polling - only get messages AFTER our latest
+        const response = await fetch(
+          `${COMMENTS_CONFIG.apiUrl}?after=${latestTimestamp}&limit=${POLL_BATCH_LIMIT}`
+        );
         
-        // Only add messages we don't already have (by ID)
-        newComments = data.comments.filter(c => !existingIds.has(c.id));
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        newComments = await response.json();
         
         if (newComments.length > 0) {
-          console.log(`[Cloud API] Found ${newComments.length} new comments`);
+          console.log(`[Cursor Polling] Found ${newComments.length} new messages after timestamp ${latestTimestamp}`);
           
-          // Merge new comments with existing, sorted by timestamp
-          const merged = [...allComments, ...newComments]
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, INITIAL_LOAD_COUNT); // Keep memory bounded
-          
-          setAllComments(merged);
+          // Just append new messages - no deduplication needed!
+          setAllComments(prev => {
+            // Combine and keep reasonable size
+            const combined = [...prev, ...newComments];
+            // Keep only recent messages to prevent memory issues
+            if (combined.length > INITIAL_LOAD_COUNT * 2) {
+              return combined.slice(-INITIAL_LOAD_COUNT);
+            }
+            return combined;
+          });
         }
       } else {
-        // Use localStorage polling
+        // Use localStorage polling - simple check for new messages
         const storedComments = loadCommentsFromStorage();
+        const latestTimestamp = allComments.length > 0 
+          ? Math.max(...allComments.map(c => c.timestamp))
+          : 0;
         
-        // Build set of existing IDs for O(1) lookup
-        const existingIds = new Set(allComments.map(c => c.id));
-        
-        // Only add messages we don't already have (by ID)
-        newComments = storedComments.filter(c => !existingIds.has(c.id));
+        newComments = storedComments.filter(c => c.timestamp > latestTimestamp);
         
         if (newComments.length > 0) {
           console.log(`[LocalStorage] Found ${newComments.length} new comments`);
-          
-          // Update with all stored comments (already includes new ones)
-          setAllComments(storedComments);
+          setAllComments(storedComments.slice(-INITIAL_LOAD_COUNT)); // Keep bounded
         }
       }
       
@@ -483,7 +494,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     } catch (err) {
       console.error('[Comments] Polling error:', err);
     }
-  }, [allComments, fetchComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom]);
+  }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom]);
   
   // Use the modular polling system
   useCommentsPolling({
