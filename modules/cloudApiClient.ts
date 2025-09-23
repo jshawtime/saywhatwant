@@ -53,6 +53,8 @@ export async function fetchCommentsFromCloud(
  * @returns Promise with the saved comment
  */
 export async function postCommentToCloud(comment: {
+  id: string;  // Client-generated ID
+  timestamp: number;  // Client-generated timestamp
   text: string;
   username?: string;
   color?: string;

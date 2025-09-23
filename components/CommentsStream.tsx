@@ -433,32 +433,36 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Poll cloud API for new comments
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
         
-        // Find truly new comments
-        const latestTimestamp = allComments.length > 0 
-          ? Math.max(...allComments.map(c => c.timestamp))
-          : 0;
-          
-        newComments = data.comments.filter(c => c.timestamp > latestTimestamp);
+        // Build set of existing IDs for O(1) lookup
+        const existingIds = new Set(allComments.map(c => c.id));
+        
+        // Only add messages we don't already have (by ID)
+        newComments = data.comments.filter(c => !existingIds.has(c.id));
         
         if (newComments.length > 0) {
           console.log(`[Cloud API] Found ${newComments.length} new comments`);
-          // Update all comments
-          setAllComments(data.comments);
+          
+          // Merge new comments with existing, sorted by timestamp
+          const merged = [...allComments, ...newComments]
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, INITIAL_LOAD_COUNT); // Keep memory bounded
+          
+          setAllComments(merged);
         }
       } else {
         // Use localStorage polling
         const storedComments = loadCommentsFromStorage();
         
-        // Find truly new comments
-        const latestTimestamp = allComments.length > 0 
-          ? Math.max(...allComments.map(c => c.timestamp))
-          : 0;
-          
-        newComments = storedComments.filter(c => c.timestamp > latestTimestamp);
+        // Build set of existing IDs for O(1) lookup
+        const existingIds = new Set(allComments.map(c => c.id));
+        
+        // Only add messages we don't already have (by ID)
+        newComments = storedComments.filter(c => !existingIds.has(c.id));
         
         if (newComments.length > 0) {
           console.log(`[LocalStorage] Found ${newComments.length} new comments`);
-          // Update all comments
+          
+          // Update with all stored comments (already includes new ones)
           setAllComments(storedComments);
         }
       }
@@ -554,6 +558,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       if (isCloudAPIEnabled()) {
         // Submit to cloud API in background
         postCommentToCloud({
+          id: newComment.id,  // Send client-generated ID
+          timestamp: newComment.timestamp,  // Send client-generated timestamp
           text: newComment.text,
           username: newComment.username,
           color: newComment.color,
@@ -561,21 +567,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           language: newComment.language,
           misc: newComment.misc,
         }).then(savedComment => {
-          // Only update if something meaningful changed (not just ID)
-          // This prevents the visual refresh/flicker
-          // We don't care about ID differences - the optimistic ID is fine
-          
-          // Only update if text, username, or color actually changed
-          if (savedComment.text !== newComment.text || 
-              savedComment.username !== newComment.username ||
-              savedComment.color !== newComment.color) {
-            setAllComments(prev => prev.map(c => 
-              c.id === newComment.id ? {...savedComment, color: savedComment.color || newComment.color} : c
-            ));
-            setDisplayedComments(prev => prev.map(c => 
-              c.id === newComment.id ? {...savedComment, color: savedComment.color || newComment.color} : c
-            ));
-          }
+          // Do nothing! The optimistic version IS the version
+          // We don't care about server response - it should echo our ID
+          console.log('[Comments] Server acknowledged:', savedComment.id);
         }).catch(err => {
           console.error('[Comments] Error posting to cloud:', err);
           // Remove the optimistic comment on error

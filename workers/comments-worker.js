@@ -330,11 +330,11 @@ async function handlePostComment(request, env) {
       });
     }
 
-    // Create comment object
+    // Create comment object - use client ID/timestamp if provided
     const comment = {
-      id: generateId(),
+      id: body.id || generateId(),  // Use client's ID if provided
       text: text,
-      timestamp: Date.now(),
+      timestamp: body.timestamp || Date.now(),  // Use client's timestamp if provided
       username: username,
       color: color,  // Include the color field
       domain: domain,  // Store the domain
