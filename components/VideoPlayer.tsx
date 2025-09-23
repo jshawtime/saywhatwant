@@ -559,21 +559,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
                 )}
               </div>
 
-              {/* Playback Mode */}
+              {/* Playback Mode Toggle - Mutually Exclusive States */}
               <div className="flex justify-center bg-black/40 rounded-full p-0.5">
                 <button
                   onClick={togglePlayMode}
                   className={`px-3 py-2 rounded-full transition-all ${
                     !isLoopMode ? 'bg-black/40' : 'hover:bg-black/20'
                   }`}
-                  title="Random playback"
+                  title="Random playback mode"
                 >
                   <Shuffle 
                     className="w-4 h-4"
                     style={{ 
                       color: !isLoopMode 
-                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity for active (lighter highlight)
-                        : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST) // 20% opacity for inactive (2 steps darker)
+                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
+                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK)  // Inactive: 40% opacity (2 steps darker)
                     }}
                   />
                 </button>
@@ -582,14 +582,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
                   className={`px-3 py-2 rounded-full transition-all ${
                     isLoopMode ? 'bg-black/40' : 'hover:bg-black/20'
                   }`}
-                  title="Loop current video"
+                  title="Loop current video mode"
                 >
                   <Repeat 
                     className="w-4 h-4"
                     style={{ 
                       color: isLoopMode 
-                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // 60% opacity for active (lighter highlight)
-                        : getDarkerColor(userColor, OPACITY_LEVELS.DARKEST) // 20% opacity for inactive (2 steps darker)
+                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
+                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK)  // Inactive: 40% opacity (2 steps darker)
                     }}
                   />
                 </button>
