@@ -160,7 +160,7 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40 transition-all duration-300 ${
+      className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40 transition-all duration-300 touch-manipulation ${
         usernameFlash 
           ? 'border-cyan-400 animate-pulse shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
           : 'border-white/10'
@@ -168,6 +168,9 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
       maxLength={maxLength}
       style={{ 
         width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        fontSize: '16px', // Prevent zoom on mobile
         color: textColor
       }}
     />

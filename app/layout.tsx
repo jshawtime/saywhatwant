@@ -4,7 +4,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Say What Want',
   description: 'Express yourself freely - anonymous comments with visual vibes',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no',
+  viewport: 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no',
   themeColor: '#000000',
   openGraph: {
     title: 'Say What Want',

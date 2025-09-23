@@ -600,6 +600,48 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   }, [searchTerm]);
 
 
+  // Handle Android keyboard visibility
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Only for mobile devices
+    if (window.innerWidth > 768) return;
+    
+    const handleViewportChange = () => {
+      // Get visual viewport if available (better Android support)
+      const visualViewport = window.visualViewport;
+      if (visualViewport) {
+        const keyboardHeight = window.innerHeight - visualViewport.height;
+        const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
+        
+        if (inputForm && keyboardHeight > 50) {
+          // Keyboard is visible - adjust input position
+          inputForm.style.transform = `translateY(-${keyboardHeight}px)`;
+        } else if (inputForm) {
+          // Keyboard hidden - reset position
+          inputForm.style.transform = 'translateY(0)';
+        }
+      }
+    };
+    
+    // Listen for visual viewport changes (Android keyboard)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+      window.visualViewport.addEventListener('scroll', handleViewportChange);
+    }
+    
+    // Also listen for regular resize events
+    window.addEventListener('resize', handleViewportChange);
+    
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+        window.visualViewport.removeEventListener('scroll', handleViewportChange);
+      }
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-full bg-black text-white overflow-hidden relative">
       {/* Header */}
@@ -873,7 +915,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       )}
 
       {/* Input Form - Always visible on mobile */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden">
+      <div className="mobile-input-form flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden transition-transform duration-200">
         {error && (
           <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
             {error}
