@@ -162,10 +162,7 @@ Currently using parseCommentText from utils
 - Comment Submission Handler ✅
 - Lazy Loading System 🔄 (next)
 
-### Phase 4: Future Enhancements (v0.5+)
-- Enhanced Comment Parser
-- Virtual Scrolling
-- Offline Support Module
+
 
 ## Benefits of Modularization
 

@@ -13,7 +13,6 @@ import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggle
 
 // Configuration - Now using config file
 const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount; // 50 (Ham Radio Mode)
-const LAZY_LOAD_BATCH = 50; // Reduced for efficient loading
 const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = 50; // Max new messages per poll
@@ -28,7 +27,7 @@ import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@
 // Import timestamp system
 import { formatTimestamp } from '@/modules/timestampSystem';
 // Import keyboard shortcuts
-import { useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
+import { useCommonShortcuts } from '@/modules/keyboardShortcuts';
 // Import polling system
 import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
 // Import video sharing system
@@ -102,11 +101,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     {
       onOptimisticUpdate: (comment) => {
         setAllComments(prev => [...prev, comment]);
-        setDisplayedComments(prev => [...prev, comment]);
       },
       onOptimisticRemove: (commentId) => {
         setAllComments(prev => prev.filter(c => c.id !== commentId));
-        setDisplayedComments(prev => prev.filter(c => c.id !== commentId));
       },
       onInputClear: () => setInputText(''),
       onScrollToBottom: () => {
@@ -269,10 +266,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             // Merge and sort by timestamp (newest first) 
             const mergedComments = [...allComments, ...newMessages]
               .sort((a, b) => b.timestamp - a.timestamp);
-            
-            setAllComments(mergedComments);
-            // Update displayed comments to show the merged results
-            setDisplayedComments(mergedComments.slice(0, Math.max(displayedComments.length, LAZY_LOAD_BATCH)));
+              
+              setAllComments(mergedComments);
           } else {
             console.log('[Comments] No new messages from server search');
           }
@@ -286,33 +281,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       });
   }, [serverSideUsers]); // Only re-run when serverSideUsers changes
 
-  // Keyboard shortcuts using the new modular system
+  // Keyboard shortcuts using the common shortcuts module
   // ⚠️ CRITICAL: NEVER ADD MODIFIER KEYS TO SHORTCUTS IN THIS APP ⚠️
-  // All shortcuts MUST be single key presses only (no ctrl, alt, shift, cmd, meta)
-  // This is a hard requirement for the app's accessibility and user experience
-  useKeyboardShortcuts([
-    {
-      key: 'Tab',
-      handler: () => {
-        inputRef.current?.focus();
-      },
-      description: 'Focus message input',
-      allowInInput: false
-      // ⚠️ NO MODIFIERS - single key press only
-    },
-    {
-      key: 'r',
-      handler: () => {
+  // The 'r' shortcut is properly handled in the module with NO modifiers
+  useCommonShortcuts({
+    onColorChange: (color) => {
+      if (color === 'random') {
         const randomColor = getRandomColor();
         setUserColor(randomColor);
         localStorage.setItem('sww-color', randomColor);
-      },
-      description: 'Random color',
-      allowInInput: false,
-      preventDefault: true
-      // ⚠️ NO MODIFIERS - single key press only
-    }
-  ]);
+      }
+    },
+    onFocusInput: () => {
+      inputRef.current?.focus();
+    },
+    inputRef
+  });
 
   // Create wrapped parse function with handlers
   const parseCommentTextWithHandlers = useCallback((text: string): React.ReactNode[] => {
@@ -423,7 +407,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(comments));
               
               setAllComments(comments);
-              setDisplayedComments(comments.slice(-LAZY_LOAD_BATCH));
               console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
               setIsLoading(false);
               return;
@@ -438,7 +421,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Only keep the most recent messages (Ham Radio Mode)
         const recentMessages = data.comments.slice(-INITIAL_LOAD_COUNT);
         setAllComments(recentMessages);
-        setDisplayedComments(recentMessages);
         
         // Scroll to bottom on initial load
         setTimeout(() => {
@@ -508,9 +490,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       }
       
       if (newComments.length > 0) {
-        // Update displayed comments with just the new ones
-        setDisplayedComments(prev => [...prev, ...newComments]);
-        
         // Smart auto-scroll using the new system
         if (isNearBottom) {
           setTimeout(() => smoothScrollToBottom(), 50);
@@ -540,26 +519,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     await submitComment(inputText, username, userColor, flashUsername);
   };
 
-  // Handle scroll to load more
-  const handleScroll = useCallback(() => {
-    if (!streamRef.current) return;
-    
-    const { scrollTop } = streamRef.current;
-    
-    // Load more when scrolling near top
-    if (scrollTop < 100) {
-      const currentCount = displayedComments.length;
-      const availableCount = allComments.length;
-      
-      if (currentCount < availableCount) {
-        const newBatchStart = Math.max(0, availableCount - currentCount - LAZY_LOAD_BATCH);
-        const newBatchEnd = availableCount - currentCount;
-        const newBatch = allComments.slice(newBatchStart, newBatchEnd);
-        
-        setDisplayedComments(prev => [...newBatch, ...prev]);
-      }
-    }
-  }, [allComments, displayedComments]);
+  // Keep displayedComments in sync with allComments (no lazy loading needed)
+  useEffect(() => {
+    setDisplayedComments(allComments);
+  }, [allComments]);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -796,7 +759,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       {/* Comments Stream */}
       <div 
         ref={streamRef}
-        onScroll={handleScroll}
         className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-1"
         style={{
           ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
