@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, ChevronDown, Tv, Ban } from 'lucide-react';
-import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter } from '@/components/UIElements';
+import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import FilterBar from '@/components/FilterBar';
@@ -41,10 +41,13 @@ interface CommentsStreamProps {
 }
 
 const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, toggleVideo }) => {
+  // Constants
+  const COMMENTS_STORAGE_KEY = 'sww-comments-local';
+  
   // Domain configuration
   const [domainConfig] = useState(() => getCurrentDomainConfig());
-  const [currentDomain] = useState(() => getCurrentDomain());
   const [domainFilterEnabled, setDomainFilterEnabled] = useState(() => isDomainFilterEnabled());
+  const currentDomain = getCurrentDomain();
   
   // State management
   const [allComments, setAllComments] = useState<Comment[]>([]);
@@ -82,11 +85,40 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     clearVideoState,
   } = useVideoSharing(inputRef, setInputText);
   
+  // Storage functions (needed before submission system)
+  const loadCommentsFromStorage = useCallback((): Comment[] => {
+    if (typeof window === 'undefined') return [];
+    
+    try {
+      const stored = localStorage.getItem(COMMENTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error('[Comments] Failed to load from localStorage:', error);
+    }
+    return [];
+  }, [COMMENTS_STORAGE_KEY]);
+
+  const saveCommentsToStorage = useCallback((comments: Comment[]) => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Keep only the last 1000 comments
+      const toSave = comments.slice(-1000);
+      localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (error) {
+      console.error('[Comments] Failed to save to localStorage:', error);
+    }
+  }, [COMMENTS_STORAGE_KEY]);
+  
   // Username validation
   const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
   
   // Comment submission system
-  const currentDomain = getCurrentDomain();
   const {
     isSubmitting,
     error,
@@ -154,9 +186,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     dateTimeFilter,
     clearDateTimeFilter
   } = useFilters({ displayedComments: domainFilteredComments, searchTerm });
-
-  // Storage key for localStorage
-  const COMMENTS_STORAGE_KEY = 'sww-comments-local';
   
   // Sync search bar with URL search terms
   useEffect(() => {
@@ -191,8 +220,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           localStorage.setItem('sww-color', rgbColor); // Update to new format
         }
       } else if (savedColor.startsWith('rgb')) {
-        setUserColor(savedColor);
-      }
+      setUserColor(savedColor);
+    }
     }
   }, []);
 
@@ -288,9 +317,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     onColorChange: (color) => {
       if (color === 'random') {
         const randomColor = getRandomColor();
-        setUserColor(randomColor);
-        localStorage.setItem('sww-color', randomColor);
-      }
+          setUserColor(randomColor);
+          localStorage.setItem('sww-color', randomColor);
+        }
     },
     onFocusInput: () => {
       inputRef.current?.focus();
@@ -319,37 +348,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   }, [addWordToFilter, addNegativeWordFilter, showVideo, toggleVideo]);
 
   // Timestamp formatting is now imported from timestampSystem module
-
-  // Load comments from localStorage or fallback to static JSON
-  const loadCommentsFromStorage = useCallback((): Comment[] => {
-    if (typeof window === 'undefined') return [];
-    
-    try {
-      const stored = localStorage.getItem(COMMENTS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.error('[Comments] Failed to load from localStorage:', error);
-    }
-    return [];
-  }, []);
-
-  // Save comments to localStorage
-  const saveCommentsToStorage = useCallback((comments: Comment[]) => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      // Keep only the last 1000 comments
-      const toSave = comments.slice(-1000);
-      localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(toSave));
-    } catch (error) {
-      console.error('[Comments] Failed to save to localStorage:', error);
-    }
-  }, []);
+  // Storage functions are now defined earlier (before submission system)
 
   // Fetch comments from cloud API is now imported from cloudApiClient module
 
@@ -440,9 +439,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
-    try {
+      try {
       let newComments: Comment[] = [];
-      
+        
       if (isCloudAPIEnabled()) {
         // Get the latest timestamp we have
         const latestTimestamp = allComments.length > 0 
@@ -493,15 +492,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Smart auto-scroll using the new system
         if (isNearBottom) {
           setTimeout(() => smoothScrollToBottom(), 50);
-        } else {
-          setHasNewComments(true);
+          } else {
+            setHasNewComments(true);
+          }
         }
+        
+        lastFetchTimeRef.current = Date.now();
+      } catch (err) {
+        console.error('[Comments] Polling error:', err);
       }
-      
-      lastFetchTimeRef.current = Date.now();
-    } catch (err) {
-      console.error('[Comments] Polling error:', err);
-    }
   }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom]);
   
   // Use the modular polling system
@@ -527,7 +526,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Scroll to bottom
   const scrollToBottom = () => {
     smoothScrollToBottom(false); // Use instant scroll for click
-    setHasNewComments(false);
+      setHasNewComments(false);
   };
 
   // Username is now auto-saved on change, no need for save function
@@ -718,20 +717,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
           {/* Filter Bar */}
           <FilterBar 
-              filterUsernames={filterUsernames}
-              filterWords={filterWords}
-              negativeFilterWords={negativeFilterWords}
-              isFilterEnabled={isFilterEnabled}
-              hasActiveFilters={hasActiveFilters}
-              userColor={userColor}
-              dateTimeFilter={dateTimeFilter}
-              onToggleFilter={toggleFilter}
-              onRemoveUsernameFilter={removeFromFilter}
-              onRemoveWordFilter={removeWordFromFilter}
-              onRemoveNegativeFilter={removeNegativeWordFilter}
-              onClearDateTimeFilter={clearDateTimeFilter}
-              getDarkerColor={getDarkerColor}
-            />
+            filterUsernames={filterUsernames}
+            filterWords={filterWords}
+            negativeFilterWords={negativeFilterWords}
+            isFilterEnabled={isFilterEnabled}
+            hasActiveFilters={hasActiveFilters}
+            userColor={userColor}
+            dateTimeFilter={dateTimeFilter}
+            onToggleFilter={toggleFilter}
+            onRemoveUsernameFilter={removeFromFilter}
+            onRemoveWordFilter={removeWordFromFilter}
+            onRemoveNegativeFilter={removeNegativeWordFilter}
+            onClearDateTimeFilter={clearDateTimeFilter}
+            getDarkerColor={getDarkerColor}
+          />
 
           {/* Search Bar - Instant Search */}
           <div className="relative">
@@ -781,15 +780,34 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 style={{ color: userColor }}
               />
             )}
-            <p style={{ color: userColor }}>
+            <div style={{ color: userColor }}>
               {searchTerm ? 'No matching comments' : (
                 <>
                   Apparently there's nothing to see here.
                   <br /><br />
-                  Try turning filters off, changing filters, search term<br />or check what link got you here.<br />Maybe someone fucked something up.<br /><br />99.9% chance it's not a server issue.
+                  Try turning filters off{' '}
+                  <button
+                    onClick={toggleFilter}
+                    style={{
+                      display: 'inline-flex',
+                      verticalAlign: 'middle',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      margin: '0 4px'
+                    }}
+                    title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
+                  >
+                    <StyledFilterIcon 
+                      userColor={userColor}
+                      opacity={isFilterEnabled ? 1.0 : 0.4}
+                    />
+                  </button>
+                  , changing filters, search term<br />or check what link got you here.<br />Maybe someone fucked something up.<br /><br />99.9% chance it's not a server issue.
                 </>
               )}
-            </p>
+            </div>
           </div>
         ) : (
           filteredComments.map((comment) => (
