@@ -31,6 +31,8 @@ import { formatTimestamp } from '@/modules/timestampSystem';
 import { useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
 // Import polling system
 import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
+// Import video sharing system
+import { useVideoSharing } from '@/modules/videoSharingSystem';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -59,7 +61,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [userColor, setUserColor] = useState(() => getRandomColor()); // Start with random color
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
-  const [pendingVideoKey, setPendingVideoKey] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false); // For hydration safety
 
   // Refs
@@ -71,6 +72,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
+  
+  // Video sharing system
+  const {
+    pendingVideoKey,
+    setPendingVideoKey,
+    processVideoInComment,
+    handleInputChange: handleVideoInputChange,
+    handleVideoLinkClick,
+    getInputCursorStyle,
+    clearVideoState,
+  } = useVideoSharing(inputRef, setInputText);
   
   // Apply domain filtering if enabled
   const domainFilteredComments = useMemo(() => {
@@ -145,33 +157,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, []);
 
-  // Listen for video share events
-  useEffect(() => {
-    const handleShareVideo = (event: CustomEvent) => {
-      const { videoKey } = event.detail;
-      
-      if (!videoKey) {
-        return;
-      }
-      
-      // Store the video key internally
-      setPendingVideoKey(videoKey);
-      
-      // Just show the link text in input
-      setInputText('<-- video');
-      
-      // Focus the input
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-
-    window.addEventListener('shareVideo' as any, handleShareVideo);
-    
-    return () => {
-      window.removeEventListener('shareVideo' as any, handleShareVideo);
-    };
-  }, []);
+  // Video share events are now handled by useVideoSharing hook
+  // When video is shared, it updates inputText directly via the hook
 
   // Close color picker on click outside
   useEffect(() => {
@@ -525,13 +512,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setIsSubmitting(true);
     setError(null);
     
-    // Create comment text
-    let commentText = inputText.trim();
-    
-    // If there's a pending video, replace '<-- video' with the full video link
-    if (pendingVideoKey && commentText.includes('<-- video')) {
-      commentText = commentText.replace('<-- video', `[video:${pendingVideoKey}] <-- video`);
-    }
+    // Create comment text and process any pending video
+    let commentText = processVideoInComment(inputText.trim());
     
     const newComment: Comment = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -549,7 +531,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Clear input and refocus IMMEDIATELY for rapid messaging
     setInputText('');
-    setPendingVideoKey(null);
+    clearVideoState();
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -995,25 +977,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               onChange={(e) => {
                 const newText = e.target.value.substring(0, MAX_COMMENT_LENGTH);
                 setInputText(newText);
-                
-                // Clear pending video if user removes the video text completely
-                if (pendingVideoKey && !newText.includes('<-- video')) {
-                  setPendingVideoKey(null);
-                }
+                // Handle video placeholder removal
+                handleVideoInputChange(newText);
               }}
-              onClick={(e) => {
-                // If clicking on a video link in the input, play it
-                if (pendingVideoKey && inputText.includes('<-- video')) {
-                  // Open video area if it's closed
-                  if (!showVideo && toggleVideo) {
-                    toggleVideo();
-                  }
-                  
-                  // Play the video
-                  const playEvent = new CustomEvent('playSharedVideo', {
-                    detail: { videoKey: pendingVideoKey }
-                  });
-                  window.dispatchEvent(playEvent);
+              onClick={() => {
+                // Handle clicking on video link in input
+                if (inputText.includes('<-- video')) {
+                  handleVideoLinkClick(showVideo || false, toggleVideo);
                 }
               }}
               placeholder="Say what you want..."
@@ -1023,9 +993,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
                 ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
                 color: userColor, // Always use user's color
-                cursor: pendingVideoKey && inputText.includes('<-- video') ? 'pointer' : 'text',
-                textDecoration: pendingVideoKey && inputText.includes('<-- video') ? 'underline' : 'none',
                 backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity - even darker than darkest
+                ...getInputCursorStyle(inputText), // Video link cursor styling
               } as React.CSSProperties}
               maxLength={MAX_COMMENT_LENGTH}
               // No disabled state - allow immediate typing for rapid messaging

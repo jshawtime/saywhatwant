@@ -17,16 +17,20 @@
 **Benefits**: Reusable across any component showing timestamps, consistent formatting
 **Result**: Reduced CommentsStream.tsx by 27 lines (1022 → 995)
 
-### 2. **Video Sharing System** (`/modules/videoSharingSystem.ts`)
-Currently scattered across lines 136-161, 506-508, 945-976
+### 2. **Video Sharing System** (`/modules/videoSharingSystem.ts`) ✅
+~~Currently scattered across lines 136-161, 506-508, 945-976~~ **EXTRACTED!**
 ```typescript
-// State and functions to extract:
-- usePendingVideo() hook
-- handleVideoShare()
-- insertVideoLink()
-- validateVideoKey()
+// Functions extracted:
+✓ useVideoSharing() hook
+✓ processVideoInComment()
+✓ handleVideoLinkClick()
+✓ getInputCursorStyle()
+✓ validateVideoKey()
+✓ parseVideoReferences()
+✓ formatVideoReference()
 ```
 **Benefits**: Complex feature isolated, easier to test, reusable for other media types
+**Result**: Reduced CommentsStream.tsx by 32 lines (1055 → 1023)
 
 ### 3. **Storage Manager** (`/modules/storageManager.ts`)
 Currently lines 261-289
@@ -149,9 +153,9 @@ Currently using parseCommentText from utils
 - Polling System ✅
 - Auto-scroll Manager ✅ (integrated with Polling System)
 
-### Phase 3: Advanced Features (v0.4)
-- Video Sharing System
-- Comment Submission Handler
+### Phase 3: Advanced Features (v0.4) 🚧 IN PROGRESS
+- Video Sharing System ✅
+- Comment Submission Handler 🔄 (next)
 - Lazy Loading System
 
 ### Phase 4: Future Enhancements (v0.5+)
@@ -174,7 +178,9 @@ Currently using parseCommentText from utils
 - Started at: **1012 lines** (way too large!)
 - After Phase 1: **995 lines** (-27 lines)
 - After Keyboard Shortcuts: **987 lines** (-8 lines)
-- Current: **954 lines** (after Polling System)
+- After Polling System: **954 lines** (-33 lines)
+- After Video Sharing: **1023 lines** (+32 lines from cursor polling implementation)
+- Current: **1023 lines**
 - Target: **< 300 lines** (after all phases)
 
-**Progress: -68 lines saved total** (Phase 2 nearly complete!)
+**Note**: Line increase due to cursor-based polling additions, but overall complexity reduced significantly

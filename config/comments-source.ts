@@ -5,7 +5,7 @@
 
 export const COMMENTS_CONFIG = {
   // Set to true for local development, false for cloud API
-  useLocalStorage: false, // Set to false for production (cursor-based polling)
+  useLocalStorage: true, // Set to true for local development
   
   // Cloud API endpoint (uses environment variable or fallback)
   // Production: https://sww-comments.bootloaders.workers.dev/api/comments
