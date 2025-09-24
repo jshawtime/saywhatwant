@@ -315,7 +315,12 @@ export class IndexedDBProvider implements StorageProvider {
   async getStorageInfo(): Promise<StorageInfo> {
     // During SSR/build, return safe defaults
     if (typeof window === 'undefined' || !navigator?.storage?.estimate) {
-      return { usage: 0, quota: STORAGE_LIMIT };
+      return { 
+        usage: 0, 
+        quota: STORAGE_LIMIT,
+        messageCount: { temporary: 0, permanent: 0 },
+        filterCount: 0
+      };
     }
     
     const estimate = await navigator.storage.estimate();
