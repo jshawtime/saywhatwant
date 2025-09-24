@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Bot Monitoring Console - Say What Want</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 15px 20px;
+      border-bottom: 2px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #4fc3f7;
+      text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+    }
+    
+    .stats {
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
+    }
+    
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .stat-label {
+      color: #888;
+    }
+    
+    .stat-value {
+      color: #4fc3f7;
+      font-weight: bold;
+    }
+    
+    /* Bot Status Bar */
+    .bot-status-bar {
+      background: #1a1a1a;
+      padding: 10px 20px;
+      border-bottom: 1px solid #333;
+      display: flex;
+      gap: 15px;
+      overflow-x: auto;
+      flex-wrap: wrap;
+    }
+    
+    .bot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      background: #2a2a2a;
+      border-radius: 20px;
+      border: 1px solid #444;
+      font-size: 12px;
+    }
+    
+    .bot-badge.active {
+      border-color: #4fc3f7;
+      background: rgba(79, 195, 247, 0.1);
+    }
+    
+    .bot-badge.inactive {
+      border-color: #f44336;
+      background: rgba(244, 67, 54, 0.1);
+      opacity: 0.7;
+    }
+    
+    .bot-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    .bot-indicator.active {
+      background: #4fc3f7;
+      box-shadow: 0 0 10px #4fc3f7;
+    }
+    
+    .bot-indicator.inactive {
+      background: #f44336;
+      animation: none;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Main Content */
+    .main-container {
+      flex: 1;
+      display: flex;
+      gap: 1px;
+      background: #333;
+      overflow: hidden;
+    }
+    
+    .panel {
+      flex: 1;
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .panel-header {
+      background: #1a1a1a;
+      padding: 10px 15px;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .panel-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .clear-btn {
+      padding: 4px 10px;
+      background: #2a2a2a;
+      color: #888;
+      border: 1px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    
+    .clear-btn:hover {
+      background: #3a3a3a;
+      color: #fff;
+    }
+    
+    /* Console Output */
+    .console-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid #333;
+      border-radius: 2px;
+      word-wrap: break-word;
+      transition: all 0.2s;
+    }
+    
+    .log-entry:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .log-entry.debug {
+      color: #666;
+      border-color: #444;
+    }
+    
+    .log-entry.info {
+      color: #4fc3f7;
+      border-color: #4fc3f7;
+    }
+    
+    .log-entry.success {
+      color: #4caf50;
+      border-color: #4caf50;
+    }
+    
+    .log-entry.warn {
+      color: #ff9800;
+      border-color: #ff9800;
+    }
+    
+    .log-entry.error {
+      color: #f44336;
+      border-color: #f44336;
+    }
+    
+    .log-entry.message {
+      color: #00bcd4;
+      border-color: #00bcd4;
+      background: rgba(0, 188, 212, 0.05);
+    }
+    
+    .log-entry.response {
+      color: #e91e63;
+      border-color: #e91e63;
+      background: rgba(233, 30, 99, 0.05);
+    }
+    
+    /* Human Readable */
+    .chat-message {
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .chat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .chat-content {
+      flex: 1;
+    }
+    
+    .chat-header {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 5px;
+      align-items: center;
+    }
+    
+    .chat-username {
+      font-weight: bold;
+      font-size: 13px;
+    }
+    
+    .chat-time {
+      color: #666;
+      font-size: 11px;
+    }
+    
+    .chat-bot-badge {
+      background: #4fc3f7;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: bold;
+    }
+    
+    .chat-text {
+      color: #e0e0e0;
+      line-height: 1.5;
+    }
+    
+    .chat-action {
+      color: #888;
+      font-style: italic;
+      font-size: 11px;
+      margin-top: 5px;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    
+    /* Auto-scroll indicator */
+    .auto-scroll-indicator {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 5px 10px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      opacity: 0.8;
+      transition: all 0.2s;
+    }
+    
+    .auto-scroll-indicator:hover {
+      opacity: 1;
+      background: #3a3a3a;
+    }
+    
+    .auto-scroll-indicator.active {
+      border-color: #4fc3f7;
+      color: #4fc3f7;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="title">🤖 AI Bot Monitoring Console</div>
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Active Bots:</span>
+        <span class="stat-value" id="active-bots">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Total Logs:</span>
+        <span class="stat-value" id="total-logs">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Messages/Min:</span>
+        <span class="stat-value" id="msg-rate">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Status:</span>
+        <span class="stat-value" id="connection-status">Connecting...</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bot Status Bar -->
+  <div class="bot-status-bar" id="bot-status-bar">
+    <!-- Bot badges will be added here dynamically -->
+  </div>
+  
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Console Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Console Output (Raw)</div>
+        <button class="clear-btn" onclick="clearConsole()">Clear</button>
+      </div>
+      <div class="console-output" id="console-output">
+        <div class="log-entry info">Waiting for bot connections...</div>
+      </div>
+    </div>
+    
+    <!-- Human Readable Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Conversation View</div>
+        <button class="clear-btn" onclick="clearChat()">Clear</button>
+      </div>
+      <div class="console-output" id="chat-output">
+        <div class="chat-message">
+          <div class="chat-content">
+            <div class="chat-text" style="color: #666;">Waiting for conversations...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let ws;
+    const bots = new Map();
+    let totalLogs = 0;
+    let messageTimestamps = [];
+    let autoScrollConsole = true;
+    let autoScrollChat = true;
+    
+    // Connect to WebSocket
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.hostname}:4000`);
+      
+      ws.onopen = () => {
+        console.log('Connected to monitoring server');
+        document.getElementById('connection-status').textContent = 'Connected';
+        document.getElementById('connection-status').style.color = '#4fc3f7';
+      };
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      };
+      
+      ws.onclose = () => {
+        document.getElementById('connection-status').textContent = 'Disconnected';
+        document.getElementById('connection-status').style.color = '#f44336';
+        setTimeout(connect, 3000); // Reconnect after 3 seconds
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    }
+    
+    function handleMessage(data) {
+      switch (data.type) {
+        case 'init':
+          // Initialize with existing data
+          data.bots.forEach(bot => {
+            bots.set(bot.id, bot);
+            addBotBadge(bot);
+          });
+          data.logs.forEach(log => addLogEntry(log));
+          updateStats();
+          break;
+          
+        case 'bot_registered':
+          bots.set(data.bot.id, data.bot);
+          addBotBadge(data.bot);
+          updateStats();
+          break;
+          
+        case 'bot_status':
+          if (bots.has(data.botId)) {
+            bots.get(data.botId).status = data.status;
+            updateBotBadge(data.botId, data.status);
+          }
+          updateStats();
+          break;
+          
+        case 'log':
+          addLogEntry(data.log);
+          totalLogs++;
+          updateStats();
+          break;
+      }
+    }
+    
+    function addBotBadge(bot) {
+      const bar = document.getElementById('bot-status-bar');
+      const badge = document.createElement('div');
+      badge.id = `bot-${bot.id}`;
+      badge.className = `bot-badge ${bot.status}`;
+      badge.innerHTML = `
+        <div class="bot-indicator ${bot.status}"></div>
+        <span>${bot.id}</span>
+        <span style="color: #666;">${bot.model}</span>
+      `;
+      bar.appendChild(badge);
+    }
+    
+    function updateBotBadge(botId, status) {
+      const badge = document.getElementById(`bot-${botId}`);
+      if (badge) {
+        badge.className = `bot-badge ${status}`;
+        badge.querySelector('.bot-indicator').className = `bot-indicator ${status}`;
+      }
+    }
+    
+    function addLogEntry(log) {
+      // Add to console
+      const consoleOutput = document.getElementById('console-output');
+      const logDiv = document.createElement('div');
+      logDiv.className = `log-entry ${log.level}`;
+      
+      const timestamp = new Date(log.timestamp).toLocaleTimeString();
+      logDiv.innerHTML = `[${timestamp}] [${log.botId}] ${log.message}`;
+      
+      if (log.data) {
+        logDiv.innerHTML += `<div style="margin-left: 20px; color: #666; margin-top: 5px;">${JSON.stringify(log.data, null, 2)}</div>`;
+      }
+      
+      consoleOutput.appendChild(logDiv);
+      
+      // Keep only last 500 entries
+      while (consoleOutput.children.length > 500) {
+        consoleOutput.removeChild(consoleOutput.firstChild);
+      }
+      
+      // Auto-scroll if enabled
+      if (autoScrollConsole) {
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      }
+      
+      // Add to human-readable chat if it's a message or response
+      if (log.level === 'message' || log.level === 'response') {
+        addChatMessage(log);
+      }
+      
+      // Track message rate
+      messageTimestamps.push(Date.now());
+      messageTimestamps = messageTimestamps.filter(t => Date.now() - t < 60000);
+    }
+    
+    function addChatMessage(log) {
+      const chatOutput = document.getElementById('chat-output');
+      const chatDiv = document.createElement('div');
+      chatDiv.className = 'chat-message';
+      
+      const bot = bots.get(log.botId);
+      const color = bot ? getColorForBot(log.botId) : '#4fc3f7';
+      const username = log.data?.username || log.botId;
+      const timestamp = new Date(log.timestamp).toLocaleTimeString();
+      
+      chatDiv.innerHTML = `
+        <div class="chat-avatar" style="background: ${color};">
+          ${username.charAt(0).toUpperCase()}
+        </div>
+        <div class="chat-content">
+          <div class="chat-header">
+            <span class="chat-username" style="color: ${color};">${username}</span>
+            ${log.level === 'response' ? '<span class="chat-bot-badge">BOT</span>' : ''}
+            <span class="chat-time">${timestamp}</span>
+          </div>
+          <div class="chat-text">${log.data?.text || log.message}</div>
+          ${log.level === 'response' ? `<div class="chat-action">Generated response (confidence: ${log.data?.confidence || 'N/A'})</div>` : ''}
+        </div>
+      `;
+      
+      chatOutput.appendChild(chatDiv);
+      
+      // Keep only last 200 messages
+      while (chatOutput.children.length > 200) {
+        chatOutput.removeChild(chatOutput.firstChild);
+      }
+      
+      // Auto-scroll if enabled
+      if (autoScrollChat) {
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+      }
+    }
+    
+    function getColorForBot(botId) {
+      const colors = [
+        '#4fc3f7', '#4caf50', '#ff9800', '#e91e63', 
+        '#9c27b0', '#00bcd4', '#8bc34a', '#ffc107'
+      ];
+      const index = Array.from(bots.keys()).indexOf(botId);
+      return colors[index % colors.length];
+    }
+    
+    function updateStats() {
+      const activeBots = Array.from(bots.values()).filter(b => b.status === 'active').length;
+      document.getElementById('active-bots').textContent = activeBots;
+      document.getElementById('total-logs').textContent = totalLogs;
+      document.getElementById('msg-rate').textContent = messageTimestamps.length;
+    }
+    
+    function clearConsole() {
+      document.getElementById('console-output').innerHTML = '';
+    }
+    
+    function clearChat() {
+      document.getElementById('chat-output').innerHTML = '';
+    }
+    
+    // Check scroll position for auto-scroll
+    document.getElementById('console-output').addEventListener('scroll', (e) => {
+      const el = e.target;
+      autoScrollConsole = (el.scrollHeight - el.scrollTop - el.clientHeight) < 100;
+    });
+    
+    document.getElementById('chat-output').addEventListener('scroll', (e) => {
+      const el = e.target;
+      autoScrollChat = (el.scrollHeight - el.scrollTop - el.clientHeight) < 100;
+    });
+    
+    // Update message rate every second
+    setInterval(() => {
+      messageTimestamps = messageTimestamps.filter(t => Date.now() - t < 60000);
+      document.getElementById('msg-rate').textContent = messageTimestamps.length;
+    }, 1000);
+    
+    // Initialize
+    connect();
+  </script>
+</body>
+</html>

@@ -9,6 +9,7 @@ import fetch from 'node-fetch';
 import chalk from 'chalk';
 import { CONFIG, SYSTEM_PROMPT, USERNAME_POOL, COLOR_POOL } from './config.js';
 import { Comment, CommentsResponse, BotState, ResponseDecision, ConversationContext } from './types.js';
+import { logger } from './console-logger.js';
 
 // Initialize OpenAI client for LM Studio
 const lmStudio = new OpenAI({
@@ -28,14 +29,27 @@ const state: BotState = {
   consecutiveSilence: 0,
 };
 
-// Logging utilities
+// Logging utilities (delegate to console logger)
 const log = {
-  info: (msg: string) => console.log(chalk.blue('[INFO]'), msg),
-  success: (msg: string) => console.log(chalk.green('[SUCCESS]'), msg),
-  warn: (msg: string) => console.log(chalk.yellow('[WARN]'), msg),
-  error: (msg: string) => console.log(chalk.red('[ERROR]'), msg),
-  debug: (msg: string) => {
+  info: (msg: string, data?: any) => {
+    logger.info(msg, data);
+    console.log(chalk.blue('[INFO]'), msg);
+  },
+  success: (msg: string, data?: any) => {
+    logger.success(msg, data);
+    console.log(chalk.green('[SUCCESS]'), msg);
+  },
+  warn: (msg: string, data?: any) => {
+    logger.warn(msg, data);
+    console.log(chalk.yellow('[WARN]'), msg);
+  },
+  error: (msg: string, data?: any) => {
+    logger.error(msg, data);
+    console.log(chalk.red('[ERROR]'), msg);
+  },
+  debug: (msg: string, data?: any) => {
     if (CONFIG.LOGGING.level === 'debug') {
+      logger.debug(msg, data);
       console.log(chalk.gray('[DEBUG]'), msg);
     }
   },
@@ -76,6 +90,15 @@ async function fetchRecentComments(): Promise<Comment[]> {
       ].slice(-CONFIG.BOT.contextMessageCount);
       
       log.info(`Fetched ${data.comments.length} new messages`);
+      
+      // Log each message to monitoring console
+      data.comments.forEach(comment => {
+        logger.message(
+          comment.username || 'Anonymous',
+          comment.text,
+          comment.color || undefined
+        );
+      });
     }
     
     return data.comments;
@@ -283,6 +306,14 @@ async function postComment(text: string): Promise<boolean> {
     }
     
     log.success(`Posted: "${text}" as ${state.currentUsername}`);
+    
+    // Log bot response to monitoring console
+    logger.response(
+      state.currentUsername,
+      text,
+      state.currentColor,
+      undefined // We'll pass confidence later
+    );
     
     // Update state
     state.lastResponseTime = Date.now();

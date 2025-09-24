@@ -1,0 +1,15 @@
+{
+  "name": "sww-ai-console",
+  "version": "1.0.0",
+  "description": "Monitoring console for Say What Want AI bots",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "chalk": "^5.3.0"
+  }
+}

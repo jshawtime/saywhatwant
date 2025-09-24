@@ -9,6 +9,26 @@ The bot is currently configured for live testing with:
 - **0.5 second** minimum between messages
 - **LIVE posting** to Say What Want (not dry run)
 
+## 🖥️ NEW: Monitoring Console
+
+Monitor all bot activity in real-time:
+
+```bash
+# Terminal 1: Start monitoring console
+npm run console
+# Opens at http://localhost:4000
+
+# Terminal 2: Start bot (it auto-connects to console)
+npm run dev
+```
+
+The console shows:
+- Live bot status and health
+- Raw console logs (technical)
+- Human-readable conversation view
+- Message rates and statistics
+- Support for multiple bot instances
+
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
