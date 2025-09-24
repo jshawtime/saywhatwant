@@ -470,6 +470,57 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [allComments]);
 
+  // Re-scroll to bottom when video area opens/closes (width change causes reflow)
+  useEffect(() => {
+    // Skip if no comments or stream ref
+    if (!streamRef.current || allComments.length === 0) return;
+    
+    // Check if we were at bottom before the change (or just loaded)
+    const wasAtBottom = isNearBottom || hasScrolledRef.current;
+    
+    // Wait for transition animation to complete (500ms) plus buffer
+    const timer = setTimeout(() => {
+      // Only scroll if we were already at bottom or on initial load
+      if (wasAtBottom && streamRef.current) {
+        streamRef.current.scrollTop = streamRef.current.scrollHeight;
+        console.log('[Scroll] Adjusted scroll after video area toggle');
+      }
+    }, 550); // 500ms transition + 50ms buffer
+    
+    return () => clearTimeout(timer);
+  }, [showVideo, isNearBottom]); // Re-run when video visibility changes
+  
+  // Use ResizeObserver to detect container width changes and maintain scroll position
+  useEffect(() => {
+    if (!streamRef.current) return;
+    
+    let resizeTimer: NodeJS.Timeout;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      clearTimeout(resizeTimer);
+      
+      // Debounce the resize handling
+      resizeTimer = setTimeout(() => {
+        for (const entry of entries) {
+          // Check if we were near bottom before resize
+          if (isNearBottom && streamRef.current) {
+            // Maintain scroll at bottom after reflow
+            streamRef.current.scrollTop = streamRef.current.scrollHeight;
+            console.log('[Scroll] Adjusted scroll after container resize');
+          }
+        }
+      }, 50); // Small debounce for performance
+    });
+    
+    // Observe the messages container for size changes
+    resizeObserver.observe(streamRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(resizeTimer);
+    };
+  }, [isNearBottom]);
+
   // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
       try {
