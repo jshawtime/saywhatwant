@@ -13,9 +13,23 @@ const corsHeaders = {
 };
 
 // Rate Limiting Configuration
-const RATE_LIMIT = 30;        // 30 comments per minute per IP (increased for testing)
+const RATE_LIMIT = 10;        // 10 comments per minute per IP
 const RATE_WINDOW = 60;       // 60 second window
-const BOT_IPS = ['127.0.0.1', 'localhost', '::1']; // Local bot IPs to exempt
+
+// Rate Limit Exemptions (no limits for these IPs/domains)
+const EXEMPT_IPS = [
+  '127.0.0.1',      // Localhost
+  'localhost',      // Localhost
+  '::1',            // IPv6 localhost
+  // Add your IP here for testing, e.g.:
+  // '192.168.1.100',
+];
+
+const EXEMPT_DOMAINS = [
+  // Add trusted domains here, e.g.:
+  // 'admin.saywhatwant.app',
+  // 'bot.yourdomain.com',
+];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 12;
 const CACHE_SIZE = 5000;      // Keep last 5000 comments in cache
@@ -337,8 +351,8 @@ async function handlePostComment(request, env) {
                request.headers.get('X-Forwarded-For') || 
                'unknown';
 
-    // Check rate limit
-    const canPost = await checkRateLimit(env, ip);
+    // Check rate limit (pass request for domain checking)
+    const canPost = await checkRateLimit(env, ip, request);
     if (!canPost) {
       return new Response(JSON.stringify({ 
         error: 'Rate limit exceeded. Please wait a moment before posting again.' 
@@ -421,11 +435,21 @@ async function handlePostComment(request, env) {
 /**
  * Check rate limit for an IP
  */
-async function checkRateLimit(env, ip) {
-  // Skip rate limiting for local bot IPs during testing
-  if (BOT_IPS.includes(ip)) {
-    console.log(`[Comments] Skipping rate limit for bot IP: ${ip}`);
+async function checkRateLimit(env, ip, request) {
+  // Check if IP is in exemption list
+  if (EXEMPT_IPS.includes(ip)) {
+    console.log(`[Comments] Skipping rate limit for exempt IP: ${ip}`);
     return true;
+  }
+  
+  // Check if request is from an exempt domain
+  const origin = request?.headers.get('Origin');
+  if (origin) {
+    const domain = origin.replace(/^https?:\/\//, '').replace(/:[0-9]+$/, '');
+    if (EXEMPT_DOMAINS.includes(domain)) {
+      console.log(`[Comments] Skipping rate limit for exempt domain: ${domain}`);
+      return true;
+    }
   }
   
   const key = `rate:${ip}`;

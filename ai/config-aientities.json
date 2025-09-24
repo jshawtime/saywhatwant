@@ -258,10 +258,17 @@
     "requireHumanActivity": true,
     "defaultModel": "highermind_the-eternal-1",
     "cloudflareWorkerRateLimits": {
-      "perIpMaxCommentsPerMinute": 30,
+      "perIpMaxCommentsPerMinute": 10,
       "rateWindowSeconds": 60,
-      "exemptBotIPs": ["127.0.0.1", "localhost", "::1"],
-      "note": "These limits are enforced at the Cloudflare Worker API level for ALL users"
+      "exemptIPs": [
+        "127.0.0.1",
+        "localhost", 
+        "::1"
+      ],
+      "exemptDomains": [
+        "_comment: Add trusted domains here for rate limit exemption"
+      ],
+      "note": "These limits are enforced at the Cloudflare Worker API level. Exempt IPs/domains have no rate limits."
     }
   }
 }
