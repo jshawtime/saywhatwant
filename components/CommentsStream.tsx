@@ -57,6 +57,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasNewComments, setHasNewComments] = useState(false);
+  const [hasScrolledOnce, setHasScrolledOnce] = useState(false); // Track if we've done initial scroll
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -139,9 +140,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       },
       onInputClear: () => setInputText(''),
       onScrollToBottom: () => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-        }
+        // When user submits a comment, always scroll to bottom
+        smoothScrollToBottom(false);
       },
       onFocusInput: () => {
         if (inputRef.current) {
@@ -412,12 +412,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               setAllComments(comments);
               console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
               
-              // Scroll to bottom on initial load (only on first mount)
-              setTimeout(() => {
-                if (streamRef.current && !displayedComments.length) {
-                  streamRef.current.scrollTop = streamRef.current.scrollHeight;
-                }
-              }, 100);
+              // Scroll to bottom on initial load (only once)
+              if (!hasScrolledOnce) {
+                setTimeout(() => {
+                  smoothScrollToBottom(false);
+                  setHasScrolledOnce(true);
+                }, 100);
+              }
               
               setIsLoading(false);
               return;
@@ -433,12 +434,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const recentMessages = data.comments.slice(-INITIAL_LOAD_COUNT);
         setAllComments(recentMessages);
         
-        // Scroll to bottom on initial load (only on first mount)
-        setTimeout(() => {
-          if (streamRef.current && !displayedComments.length) {
-            streamRef.current.scrollTop = streamRef.current.scrollHeight;
-          }
-        }, 100);
+        // Scroll to bottom on initial load (only once)
+        if (!hasScrolledOnce) {
+          setTimeout(() => {
+            smoothScrollToBottom(false);
+            setHasScrolledOnce(true);
+          }, 100);
+        }
       } catch (err) {
         setError('Failed to load comments. Please refresh the page.');
       } finally {
@@ -459,17 +461,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       hasScrolledRef.current = true;
       
       // Use double requestAnimationFrame to ensure DOM is fully updated
-      // Only scroll to bottom on first load, not when user has scrolled up
-      requestAnimationFrame(() => {
+      // Only scroll to bottom once on first load AND if user hasn't scrolled away
+      if (!hasScrolledOnce && isNearBottom) {
         requestAnimationFrame(() => {
-          if (streamRef.current && !displayedComments.length) {
-            streamRef.current.scrollTop = streamRef.current.scrollHeight;
+          requestAnimationFrame(() => {
+            smoothScrollToBottom(false);
+            setHasScrolledOnce(true);
             console.log('[Scroll] Initial scroll to bottom completed');
-          }
+          });
         });
-      });
+      }
     }
-  }, [allComments]);
+  }, [allComments, hasScrolledOnce, isNearBottom, smoothScrollToBottom]);
 
   // Re-scroll to bottom when video area opens/closes (width change causes reflow)
   useEffect(() => {
@@ -481,11 +484,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Wait for transition animation to complete (500ms) plus buffer
     const timer = setTimeout(() => {
-      // Only scroll if we were already at bottom or on initial load
-      if (wasAtBottom && streamRef.current) {
-        streamRef.current.scrollTop = streamRef.current.scrollHeight;
-        console.log('[Scroll] Adjusted scroll after video area toggle');
-      }
+    // Only scroll if we were already at bottom
+    if (wasAtBottom) {
+      smoothScrollToBottom(false);
+      console.log('[Scroll] Adjusted scroll after video area toggle');
+    }
     }, 550); // 500ms transition + 50ms buffer
     
     return () => clearTimeout(timer);
@@ -504,9 +507,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       resizeTimer = setTimeout(() => {
         for (const entry of entries) {
           // Check if we were near bottom before resize
-          if (isNearBottom && streamRef.current) {
+          if (isNearBottom) {
             // Maintain scroll at bottom after reflow
-            streamRef.current.scrollTop = streamRef.current.scrollHeight;
+            smoothScrollToBottom(false);
             console.log('[Scroll] Adjusted scroll after container resize');
           }
         }
@@ -520,7 +523,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       resizeObserver.disconnect();
       clearTimeout(resizeTimer);
     };
-  }, [isNearBottom]);
+  }, [isNearBottom, smoothScrollToBottom]);
 
   // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
@@ -659,12 +662,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // When filter is turned off, scroll to bottom only if user is near bottom
     if (!isFilterEnabled && isNearBottom) {
       setTimeout(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-        }
+        smoothScrollToBottom(true);
       }, 50);
     }
-  }, [isFilterEnabled, isNearBottom]);
+  }, [isFilterEnabled, isNearBottom, smoothScrollToBottom]);
 
   // Scroll to bottom when search is cleared (only if already near bottom)
   useEffect(() => {
@@ -673,12 +674,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // When search is cleared, scroll to bottom only if user is near bottom
     if (!searchTerm && isNearBottom) {
       setTimeout(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-        }
+        smoothScrollToBottom(true);
       }, 50);
     }
-  }, [searchTerm, isNearBottom]);
+  }, [searchTerm, isNearBottom, smoothScrollToBottom]);
 
 
   // Handle mobile keyboard visibility - works for both iOS and Android
@@ -723,7 +722,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Only scroll to bottom if user is already near the bottom
         if (isNearBottom) {
           setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            smoothScrollToBottom(false);
           }, 100);
         }
         
@@ -791,7 +790,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       window.removeEventListener('resize', handleViewportChange);
       clearTimeout(resizeTimer);
     };
-  }, [isNearBottom]);
+  }, [isNearBottom, smoothScrollToBottom]);
 
   return (
     <div className="flex flex-col h-full bg-black text-white overflow-hidden relative">
