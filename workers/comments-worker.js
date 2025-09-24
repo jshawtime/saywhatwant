@@ -29,7 +29,7 @@ const EXEMPT_DOMAINS = [
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 12;
-const CACHE_SIZE = 5000;      // Keep last 5000 comments in cache
+const CACHE_SIZE = 500;       // Keep last 500 comments in cache (reduced from 5000 to avoid KV size limits)
 
 /**
  * Generate a random RGB color using sophisticated range-based generation
@@ -417,8 +417,19 @@ async function handlePostComment(request, env) {
     });
   } catch (error) {
     console.error('[Comments] Error posting comment:', error);
+    console.error('[Comments] Error details:', error.message, error.stack);
+    
+    // More specific error message
+    let errorMessage = 'Failed to post comment';
+    if (error.message?.includes('size') || error.message?.includes('limit')) {
+      errorMessage = 'Comment cache too large, please try again';
+    } else if (error.message?.includes('KV')) {
+      errorMessage = 'Storage error, please try again';
+    }
+    
     return new Response(JSON.stringify({ 
-      error: 'Failed to post comment' 
+      error: errorMessage,
+      details: error.message 
     }), {
       status: 500,
       headers: {
@@ -478,23 +489,47 @@ async function checkRateLimit(env, ip, request) {
  */
 async function addToCache(env, comment) {
   const cacheKey = 'recent:comments';
-  const cachedData = await env.COMMENTS_KV.get(cacheKey);
   
-  let comments = [];
-  if (cachedData) {
-    comments = JSON.parse(cachedData);
+  try {
+    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    
+    let comments = [];
+    if (cachedData) {
+      try {
+        comments = JSON.parse(cachedData);
+      } catch (parseError) {
+        console.error('[Comments] Failed to parse cache, resetting:', parseError);
+        comments = []; // Reset if corrupt
+      }
+    }
+    
+    // Add new comment
+    comments.push(comment);
+    
+    // Keep only the most recent comments
+    if (comments.length > CACHE_SIZE) {
+      comments = comments.slice(-CACHE_SIZE);
+    }
+    
+    // Check size before writing (KV has 25MB limit per value)
+    const cacheString = JSON.stringify(comments);
+    if (cacheString.length > 20000000) { // 20MB safety limit
+      console.warn('[Comments] Cache too large, reducing to last 100 comments');
+      comments = comments.slice(-100);
+    }
+    
+    // Update cache
+    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments));
+  } catch (error) {
+    console.error('[Comments] Failed to update cache:', error);
+    // Try to at least save the new comment
+    try {
+      await env.COMMENTS_KV.put(cacheKey, JSON.stringify([comment]));
+    } catch (fallbackError) {
+      console.error('[Comments] Failed to save even single comment:', fallbackError);
+      // Don't throw - let the comment still be saved to main KV
+    }
   }
-  
-  // Add new comment
-  comments.push(comment);
-  
-  // Keep only the most recent comments
-  if (comments.length > CACHE_SIZE) {
-    comments = comments.slice(-CACHE_SIZE);
-  }
-  
-  // Update cache
-  await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments));
 }
 
 /**
