@@ -7,7 +7,7 @@
 import OpenAI from 'openai';
 import fetch from 'node-fetch';
 import chalk from 'chalk';
-import { CONFIG, SYSTEM_PROMPT, USERNAME_POOL, COLOR_POOL } from './config.js';
+import { CONFIG } from './config.js';
 import { Comment, CommentsResponse, BotState, ResponseDecision, ConversationContext } from './types.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -141,7 +141,7 @@ async function fetchRecentComments(): Promise<Comment[]> {
       state.messageHistory = [
         ...state.messageHistory,
         ...data.comments
-      ].slice(-CONFIG.BOT.contextMessageCount);
+      ].slice(-(currentEntity?.contextWindow || CONFIG.BOT.contextMessageCount));
       
       log.info(`Fetched ${data.comments.length} new messages`);
       
@@ -202,10 +202,10 @@ function analyzeContext(messages: Comment[]): ConversationContext {
         return true; // Include all AI messages
       }
       // Check if this bot is in the specific response list
-      const allowedBots = settings.respondsToTheseAiOnly.map((id: string) => {
-        const bot = entitiesConfig.entities.find((e: any) => e.id === id);
-        return bot?.username?.toLowerCase();
-      }).filter(Boolean);
+        const allowedBots = settings.respondsToTheseAiOnly.map((id: string) => {
+          const bot = entitiesConfig.entities.find((e: any) => e.id === id);
+          return bot?.username?.toLowerCase();
+        }).filter(Boolean) as string[];
       
       return allowedBots.includes(usernameLower);
     }
@@ -218,8 +218,7 @@ function analyzeContext(messages: Comment[]): ConversationContext {
     return {
       recentMessages: '',
       activeUsers: [],
-      topics: [],
-      lastSpeaker: '',
+      activityLevel: 'quiet' as const,
       hasQuestion: false,
       mentionsBot: false,
     };
@@ -230,20 +229,6 @@ function analyzeContext(messages: Comment[]): ConversationContext {
     .join('\n');
   
   const activeUsers = [...new Set(conversationMessages.map(m => m.username).filter(Boolean))] as string[];
-  
-  // Simple topic extraction (words that appear multiple times)
-  const words = conversationMessages.map(m => m.text).join(' ').toLowerCase().split(/\s+/);
-  const wordCounts = words.reduce((acc, word) => {
-    if (word.length > 4) {
-      acc[word] = (acc[word] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const topics = Object.entries(wordCounts)
-    .filter(([_, count]) => count > 2)
-    .map(([word]) => word)
-    .slice(0, 5);
   
   // Activity level
   const messagesPerMinute = conversationMessages.length / 5; // Last 5 minutes
@@ -260,7 +245,6 @@ function analyzeContext(messages: Comment[]): ConversationContext {
   return {
     recentMessages,
     activeUsers,
-    topics,
     activityLevel,
     hasQuestion,
     mentionsBot,
@@ -372,7 +356,7 @@ async function generateResponse(context: ConversationContext): Promise<string | 
     // Build the context-aware prompt
     const contextInfo = isPing 
       ? `\n\nSomeone just sent a ping! Respond briefly to acknowledge you're here and active. Context: ${context.recentMessages}`
-      : `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}\nTopics: ${context.topics.join(', ')}`;
+      : `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}`;
     const fullPrompt = currentEntity.systemPrompt + contextInfo;
     
     log.debug(`Generating response as ${currentEntity.username} (${currentEntity.id}) using model: ${currentEntity.model}`);
@@ -381,17 +365,17 @@ async function generateResponse(context: ConversationContext): Promise<string | 
       model: currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model,
       messages: [
         { role: 'system', content: fullPrompt },
-        { role: 'user', content: 'Generate a response based on the conversation context. Keep it natural and conversational.' }
+        { role: 'user', content: currentEntity.userPrompt || 'Generate a response based on the conversation context. Keep it natural and conversational.' }
       ],
       temperature: currentEntity.temperature,
       max_tokens: currentEntity.maxTokens,
       top_p: currentEntity.topP,
-      top_k: currentEntity.topK || 40,
-      repeat_penalty: currentEntity.repeatPenalty || 1.42,
-      min_p: currentEntity.minP || 0,
       frequency_penalty: 0.3,
       presence_penalty: 0.3,
-    });
+      // Note: top_k, repeat_penalty, and min_p are LM Studio specific parameters
+      // They may not work with standard OpenAI API but LM Studio may support them
+      // as custom extensions
+    } as any);
     
     const response = completion.choices[0]?.message?.content || null;
     
@@ -495,7 +479,7 @@ async function postComment(text: string): Promise<boolean> {
  * Main polling loop
  */
 async function runBot() {
-  const entityNames = entitiesConfig.entities.map(e => e.username).slice(0, 3).join(', ');
+  const entityNames = entitiesConfig.entities.map((e: any) => e.username).slice(0, 3).join(', ');
   log.info(chalk.bold.cyan(`
 ╔════════════════════════════════════════╗
 ║     Say What Want AI Entities          ║

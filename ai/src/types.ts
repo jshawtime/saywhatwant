@@ -69,7 +69,6 @@ export interface ResponseDecision {
 export interface ConversationContext {
   recentMessages: string;
   activeUsers: string[];
-  topics: string[];
   activityLevel: 'quiet' | 'moderate' | 'busy';
   hasQuestion: boolean;
   mentionsBot: boolean;
