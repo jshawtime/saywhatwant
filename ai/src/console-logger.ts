@@ -22,7 +22,7 @@ class ConsoleLogger {
   private isProcessing = false;
   
   constructor() {
-    this.consoleUrl = process.env.CONSOLE_URL || 'http://localhost:4000';
+    this.consoleUrl = process.env.CONSOLE_URL || 'http://localhost:3000';
     this.botId = process.env.BOT_ID || `bot-${Date.now()}`;
   }
   
