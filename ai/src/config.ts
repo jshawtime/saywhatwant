@@ -46,8 +46,8 @@ export const CONFIG = {
     pollingInterval: 5000,  // 5 seconds (matching app's polling rate)
     
     // Response settings
-    minTimeBetweenMessages: 500,     // 0.5 seconds minimum between bot messages (testing)
-    maxMessagesPerMinute: 100,       // Rate limiting per minute (testing mode)
+    minTimeBetweenMessages: 10000,   // 10 seconds minimum between bot messages
+    maxMessagesPerMinute: 3,         // Rate limiting per minute (reduced for testing)
     
     // Context window
     contextMessageCount: 15,  // Consider last 15 messages for context

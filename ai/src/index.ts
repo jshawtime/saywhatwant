@@ -287,7 +287,7 @@ async function postComment(text: string): Promise<boolean> {
       username: state.currentUsername,
       color: state.currentColor,
       timestamp: Date.now(),
-      domain: 'ai.saywhatwant.app',
+      // domain: 'ai.saywhatwant.app', // Commented out - let server assign
     };
     
     const response = await fetch(
