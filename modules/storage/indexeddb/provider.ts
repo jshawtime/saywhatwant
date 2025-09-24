@@ -134,11 +134,9 @@ export class IndexedDBProvider implements StorageProvider {
     const transaction = this.db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
-    // Remove id if it exists to let IndexedDB auto-generate
-    const messageToSave = { ...message };
-    delete messageToSave.id;
-    
-    await this.promisifyRequest(store.add(messageToSave));
+    // Use put() to update if exists or insert if new
+    // This preserves the original ID to prevent duplicates
+    await this.promisifyRequest(store.put(message));
     
     // Update filter statistics if permanent
     if (isPermanent && message.matchedFilters) {
@@ -159,8 +157,8 @@ export class IndexedDBProvider implements StorageProvider {
     for (const message of messages) {
       const isPermanent = matchesLifetimeFilters(message, this.lifetimeFilters);
       
+      // Preserve the original message with its ID
       const messageToSave = { ...message };
-      delete messageToSave.id;
       
       if (isPermanent) {
         messageToSave.matchedFilters = getMatchedFilters(message, this.lifetimeFilters);
@@ -176,7 +174,7 @@ export class IndexedDBProvider implements StorageProvider {
       const store = transaction.objectStore(STORES.MESSAGES_TEMP);
       
       for (const msg of tempMessages) {
-        store.add(msg);
+        store.put(msg);  // Use put() instead of add() to handle existing IDs
       }
       
       await this.promisifyTransaction(transaction);
@@ -188,7 +186,7 @@ export class IndexedDBProvider implements StorageProvider {
       const store = transaction.objectStore(STORES.MESSAGES_PERM);
       
       for (const msg of permMessages) {
-        store.add(msg);
+        store.put(msg);  // Use put() instead of add() to handle existing IDs
         
         // Update filter stats
         if (msg.matchedFilters) {

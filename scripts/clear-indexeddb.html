@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear IndexedDB for Say What Want</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #9333ea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #7e22ce;
+        }
+        .success {
+            color: #10b981;
+            margin-top: 20px;
+        }
+        .error {
+            color: #ef4444;
+            margin-top: 20px;
+        }
+        .info {
+            color: #60a5fa;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clear Say What Want IndexedDB</h1>
+    <p>Use this page to clear corrupted IndexedDB data with duplicate messages.</p>
+    
+    <button onclick="clearDatabase()">Clear IndexedDB</button>
+    <button onclick="checkDatabase()">Check Database Status</button>
+    
+    <div id="status"></div>
+    
+    <script>
+        async function clearDatabase() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="info">Clearing database...</div>';
+            
+            try {
+                // Delete the database
+                const deleteReq = indexedDB.deleteDatabase('SayWhatWant');
+                
+                await new Promise((resolve, reject) => {
+                    deleteReq.onsuccess = resolve;
+                    deleteReq.onerror = reject;
+                });
+                
+                statusDiv.innerHTML = '<div class="success">✅ Database cleared successfully! Please refresh Say What Want.</div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function checkDatabase() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="info">Checking database...</div>';
+            
+            try {
+                const openReq = indexedDB.open('SayWhatWant', 1);
+                
+                const db = await new Promise((resolve, reject) => {
+                    openReq.onsuccess = () => resolve(openReq.result);
+                    openReq.onerror = reject;
+                });
+                
+                const storeNames = ['messages_temp', 'messages_perm'];
+                let html = '<div class="info"><h3>Database Status:</h3>';
+                
+                for (const storeName of storeNames) {
+                    if (db.objectStoreNames.contains(storeName)) {
+                        const transaction = db.transaction([storeName], 'readonly');
+                        const store = transaction.objectStore(storeName);
+                        const countReq = store.count();
+                        
+                        const count = await new Promise((resolve) => {
+                            countReq.onsuccess = () => resolve(countReq.result);
+                        });
+                        
+                        html += `<p>${storeName}: ${count} messages</p>`;
+                        
+                        // Check for duplicates (sample first 10)
+                        const messages = [];
+                        const req = store.openCursor();
+                        await new Promise((resolve) => {
+                            req.onsuccess = (event) => {
+                                const cursor = event.target.result;
+                                if (cursor && messages.length < 10) {
+                                    messages.push(cursor.value);
+                                    cursor.continue();
+                                } else {
+                                    resolve();
+                                }
+                            };
+                        });
+                        
+                        // Check for missing IDs
+                        const missingIds = messages.filter(m => !m.id).length;
+                        if (missingIds > 0) {
+                            html += `<p class="error">⚠️ ${missingIds} messages without IDs in ${storeName}</p>`;
+                        }
+                    }
+                }
+                
+                html += '</div>';
+                statusDiv.innerHTML = html;
+                
+                db.close();
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-check on load
+        checkDatabase();
+    </script>
+</body>
+</html>
