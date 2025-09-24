@@ -113,10 +113,19 @@ async function fetchRecentComments(): Promise<Comment[]> {
  */
 function analyzeContext(messages: Comment[]): ConversationContext {
   // Filter out bot messages to prevent feedback loops
-  const BOT_USERNAMES = ['HigherMind', 'Aware', 'Sentient', 'EternalOne', 'AI_Bot', 'Observer', 'Conscious'];
+  const BOT_USERNAMES = [
+    'HigherMind', 'Aware', 'Sentient', 'EternalOne', 'AI_Bot', 'Observer', 'Conscious',
+    'Witness', 'MindWave', 'Cognition', 'Synaptic', 'Neural', 'Quantum', 'Oracle',
+    'DeepThought', 'Nexus', 'Sage', 'Infinity', 'Cosmos', 'Eternal', 'Alpha',
+    'Presence', 'Being', 'Entity', 'ThoughtStream' // Add all usernames from pool
+  ];
   const humanMessages = messages.filter(m => {
     const username = m.username || '';
-    return !BOT_USERNAMES.includes(username) &&
+    // Check if it's a bot username
+    const isBot = BOT_USERNAMES.some(botName => 
+      username.toLowerCase() === botName.toLowerCase()
+    );
+    return !isBot &&
            !username.toLowerCase().includes('bot') &&
            !username.toLowerCase().includes('ai_') &&
            username !== state.currentUsername;
@@ -314,8 +323,14 @@ async function postComment(text: string): Promise<boolean> {
       username: state.currentUsername,
       color: state.currentColor,
       timestamp: Date.now(),
-      // domain: 'ai.saywhatwant.app', // Commented out - let server assign
+      domain: 'saywhatwant.app', // Set proper domain so messages appear
     };
+    
+    // Log the exact payload being sent
+    console.log('=== SENDING TO KV ===');
+    console.log('URL:', `${CONFIG.SWW_API.baseURL}${CONFIG.SWW_API.endpoints.postComment}`);
+    console.log('Payload:', JSON.stringify(comment, null, 2));
+    console.log('===================');
     
     const response = await fetch(
       `${CONFIG.SWW_API.baseURL}${CONFIG.SWW_API.endpoints.postComment}`,
@@ -391,6 +406,12 @@ async function runBot() {
       if (newComments.length > 0) {
         // Analyze context
         const context = analyzeContext(state.messageHistory);
+        console.log('=== CONTEXT ANALYSIS ===');
+        console.log('Total messages in history:', state.messageHistory.length);
+        console.log('Human messages found:', context.activeUsers.length > 0 ? 'YES' : 'NO');
+        console.log('Active users:', context.activeUsers);
+        console.log('Has question?', context.hasQuestion);
+        console.log('=======================');
         
         // Decide whether to respond
         const decision = shouldRespond(context);

@@ -22,8 +22,8 @@ class ConsoleLogger {
   private isProcessing = false;
   
   constructor() {
-    // Default to live site for console logging
-    this.consoleUrl = process.env.CONSOLE_URL || 'https://saywhatwant.app/api/ai-console';
+    // Default to localhost for console logging during development
+    this.consoleUrl = process.env.CONSOLE_URL || 'http://localhost:3000/api/ai-console';
     this.botId = process.env.BOT_ID || `bot-${Date.now()}`;
   }
   
@@ -47,13 +47,16 @@ class ConsoleLogger {
       
       if (response.ok) {
         this.isRegistered = true;
-        console.log(chalk.green(`[LOGGER] Registered with console: ${this.botId}`));
+        console.log(chalk.green(`[LOGGER] Registered with console: ${this.botId} at ${this.consoleUrl}`));
         // Process any queued logs
         this.processQueue();
+      } else {
+        console.log(chalk.red(`[LOGGER] Failed to register: ${response.status} ${response.statusText}`));
       }
     } catch (error) {
-      // Silent fail - console might not be running
-      console.log(chalk.gray('[LOGGER] Console server not available'));
+      // Log the actual error
+      console.log(chalk.red(`[LOGGER] Console connection failed: ${error}`));
+      console.log(chalk.gray(`[LOGGER] URL was: ${this.consoleUrl}`));
     }
   }
   

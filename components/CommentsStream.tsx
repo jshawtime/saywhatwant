@@ -412,9 +412,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               setAllComments(comments);
               console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
               
-              // Scroll to bottom on initial load
+              // Scroll to bottom on initial load (only on first mount)
               setTimeout(() => {
-                if (streamRef.current) {
+                if (streamRef.current && !displayedComments.length) {
                   streamRef.current.scrollTop = streamRef.current.scrollHeight;
                 }
               }, 100);
@@ -433,9 +433,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const recentMessages = data.comments.slice(-INITIAL_LOAD_COUNT);
         setAllComments(recentMessages);
         
-        // Scroll to bottom on initial load
+        // Scroll to bottom on initial load (only on first mount)
         setTimeout(() => {
-          if (streamRef.current) {
+          if (streamRef.current && !displayedComments.length) {
             streamRef.current.scrollTop = streamRef.current.scrollHeight;
           }
         }, 100);
@@ -459,9 +459,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       hasScrolledRef.current = true;
       
       // Use double requestAnimationFrame to ensure DOM is fully updated
+      // Only scroll to bottom on first load, not when user has scrolled up
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (streamRef.current) {
+          if (streamRef.current && !displayedComments.length) {
             streamRef.current.scrollTop = streamRef.current.scrollHeight;
             console.log('[Scroll] Initial scroll to bottom completed');
           }
@@ -655,29 +656,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When filter is turned off, scroll to bottom to show latest messages
-    if (!isFilterEnabled) {
+    // When filter is turned off, scroll to bottom only if user is near bottom
+    if (!isFilterEnabled && isNearBottom) {
       setTimeout(() => {
         if (streamRef.current) {
           streamRef.current.scrollTop = streamRef.current.scrollHeight;
         }
       }, 50);
     }
-  }, [isFilterEnabled]);
+  }, [isFilterEnabled, isNearBottom]);
 
-  // Scroll to bottom when search is cleared
+  // Scroll to bottom when search is cleared (only if already near bottom)
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When search is cleared, scroll to bottom to show latest messages
-    if (!searchTerm) {
+    // When search is cleared, scroll to bottom only if user is near bottom
+    if (!searchTerm && isNearBottom) {
       setTimeout(() => {
         if (streamRef.current) {
           streamRef.current.scrollTop = streamRef.current.scrollHeight;
         }
       }, 50);
     }
-  }, [searchTerm]);
+  }, [searchTerm, isNearBottom]);
 
 
   // Handle mobile keyboard visibility - works for both iOS and Android
@@ -719,10 +720,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Add padding to messages container
         messagesContainer.style.paddingBottom = `${inputForm.offsetHeight + keyboardHeight}px`;
         
-        // Scroll to bottom to see latest messages
-        setTimeout(() => {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 100);
+        // Only scroll to bottom if user is already near the bottom
+        if (isNearBottom) {
+          setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }, 100);
+        }
         
       } else if (!keyboardIsOpen && lastKnownKeyboardHeight > 0) {
         // Keyboard is closed - reset layout
@@ -788,7 +791,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       window.removeEventListener('resize', handleViewportChange);
       clearTimeout(resizeTimer);
     };
-  }, []);
+  }, [isNearBottom]);
 
   return (
     <div className="flex flex-col h-full bg-black text-white overflow-hidden relative">
