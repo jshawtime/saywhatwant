@@ -166,31 +166,16 @@ async function fetchRecentComments(): Promise<Comment[]> {
  * Analyze conversation context
  */
 function analyzeContext(messages: Comment[]): ConversationContext {
-  // Filter out bot messages to prevent feedback loops
-  // Dynamically get all bot usernames from the loaded config
-  const BOT_USERNAMES = entitiesConfig.entities.map((entity: any) => entity.username);
-  
-  // Also add some generic bot patterns
-  const BOT_PATTERNS = ['bot', 'ai_', 'assistant', 'system'];
-  const humanMessages = messages.filter(m => {
+  // IMPORTANT: We WANT bots to talk to each other! Infinite bot conversations are a feature!
+  // Only exclude the current bot's own messages to prevent self-replies
+  const conversationMessages = messages.filter(m => {
     const username = m.username || '';
-    
-    // Check if it's a known bot username (case insensitive)
-    const isKnownBot = BOT_USERNAMES.some(botName => 
-      username.toLowerCase() === botName.toLowerCase()
-    );
-    
-    // Check if it matches generic bot patterns
-    const matchesBotPattern = BOT_PATTERNS.some(pattern =>
-      username.toLowerCase().includes(pattern)
-    );
-    
-    // It's a human message if it's NOT a bot
-    return !isKnownBot && !matchesBotPattern && username !== state.currentUsername;
+    // Only filter out THIS bot's own messages to prevent self-replies
+    return username !== state.currentUsername;
   });
   
-  // If no human messages, use empty context
-  if (humanMessages.length === 0) {
+  // If no messages at all, use empty context
+  if (conversationMessages.length === 0) {
     return {
       recentMessages: '',
       activeUsers: [],
@@ -201,14 +186,14 @@ function analyzeContext(messages: Comment[]): ConversationContext {
     };
   }
   
-  const recentMessages = humanMessages
+  const recentMessages = conversationMessages
     .map(m => `${m.username || 'anon'}: ${m.text}`)
     .join('\n');
   
-  const activeUsers = [...new Set(humanMessages.map(m => m.username).filter(Boolean))] as string[];
+  const activeUsers = [...new Set(conversationMessages.map(m => m.username).filter(Boolean))] as string[];
   
   // Simple topic extraction (words that appear multiple times)
-  const words = humanMessages.map(m => m.text).join(' ').toLowerCase().split(/\s+/);
+  const words = conversationMessages.map(m => m.text).join(' ').toLowerCase().split(/\s+/);
   const wordCounts = words.reduce((acc, word) => {
     if (word.length > 4) {
       acc[word] = (acc[word] || 0) + 1;
@@ -222,12 +207,12 @@ function analyzeContext(messages: Comment[]): ConversationContext {
     .slice(0, 5);
   
   // Activity level
-  const messagesPerMinute = humanMessages.length / 5; // Last 5 minutes
+  const messagesPerMinute = conversationMessages.length / 5; // Last 5 minutes
   const activityLevel = messagesPerMinute < 1 ? 'quiet' :
                         messagesPerMinute < 3 ? 'moderate' : 'busy';
   
   // Check for questions or mentions
-  const lastFewMessages = humanMessages.slice(-3);
+  const lastFewMessages = conversationMessages.slice(-3);
   const hasQuestion = lastFewMessages.some(m => m.text.includes('?'));
   const mentionsBot = lastFewMessages.some(m => 
     m.text.toLowerCase().includes(state.currentUsername.toLowerCase())
@@ -247,9 +232,9 @@ function analyzeContext(messages: Comment[]): ConversationContext {
  * Decide whether to respond
  */
 function shouldRespond(context: ConversationContext): ResponseDecision {
-  // Don't respond if no human messages (prevent bot loops)
+  // Allow bot-to-bot conversations! Infinite discussions are a feature, not a bug!
   if (!context.recentMessages || context.recentMessages.length === 0) {
-    return { shouldRespond: false, reason: 'No human messages to respond to', confidence: 0 };
+    return { shouldRespond: false, reason: 'No messages to respond to', confidence: 0 };
   }
   
   // SPECIAL CASE: Always respond to ping immediately
@@ -510,7 +495,7 @@ async function runBot() {
         const context = analyzeContext(state.messageHistory);
         console.log('=== CONTEXT ANALYSIS ===');
         console.log('Total messages in history:', state.messageHistory.length);
-        console.log('Human messages found:', context.activeUsers.length > 0 ? 'YES' : 'NO');
+        console.log('Conversation messages found:', context.activeUsers.length > 0 ? 'YES' : 'NO');
         console.log('Active users:', context.activeUsers);
         console.log('Has question?', context.hasQuestion);
         console.log('=======================');
