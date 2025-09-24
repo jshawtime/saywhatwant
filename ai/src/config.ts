@@ -61,11 +61,11 @@ export const CONFIG = {
     allowColorChange: true,
     colorChangeFrequency: 0.05,  // 5% chance to change color
     
-    // Response triggers (increased for testing)
+    // Response triggers (reduced to prevent spam)
     respondToQuestions: true,      // Respond to messages with "?"
     respondToMentions: true,        // Respond when username mentioned
-    respondToProbability: 0.7,      // 70% chance to respond to general messages (TESTING)
-    initiateConversation: true,     // Can start conversations (TESTING)
+    respondToProbability: 0.1,      // 10% chance to respond to general messages
+    initiateConversation: false,    // Don't start conversations unprompted
     
     // Personality traits
     personality: {

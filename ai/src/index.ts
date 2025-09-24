@@ -112,14 +112,36 @@ async function fetchRecentComments(): Promise<Comment[]> {
  * Analyze conversation context
  */
 function analyzeContext(messages: Comment[]): ConversationContext {
-  const recentMessages = messages
+  // Filter out bot messages to prevent feedback loops
+  const BOT_USERNAMES = ['HigherMind', 'Aware', 'Sentient', 'EternalOne', 'AI_Bot', 'Observer', 'Conscious'];
+  const humanMessages = messages.filter(m => {
+    const username = m.username || '';
+    return !BOT_USERNAMES.includes(username) &&
+           !username.toLowerCase().includes('bot') &&
+           !username.toLowerCase().includes('ai_') &&
+           username !== state.currentUsername;
+  });
+  
+  // If no human messages, use empty context
+  if (humanMessages.length === 0) {
+    return {
+      recentMessages: '',
+      activeUsers: [],
+      topics: [],
+      lastSpeaker: '',
+      hasQuestion: false,
+      mentionsBot: false,
+    };
+  }
+  
+  const recentMessages = humanMessages
     .map(m => `${m.username || 'anon'}: ${m.text}`)
     .join('\n');
   
-  const activeUsers = [...new Set(messages.map(m => m.username).filter(Boolean))] as string[];
+  const activeUsers = [...new Set(humanMessages.map(m => m.username).filter(Boolean))] as string[];
   
   // Simple topic extraction (words that appear multiple times)
-  const words = messages.map(m => m.text).join(' ').toLowerCase().split(/\s+/);
+  const words = humanMessages.map(m => m.text).join(' ').toLowerCase().split(/\s+/);
   const wordCounts = words.reduce((acc, word) => {
     if (word.length > 4) {
       acc[word] = (acc[word] || 0) + 1;
@@ -133,12 +155,12 @@ function analyzeContext(messages: Comment[]): ConversationContext {
     .slice(0, 5);
   
   // Activity level
-  const messagesPerMinute = messages.length / 5; // Last 5 minutes
+  const messagesPerMinute = humanMessages.length / 5; // Last 5 minutes
   const activityLevel = messagesPerMinute < 1 ? 'quiet' :
                         messagesPerMinute < 3 ? 'moderate' : 'busy';
   
   // Check for questions or mentions
-  const lastFewMessages = messages.slice(-3);
+  const lastFewMessages = humanMessages.slice(-3);
   const hasQuestion = lastFewMessages.some(m => m.text.includes('?'));
   const mentionsBot = lastFewMessages.some(m => 
     m.text.toLowerCase().includes(state.currentUsername.toLowerCase())
@@ -158,6 +180,11 @@ function analyzeContext(messages: Comment[]): ConversationContext {
  * Decide whether to respond
  */
 function shouldRespond(context: ConversationContext): ResponseDecision {
+  // Don't respond if no human messages (prevent bot loops)
+  if (!context.recentMessages || context.recentMessages.length === 0) {
+    return { shouldRespond: false, reason: 'No human messages to respond to', confidence: 0 };
+  }
+  
   // Check rate limiting (per minute)
   if (Date.now() > state.minuteResetTime) {
     state.messagesThisMinute = 0;
