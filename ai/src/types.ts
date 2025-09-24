@@ -31,8 +31,8 @@ export interface BotState {
   messageHistory: Comment[];
   currentUsername: string;
   currentColor: string;
-  messagesThisHour: number;
-  hourResetTime: number;
+  messagesThisMinute: number;
+  minuteResetTime: number;
   consecutiveSilence: number;
 }
 

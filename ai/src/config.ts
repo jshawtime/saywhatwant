@@ -46,8 +46,8 @@ export const CONFIG = {
     pollingInterval: 5000,  // 5 seconds (matching app's polling rate)
     
     // Response settings
-    minTimeBetweenMessages: 10000,  // 10 seconds minimum between bot messages
-    maxMessagesPerHour: 20,         // Rate limiting
+    minTimeBetweenMessages: 500,     // 0.5 seconds minimum between bot messages (testing)
+    maxMessagesPerMinute: 100,       // Rate limiting per minute (testing mode)
     
     // Context window
     contextMessageCount: 15,  // Consider last 15 messages for context
@@ -61,11 +61,11 @@ export const CONFIG = {
     allowColorChange: true,
     colorChangeFrequency: 0.05,  // 5% chance to change color
     
-    // Response triggers
+    // Response triggers (increased for testing)
     respondToQuestions: true,      // Respond to messages with "?"
     respondToMentions: true,        // Respond when username mentioned
-    respondToProbability: 0.3,      // 30% chance to respond to general messages
-    initiateConversation: false,    // Don't start conversations unprompted
+    respondToProbability: 0.7,      // 70% chance to respond to general messages (TESTING)
+    initiateConversation: true,     // Can start conversations (TESTING)
     
     // Personality traits
     personality: {

@@ -23,8 +23,8 @@ const state: BotState = {
   messageHistory: [],
   currentUsername: CONFIG.BOT.defaultUsername,
   currentColor: COLOR_POOL[0],
-  messagesThisHour: 0,
-  hourResetTime: Date.now() + 3600000,
+  messagesThisMinute: 0,
+  minuteResetTime: Date.now() + 60000,
   consecutiveSilence: 0,
 };
 
@@ -135,13 +135,13 @@ function analyzeContext(messages: Comment[]): ConversationContext {
  * Decide whether to respond
  */
 function shouldRespond(context: ConversationContext): ResponseDecision {
-  // Check rate limiting
-  if (Date.now() > state.hourResetTime) {
-    state.messagesThisHour = 0;
-    state.hourResetTime = Date.now() + 3600000;
+  // Check rate limiting (per minute)
+  if (Date.now() > state.minuteResetTime) {
+    state.messagesThisMinute = 0;
+    state.minuteResetTime = Date.now() + 60000;
   }
   
-  if (state.messagesThisHour >= CONFIG.BOT.maxMessagesPerHour) {
+  if (state.messagesThisMinute >= CONFIG.BOT.maxMessagesPerMinute) {
     return { shouldRespond: false, reason: 'Rate limit exceeded', confidence: 0 };
   }
   
@@ -286,7 +286,7 @@ async function postComment(text: string): Promise<boolean> {
     
     // Update state
     state.lastResponseTime = Date.now();
-    state.messagesThisHour++;
+    state.messagesThisMinute++;
     state.consecutiveSilence = 0;
     
     return true;
@@ -307,7 +307,9 @@ async function runBot() {
 ║ LM Studio: ${CONFIG.LM_STUDIO.baseURL.padEnd(28)}║
 ║ Model: ${CONFIG.LM_STUDIO.model.padEnd(33)}║
 ║ API: ${CONFIG.SWW_API.baseURL.padEnd(35)}║
-║ Mode: ${CONFIG.DEV.dryRun ? 'DRY RUN' : 'LIVE'.padEnd(34)}║
+║ Mode: ${CONFIG.DEV.dryRun ? 'DRY RUN' : 'LIVE 🔴'.padEnd(34)}║
+║ Rate Limit: ${String(CONFIG.BOT.maxMessagesPerMinute + ' msgs/min').padEnd(28)}║
+║ Response %: ${String(CONFIG.BOT.respondToProbability * 100 + '%').padEnd(28)}║
 ╚════════════════════════════════════════╝
   `));
   

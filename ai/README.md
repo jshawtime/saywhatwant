@@ -2,6 +2,13 @@
 
 An AI-powered chat bot for Say What Want, using LM Studio for local language model inference.
 
+## ⚠️ TESTING MODE ACTIVE
+The bot is currently configured for live testing with:
+- **70% response probability** (high engagement)
+- **100 messages/minute** rate limit
+- **0.5 second** minimum between messages
+- **LIVE posting** to Say What Want (not dry run)
+
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
@@ -74,9 +81,9 @@ Edit `src/config.ts` to adjust:
 ```typescript
 BOT: {
   pollingInterval: 5000,           // How often to check for new messages
-  minTimeBetweenMessages: 10000,   // Minimum delay between bot messages
-  maxMessagesPerHour: 20,          // Rate limit
-  respondToProbability: 0.3,       // 30% chance to respond randomly
+  minTimeBetweenMessages: 500,     // Minimum delay between bot messages (testing)
+  maxMessagesPerMinute: 100,       // Rate limit per minute (testing mode)
+  respondToProbability: 0.7,       // 70% chance to respond (testing mode)
   // ... more options
 }
 ```
