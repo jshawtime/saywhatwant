@@ -30,8 +30,8 @@ export const CONFIG = {
   
   // Say What Want API Configuration
   SWW_API: {
-    // Production API
-    baseURL: 'https://saywhatwant.app/api',
+    // Production API (Cloudflare Worker)
+    baseURL: 'https://sww-comments.bootloaders.workers.dev/api',
     
     // Endpoints
     endpoints: {
