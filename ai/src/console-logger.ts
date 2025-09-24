@@ -22,7 +22,8 @@ class ConsoleLogger {
   private isProcessing = false;
   
   constructor() {
-    this.consoleUrl = process.env.CONSOLE_URL || 'http://localhost:3000';
+    // Default to live site for console logging
+    this.consoleUrl = process.env.CONSOLE_URL || 'https://saywhatwant.app/api/ai-console';
     this.botId = process.env.BOT_ID || `bot-${Date.now()}`;
   }
   
@@ -30,10 +31,14 @@ class ConsoleLogger {
     if (this.isRegistered) return;
     
     try {
-      const response = await fetch(`${this.consoleUrl}/api/register`, {
+      const response = await fetch(this.consoleUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-console-password': 'saywhatwant'
+        },
         body: JSON.stringify({
+          action: 'register',
           botId: this.botId,
           model: CONFIG.LM_STUDIO.model,
           baseURL: CONFIG.LM_STUDIO.baseURL
@@ -60,10 +65,16 @@ class ConsoleLogger {
     }
     
     try {
-      await fetch(`${this.consoleUrl}/api/log`, {
+      await fetch(this.consoleUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(log)
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-console-password': 'saywhatwant'
+        },
+        body: JSON.stringify({
+          action: 'log',
+          ...log
+        })
       });
     } catch (error) {
       // Silent fail - don't break the bot if console is down
