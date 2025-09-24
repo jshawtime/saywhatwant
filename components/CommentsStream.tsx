@@ -20,6 +20,8 @@ const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = 50; // Max new messages per poll
 const MAX_USERNAME_LENGTH = 16;
+const INDEXEDDB_INITIAL_LOAD = 500; // Load 500 messages from IndexedDB initially
+const INDEXEDDB_LAZY_LOAD_CHUNK = 100; // Load 100 more on each lazy load
 
 // Import color functions from the color system
 import { getRandomColor, getDarkerColor, COLOR_PALETTE } from '@/modules/colorSystem';
@@ -66,6 +68,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [userColor, setUserColor] = useState(() => getRandomColor()); // Start with random color
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false); // For hydration safety
+  
+  // IndexedDB lazy loading state
+  const [indexedDbOffset, setIndexedDbOffset] = useState(0);
+  const [hasMoreInIndexedDb, setHasMoreInIndexedDb] = useState(false);
+  const [isLoadingMoreFromIndexedDb, setIsLoadingMoreFromIndexedDb] = useState(false);
+  const allIndexedDbMessages = useRef<Comment[]>([]);
 
   // Sync comments to IndexedDB (stores every message you see locally)
   useIndexedDBSync(allComments);
@@ -103,8 +111,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           return parsed;
         }
       }
-    } catch (error) {
-      console.error('[Comments] Failed to load from localStorage:', error);
+    } catch (err) {
+      console.error('[Comments] Failed to load from localStorage:', err);
     }
     return [];
   }, [COMMENTS_STORAGE_KEY]);
@@ -116,8 +124,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // Keep only the last 1000 comments
       const toSave = comments.slice(-1000);
       localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(toSave));
-    } catch (error) {
-      console.error('[Comments] Failed to save to localStorage:', error);
+    } catch (err) {
+      console.error('[Comments] Failed to save to localStorage:', err);
     }
   }, [COMMENTS_STORAGE_KEY]);
   
@@ -400,7 +408,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   useEffect(() => {
     const loadInitialComments = async () => {
       setIsLoading(true);
-      setError(null);
       
       try {
         // In dev mode with localStorage enabled, try to load from static JSON first
@@ -427,7 +434,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           }
         }
         
-        // ENHANCED: Load from IndexedDB first (all messages user has seen)
+        // ENHANCED: Load from IndexedDB first (limited to INDEXEDDB_INITIAL_LOAD for performance)
         let indexedDbMessages: Comment[] = [];
         try {
           // Initialize IndexedDB if needed
@@ -435,8 +442,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           
           const storage = getStorage();
           if (storage.isInitialized()) {
-            const storedMessages = await storage.getMessages({ store: 'all' });
-            indexedDbMessages = storedMessages.map((msg: any) => ({
+            const allStoredMessages = await storage.getMessages({ store: 'all' });
+            
+            // Store all messages in ref for lazy loading
+            allIndexedDbMessages.current = allStoredMessages.map((msg: any) => ({
               id: msg.id,
               text: msg.text,
               timestamp: new Date(msg.timestamp).getTime(),
@@ -445,7 +454,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               videoRef: msg.videoRef,
               domain: msg.domain,
             }));
-            console.log(`[IndexedDB] Restored ${indexedDbMessages.length} messages from local storage`);
+            
+            // Sort by timestamp (oldest first)
+            allIndexedDbMessages.current.sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Take only the most recent INDEXEDDB_INITIAL_LOAD messages for initial display
+            const totalStored = allIndexedDbMessages.current.length;
+            if (totalStored > INDEXEDDB_INITIAL_LOAD) {
+              indexedDbMessages = allIndexedDbMessages.current.slice(-INDEXEDDB_INITIAL_LOAD);
+              setHasMoreInIndexedDb(true);
+              setIndexedDbOffset(totalStored - INDEXEDDB_INITIAL_LOAD);
+              console.log(`[IndexedDB] Loaded ${INDEXEDDB_INITIAL_LOAD} of ${totalStored} messages (more available)`);
+            } else {
+              indexedDbMessages = allIndexedDbMessages.current;
+              setHasMoreInIndexedDb(false);
+              console.log(`[IndexedDB] Loaded all ${totalStored} messages from local storage`);
+            }
           }
         } catch (err) {
           console.warn('[IndexedDB] Failed to load stored messages:', err);
@@ -478,7 +502,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         // Initial scroll is handled by the useEffect
       } catch (err) {
-        setError('Failed to load comments. Please refresh the page.');
+        console.error('[Comments] Failed to load comments:', err);
       } finally {
         setIsLoading(false);
       }
@@ -489,6 +513,46 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Track if we've done initial scroll
   const hasScrolledRef = useRef(false);
+  
+  // Load more messages from IndexedDB (for lazy loading)
+  const loadMoreFromIndexedDb = useCallback(() => {
+    if (!hasMoreInIndexedDb || isLoadingMoreFromIndexedDb) return;
+    
+    setIsLoadingMoreFromIndexedDb(true);
+    
+    // Calculate how many messages to load
+    const newOffset = Math.max(0, indexedDbOffset - INDEXEDDB_LAZY_LOAD_CHUNK);
+    const loadCount = indexedDbOffset - newOffset;
+    
+    if (loadCount > 0 && allIndexedDbMessages.current.length > 0) {
+      // Get the older messages
+      const olderMessages = allIndexedDbMessages.current.slice(newOffset, indexedDbOffset);
+      
+      // Prepend to existing messages
+      setAllComments(prev => {
+        // Create a Map to avoid duplicates
+        const messageMap = new Map<string, Comment>();
+        
+        // Add older messages first
+        olderMessages.forEach(msg => messageMap.set(msg.id, msg));
+        
+        // Add existing messages
+        prev.forEach(msg => messageMap.set(msg.id, msg));
+        
+        // Convert back to array and sort
+        const merged = Array.from(messageMap.values())
+          .sort((a, b) => a.timestamp - b.timestamp);
+        
+        console.log(`[IndexedDB] Loaded ${loadCount} more messages (${newOffset} remaining)`);
+        return merged;
+      });
+      
+      setIndexedDbOffset(newOffset);
+      setHasMoreInIndexedDb(newOffset > 0);
+    }
+    
+    setIsLoadingMoreFromIndexedDb(false);
+  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset]);
   
   // Scroll to bottom ONLY on initial page load when comments first arrive
   useEffect(() => {
@@ -537,15 +601,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         if (newComments.length > 0) {
           console.log(`[Cursor Polling] Found ${newComments.length} new messages after timestamp ${latestTimestamp}`);
           
-          // Just append new messages - no deduplication needed!
+          // Just append new messages - keep ALL existing messages!
           setAllComments(prev => {
-            // Combine and keep reasonable size
-            const combined = [...prev, ...newComments];
-            // Keep only recent messages to prevent memory issues
-            if (combined.length > INITIAL_LOAD_COUNT * 2) {
-              return combined.slice(-INITIAL_LOAD_COUNT);
-            }
-            return combined;
+            // Simply append new messages without limiting
+            // Users want to keep their full history visible
+            return [...prev, ...newComments];
           });
         }
       } else {
@@ -559,7 +619,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         if (newComments.length > 0) {
           console.log(`[LocalStorage] Found ${newComments.length} new comments`);
-          setAllComments(storedComments.slice(-INITIAL_LOAD_COUNT)); // Keep bounded
+          setAllComments(prev => [...prev, ...newComments]); // Append new messages without resetting!
         }
       }
       
@@ -939,7 +999,35 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
           ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
         } as React.CSSProperties}
+        onScroll={(e) => {
+          const element = e.currentTarget;
+          // Check if scrolled near the top for lazy loading
+          if (element.scrollTop < 100 && hasMoreInIndexedDb && !isLoadingMoreFromIndexedDb) {
+            loadMoreFromIndexedDb();
+          }
+        }}
       >
+        {/* Load More indicator at the top */}
+        {hasMoreInIndexedDb && (
+          <div className="flex justify-center py-2 mb-2">
+            {isLoadingMoreFromIndexedDb ? (
+              <div className="text-gray-500 text-sm">Loading more messages...</div>
+            ) : (
+              <button
+                onClick={loadMoreFromIndexedDb}
+                className="px-4 py-1 text-sm rounded-lg transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST),
+                  color: userColor,
+                  border: `1px solid ${getDarkerColor(userColor, OPACITY_LEVELS.DARK)}`
+                }}
+              >
+                Load {Math.min(INDEXEDDB_LAZY_LOAD_CHUNK, indexedDbOffset)} more messages
+              </button>
+            )}
+          </div>
+        )}
+        
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
             <div className="typing-indicator">
