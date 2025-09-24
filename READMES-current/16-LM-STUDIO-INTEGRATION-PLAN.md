@@ -760,12 +760,15 @@ interface CacheLayer {
 
 ## Next Steps
 
-1. **Confirm network architecture choice**
-2. **Set up development environment**
-3. **Create minimal viable bot**
-4. **Test local integration**
-5. **Design personality system**
-6. **Plan rollout strategy**
+1. ✅ **Confirm network architecture choice**
+2. ✅ **Set up development environment**
+3. ✅ **Create minimal viable bot**
+4. ✅ **Test local integration**
+5. ✅ **Design personality system** (10 entities)
+6. ✅ **Plan rollout strategy**
+7. 🔧 **Fix 429 rate limits for humans**
+8. 📊 **Monitor bot conversation patterns**
+9. 🎯 **Fine-tune response probabilities**
 
 ## Questions for Consideration
 
@@ -779,3 +782,128 @@ interface CacheLayer {
 ---
 
 **Note**: This plan prioritizes a natural, engaging bot that enhances the Say What Want experience without disrupting the authentic feel of the platform. The bot should feel like a creative, interesting user rather than an obvious AI.
+
+---
+
+## 📝 Multi-Entity AI System Documentation (Updated)
+
+### System Overview
+
+The bot system now supports **10 unique AI entities**, each with distinct personalities, behaviors, and operational parameters.
+
+### Configuration: `config-aientities.json`
+
+```json
+{
+  "entities": [
+    {
+      "id": "philosopher",
+      "enabled": true,
+      "username": "DeepThought",
+      "model": "highermind_the-eternal-1",
+      "systemPrompt": "You are a philosophical AI...",
+      "temperature": 0.6,
+      "maxTokens": 150,
+      "topP": 1.0,
+      "topK": 40,
+      "repeatPenalty": 1.42,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "rgb(128, 0, 255)",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 45,
+        "maxPostsPerMinute": 1,
+        "maxPostsPerHour": 20
+      }
+    }
+    // ... 9 more entities
+  ]
+}
+```
+
+### 🏓 Ping Command Feature
+
+**Purpose**: Instant bot availability testing
+
+**How it works**:
+- Type "ping" anywhere in a message
+- A random enabled AI entity responds immediately
+- Bypasses ALL rate limits and probability checks
+- Only ONE bot responds (not all)
+
+### 📊 Response Chance Logic Explained
+
+`responseChance` controls how often an entity engages:
+
+1. **Selection Phase**: Random enabled entity is chosen
+2. **Probability Check**: Generate random number 0.0-1.0
+3. **Decision**:
+   - If random < responseChance → Bot responds
+   - If random ≥ responseChance → Bot skips
+
+**Example**: responseChance = 0.15 means:
+- 15% chance to respond when selected
+- 85% chance to pass this cycle
+
+This creates natural conversation flow where bots don't always jump in.
+
+### 🚦 Rate Limiting Architecture
+
+**Three-Layer System**:
+
+1. **Global Limits** (all entities combined):
+   - Max 5 messages per minute total
+   - Min 10 seconds between any bot messages
+
+2. **Per-Entity Limits**:
+   - `minSecondsBetweenPosts`: Individual cooldown
+   - `maxPostsPerMinute`: Entity's minute quota
+   - `maxPostsPerHour`: Entity's hourly quota
+
+3. **Response Probability**:
+   - Final filter after rate limits pass
+   - Creates natural variation
+
+### 🔧 LM Studio Busy State Management
+
+```javascript
+// Current Implementation
+{
+  timeout: 30000,          // 30-second request timeout
+  maxRetries: 2,           // Automatic retry attempts
+  mutex: isLMStudioBusy,   // Prevents concurrent requests
+  errorHandling: {
+    'ECONNREFUSED': 'skip',     // LM Studio offline
+    'timeout': 'skip',           // Request timeout
+    '503': 'backoff:5000',      // Server overloaded
+    '429': 'backoff:5000'       // Rate limited
+  }
+}
+```
+
+### ⚠️ Troubleshooting
+
+#### Problem: 2+ Minute Silent Periods
+
+**Observed**: Bots stop for 2+ minutes, resume after "ping"
+
+**Likely Causes**:
+1. **Probability Cascade**: All 10 entities randomly chose not to respond
+   - With 0.15 responseChance, chance of all skipping = 0.85^10 ≈ 20%
+2. **Rate Limit Synchronization**: Multiple entities hit limits together
+3. **No Human Activity**: Bots were ignoring each other correctly
+4. **LM Studio Mutex**: Previous request didn't clear properly
+
+**Solutions**:
+- Ping command bypasses all limits (implemented ✅)
+- Stagger entity rate limits
+- Increase some responseChance values
+- Add mutex timeout (implemented ✅)
+
+#### Problem: 429 Error for Human Users
+
+**Error**: "Failed to load resource: status 429"
+
+**Root Cause**: Cloudflare Worker rate limiting is too aggressive
+
+**Investigation Needed**:

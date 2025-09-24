@@ -13,8 +13,9 @@ const corsHeaders = {
 };
 
 // Rate Limiting Configuration
-const RATE_LIMIT = 10;        // 10 comments per minute per IP
+const RATE_LIMIT = 30;        // 30 comments per minute per IP (increased for testing)
 const RATE_WINDOW = 60;       // 60 second window
+const BOT_IPS = ['127.0.0.1', 'localhost', '::1']; // Local bot IPs to exempt
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 12;
 const CACHE_SIZE = 5000;      // Keep last 5000 comments in cache
@@ -421,6 +422,12 @@ async function handlePostComment(request, env) {
  * Check rate limit for an IP
  */
 async function checkRateLimit(env, ip) {
+  // Skip rate limiting for local bot IPs during testing
+  if (BOT_IPS.includes(ip)) {
+    console.log(`[Comments] Skipping rate limit for bot IP: ${ip}`);
+    return true;
+  }
+  
   const key = `rate:${ip}`;
   const current = await env.COMMENTS_KV.get(key);
   
