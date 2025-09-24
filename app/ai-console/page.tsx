@@ -67,7 +67,7 @@ export default function AIConsole() {
           // Update logs (deduplicate by timestamp)
           const existingTimestamps = new Set(logs.map(l => l.timestamp));
           const newLogs = data.logs?.filter((log: LogEntry) => 
-            !existingTimestamps.has(log.timestamp)
+            !Array.from(existingTimestamps).includes(log.timestamp)
           ) || [];
           
           if (newLogs.length > 0) {
