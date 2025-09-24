@@ -57,7 +57,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasNewComments, setHasNewComments] = useState(false);
-  const [hasScrolledOnce, setHasScrolledOnce] = useState(false); // Track if we've done initial scroll
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -412,13 +411,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               setAllComments(comments);
               console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
               
-              // Scroll to bottom on initial load (only once)
-              if (!hasScrolledOnce) {
-                setTimeout(() => {
-                  smoothScrollToBottom(false);
-                  setHasScrolledOnce(true);
-                }, 100);
-              }
+              // Initial scroll is handled by the useEffect
               
               setIsLoading(false);
               return;
@@ -434,13 +427,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const recentMessages = data.comments.slice(-INITIAL_LOAD_COUNT);
         setAllComments(recentMessages);
         
-        // Scroll to bottom on initial load (only once)
-        if (!hasScrolledOnce) {
-          setTimeout(() => {
-            smoothScrollToBottom(false);
-            setHasScrolledOnce(true);
-          }, 100);
-        }
+        // Initial scroll is handled by the useEffect
       } catch (err) {
         setError('Failed to load comments. Please refresh the page.');
       } finally {
@@ -454,76 +441,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Track if we've done initial scroll
   const hasScrolledRef = useRef(false);
   
-  // Scroll to bottom when initial comments load
+  // Scroll to bottom ONLY on initial page load when comments first arrive
   useEffect(() => {
-    // Only scroll once when comments first arrive
+    // Only scroll once when comments first arrive AND we haven't scrolled yet
     if (allComments.length > 0 && !hasScrolledRef.current) {
       hasScrolledRef.current = true;
       
-      // Use double requestAnimationFrame to ensure DOM is fully updated
-      // Only scroll to bottom once on first load AND if user hasn't scrolled away
-      if (!hasScrolledOnce && isNearBottom) {
+      // Initial scroll to bottom (only happens once per page load)
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            smoothScrollToBottom(false);
-            setHasScrolledOnce(true);
+          if (streamRef.current) {
+            streamRef.current.scrollTop = streamRef.current.scrollHeight;
             console.log('[Scroll] Initial scroll to bottom completed');
-          });
-        });
-      }
-    }
-  }, [allComments, hasScrolledOnce, isNearBottom, smoothScrollToBottom]);
-
-  // Re-scroll to bottom when video area opens/closes (width change causes reflow)
-  useEffect(() => {
-    // Skip if no comments or stream ref
-    if (!streamRef.current || allComments.length === 0) return;
-    
-    // Check if we were at bottom before the change (or just loaded)
-    const wasAtBottom = isNearBottom || hasScrolledRef.current;
-    
-    // Wait for transition animation to complete (500ms) plus buffer
-    const timer = setTimeout(() => {
-    // Only scroll if we were already at bottom
-    if (wasAtBottom) {
-      smoothScrollToBottom(false);
-      console.log('[Scroll] Adjusted scroll after video area toggle');
-    }
-    }, 550); // 500ms transition + 50ms buffer
-    
-    return () => clearTimeout(timer);
-  }, [showVideo, isNearBottom]); // Re-run when video visibility changes
-  
-  // Use ResizeObserver to detect container width changes and maintain scroll position
-  useEffect(() => {
-    if (!streamRef.current) return;
-    
-    let resizeTimer: NodeJS.Timeout;
-    
-    const resizeObserver = new ResizeObserver((entries) => {
-      clearTimeout(resizeTimer);
-      
-      // Debounce the resize handling
-      resizeTimer = setTimeout(() => {
-        for (const entry of entries) {
-          // Check if we were near bottom before resize
-          if (isNearBottom) {
-            // Maintain scroll at bottom after reflow
-            smoothScrollToBottom(false);
-            console.log('[Scroll] Adjusted scroll after container resize');
           }
-        }
-      }, 50); // Small debounce for performance
-    });
-    
-    // Observe the messages container for size changes
-    resizeObserver.observe(streamRef.current);
-    
-    return () => {
-      resizeObserver.disconnect();
-      clearTimeout(resizeTimer);
-    };
-  }, [isNearBottom, smoothScrollToBottom]);
+        });
+      });
+    }
+  }, [allComments.length]); // Only re-run when number of comments changes from 0
+
+  // Don't auto-scroll when video area toggles - let user stay where they are
+  
+  // Don't auto-scroll on resize - let user stay where they are
 
   // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
@@ -659,25 +597,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When filter is turned off, scroll to bottom only if user is near bottom
-    if (!isFilterEnabled && isNearBottom) {
-      setTimeout(() => {
-        smoothScrollToBottom(true);
-      }, 50);
-    }
-  }, [isFilterEnabled, isNearBottom, smoothScrollToBottom]);
+    // When filter is turned off, DON'T auto-scroll
+    // User should stay where they are
+  }, [isFilterEnabled]);
 
   // Scroll to bottom when search is cleared (only if already near bottom)
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When search is cleared, scroll to bottom only if user is near bottom
-    if (!searchTerm && isNearBottom) {
-      setTimeout(() => {
-        smoothScrollToBottom(true);
-      }, 50);
-    }
-  }, [searchTerm, isNearBottom, smoothScrollToBottom]);
+    // When search is cleared, DON'T auto-scroll
+    // User should stay where they are
+  }, [searchTerm]);
 
 
   // Handle mobile keyboard visibility - works for both iOS and Android
