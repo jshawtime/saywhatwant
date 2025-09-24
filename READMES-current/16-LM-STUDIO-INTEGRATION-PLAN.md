@@ -38,6 +38,22 @@ cd saywhatwant/ai
 npm run dev  # Bot starts in LIVE mode
 ```
 
+### AI Monitoring Console
+
+Monitor your bot's activity from anywhere:
+
+**Access**: https://saywhatwant.app/ai-console  
+**Password**: saywhatwant
+
+**Features**:
+- Real-time bot activity monitoring
+- Dual view: Raw logs + Human-readable conversation
+- Bot health status and message rates
+- Works from any device/location
+- Bot auto-reports logs (no config needed)
+
+The console is a technical backend interface separate from the main app.
+
 ## 1. Architecture Overview
 
 ```
