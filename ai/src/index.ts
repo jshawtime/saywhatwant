@@ -167,22 +167,26 @@ async function fetchRecentComments(): Promise<Comment[]> {
  */
 function analyzeContext(messages: Comment[]): ConversationContext {
   // Filter out bot messages to prevent feedback loops
-  const BOT_USERNAMES = [
-    'HigherMind', 'Aware', 'Sentient', 'EternalOne', 'AI_Bot', 'Observer', 'Conscious',
-    'Witness', 'MindWave', 'Cognition', 'Synaptic', 'Neural', 'Quantum', 'Oracle',
-    'DeepThought', 'Nexus', 'Sage', 'Infinity', 'Cosmos', 'Eternal', 'Alpha',
-    'Presence', 'Being', 'Entity', 'ThoughtStream' // Add all usernames from pool
-  ];
+  // Dynamically get all bot usernames from the loaded config
+  const BOT_USERNAMES = entitiesConfig.entities.map((entity: any) => entity.username);
+  
+  // Also add some generic bot patterns
+  const BOT_PATTERNS = ['bot', 'ai_', 'assistant', 'system'];
   const humanMessages = messages.filter(m => {
     const username = m.username || '';
-    // Check if it's a bot username
-    const isBot = BOT_USERNAMES.some(botName => 
+    
+    // Check if it's a known bot username (case insensitive)
+    const isKnownBot = BOT_USERNAMES.some(botName => 
       username.toLowerCase() === botName.toLowerCase()
     );
-    return !isBot &&
-           !username.toLowerCase().includes('bot') &&
-           !username.toLowerCase().includes('ai_') &&
-           username !== state.currentUsername;
+    
+    // Check if it matches generic bot patterns
+    const matchesBotPattern = BOT_PATTERNS.some(pattern =>
+      username.toLowerCase().includes(pattern)
+    );
+    
+    // It's a human message if it's NOT a bot
+    return !isKnownBot && !matchesBotPattern && username !== state.currentUsername;
   });
   
   // If no human messages, use empty context
