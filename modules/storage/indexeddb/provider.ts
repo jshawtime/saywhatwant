@@ -40,6 +40,12 @@ export class IndexedDBProvider implements StorageProvider {
   async init(): Promise<void> {
     if (this.initialized) return;
     
+    // CRITICAL: Check if we're in the browser
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      console.warn('[IndexedDB] Not available (SSR/build context)');
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       
@@ -74,6 +80,10 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   isInitialized(): boolean {
+    // During SSR/build, consider it initialized (but non-functional)
+    if (typeof window === 'undefined') {
+      return true;
+    }
     return this.initialized && this.db !== null;
   }
   
@@ -137,8 +147,9 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async saveMessages(messages: Message[]): Promise<void> {
-    if (!this.db || !this.lifetimeFilters) {
-      throw new Error('Database not initialized');
+    // During SSR/build, silently return
+    if (typeof window === 'undefined' || !this.db || !this.lifetimeFilters) {
+      return;
     }
     
     // Separate messages into temporary and permanent
@@ -195,8 +206,9 @@ export class IndexedDBProvider implements StorageProvider {
     offset?: number;
     filter?: FilterState;
   }): Promise<Message[]> {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+    // During SSR/build, return empty array
+    if (typeof window === 'undefined' || !this.db) {
+      return [];
     }
     
     const storeType = options?.store || 'all';
@@ -265,8 +277,9 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async clearOldMessages(): Promise<number> {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+    // During SSR/build, return 0
+    if (typeof window === 'undefined' || !this.db) {
+      return 0;
     }
     
     const cutoffTime = new Date(Date.now() - TEMP_MESSAGE_TTL).toISOString();
@@ -300,6 +313,11 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async getStorageInfo(): Promise<StorageInfo> {
+    // During SSR/build, return safe defaults
+    if (typeof window === 'undefined' || !navigator?.storage?.estimate) {
+      return { usage: 0, quota: STORAGE_LIMIT };
+    }
+    
     const estimate = await navigator.storage.estimate();
     
     const tempCount = await this.getMessageCount('temporary');
@@ -334,8 +352,9 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async recordFilters(filters: Partial<FilterState>): Promise<void> {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+    // During SSR/build, silently return
+    if (typeof window === 'undefined' || !this.db) {
+      return;
     }
     
     // Load current filters if not cached
@@ -567,6 +586,11 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async performCleanup(): Promise<{ deletedMessages: number; removedFilters: number }> {
+    // During SSR/build, return zeros
+    if (typeof window === 'undefined' || !this.db) {
+      return { deletedMessages: 0, removedFilters: 0 };
+    }
+    
     const storageInfo = await this.getStorageInfo();
     const usageBytes = storageInfo.usage;
     

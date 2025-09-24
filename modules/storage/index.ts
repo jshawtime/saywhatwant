@@ -48,6 +48,11 @@ export async function initStorage(): Promise<void> {
  * Runs every hour to clean up old messages
  */
 function startCleanupTask(): void {
+  // CRITICAL: Only run cleanup in the browser, not during SSR/build
+  if (typeof window === 'undefined') {
+    return;
+  }
+  
   // Run cleanup every hour
   const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
   
