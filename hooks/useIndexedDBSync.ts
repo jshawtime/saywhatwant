@@ -46,6 +46,7 @@ export function useIndexedDBSync(comments: Comment[]) {
         if (newComments.length > 0) {
           // Transform comments to Message format
           const messages: Message[] = newComments.map(comment => ({
+            id: comment.id,  // CRITICAL: Include the ID to prevent duplicates!
             timestamp: new Date(comment.timestamp).toISOString(),
             username: comment.username || 'anonymous',
             text: comment.text || '',
@@ -93,6 +94,7 @@ export function useIndexedDBSync(comments: Comment[]) {
           
           // Import all comments
           const messages: Message[] = comments.map(comment => ({
+            id: comment.id,  // CRITICAL: Include the ID to prevent duplicates!
             timestamp: new Date(comment.timestamp).toISOString(),
             username: comment.username || 'anonymous',
             text: comment.text || '',
