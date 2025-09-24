@@ -5,6 +5,7 @@ import { Send, ChevronDown, Tv, Ban } from 'lucide-react';
 import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
+import { useIndexedDBSync } from '@/hooks/useIndexedDBSync';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
@@ -63,6 +64,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [userColor, setUserColor] = useState(() => getRandomColor()); // Start with random color
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false); // For hydration safety
+
+  // Sync comments to IndexedDB (stores every message you see locally)
+  useIndexedDBSync(allComments);
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
