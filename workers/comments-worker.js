@@ -21,14 +21,11 @@ const EXEMPT_IPS = [
   '127.0.0.1',      // Localhost
   'localhost',      // Localhost
   '::1',            // IPv6 localhost
-  // Add your IP here for testing, e.g.:
-  // '192.168.1.100',
+  '98.97.140.211',  // Testing IP (your current IP)
 ];
 
 const EXEMPT_DOMAINS = [
-  // Add trusted domains here, e.g.:
-  // 'admin.saywhatwant.app',
-  // 'bot.yourdomain.com',
+  'ai.saywhatwant.app',  // AI bot domain
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 12;

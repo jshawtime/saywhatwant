@@ -263,10 +263,11 @@
       "exemptIPs": [
         "127.0.0.1",
         "localhost", 
-        "::1"
+        "::1",
+        "98.97.140.211"
       ],
       "exemptDomains": [
-        "_comment: Add trusted domains here for rate limit exemption"
+        "ai.saywhatwant.app"
       ],
       "note": "These limits are enforced at the Cloudflare Worker API level. Exempt IPs/domains have no rate limits."
     }
