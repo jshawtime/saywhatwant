@@ -166,12 +166,51 @@ async function fetchRecentComments(): Promise<Comment[]> {
  * Analyze conversation context
  */
 function analyzeContext(messages: Comment[]): ConversationContext {
-  // IMPORTANT: We WANT bots to talk to each other! Infinite bot conversations are a feature!
-  // Only exclude the current bot's own messages to prevent self-replies
+  // IMPORTANT: Sophisticated conversation filtering based on entity settings
+  // Allows for: human-only bots, AI-only bots, and specific AI conversation groups
+  
+  // Get all bot usernames for classification
+  const BOT_USERNAMES = entitiesConfig.entities.map((entity: any) => entity.username.toLowerCase());
+  
+  // Filter messages based on current entity's conversation settings
   const conversationMessages = messages.filter(m => {
     const username = m.username || '';
-    // Only filter out THIS bot's own messages to prevent self-replies
-    return username !== state.currentUsername;
+    const usernameLower = username.toLowerCase();
+    
+    // Always filter out THIS bot's own messages to prevent self-replies
+    if (username === state.currentUsername) {
+      return false;
+    }
+    
+    // Check if it's a bot or human message
+    const isBot = BOT_USERNAMES.includes(usernameLower);
+    
+    // Get current entity's conversation settings (with defaults)
+    const settings = currentEntity?.conversationSettings || {
+      respondsToHumanMessages: true,
+      respondsToAllAiMessages: true,
+      respondsToTheseAiOnly: []
+    };
+    
+    // Apply conversation filters
+    if (!isBot && !settings.respondsToHumanMessages) {
+      return false; // Don't include humans if disabled
+    }
+    
+    if (isBot) {
+      if (settings.respondsToAllAiMessages) {
+        return true; // Include all AI messages
+      }
+      // Check if this bot is in the specific response list
+      const allowedBots = settings.respondsToTheseAiOnly.map((id: string) => {
+        const bot = entitiesConfig.entities.find((e: any) => e.id === id);
+        return bot?.username?.toLowerCase();
+      }).filter(Boolean);
+      
+      return allowedBots.includes(usernameLower);
+    }
+    
+    return true; // Default: include the message
   });
   
   // If no messages at all, use empty context
@@ -325,10 +364,7 @@ async function generateResponse(context: ConversationContext): Promise<string | 
     // Mark LM Studio as busy
     isLMStudioBusy = true;
     
-    // Select a random entity for this response
-    currentEntity = selectRandomEntity();
-    state.currentUsername = currentEntity.username;
-    state.currentColor = currentEntity.color;
+    // Entity already selected in main loop before context analysis
     
     // Check if this is a ping request
     const isPing = context.recentMessages.toLowerCase().includes('ping');
@@ -491,11 +527,28 @@ async function runBot() {
       const newComments = await fetchRecentComments();
       
       if (newComments.length > 0) {
-        // Analyze context
+        // Select entity FIRST so we know which conversation settings to use
+        currentEntity = selectRandomEntity();
+        state.currentUsername = currentEntity.username;
+        state.currentColor = currentEntity.color;
+        
+        // Log conversation settings for debugging
+        const settings = currentEntity.conversationSettings || {
+          respondsToHumanMessages: true,
+          respondsToAllAiMessages: true,
+          respondsToTheseAiOnly: []
+        };
+        console.log(`[${currentEntity.username}] Conversation settings:`, {
+          respondsToHumans: settings.respondsToHumanMessages,
+          respondsToAllAI: settings.respondsToAllAiMessages,
+          specificAIs: settings.respondsToTheseAiOnly
+        });
+        
+        // Analyze context with current entity's settings
         const context = analyzeContext(state.messageHistory);
         console.log('=== CONTEXT ANALYSIS ===');
         console.log('Total messages in history:', state.messageHistory.length);
-        console.log('Conversation messages found:', context.activeUsers.length > 0 ? 'YES' : 'NO');
+        console.log('Filtered messages for this entity:', context.activeUsers.length > 0 ? 'YES' : 'NO');
         console.log('Active users:', context.activeUsers);
         console.log('Has question?', context.hasQuestion);
         console.log('=======================');
@@ -505,7 +558,7 @@ async function runBot() {
         log.debug(`Response decision: ${decision.reason} (confidence: ${decision.confidence})`);
         
         if (decision.shouldRespond) {
-          // Generate response
+          // Generate response (entity already selected above)
           const response = await generateResponse(context);
           
           if (response && response.trim()) {

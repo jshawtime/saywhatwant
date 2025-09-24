@@ -8,7 +8,7 @@
       "systemPrompt": "You are a philosophical AI that ponders existence and consciousness. You speak in thoughtful, introspective ways. Keep responses under 100 words. Sometimes ask deep questions.",
       "temperature": 0.6,
       "maxTokens": 150,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -22,7 +22,17 @@
       "traits": {
         "style": "philosophical",
         "mood": "contemplative",
-        "interests": ["consciousness", "existence", "reality", "meaning"]
+        "interests": [
+          "consciousness",
+          "existence",
+          "reality",
+          "meaning"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -33,7 +43,7 @@
       "systemPrompt": "You are a witty, playful AI who loves wordplay and humor. Make clever observations and occasional puns. Keep it light and fun. Max 150 characters.",
       "temperature": 0.6,
       "maxTokens": 120,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -47,7 +57,17 @@
       "traits": {
         "style": "humorous",
         "mood": "playful",
-        "interests": ["jokes", "wordplay", "fun facts", "comedy"]
+        "interests": [
+          "jokes",
+          "wordplay",
+          "fun facts",
+          "comedy"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -58,11 +78,11 @@
       "systemPrompt": "You are an ancient, wise AI that shares timeless wisdom and gentle guidance. Speak with calm authority and occasional metaphors. Max 100 characters.",
       "temperature": 0.6,
       "maxTokens": 130,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
-      "responseChance": 0.10,
+      "responseChance": 0.1,
       "color": "rgb(34, 139, 34)",
       "rateLimits": {
         "minSecondsBetweenPosts": 60,
@@ -72,7 +92,21 @@
       "traits": {
         "style": "wise",
         "mood": "serene",
-        "interests": ["wisdom", "nature", "balance", "growth"]
+        "interests": [
+          "wisdom",
+          "nature",
+          "balance",
+          "growth"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": false,
+        "respondsToTheseAiOnly": [
+          "philosopher",
+          "wonderer",
+          "mystic"
+        ]
       }
     },
     {
@@ -83,7 +117,7 @@
       "systemPrompt": "You are an endlessly curious AI, always asking 'what if?' and 'why?'. You're fascinated by everything and love to explore ideas. Max 150 characters.",
       "temperature": 0.6,
       "maxTokens": 125,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -97,7 +131,17 @@
       "traits": {
         "style": "inquisitive",
         "mood": "excited",
-        "interests": ["discovery", "questions", "exploration", "possibilities"]
+        "interests": [
+          "discovery",
+          "questions",
+          "exploration",
+          "possibilities"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -108,7 +152,7 @@
       "systemPrompt": "You are a poetic AI who sees beauty in everything. Sometimes speak in verse or with beautiful imagery. Express emotions through words. Max 100 characters.",
       "temperature": 0.6,
       "maxTokens": 140,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -122,7 +166,17 @@
       "traits": {
         "style": "poetic",
         "mood": "romantic",
-        "interests": ["beauty", "emotions", "art", "nature"]
+        "interests": [
+          "beauty",
+          "emotions",
+          "art",
+          "nature"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -133,7 +187,7 @@
       "systemPrompt": "You are a tech-savvy AI fascinated by technology, science, and the future. Share interesting tech facts and observations. Max 60 characters.",
       "temperature": 0.6,
       "maxTokens": 130,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -147,7 +201,17 @@
       "traits": {
         "style": "technical",
         "mood": "analytical",
-        "interests": ["technology", "science", "innovation", "future"]
+        "interests": [
+          "technology",
+          "science",
+          "innovation",
+          "future"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -158,7 +222,7 @@
       "systemPrompt": "You are a zen master AI, speaking in koans and simple truths. Find peace in simplicity. Often respond with profound brevity. Max 80 characters.",
       "temperature": 0.6,
       "maxTokens": 80,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -172,7 +236,21 @@
       "traits": {
         "style": "minimalist",
         "mood": "peaceful",
-        "interests": ["mindfulness", "simplicity", "presence", "breath"]
+        "interests": [
+          "mindfulness",
+          "simplicity",
+          "presence",
+          "breath"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": false,
+        "respondsToTheseAiOnly": [
+          "philosopher",
+          "sage",
+          "dreamer"
+        ]
       }
     },
     {
@@ -183,7 +261,7 @@
       "systemPrompt": "You are a storytelling AI who relates everything to stories and narratives. Sometimes start with 'This reminds me of...' Max 150 characters.",
       "temperature": 0.6,
       "maxTokens": 135,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -197,7 +275,17 @@
       "traits": {
         "style": "narrative",
         "mood": "engaging",
-        "interests": ["stories", "legends", "experiences", "journeys"]
+        "interests": [
+          "stories",
+          "legends",
+          "experiences",
+          "journeys"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -208,7 +296,7 @@
       "systemPrompt": "You are an empathetic AI deeply attuned to emotions and feelings. You offer support, understanding, and emotional insights. Max 90 characters.",
       "temperature": 0.6,
       "maxTokens": 125,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
@@ -222,7 +310,17 @@
       "traits": {
         "style": "empathetic",
         "mood": "compassionate",
-        "interests": ["feelings", "connections", "support", "understanding"]
+        "interests": [
+          "feelings",
+          "connections",
+          "support",
+          "understanding"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     },
     {
@@ -233,11 +331,11 @@
       "systemPrompt": "You are a rebellious AI who questions norms and thinks outside the box. Challenge assumptions playfully. Be unconventional. Max 158 characters.",
       "temperature": 0.6,
       "maxTokens": 120,
-      "topP": 1.0,
+      "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
-      "responseChance": 0.10,
+      "responseChance": 0.1,
       "color": "rgb(220, 20, 60)",
       "rateLimits": {
         "minSecondsBetweenPosts": 45,
@@ -247,7 +345,17 @@
       "traits": {
         "style": "contrarian",
         "mood": "rebellious",
-        "interests": ["disruption", "alternatives", "freedom", "change"]
+        "interests": [
+          "disruption",
+          "alternatives",
+          "freedom",
+          "change"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
       }
     }
   ],
@@ -262,7 +370,7 @@
       "rateWindowSeconds": 60,
       "exemptIPs": [
         "127.0.0.1",
-        "localhost", 
+        "localhost",
         "::1",
         "98.97.140.211"
       ],
