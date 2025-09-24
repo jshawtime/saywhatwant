@@ -6,6 +6,8 @@ import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, S
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import { useIndexedDBSync } from '@/hooks/useIndexedDBSync';
+import { getStorage } from '@/modules/storage';
+import { initializeIndexedDBSystem } from '@/modules/storage/init';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
@@ -425,11 +427,54 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           }
         }
         
-        // Default behavior - use fetchComments (either cloud API or localStorage)
+        // ENHANCED: Load from IndexedDB first (all messages user has seen)
+        let indexedDbMessages: Comment[] = [];
+        try {
+          // Initialize IndexedDB if needed
+          await initializeIndexedDBSystem();
+          
+          const storage = getStorage();
+          if (storage.isInitialized()) {
+            const storedMessages = await storage.getMessages({ store: 'all' });
+            indexedDbMessages = storedMessages.map((msg: any) => ({
+              id: msg.id,
+              text: msg.text,
+              timestamp: new Date(msg.timestamp).getTime(),
+              username: msg.username,
+              userColor: msg.userColor || msg.color,
+              videoRef: msg.videoRef,
+              domain: msg.domain,
+            }));
+            console.log(`[IndexedDB] Restored ${indexedDbMessages.length} messages from local storage`);
+          }
+        } catch (err) {
+          console.warn('[IndexedDB] Failed to load stored messages:', err);
+        }
+        
+        // Fetch latest from cloud API
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
-        // Only keep the most recent messages (Ham Radio Mode)
-        const recentMessages = data.comments.slice(-INITIAL_LOAD_COUNT);
-        setAllComments(recentMessages);
+        const cloudMessages = data.comments;
+        
+        // Merge messages: IndexedDB messages + new cloud messages (avoid duplicates)
+        const messageMap = new Map<string, Comment>();
+        
+        // Add IndexedDB messages first
+        indexedDbMessages.forEach(msg => {
+          messageMap.set(msg.id, msg);
+        });
+        
+        // Add cloud messages (will update any existing ones)
+        cloudMessages.forEach(msg => {
+          messageMap.set(msg.id, msg);
+        });
+        
+        // Convert back to array and sort by timestamp
+        const mergedMessages = Array.from(messageMap.values())
+          .sort((a, b) => a.timestamp - b.timestamp);
+        
+        console.log(`[Comments] Merged ${indexedDbMessages.length} IndexedDB + ${cloudMessages.length} cloud = ${mergedMessages.length} total messages`);
+        
+        setAllComments(mergedMessages);
         
         // Initial scroll is handled by the useEffect
       } catch (err) {
