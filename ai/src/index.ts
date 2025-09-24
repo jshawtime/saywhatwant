@@ -9,21 +9,75 @@ import fetch from 'node-fetch';
 import chalk from 'chalk';
 import { CONFIG, SYSTEM_PROMPT, USERNAME_POOL, COLOR_POOL } from './config.js';
 import { Comment, CommentsResponse, BotState, ResponseDecision, ConversationContext } from './types.js';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { logger } from './console-logger.js';
 
-// Initialize OpenAI client for LM Studio
+// Load AI entities configuration
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const entitiesConfigPath = join(__dirname, '..', 'config-aientities.json');
+let entitiesConfig: any;
+
+try {
+  const configData = readFileSync(entitiesConfigPath, 'utf-8');
+  entitiesConfig = JSON.parse(configData);
+  console.log(chalk.green('[CONFIG]'), `Loaded ${entitiesConfig.entities.length} AI entities`);
+} catch (err) {
+  console.error(chalk.red('[ERROR]'), 'Failed to load config-aientities.json:', err);
+  process.exit(1);
+}
+
+// Initialize OpenAI client for LM Studio with timeout
 const lmStudio = new OpenAI({
   baseURL: `${CONFIG.LM_STUDIO.baseURL}/v1`,
   apiKey: CONFIG.LM_STUDIO.apiKey,
+  timeout: 30000, // 30 second timeout
+  maxRetries: 2,   // Retry up to 2 times if busy
 });
+
+// Track if LM Studio is currently processing
+let isLMStudioBusy = false;
+
+// Track rate limits per entity
+const entityRateLimits: { [entityId: string]: { 
+  lastPostTime: number;
+  postsThisMinute: number;
+  postsThisHour: number;
+  minuteResetTime: number;
+  hourResetTime: number;
+}} = {};
+
+// Initialize rate limits for all entities
+entitiesConfig.entities.forEach((entity: any) => {
+  entityRateLimits[entity.id] = {
+    lastPostTime: 0,
+    postsThisMinute: 0,
+    postsThisHour: 0,
+    minuteResetTime: Date.now() + 60000,
+    hourResetTime: Date.now() + 3600000
+  };
+});
+
+// Select random entity for initialization (only enabled ones)
+const selectRandomEntity = () => {
+  const enabledEntities = entitiesConfig.entities.filter((e: any) => e.enabled !== false);
+  if (enabledEntities.length === 0) {
+    console.error(chalk.red('[ERROR]'), 'No enabled entities found!');
+    process.exit(1);
+  }
+  return enabledEntities[Math.floor(Math.random() * enabledEntities.length)];
+};
+
+let currentEntity = selectRandomEntity();
 
 // Bot state
 const state: BotState = {
   lastMessageTimestamp: Date.now(),
   lastResponseTime: 0,
   messageHistory: [],
-  currentUsername: CONFIG.BOT.defaultUsername,
-  currentColor: COLOR_POOL[0],
+  currentUsername: currentEntity.username,
+  currentColor: currentEntity.color,
   messagesThisMinute: 0,
   minuteResetTime: Date.now() + 60000,
   consecutiveSilence: 0,
@@ -194,20 +248,36 @@ function shouldRespond(context: ConversationContext): ResponseDecision {
     return { shouldRespond: false, reason: 'No human messages to respond to', confidence: 0 };
   }
   
-  // Check rate limiting (per minute)
-  if (Date.now() > state.minuteResetTime) {
-    state.messagesThisMinute = 0;
-    state.minuteResetTime = Date.now() + 60000;
+  // Check entity-specific rate limits
+  const entityLimits = entityRateLimits[currentEntity.id];
+  const now = Date.now();
+  
+  // Reset minute counter if needed
+  if (now > entityLimits.minuteResetTime) {
+    entityLimits.postsThisMinute = 0;
+    entityLimits.minuteResetTime = now + 60000;
   }
   
-  if (state.messagesThisMinute >= CONFIG.BOT.maxMessagesPerMinute) {
-    return { shouldRespond: false, reason: 'Rate limit exceeded', confidence: 0 };
+  // Reset hour counter if needed
+  if (now > entityLimits.hourResetTime) {
+    entityLimits.postsThisHour = 0;
+    entityLimits.hourResetTime = now + 3600000;
   }
   
-  // Check minimum time between messages
-  const timeSinceLastMessage = Date.now() - state.lastResponseTime;
-  if (timeSinceLastMessage < CONFIG.BOT.minTimeBetweenMessages) {
-    return { shouldRespond: false, reason: 'Too soon after last message', confidence: 0 };
+  // Check per-minute limit for this entity
+  if (entityLimits.postsThisMinute >= currentEntity.rateLimits.maxPostsPerMinute) {
+    return { shouldRespond: false, reason: `${currentEntity.username} rate limit (minute) exceeded`, confidence: 0 };
+  }
+  
+  // Check per-hour limit for this entity
+  if (entityLimits.postsThisHour >= currentEntity.rateLimits.maxPostsPerHour) {
+    return { shouldRespond: false, reason: `${currentEntity.username} rate limit (hour) exceeded`, confidence: 0 };
+  }
+  
+  // Check minimum time between posts for this entity
+  const timeSinceLastPost = now - entityLimits.lastPostTime;
+  if (timeSinceLastPost < (currentEntity.rateLimits.minSecondsBetweenPosts * 1000)) {
+    return { shouldRespond: false, reason: `${currentEntity.username} posted too recently`, confidence: 0 };
   }
   
   // High priority: Direct mention
@@ -221,15 +291,15 @@ function shouldRespond(context: ConversationContext): ResponseDecision {
     return { shouldRespond: true, reason: 'Question detected', confidence };
   }
   
-  // Low priority: Random engagement
+  // Low priority: Random engagement based on current entity's response chance
   const randomChance = Math.random();
-  if (randomChance < CONFIG.BOT.respondToProbability) {
+  if (randomChance < currentEntity.responseChance) {
     // Less likely to respond if busy
     const adjustedChance = context.activityLevel === 'busy' ? 
-      CONFIG.BOT.respondToProbability * 0.5 : CONFIG.BOT.respondToProbability;
+      currentEntity.responseChance * 0.5 : currentEntity.responseChance;
     
     if (randomChance < adjustedChance) {
-      return { shouldRespond: true, reason: 'Random engagement', confidence: 0.3 };
+      return { shouldRespond: true, reason: `${currentEntity.username} wants to engage`, confidence: 0.3 };
     }
   }
   
@@ -247,30 +317,41 @@ function shouldRespond(context: ConversationContext): ResponseDecision {
  * Generate response using LM Studio
  */
 async function generateResponse(context: ConversationContext): Promise<string | null> {
+  // Check if LM Studio is busy
+  if (isLMStudioBusy) {
+    log.debug('LM Studio is busy, skipping this cycle');
+    return null;
+  }
+  
   try {
-    // Build the system prompt with current context
-    const systemPrompt = SYSTEM_PROMPT
-      .replace('{username}', state.currentUsername)
-      .replace('{color}', state.currentColor)
-      .replace('{time}', new Date().toLocaleTimeString())
-      .replace('{topics}', context.topics.join(', ') || 'general chat')
-      .replace('{activeUsers}', context.activeUsers.join(', ') || 'various users')
-      .replace('{activityLevel}', context.activityLevel)
-      .replace('{recentMessages}', context.recentMessages);
+    // Mark LM Studio as busy
+    isLMStudioBusy = true;
     
-    log.debug('Generating response with LM Studio...');
+    // Select a random entity for this response
+    currentEntity = selectRandomEntity();
+    state.currentUsername = currentEntity.username;
+    state.currentColor = currentEntity.color;
+    
+    // Build the context-aware prompt
+    const contextInfo = `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}\nTopics: ${context.topics.join(', ')}`;
+    const fullPrompt = currentEntity.systemPrompt + contextInfo;
+    
+    log.debug(`Generating response as ${currentEntity.username} (${currentEntity.id}) using model: ${currentEntity.model}`);
     
     const completion = await lmStudio.chat.completions.create({
-      model: CONFIG.LM_STUDIO.model,
+      model: currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Generate a response based on the conversation context. Reply with [SKIP] if you choose not to respond.' }
+        { role: 'system', content: fullPrompt },
+        { role: 'user', content: 'Generate a response based on the conversation context. Keep it natural and conversational.' }
       ],
-      temperature: CONFIG.LM_STUDIO.temperature,
-      max_tokens: CONFIG.LM_STUDIO.maxTokens,
-      top_p: CONFIG.LM_STUDIO.topP,
-      frequency_penalty: CONFIG.LM_STUDIO.frequencyPenalty,
-      presence_penalty: CONFIG.LM_STUDIO.presencePenalty,
+      temperature: currentEntity.temperature,
+      max_tokens: currentEntity.maxTokens,
+      top_p: currentEntity.topP,
+      top_k: currentEntity.topK || 40,
+      repeat_penalty: currentEntity.repeatPenalty || 1.42,
+      min_p: currentEntity.minP || 0,
+      frequency_penalty: 0.3,
+      presence_penalty: 0.3,
     });
     
     const response = completion.choices[0]?.message?.content || null;
@@ -281,27 +362,23 @@ async function generateResponse(context: ConversationContext): Promise<string | 
       return null;
     }
     
-    // Occasionally change username
-    if (CONFIG.BOT.allowUsernameChange && Math.random() < CONFIG.BOT.usernameChangeFrequency) {
-      const newUsername = USERNAME_POOL[Math.floor(Math.random() * USERNAME_POOL.length)];
-      if (newUsername !== state.currentUsername) {
-        log.info(`Changing username from ${state.currentUsername} to ${newUsername}`);
-        state.currentUsername = newUsername;
-      }
-    }
+    // Entity is now randomly selected for each response in generateResponse()
+    // No need to change username/color here anymore
     
-    // Occasionally change color
-    if (CONFIG.BOT.allowColorChange && Math.random() < CONFIG.BOT.colorChangeFrequency) {
-      const newColor = COLOR_POOL[Math.floor(Math.random() * COLOR_POOL.length)];
-      if (newColor !== state.currentColor) {
-        log.info(`Changing color from ${state.currentColor} to ${newColor}`);
-        state.currentColor = newColor;
-      }
-    }
-    
+    isLMStudioBusy = false; // Mark as not busy
     return response;
-  } catch (error) {
-    log.error(`Failed to generate response: ${error}`);
+  } catch (error: any) {
+    isLMStudioBusy = false; // Mark as not busy even on error
+    // Check if LM Studio is busy or timeout
+    if (error.message?.includes('timeout') || error.message?.includes('ECONNREFUSED')) {
+      log.warn(`LM Studio busy/timeout for ${currentEntity.username}, will retry next cycle`);
+    } else if (error.status === 503 || error.status === 429) {
+      log.warn(`LM Studio overloaded (${error.status}), backing off...`);
+      // Add exponential backoff
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    } else {
+      log.error(`Failed to generate response: ${error}`);
+    }
     return null;
   }
 }
@@ -362,6 +439,12 @@ async function postComment(text: string): Promise<boolean> {
     state.messagesThisMinute++;
     state.consecutiveSilence = 0;
     
+    // Update entity-specific rate limits
+    const entityLimits = entityRateLimits[currentEntity.id];
+    entityLimits.lastPostTime = Date.now();
+    entityLimits.postsThisMinute++;
+    entityLimits.postsThisHour++;
+    
     return true;
   } catch (error) {
     log.error(`Failed to post comment: ${error}`);
@@ -373,16 +456,17 @@ async function postComment(text: string): Promise<boolean> {
  * Main polling loop
  */
 async function runBot() {
+  const entityNames = entitiesConfig.entities.map(e => e.username).slice(0, 3).join(', ');
   log.info(chalk.bold.cyan(`
 ╔════════════════════════════════════════╗
-║     Say What Want AI Bot Starting      ║
+║     Say What Want AI Entities          ║
 ╠════════════════════════════════════════╣
 ║ LM Studio: ${CONFIG.LM_STUDIO.baseURL.padEnd(28)}║
-║ Model: ${CONFIG.LM_STUDIO.model.padEnd(33)}║
+║ Model: ${entitiesConfig.globalSettings.defaultModel.padEnd(33)}║
 ║ API: ${CONFIG.SWW_API.baseURL.padEnd(35)}║
 ║ Mode: ${CONFIG.DEV.dryRun ? 'DRY RUN' : 'LIVE 🔴'.padEnd(34)}║
-║ Rate Limit: ${String(CONFIG.BOT.maxMessagesPerMinute + ' msgs/min').padEnd(28)}║
-║ Response %: ${String(CONFIG.BOT.respondToProbability * 100 + '%').padEnd(28)}║
+║ Entities: ${String(entitiesConfig.entities.length + ' loaded').padEnd(29)}║
+║ Active: ${entityNames.padEnd(31)}║
 ╚════════════════════════════════════════╝
   `));
   
