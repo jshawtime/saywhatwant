@@ -691,6 +691,9 @@
                 return;
             }
             
+            // Track current view for auto-refresh
+            currentMessageView = type;
+            
             log(`Loading ${type} messages...`, 'info');
             
             try {
@@ -1060,12 +1063,18 @@
             document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
         }
 
+        // Track current message view
+        let currentMessageView = null;
+        
         // Auto-refresh
         setInterval(() => {
             updateTimestamp();
             updateStorageStats();
             if (currentTab === 'filters') {
                 updateMessageCounts();
+            } else if (currentTab === 'messages' && currentMessageView) {
+                // Refresh messages if we're viewing them
+                loadMessages(currentMessageView);
             }
         }, 5000);
 

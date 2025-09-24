@@ -568,27 +568,34 @@ export class IndexedDBProvider implements StorageProvider {
   
   async performCleanup(): Promise<{ deletedMessages: number; removedFilters: number }> {
     const storageInfo = await this.getStorageInfo();
-    const usagePercent = (storageInfo.usage / STORAGE_LIMIT) * 100;
+    const usageBytes = storageInfo.usage;
     
     let deletedMessages = 0;
     let removedFilters = 0;
     
-    // If over 80% capacity, start cleanup
-    if (usagePercent > 80) {
+    // If over 1GB (STORAGE_LIMIT), start cleanup
+    if (usageBytes > STORAGE_LIMIT) {
+      console.log(`[IndexedDB] Storage at ${(usageBytes / 1024 / 1024).toFixed(2)}MB, starting cleanup...`);
+      
+      // Calculate how many messages to delete (~10MB worth)
+      const TARGET_DELETE_BYTES = 10 * 1024 * 1024; // 10MB
+      const avgMessageSize = 500; // Assume ~500 bytes per message
+      const messagesToDelete = Math.ceil(TARGET_DELETE_BYTES / avgMessageSize);
+      
       // Step 1: Delete oldest permanent messages
       if (this.db) {
         const transaction = this.db.transaction([STORES.MESSAGES_PERM], 'readwrite');
         const store = transaction.objectStore(STORES.MESSAGES_PERM);
         const index = store.index(INDEXES.MESSAGES.TIMESTAMP);
         
-        // Delete oldest 1000 messages
+        // Delete oldest messages (approx 10MB worth)
         const request = index.openCursor();
         let count = 0;
         
         await new Promise((resolve, reject) => {
           request.onsuccess = (event) => {
             const cursor = (event.target as IDBRequest).result;
-            if (cursor && count < 1000) {
+            if (cursor && count < messagesToDelete) {
               cursor.delete();
               count++;
               deletedMessages++;
@@ -601,11 +608,10 @@ export class IndexedDBProvider implements StorageProvider {
         });
       }
       
-      // Step 2: If still over 90%, remove least-matched filters
+      // Step 2: If still over 1GB after deletion, remove least-matched filters
       const newStorageInfo = await this.getStorageInfo();
-      const newUsagePercent = (newStorageInfo.usage / STORAGE_LIMIT) * 100;
       
-      if (newUsagePercent > 90) {
+      if (newStorageInfo.usage > STORAGE_LIMIT) {
         const stats = await this.getFilterStats();
         
         // Sort by efficiency score
