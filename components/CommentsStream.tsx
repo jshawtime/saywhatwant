@@ -687,10 +687,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Only for mobile devices
     if (window.innerWidth > 768) return;
     
-    let isKeyboardVisible = false;
+    let lastKnownKeyboardHeight = 0;
     let resizeTimer: NodeJS.Timeout;
     
-    const adjustForKeyboard = () => {
+    const adjustForKeyboard = (forceAdjust = false) => {
       const inputForm = document.querySelector('.mobile-input-form') as HTMLElement;
       const messagesContainer = streamRef.current;
       
@@ -701,9 +701,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       const windowHeight = window.innerHeight;
       const keyboardHeight = windowHeight - viewportHeight;
       
-      if (keyboardHeight > 50 && !isKeyboardVisible) {
-        // Keyboard is opening
-        isKeyboardVisible = true;
+      // Check if keyboard state changed or force adjustment on focus
+      const keyboardIsOpen = keyboardHeight > 50;
+      const keyboardStateChanged = Math.abs(keyboardHeight - lastKnownKeyboardHeight) > 30;
+      
+      if (keyboardIsOpen && (keyboardStateChanged || forceAdjust)) {
+        // Keyboard is open - adjust layout
+        lastKnownKeyboardHeight = keyboardHeight;
         
         // Make input fixed at bottom
         inputForm.style.position = 'fixed';
@@ -720,9 +724,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }, 100);
         
-      } else if (keyboardHeight <= 50 && isKeyboardVisible) {
-        // Keyboard is closing
-        isKeyboardVisible = false;
+      } else if (!keyboardIsOpen && lastKnownKeyboardHeight > 0) {
+        // Keyboard is closed - reset layout
+        lastKnownKeyboardHeight = 0;
         
         // Reset styles
         inputForm.style.position = '';
@@ -738,21 +742,21 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       const target = e.target as HTMLElement;
       // Check if it's an input or textarea
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        // Small delay to let keyboard start opening
+        // Force adjustment on focus (handles case where keyboard was dismissed with native button)
         setTimeout(() => {
-          adjustForKeyboard();
+          adjustForKeyboard(true); // Force adjust
           // Ensure input is visible
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
         
         // Check again after keyboard should be fully open
-        setTimeout(adjustForKeyboard, 500);
+        setTimeout(() => adjustForKeyboard(true), 500);
       }
     };
     
     const handleFocusOut = () => {
       // Delay to let keyboard close
-      setTimeout(adjustForKeyboard, 100);
+      setTimeout(() => adjustForKeyboard(false), 100);
     };
     
     const handleViewportChange = () => {
@@ -760,7 +764,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       clearTimeout(resizeTimer);
       
       // Debounce the adjustment
-      resizeTimer = setTimeout(adjustForKeyboard, 50);
+      resizeTimer = setTimeout(() => adjustForKeyboard(false), 50);
     };
     
     // Listen for focus events
