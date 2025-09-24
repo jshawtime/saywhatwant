@@ -248,36 +248,45 @@ function shouldRespond(context: ConversationContext): ResponseDecision {
     return { shouldRespond: false, reason: 'No human messages to respond to', confidence: 0 };
   }
   
-  // Check entity-specific rate limits
-  const entityLimits = entityRateLimits[currentEntity.id];
-  const now = Date.now();
-  
-  // Reset minute counter if needed
-  if (now > entityLimits.minuteResetTime) {
-    entityLimits.postsThisMinute = 0;
-    entityLimits.minuteResetTime = now + 60000;
+  // SPECIAL CASE: Always respond to ping immediately
+  const recentText = context.recentMessages.toLowerCase();
+  if (recentText.includes('ping')) {
+    return { shouldRespond: true, reason: 'PING detected - immediate response', confidence: 1.0 };
   }
   
-  // Reset hour counter if needed
-  if (now > entityLimits.hourResetTime) {
-    entityLimits.postsThisHour = 0;
-    entityLimits.hourResetTime = now + 3600000;
-  }
-  
-  // Check per-minute limit for this entity
-  if (entityLimits.postsThisMinute >= currentEntity.rateLimits.maxPostsPerMinute) {
-    return { shouldRespond: false, reason: `${currentEntity.username} rate limit (minute) exceeded`, confidence: 0 };
-  }
-  
-  // Check per-hour limit for this entity
-  if (entityLimits.postsThisHour >= currentEntity.rateLimits.maxPostsPerHour) {
-    return { shouldRespond: false, reason: `${currentEntity.username} rate limit (hour) exceeded`, confidence: 0 };
-  }
-  
-  // Check minimum time between posts for this entity
-  const timeSinceLastPost = now - entityLimits.lastPostTime;
-  if (timeSinceLastPost < (currentEntity.rateLimits.minSecondsBetweenPosts * 1000)) {
-    return { shouldRespond: false, reason: `${currentEntity.username} posted too recently`, confidence: 0 };
+  // Skip rate limits for ping (already checked it's a ping above)
+  if (!context.recentMessages.toLowerCase().includes('ping')) {
+    // Check entity-specific rate limits
+    const entityLimits = entityRateLimits[currentEntity.id];
+    const now = Date.now();
+    
+    // Reset minute counter if needed
+    if (now > entityLimits.minuteResetTime) {
+      entityLimits.postsThisMinute = 0;
+      entityLimits.minuteResetTime = now + 60000;
+    }
+    
+    // Reset hour counter if needed
+    if (now > entityLimits.hourResetTime) {
+      entityLimits.postsThisHour = 0;
+      entityLimits.hourResetTime = now + 3600000;
+    }
+    
+    // Check per-minute limit for this entity
+    if (entityLimits.postsThisMinute >= currentEntity.rateLimits.maxPostsPerMinute) {
+      return { shouldRespond: false, reason: `${currentEntity.username} rate limit (minute) exceeded`, confidence: 0 };
+    }
+    
+    // Check per-hour limit for this entity
+    if (entityLimits.postsThisHour >= currentEntity.rateLimits.maxPostsPerHour) {
+      return { shouldRespond: false, reason: `${currentEntity.username} rate limit (hour) exceeded`, confidence: 0 };
+    }
+    
+    // Check minimum time between posts for this entity
+    const timeSinceLastPost = now - entityLimits.lastPostTime;
+    if (timeSinceLastPost < (currentEntity.rateLimits.minSecondsBetweenPosts * 1000)) {
+      return { shouldRespond: false, reason: `${currentEntity.username} posted too recently`, confidence: 0 };
+    }
   }
   
   // High priority: Direct mention
@@ -332,8 +341,13 @@ async function generateResponse(context: ConversationContext): Promise<string | 
     state.currentUsername = currentEntity.username;
     state.currentColor = currentEntity.color;
     
+    // Check if this is a ping request
+    const isPing = context.recentMessages.toLowerCase().includes('ping');
+    
     // Build the context-aware prompt
-    const contextInfo = `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}\nTopics: ${context.topics.join(', ')}`;
+    const contextInfo = isPing 
+      ? `\n\nSomeone just sent a ping! Respond briefly to acknowledge you're here and active. Context: ${context.recentMessages}`
+      : `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}\nTopics: ${context.topics.join(', ')}`;
     const fullPrompt = currentEntity.systemPrompt + contextInfo;
     
     log.debug(`Generating response as ${currentEntity.username} (${currentEntity.id}) using model: ${currentEntity.model}`);
