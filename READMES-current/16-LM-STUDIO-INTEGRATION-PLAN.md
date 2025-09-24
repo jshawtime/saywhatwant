@@ -65,13 +65,332 @@ Internet -> VPS -> VPN/SSH -> Home LM Studio
 - **Pros**: Full control, can add features
 - **Cons**: Additional infrastructure
 
-### Recommended: Cloudflare Tunnel
+### Recommended: Cloudflare Tunnel (DETAILED SETUP)
+
+## 🚀 CLOUDFLARE TUNNEL SETUP FOR LM STUDIO
+
+### Prerequisites Checklist
+- [ ] LM Studio running on localhost:1234
+- [ ] Cloudflare account (free tier works)
+- [ ] Domain name (to be registered)
+- [ ] Terminal access on LM Studio machine
+
+### SECTION A: Install Cloudflared
+
+#### macOS
 ```bash
-# Install cloudflared
-# Configure tunnel to LM Studio
-cloudflared tunnel --url http://localhost:1234
-# Creates: https://ai-bot.yourdomain.com
+# Using Homebrew
+brew install cloudflare/cloudflare/cloudflared
+
+# Or download directly
+curl -L --output cloudflared.pkg https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64.pkg
+sudo installer -pkg cloudflared.pkg -target /
 ```
+
+#### Windows
+```powershell
+# Download installer
+winget install --id Cloudflare.cloudflared
+
+# Or use direct download
+# Visit: https://github.com/cloudflare/cloudflared/releases
+# Download: cloudflared-windows-amd64.msi
+```
+
+#### Linux
+```bash
+# Debian/Ubuntu
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+sudo dpkg -i cloudflared.deb
+
+# Or using package manager
+sudo apt-get update && sudo apt-get install cloudflared
+```
+
+### SECTION B: Authenticate with Cloudflare
+
+```bash
+# Login to Cloudflare (opens browser)
+cloudflared tunnel login
+
+# This will:
+# 1. Open your browser
+# 2. Ask you to select your Cloudflare account
+# 3. Download a certificate to ~/.cloudflared/cert.pem
+# 4. Display: "You have successfully logged in"
+```
+
+### SECTION C: Create Named Tunnel
+
+```bash
+# Create a persistent tunnel (replace lm-studio-bot with your preferred name)
+cloudflared tunnel create lm-studio-bot
+
+# Output will show:
+# Tunnel credentials written to /Users/[you]/.cloudflared/[UUID].json
+# Created tunnel lm-studio-bot with id [UUID]
+
+# Save the UUID - you'll need it!
+TUNNEL_UUID="YOUR-UUID-HERE"
+```
+
+### SECTION D: Configure Tunnel
+
+```bash
+# Create config file
+cat > ~/.cloudflared/config.yml << EOF
+tunnel: $TUNNEL_UUID
+credentials-file: ~/.cloudflared/$TUNNEL_UUID.json
+
+ingress:
+  # Main LM Studio API endpoint
+  - hostname: lm-api.yourdomain.com
+    service: http://localhost:1234
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      # Allow streaming responses
+      disableChunkedEncoding: false
+      
+  # Optional: Health check endpoint
+  - hostname: lm-health.yourdomain.com
+    service: http://localhost:1234/health
+    
+  # Catch-all rule (required)
+  - service: http_status:404
+EOF
+```
+
+### SECTION E: Route DNS (After Domain Registration)
+
+```bash
+# Option 1: Automatic DNS routing (if domain is on Cloudflare)
+cloudflared tunnel route dns lm-studio-bot lm-api.yourdomain.com
+
+# Option 2: Manual CNAME (if domain is elsewhere)
+# Add CNAME record:
+# lm-api.yourdomain.com -> [UUID].cfargotunnel.com
+```
+
+### SECTION F: Run Tunnel
+
+#### Test Mode (Foreground)
+```bash
+# Run in terminal to test
+cloudflared tunnel run lm-studio-bot
+
+# You should see:
+# INF Starting tunnel tunnelID=[UUID]
+# INF Connection established connIndex=0 
+# INF Tunnel ready
+```
+
+#### Production Mode (Service)
+
+**macOS (launchd)**
+```bash
+# Install as service
+sudo cloudflared service install
+
+# Start service
+sudo launchctl start com.cloudflare.cloudflared
+
+# Check status
+sudo launchctl list | grep cloudflared
+```
+
+**Linux (systemd)**
+```bash
+# Install as service
+sudo cloudflared service install
+
+# Enable and start
+sudo systemctl enable cloudflared
+sudo systemctl start cloudflared
+
+# Check status
+sudo systemctl status cloudflared
+```
+
+**Windows (Service)**
+```powershell
+# Install as Windows service
+cloudflared service install
+
+# Start service
+sc start cloudflared
+
+# Check status
+sc query cloudflared
+```
+
+### SECTION G: Quick Setup Mode (Temporary Tunnel)
+
+For testing before domain registration:
+
+```bash
+# One-command tunnel (generates random URL)
+cloudflared tunnel --url http://localhost:1234
+
+# Output:
+# Your quick tunnel has been created! Visit:
+# https://random-name-here.trycloudflare.com
+
+# ⚠️ NOTE: URL changes each time, not for production
+```
+
+### SECTION H: Verification & Testing
+
+```bash
+# Test from outside network
+curl https://lm-api.yourdomain.com/v1/models
+
+# Expected response:
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "local-model",
+      "object": "model",
+      "owned_by": "local"
+    }
+  ]
+}
+
+# Test chat completion
+curl https://lm-api.yourdomain.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "local-model",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "temperature": 0.7
+  }'
+```
+
+### SECTION I: Security Configuration
+
+```yaml
+# Enhanced config.yml with security
+tunnel: $TUNNEL_UUID
+credentials-file: ~/.cloudflared/$TUNNEL_UUID.json
+
+ingress:
+  - hostname: lm-api.yourdomain.com
+    service: http://localhost:1234
+    originRequest:
+      # Security headers
+      httpHostHeader: "localhost"
+      originServerName: "localhost"
+      noTLSVerify: true
+      
+      # Timeouts
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      
+      # Access control (optional)
+      # caPool: /path/to/ca.pem
+      # clientCert:
+      #   cert: /path/to/cert.pem
+      #   key: /path/to/key.pem
+      
+  - service: http_status:404
+
+# Optional: Access policies (requires Cloudflare Access)
+# access:
+#   - hostname: lm-api.yourdomain.com
+#     policies:
+#       - allow:
+#           email: ["your@email.com"]
+```
+
+### SECTION J: Monitoring & Maintenance
+
+```bash
+# View tunnel status
+cloudflared tunnel info lm-studio-bot
+
+# List all tunnels
+cloudflared tunnel list
+
+# View tunnel metrics (if logged in to dashboard)
+# Visit: https://one.dash.cloudflare.com/tunnels
+
+# View logs
+# macOS/Linux
+tail -f /var/log/cloudflared.log
+
+# Windows
+Get-Content C:\Windows\System32\config\systemprofile\.cloudflared\cloudflared.log -Tail 50 -Wait
+
+# Clean up tunnel (if needed)
+cloudflared tunnel cleanup lm-studio-bot
+cloudflared tunnel delete lm-studio-bot
+```
+
+### SECTION K: Bot Service Connection Configuration
+
+Once tunnel is running, update bot service to use public URL:
+
+```typescript
+// bot-service/config/production.ts
+export const LM_STUDIO_CONFIG = {
+  // Change from localhost to tunnel URL
+  baseURL: 'https://lm-api.yourdomain.com/v1',
+  
+  // No API key needed for LM Studio
+  apiKey: 'not-required',
+  
+  // Timeout for long responses
+  timeout: 30000,
+  
+  // Retry configuration
+  maxRetries: 3,
+  retryDelay: 1000
+};
+```
+
+### SECTION L: Troubleshooting Guide
+
+| Issue | Solution |
+|-------|----------|
+| "error 1001: DNS resolution error" | Domain DNS not configured, run `cloudflared tunnel route dns` |
+| "error 502: Bad Gateway" | LM Studio not running on localhost:1234 |
+| "error 524: Origin timeout" | Increase `connectTimeout` in config.yml |
+| "Unable to connect to the origin" | Check LM Studio is running and accessible |
+| "Tunnel credentials not found" | Run `cloudflared tunnel login` again |
+| "error 403: Forbidden" | Cloudflare Access policies blocking, check access rules |
+
+### DEPLOYMENT CHECKLIST FOR PRODUCTION
+
+Before going live:
+- [ ] LM Studio running with model loaded
+- [ ] Cloudflared installed and authenticated
+- [ ] Named tunnel created (not quick tunnel)
+- [ ] Domain registered and DNS configured
+- [ ] Tunnel running as system service
+- [ ] API endpoint tested from external network
+- [ ] Bot service configured with tunnel URL
+- [ ] Monitoring setup for tunnel health
+- [ ] Backup tunnel credentials saved
+- [ ] Rate limiting configured (if needed)
+
+### QUICK REFERENCE COMMANDS
+
+```bash
+# Essential commands
+cloudflared tunnel login                    # Authenticate
+cloudflared tunnel create lm-studio-bot    # Create tunnel
+cloudflared tunnel list                    # List tunnels
+cloudflared tunnel run lm-studio-bot       # Run tunnel
+cloudflared service install               # Install service
+cloudflared tunnel delete lm-studio-bot   # Delete tunnel
+
+# Testing
+curl https://lm-api.yourdomain.com/v1/models  # Test API
+cloudflared tunnel --url http://localhost:1234 # Quick test tunnel
+```
+
+---
 
 ## 4. Bot Service Architecture
 
