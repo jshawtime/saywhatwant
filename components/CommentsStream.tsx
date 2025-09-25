@@ -1166,6 +1166,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               <h2 
                 onContextMenu={handleTitleContextMenu}
                 className="sww-title transition-opacity cursor-pointer select-none" 
+                title={domainFilterEnabled ? "Messages from this website | Right click more options" : "Global message stream | Right click more options"}
                 style={{ 
                   color: userColor,
                   opacity: domainFilterEnabled ? 0.4 : 0.25, // Simple opacity change
@@ -1194,7 +1195,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 <span 
                   className="text-xs mr-2 opacity-60" 
                   style={{ color: userColor }}
-                  title={`Total messages: ${messageCount.toLocaleString()}`}
+                  title="Total global messages"
                 >
                   {formatNumber(messageCount)}
                 </span>
@@ -1423,6 +1424,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   onTouchEnd={handleTouchEnd}
                   onTouchMove={handleTouchEnd}
                   className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer select-none" 
+                  title={`Click to filter by ${comment.username || 'Anonymous'} | Right click more options`}
                   style={{ 
                     lineHeight: '20px',
                     color: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.LIGHT)  // Use generated color for consistency
@@ -1440,6 +1442,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     onTouchEnd={handleTouchEnd}
                     onTouchMove={handleTouchEnd}
                     className="text-sm leading-snug break-all overflow-wrap-anywhere" 
+                    title="Click to filter by word | Right click more options"
                     style={{ 
                       lineHeight: '20px',
                       color: getCommentColor(comment) // Use actual or generated color
