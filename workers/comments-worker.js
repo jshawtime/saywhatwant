@@ -30,6 +30,7 @@ const EXEMPT_DOMAINS = [
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 12;
 const CACHE_SIZE = 500;       // Keep last 500 comments in cache (reduced from 5000 to avoid KV size limits)
+const MESSAGE_COUNT_BATCH = 100; // Batch counter updates every 100 messages
 
 /**
  * Generate a random RGB color using sophisticated range-based generation
@@ -60,6 +61,10 @@ function generateRandomRGB() {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+// In-memory counter for batching (persists for worker lifetime)
+let messageCounter = 0;
+let lastKnownTotal = null;
+
 /**
  * Main request handler
  */
@@ -86,6 +91,11 @@ export default {
             headers: corsHeaders 
           });
       }
+    }
+    
+    // Stats endpoint
+    if (path === '/api/stats') {
+      return await handleGetStats(env);
     }
 
     return new Response('Not found', { 
@@ -404,6 +414,9 @@ async function handlePostComment(request, env) {
 
     // Update recent comments cache
     await addToCache(env, comment);
+    
+    // Update message counter (batched for efficiency)
+    await updateMessageCounter(env);
 
     // Log for monitoring
     console.log(`[Comments] New comment from ${ip}: "${text.substring(0, 50)}..."`);
@@ -573,4 +586,72 @@ function sanitizeUsername(username) {
   
   const cleaned = username.trim().substring(0, MAX_USERNAME_LENGTH);
   return cleaned.length > 0 ? cleaned : undefined;
+}
+
+/**
+ * Update message counter with batching
+ */
+async function updateMessageCounter(env) {
+  try {
+    // Increment in-memory counter
+    messageCounter++;
+    
+    // Initialize lastKnownTotal if needed
+    if (lastKnownTotal === null) {
+      const stored = await env.COMMENTS_KV.get('stats:totalMessages');
+      lastKnownTotal = stored ? parseInt(stored, 10) : 0;
+    }
+    
+    // Update KV every MESSAGE_COUNT_BATCH messages
+    if (messageCounter >= MESSAGE_COUNT_BATCH) {
+      const newTotal = lastKnownTotal + messageCounter;
+      await env.COMMENTS_KV.put('stats:totalMessages', newTotal.toString());
+      
+      console.log(`[Stats] Updated total message count: ${newTotal}`);
+      
+      // Reset counter and update last known total
+      lastKnownTotal = newTotal;
+      messageCounter = 0;
+    }
+  } catch (error) {
+    console.error('[Stats] Failed to update message counter:', error);
+    // Don't throw - let the message still be posted
+  }
+}
+
+/**
+ * Get statistics including total message count
+ */
+async function handleGetStats(env) {
+  try {
+    // Get the stored total
+    const stored = await env.COMMENTS_KV.get('stats:totalMessages');
+    const storedTotal = stored ? parseInt(stored, 10) : 0;
+    
+    // Add the current in-memory counter
+    const totalMessages = storedTotal + messageCounter;
+    
+    return new Response(JSON.stringify({
+      totalMessages,
+      // Can add more stats here in the future
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60' // Cache for 1 minute
+      }
+    });
+  } catch (error) {
+    console.error('[Stats] Failed to get stats:', error);
+    return new Response(JSON.stringify({
+      totalMessages: 0,
+      error: 'Failed to retrieve stats'
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
 }

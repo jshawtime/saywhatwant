@@ -61,7 +61,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         <button
           onClick={onToggleFilter}
           className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 cursor-pointer"
-          title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
+          title={isFilterEnabled ? 'Disable filter' : 'Enable filter | You can also bookmark to save'}
           tabIndex={-1}
         >
           <StyledFilterIcon 

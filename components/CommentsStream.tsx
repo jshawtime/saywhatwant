@@ -36,6 +36,8 @@ import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@
 import { formatTimestamp } from '@/modules/timestampSystem';
 // Import keyboard shortcuts
 import { useCommonShortcuts, useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
+// Import number formatter
+import { formatNumber } from '@/utils/formatNumber';
 // Import polling system
 import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
 // Import video sharing system
@@ -96,9 +98,34 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   } | null>(null);
   const [titleContextMenu, setTitleContextMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [messageCount, setMessageCount] = useState<number>(0);
 
   // Sync comments to IndexedDB (stores every message you see locally)
   useIndexedDBSync(allComments);
+  
+  // Fetch message count every 5 minutes
+  useEffect(() => {
+    const fetchMessageCount = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_COMMENTS_API_URL || 'https://sww-comments.bootloaders.workers.dev';
+        const response = await fetch(`${baseUrl}/api/stats`);
+        if (response.ok) {
+          const data = await response.json();
+          setMessageCount(data.totalMessages || 0);
+        }
+      } catch (error) {
+        console.error('[MessageCounter] Failed to fetch count:', error);
+      }
+    };
+    
+    // Fetch immediately
+    fetchMessageCount();
+    
+    // Then every 5 minutes
+    const interval = setInterval(fetchMessageCount, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
@@ -1187,6 +1214,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     </button>
                   ))}
                 </div>
+              )}
+              {/* Message counter - small and subtle, inheriting user color */}
+              {messageCount > 0 && (
+                <span 
+                  className="text-xs mr-2 opacity-60" 
+                  style={{ color: userColor }}
+                  title={`Total messages: ${messageCount.toLocaleString()}`}
+                >
+                  {formatNumber(messageCount)}
+                </span>
               )}
               <StyledUsernameInput
                 inputRef={usernameRef}
