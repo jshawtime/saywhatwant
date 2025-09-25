@@ -20,6 +20,7 @@ const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = 50; // Max new messages per poll
 const MAX_USERNAME_LENGTH = 16;
+const MAX_DISPLAY_MESSAGES = 500; // Maximum messages to display at once
 const INDEXEDDB_INITIAL_LOAD = 500; // Load 500 messages from IndexedDB initially
 const INDEXEDDB_LAZY_LOAD_CHUNK = 100; // Load 100 more on each lazy load
 
@@ -150,7 +151,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     },
     {
       onOptimisticUpdate: (comment) => {
-        setAllComments(prev => [...prev, comment]);
+        setAllComments(prev => {
+          const combined = [...prev, comment];
+          return trimToMaxMessages(combined);
+        });
       },
       onOptimisticRemove: (commentId) => {
         setAllComments(prev => prev.filter(c => c.id !== commentId));
@@ -313,7 +317,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             const mergedComments = [...allComments, ...newMessages]
               .sort((a, b) => b.timestamp - a.timestamp);
               
-              setAllComments(mergedComments);
+              // Apply max display limit
+              const trimmedComments = trimToMaxMessages(mergedComments);
+              setAllComments(trimmedComments);
           } else {
             console.log('[Comments] No new messages from server search');
           }
@@ -425,8 +431,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               // Store in localStorage for consistency
               localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(comments));
               
-              setAllComments(comments);
-              console.log(`[Dev Mode] Loaded ${comments.length} comments from static JSON`);
+              // Apply max display limit even for static JSON
+              const trimmedComments = trimToMaxMessages(comments);
+              setAllComments(trimmedComments);
+              console.log(`[Dev Mode] Loaded ${trimmedComments.length} of ${comments.length} comments from static JSON`);
               
               // Initial scroll is handled by the useEffect
               
@@ -502,7 +510,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         console.log(`[Comments] Merged ${indexedDbMessages.length} IndexedDB + ${cloudMessages.length} cloud = ${mergedMessages.length} total messages`);
         
-        setAllComments(mergedMessages);
+        // Trim to max display limit (keep newest)
+        const trimmedMessages = trimToMaxMessages(mergedMessages);
+        
+        setAllComments(trimmedMessages);
         
         // Initial scroll is handled by the useEffect
       } catch (err) {
@@ -517,6 +528,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Track if we've done initial scroll
   const hasScrolledRef = useRef(false);
+  
+  // Helper to trim messages to max display limit while preserving scroll context
+  const trimToMaxMessages = useCallback((messages: Comment[], preserveOlder: boolean = false): Comment[] => {
+    if (messages.length <= MAX_DISPLAY_MESSAGES) {
+      return messages;
+    }
+    
+    if (preserveOlder) {
+      // When loading older messages, keep the oldest and trim from the end
+      const trimmed = messages.slice(0, MAX_DISPLAY_MESSAGES);
+      console.log(`[Trim] Kept oldest ${MAX_DISPLAY_MESSAGES} messages, removed ${messages.length - MAX_DISPLAY_MESSAGES} newer ones`);
+      return trimmed;
+    } else {
+      // Normal case: keep the newest messages
+      const trimmed = messages.slice(-MAX_DISPLAY_MESSAGES);
+      console.log(`[Trim] Kept newest ${MAX_DISPLAY_MESSAGES} messages, removed ${messages.length - MAX_DISPLAY_MESSAGES} older ones`);
+      // When we trim from the beginning, there are more messages available to lazy load
+      if (messages.length > MAX_DISPLAY_MESSAGES) {
+        setHasMoreInIndexedDb(true);
+      }
+      return trimmed;
+    }
+  }, []);
   
   // Load more messages from IndexedDB (for lazy loading)
   const loadMoreFromIndexedDb = useCallback(() => {
@@ -547,8 +581,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const merged = Array.from(messageMap.values())
           .sort((a, b) => a.timestamp - b.timestamp);
         
+        // Trim to max, but preserve older messages since user is scrolling up
+        const trimmed = trimToMaxMessages(merged, true);
+        
         console.log(`[IndexedDB] Loaded ${loadCount} more messages (${newOffset} remaining)`);
-        return merged;
+        return trimmed;
       });
       
       setIndexedDbOffset(newOffset);
@@ -556,7 +593,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
     
     setIsLoadingMoreFromIndexedDb(false);
-  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset]);
+  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, trimToMaxMessages]);
   
   // Scroll to bottom ONLY on initial page load when comments first arrive
   useEffect(() => {
@@ -605,11 +642,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         if (newComments.length > 0) {
           console.log(`[Cursor Polling] Found ${newComments.length} new messages after timestamp ${latestTimestamp}`);
           
-          // Just append new messages - keep ALL existing messages!
+          // Append new messages but respect max display limit
           setAllComments(prev => {
-            // Simply append new messages without limiting
-            // Users want to keep their full history visible
-            return [...prev, ...newComments];
+            const combined = [...prev, ...newComments];
+            // Trim to max limit (keep newest messages)
+            return trimToMaxMessages(combined);
           });
         }
       } else {
@@ -623,7 +660,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         if (newComments.length > 0) {
           console.log(`[LocalStorage] Found ${newComments.length} new comments`);
-          setAllComments(prev => [...prev, ...newComments]); // Append new messages without resetting!
+          setAllComments(prev => {
+            const combined = [...prev, ...newComments];
+            return trimToMaxMessages(combined); // Append but respect max limit
+          });
         }
       }
       
@@ -640,7 +680,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       } catch (err) {
         console.error('[Comments] Polling error:', err);
       }
-  }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom]);
+  }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages]);
   
   // Use the modular polling system
   useCommentsPolling({
