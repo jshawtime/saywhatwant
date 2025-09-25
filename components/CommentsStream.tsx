@@ -74,6 +74,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [hasMoreInIndexedDb, setHasMoreInIndexedDb] = useState(false);
   const [isLoadingMoreFromIndexedDb, setIsLoadingMoreFromIndexedDb] = useState(false);
   const allIndexedDbMessages = useRef<Comment[]>([]);
+  
+  // Scroll position memory for filters and search
+  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
+  const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
 
   // Sync comments to IndexedDB (stores every message you see locally)
   useIndexedDBSync(allComments);
@@ -702,30 +706,45 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   };
 
 
-  // Scroll to bottom when filters are turned off
+  // Remember and restore scroll position when toggling filters
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When filters are turned OFF (inactive), scroll to bottom to show newest messages
-    // When filters are turned ON (active), stay where you are
-    if (!isFilterEnabled) {
-      // Small delay to ensure DOM has updated with new messages
+    if (isFilterEnabled) {
+      // Filters just turned ON - save current scroll position
+      setSavedScrollPosition(streamRef.current.scrollTop);
+      console.log('[Scroll] Saved scroll position before filter activation:', streamRef.current.scrollTop);
+    } else if (savedScrollPosition !== null) {
+      // Filters just turned OFF - restore saved scroll position
       requestAnimationFrame(() => {
         if (streamRef.current) {
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-          console.log('[Scroll] Scrolled to bottom after filters turned off');
+          streamRef.current.scrollTop = savedScrollPosition;
+          console.log('[Scroll] Restored scroll position after filter deactivation:', savedScrollPosition);
+          setSavedScrollPosition(null); // Clear saved position
         }
       });
     }
-  }, [isFilterEnabled]);
+  }, [isFilterEnabled, savedScrollPosition]);
 
-  // Scroll to bottom when search is cleared (only if already near bottom)
+  // Remember and restore scroll position when using search
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When search is cleared, DON'T auto-scroll
-    // User should stay where they are
-  }, [searchTerm]);
+    if (searchTerm && !savedSearchScrollPosition) {
+      // Search just started - save current scroll position
+      setSavedSearchScrollPosition(streamRef.current.scrollTop);
+      console.log('[Scroll] Saved scroll position before search:', streamRef.current.scrollTop);
+    } else if (!searchTerm && savedSearchScrollPosition !== null) {
+      // Search just cleared - restore saved scroll position
+      requestAnimationFrame(() => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = savedSearchScrollPosition;
+          console.log('[Scroll] Restored scroll position after search cleared:', savedSearchScrollPosition);
+          setSavedSearchScrollPosition(null); // Clear saved position
+        }
+      });
+    }
+  }, [searchTerm, savedSearchScrollPosition]);
 
 
   // Handle mobile keyboard visibility - works for both iOS and Android
