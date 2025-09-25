@@ -706,8 +706,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // When filter is turned off, DON'T auto-scroll
-    // User should stay where they are
+    // When filters are turned OFF (inactive), scroll to bottom to show newest messages
+    // When filters are turned ON (active), stay where you are
+    if (!isFilterEnabled) {
+      // Small delay to ensure DOM has updated with new messages
+      requestAnimationFrame(() => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = streamRef.current.scrollHeight;
+          console.log('[Scroll] Scrolled to bottom after filters turned off');
+        }
+      });
+    }
   }, [isFilterEnabled]);
 
   // Scroll to bottom when search is cleared (only if already near bottom)
