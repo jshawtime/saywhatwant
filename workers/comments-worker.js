@@ -375,6 +375,7 @@ async function handlePostComment(request, env) {
     const color = body.color || generateRandomRGB(); // Generate random color if not provided
     const domain = body.domain || request.headers.get('Origin')?.replace(/^https?:\/\//, '') || 'unknown';
     const language = body.language || 'en'; // Default to English
+    const messageType = body['message-type'] || 'human'; // Default to human if not specified
     const misc = body.misc || ''; // Optional misc field
 
     // Validate input
@@ -399,6 +400,7 @@ async function handlePostComment(request, env) {
       color: color,  // Include the color field
       domain: domain,  // Store the domain
       language: language, // Store the language
+      'message-type': messageType, // Store message type (AI, human, etc)
       misc: misc  // Store misc data
       // Removed userAgent - not needed
     };

@@ -161,6 +161,7 @@ export function useCommentSubmission(
           color: newComment.color,
           domain: config.domain,
           language: newComment.language,
+          'message-type': 'human', // Mark as human-generated message
           misc: newComment.misc,
         }).then(savedComment => {
           // Server acknowledged - optimistic version is canonical

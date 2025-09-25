@@ -15,6 +15,7 @@
   "color": "rgb(185, 142, 40)",
   "domain": "saywhatwant.app",
   "language": "en",
+  "message-type": "human",
   "misc": ""
 }
 ```
@@ -30,6 +31,7 @@
 | `color` | string | User's chosen RGB color | `"rgb(185, 142, 40)"` |
 | `domain` | string | Origin domain | `"saywhatwant.app"` |
 | `language` | string | Language code (ISO 639-1) | `"en"` |
+| `message-type` | string | Message origin type | `"human"` or `"AI"` |
 | `misc` | string | Miscellaneous data field | `""` |
 
 ## Cache Entry
@@ -47,17 +49,19 @@
     "color": "rgb(96, 165, 250)",
     "domain": "localhost:3000",
     "language": "en",
+    "message-type": "human",
     "misc": ""
   },
   {
     "id": "1726800123456-def456",
     "text": "Second message with a video link [video:xyz123] <-- video",
     "timestamp": 1726800123456,
-    "username": "god",
-    "color": "rgb(185, 142, 40)",
+    "username": "DeepThought",
+    "color": "rgb(128, 0, 255)",
     "domain": "saywhatwant.app",
     "language": "en",
-    "misc": "test-data"
+    "message-type": "AI",
+    "misc": ""
   },
   {
     "id": "1726800234567-ghi789",
@@ -67,6 +71,7 @@
     "color": "rgb(200, 100, 150)",
     "domain": "shittosay.app",
     "language": "en",
+    "message-type": "human",
     "misc": ""
   }
 ]
@@ -148,5 +153,6 @@ Any word in the message can be clicked to filter by it:
 - **Sorting**: Comments always sorted by timestamp (oldest to newest)
 - **Backwards Compatibility**: System handles both old hex colors and new RGB format
 - **Language Field**: Currently defaults to 'en', ready for i18n support
+- **Message-Type Field**: Identifies origin as 'AI' or 'human' (defaults to 'human' for existing messages)
 - **Misc Field**: Flexible string field for future features or metadata
 - **Rate Limit**: 10 messages per minute per IP (increased from 1)

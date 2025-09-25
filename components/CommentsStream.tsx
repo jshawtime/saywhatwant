@@ -532,7 +532,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               console.log(`[IndexedDB] Loaded all ${totalStored} messages from local storage`);
             }
           }
-        } catch (err) {
+      } catch (err) {
           console.warn('[IndexedDB] Failed to load stored messages:', err);
         }
         
@@ -793,7 +793,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
     setShowColorPicker(!showColorPicker);
   };
-  
+
   // Context menu handlers
   const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment, isUsername: boolean = false) => {
     e.preventDefault();
@@ -1084,9 +1084,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         // Only scroll to bottom if user is already near the bottom
         if (isNearBottom) {
-          setTimeout(() => {
+        setTimeout(() => {
             smoothScrollToBottom(false);
-          }, 100);
+        }, 100);
         }
         
       } else if (!keyboardIsOpen && lastKnownKeyboardHeight > 0) {
@@ -1451,8 +1451,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     className="text-sm leading-snug break-all overflow-wrap-anywhere" 
                     title="Click to filter by word | Right click more options"
                     style={{ 
-                      lineHeight: '20px',
-                      color: getCommentColor(comment) // Use actual or generated color
+                    lineHeight: '20px',
+                    color: getCommentColor(comment) // Use actual or generated color
                     }}
                   >
                     {parseCommentTextWithHandlers(comment.text)}

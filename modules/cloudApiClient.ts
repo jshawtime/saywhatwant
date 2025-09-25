@@ -60,6 +60,7 @@ export async function postCommentToCloud(comment: {
   color?: string;
   domain: string;
   language?: string;
+  'message-type'?: 'AI' | 'human' | string;
   misc?: string;
 }): Promise<Comment> {
   try {

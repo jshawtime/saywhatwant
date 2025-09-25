@@ -7,6 +7,7 @@ export interface Comment {
   domain?: string; // Domain where comment was posted
   color?: string; // User's chosen color
   language?: string; // Language of the comment (default: "en")
+  'message-type'?: 'AI' | 'human' | string; // Message type: AI, human, or future types
   misc?: string; // Miscellaneous data field for future use
   // userAgent removed - not needed
 }

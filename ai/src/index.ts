@@ -424,6 +424,7 @@ async function postComment(text: string): Promise<boolean> {
       color: state.currentColor,
       timestamp: Date.now(),
       domain: 'saywhatwant.app', // Set proper domain so messages appear
+      'message-type': 'AI', // Mark as AI-generated message
     };
     
     // Log the exact payload being sent
