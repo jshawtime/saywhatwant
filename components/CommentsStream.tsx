@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Send, ChevronDown, Tv, Ban } from 'lucide-react';
+import { Send, ChevronDown, Tv, Ban, Users, Sparkles } from 'lucide-react';
 import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
@@ -73,6 +73,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [userColor, setUserColor] = useState(() => getRandomColor()); // Start with random color
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false); // For hydration safety
+  
+  // Message type filtering (Humans/Entities)
+  const [showHumans, setShowHumans] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sww-show-humans');
+      return saved !== null ? saved === 'true' : true; // Default to true
+    }
+    return true;
+  });
+  const [showEntities, setShowEntities] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sww-show-entities');
+      return saved !== null ? saved === 'true' : true; // Default to true
+    }
+    return true;
+  });
   
   // IndexedDB lazy loading state
   const [indexedDbOffset, setIndexedDbOffset] = useState(0);
@@ -229,7 +245,33 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     );
   }, [displayedComments, domainFilterEnabled, currentDomain]);
 
-  // Use the filters hook with domain-filtered comments
+  // Apply message-type filtering (Humans/Entities)
+  const messageTypeFilteredComments = useMemo(() => {
+    // If both are on or both are off, show all or none respectively
+    if (showHumans && showEntities) return domainFilteredComments;
+    if (!showHumans && !showEntities) return []; // Both off = show nothing
+    
+    // Filter based on message-type
+    return domainFilteredComments.filter(comment => {
+      const messageType = comment['message-type'];
+      
+      // If no message-type field, assume it's human (for backward compatibility)
+      if (!messageType) {
+        return showHumans;
+      }
+      
+      // Check message type
+      if (messageType === 'AI' && showEntities) return true;
+      if (messageType === 'human' && showHumans) return true;
+      
+      // For any other future message types, treat as human by default
+      if (messageType !== 'AI' && showHumans) return true;
+      
+      return false;
+    });
+  }, [domainFilteredComments, showHumans, showEntities]);
+
+  // Use the filters hook with message-type-filtered comments
   const {
     filterUsernames,
     filterWords,
@@ -250,7 +292,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     serverSideUsers,  // Server-side user search from #uss= parameter
     dateTimeFilter,
     clearDateTimeFilter
-  } = useFilters({ displayedComments: domainFilteredComments, searchTerm });
+  } = useFilters({ displayedComments: messageTypeFilteredComments, searchTerm });
   
   // Sync search bar with URL search terms
   useEffect(() => {
@@ -794,6 +836,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setShowColorPicker(!showColorPicker);
   };
 
+  // Toggle message type filters
+  const toggleShowHumans = () => {
+    const newState = !showHumans;
+    setShowHumans(newState);
+    localStorage.setItem('sww-show-humans', String(newState));
+  };
+  
+  const toggleShowEntities = () => {
+    const newState = !showEntities;
+    setShowEntities(newState);
+    localStorage.setItem('sww-show-entities', String(newState));
+  };
+
   // Context menu handlers
   const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment, isUsername: boolean = false) => {
     e.preventDefault();
@@ -1190,6 +1245,47 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   }}
                 />
               )}
+            </div>
+            
+            {/* Message Type Filters - Between LED and Counter */}
+            <div className="flex gap-1.5">
+              {/* Humans Button */}
+              <button
+                onClick={toggleShowHumans}
+                className={`px-2.5 py-1.5 rounded-full transition-all ${
+                  showHumans ? 'bg-black/40' : 'hover:bg-black/20'
+                }`}
+                title="Show human messages"
+              >
+                <Users 
+                  className="w-3.5 h-3.5"
+                  style={{ 
+                    color: getDarkerColor(userColor, showHumans 
+                      ? OPACITY_LEVELS.LIGHT  // Active: 60% opacity
+                      : OPACITY_LEVELS.DARK   // Inactive: 40% opacity
+                    )
+                  }}
+                />
+              </button>
+              
+              {/* Entities Button */}
+              <button
+                onClick={toggleShowEntities}
+                className={`px-2.5 py-1.5 rounded-full transition-all ${
+                  showEntities ? 'bg-black/40' : 'hover:bg-black/20'
+                }`}
+                title="Show AI entity messages"
+              >
+                <Sparkles 
+                  className="w-3.5 h-3.5"
+                  style={{ 
+                    color: getDarkerColor(userColor, showEntities 
+                      ? OPACITY_LEVELS.LIGHT  // Active: 60% opacity
+                      : OPACITY_LEVELS.DARK   // Inactive: 40% opacity
+                    )
+                  }}
+                />
+              </button>
             </div>
             
             {/* Username Input and TV Toggle - Always Visible */}
