@@ -28,13 +28,24 @@ try {
   process.exit(1);
 }
 
-// Initialize OpenAI client for LM Studio with timeout
-const lmStudio = new OpenAI({
-  baseURL: `${CONFIG.LM_STUDIO.baseURL}/v1`,
+// Initialize OpenAI clients for LM Studio with cloud/local fallback
+const lmStudioCloud = new OpenAI({
+  baseURL: 'https://aientities.saywhatwant.app/v1',
   apiKey: CONFIG.LM_STUDIO.apiKey,
   timeout: 30000, // 30 second timeout
   maxRetries: 2,   // Retry up to 2 times if busy
 });
+
+const lmStudioLocal = new OpenAI({
+  baseURL: 'http://10.0.0.102:1234/v1',
+  apiKey: CONFIG.LM_STUDIO.apiKey,
+  timeout: 30000, // 30 second timeout
+  maxRetries: 2,   // Retry up to 2 times if busy
+});
+
+// Use cloud by default, fallback to local
+let lmStudio = lmStudioCloud;
+let usingCloudEndpoint = true;
 
 // Track if LM Studio is currently processing
 let isLMStudioBusy = false;
@@ -361,21 +372,53 @@ async function generateResponse(context: ConversationContext): Promise<string | 
     
     log.debug(`Generating response as ${currentEntity.username} (${currentEntity.id}) using model: ${currentEntity.model}`);
     
-    const completion = await lmStudio.chat.completions.create({
-      model: currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model,
-      messages: [
-        { role: 'system', content: fullPrompt },
-        { role: 'user', content: currentEntity.userPrompt || 'Generate a response based on the conversation context. Keep it natural and conversational.' }
-      ],
-      temperature: currentEntity.temperature,
-      max_tokens: currentEntity.maxTokens,
-      top_p: currentEntity.topP,
-      frequency_penalty: 0.3,
-      presence_penalty: 0.3,
-      // Note: top_k, repeat_penalty, and min_p are LM Studio specific parameters
-      // They may not work with standard OpenAI API but LM Studio may support them
-      // as custom extensions
-    } as any);
+    let completion;
+    try {
+      // Try cloud endpoint first (already set as default lmStudio)
+      completion = await lmStudio.chat.completions.create({
+        model: currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model,
+        messages: [
+          { role: 'system', content: fullPrompt },
+          { role: 'user', content: currentEntity.userPrompt || 'Generate a response based on the conversation context. Keep it natural and conversational.' }
+        ],
+        temperature: currentEntity.temperature,
+        max_tokens: currentEntity.maxTokens,
+        top_p: currentEntity.topP,
+        frequency_penalty: 0.3,
+        presence_penalty: 0.3,
+        // Note: top_k, repeat_penalty, and min_p are LM Studio specific parameters
+        // They may not work with standard OpenAI API but LM Studio may support them
+        // as custom extensions
+      } as any);
+      
+      if (!usingCloudEndpoint) {
+        log.info('Cloud endpoint is back online, switching to cloud');
+        lmStudio = lmStudioCloud;
+        usingCloudEndpoint = true;
+      }
+    } catch (cloudError: any) {
+      if (usingCloudEndpoint) {
+        log.warn('Cloud endpoint failed, falling back to local:', cloudError.message);
+        lmStudio = lmStudioLocal;
+        usingCloudEndpoint = false;
+        
+        // Retry with local endpoint
+        completion = await lmStudio.chat.completions.create({
+          model: currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model,
+          messages: [
+            { role: 'system', content: fullPrompt },
+            { role: 'user', content: currentEntity.userPrompt || 'Generate a response based on the conversation context. Keep it natural and conversational.' }
+          ],
+          temperature: currentEntity.temperature,
+          max_tokens: currentEntity.maxTokens,
+          top_p: currentEntity.topP,
+          frequency_penalty: 0.3,
+          presence_penalty: 0.3,
+        } as any);
+      } else {
+        throw cloudError; // Both endpoints failed
+      }
+    }
     
     const response = completion.choices[0]?.message?.content || null;
     
