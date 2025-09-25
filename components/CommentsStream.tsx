@@ -1164,9 +1164,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <h2 
+                onClick={() => {
+                  const newState = toggleDomainFilter();
+                  setDomainFilterEnabled(newState);
+                }}
                 onContextMenu={handleTitleContextMenu}
                 className="sww-title transition-opacity cursor-pointer select-none" 
-                title={domainFilterEnabled ? "Messages from this website | Right click more options" : "Global message stream | Right click more options"}
+                title={domainFilterEnabled ? "Show messages across all domains | Right click more options" : "Show messages from this domain only | Right click more options"}
                 style={{ 
                   color: userColor,
                   opacity: domainFilterEnabled ? 0.4 : 0.25, // Simple opacity change
@@ -1306,7 +1310,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
           {/* Search Bar - Instant Search */}
           <div className="relative">
-            <StyledSearchIcon userColor={userColor} />
+            <StyledSearchIcon 
+              userColor={userColor} 
+              opacity={searchTerm ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.LIGHT} 
+            />
               <StyledSearchInput 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -1508,7 +1515,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               }`}
               style={{ 
                 color: userColor, // Message text color
-                opacity: (isSubmitting || !inputText.trim()) ? OPACITY_LEVELS.DARK : 1 // 40% when disabled
+                opacity: (isSubmitting || !inputText.trim()) ? OPACITY_LEVELS.DARK : OPACITY_LEVELS.LIGHT // 40% when disabled, 60% when enabled - one level lighter
               }}
               tabIndex={-1}
               aria-label="Send message"
@@ -1538,7 +1545,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               placeholder="Say what you want..."
               className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
               style={{
-                ['--placeholder-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARK), // 40% opacity
+                ['--placeholder-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKER), // 30% opacity - one level lighter
                 ['--scrollbar-color' as any]: getDarkerColor(userColor, OPACITY_LEVELS.LIGHT), // 60% opacity
                 ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
                 color: userColor, // Always use user's color

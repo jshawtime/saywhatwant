@@ -80,7 +80,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
           } as React.CSSProperties}
         >
           {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && (!mounted || !hasDateTimeFilter) ? (
-            <span style={{ color: getDarkerColor(userColor, OPACITY_LEVELS.DARK) }}> {/* 40% opacity */}
+            <span style={{ color: getDarkerColor(userColor, OPACITY_LEVELS.DARKER) }}> {/* 30% opacity - one level lighter */}
               Click usernames or words to filter...
             </span>
           ) : (

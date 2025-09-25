@@ -105,7 +105,7 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
   const baseColor = userColor;
   const textColor = value ? baseColor : getDarkerColor(baseColor, OPACITY_LEVELS.DARK);
   const borderColor = value ? getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM) : 'rgba(255,255,255,0.1)';
-  const placeholderColor = getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM); // 50% opacity - 1 step lighter
+  const placeholderColor = getDarkerColor(baseColor, OPACITY_LEVELS.DARK); // 40% opacity - one level lighter
   
   return (
     <input
@@ -195,7 +195,7 @@ export const StyledCharCounter: React.FC<StyledCharCounterProps> = ({
   userColor
 }) => {
   const baseColor = userColor;
-  const color = getDarkerColor(baseColor, OPACITY_LEVELS.LIGHT); // 60% opacity
+  const color = getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM); // 50% opacity - one level lighter
   
   return (
     <div 
