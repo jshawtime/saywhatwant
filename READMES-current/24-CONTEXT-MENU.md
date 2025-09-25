@@ -1,9 +1,13 @@
-# Context Menu for Messages
+# Context Menus for Messages and Title
 
 ## Overview
-Right-click (desktop) or long-press (mobile) on any message to access a sleek contextual menu with quick actions.
+Right-click on messages or the app title to access contextual menus with quick actions.
 
-## Features
+## Message Context Menu
+
+Right-click (desktop) or long-press (mobile) on any message for individual message actions.
+
+### Features
 
 ### 📋 Copy
 - Copies the username, timestamp, and message to clipboard
@@ -40,7 +44,46 @@ Right-click (desktop) or long-press (mobile) on any message to access a sleek co
 - Tap outside to dismiss
 - **Tip**: Select text first, then long-press to block specific words
 
-## Visual Design
+## Title Context Menu
+
+Right-click on the app title (e.g., "Say What Want") to access bulk actions for all visible messages.
+
+### Features
+
+### Copy ALL
+- Copies ALL visible messages in the window to clipboard
+- Includes header with title, export time, and message count
+- Each message formatted with username, timestamp, and text
+- Preserves chronological order
+
+### Save ALL
+- Downloads ALL visible messages as a text file
+- Filename: `saywhatwant_[domain]_[timestamp].txt`
+- Includes formatted header with metadata
+- Perfect for archiving conversations or sharing
+
+### Visual Design
+- Text-only menu (no icons)
+- Clean, minimal design
+- Consistent with app styling
+
+### Format Example
+```
+Say What Want - [Domain Title]
+Exported: 12/25/2024, 3:45:23 PM
+Total Messages: 127
+==================================================
+
+JohnDoe (12/25/2024, 3:30:15 PM):
+Hello everyone!
+
+Jane123 (12/25/2024, 3:31:42 PM):
+Hey there!
+
+[... continues for all messages ...]
+```
+
+## Visual Design (Message Menu)
 
 ### Icons
 - Uses lucide-react icons for consistency
@@ -97,10 +140,16 @@ const url = URL.createObjectURL(blob);
 ```
 
 ## Console Logging
+
+### Message Context Menu
 - `[Context Menu] Copied message to clipboard`
 - `[Context Menu] Saved message as: [filename]`
 - `[Context Menu] Blocked user: [username]`
 - `[Context Menu] Blocked word: [word]`
+
+### Title Context Menu
+- `[Title Context Menu] Copied 127 messages to clipboard`
+- `[Title Context Menu] Saved 127 messages as: saywhatwant_domain_2024-12-25T15-45.txt`
 
 ## Accessibility
 - All buttons have proper `aria-label` attributes

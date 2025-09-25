@@ -29,6 +29,7 @@ import { getRandomColor, getDarkerColor, COLOR_PALETTE } from '@/modules/colorSy
 import { getCommentColor } from '@/modules/usernameColorGenerator';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { ContextMenu } from '@/components/ContextMenu';
+import { TitleContextMenu } from '@/components/TitleContextMenu';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -93,6 +94,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     clickedWord?: string;
     isUsername?: boolean;
   } | null>(null);
+  const [titleContextMenu, setTitleContextMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Sync comments to IndexedDB (stores every message you see locally)
@@ -911,6 +913,66 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.log('[Context Menu] Blocked user:', username);
     }
   }, [contextMenu, addNegativeWordFilter]);
+  
+  // Title context menu handlers
+  const handleTitleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setTitleContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+  
+  const handleCopyAll = useCallback(() => {
+    // Get all visible messages
+    const messages = filteredComments.map(comment => {
+      const timestamp = new Date(comment.timestamp).toLocaleString();
+      return `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
+    }).join('\n\n');
+    
+    const header = `Say What Want - ${domainConfig.title}\nExported: ${new Date().toLocaleString()}\nTotal Messages: ${filteredComments.length}\n${'='.repeat(50)}\n\n`;
+    const fullText = header + messages;
+    
+    // Modern clipboard API with fallback
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(fullText);
+    } else {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = fullText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    
+    console.log(`[Title Context Menu] Copied ${filteredComments.length} messages to clipboard`);
+  }, [filteredComments, domainConfig.title]);
+  
+  const handleSaveAll = useCallback(() => {
+    // Get all visible messages
+    const messages = filteredComments.map(comment => {
+      const timestamp = new Date(comment.timestamp).toLocaleString();
+      return `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
+    }).join('\n\n');
+    
+    const header = `Say What Want - ${domainConfig.title}\nExported: ${new Date().toLocaleString()}\nTotal Messages: ${filteredComments.length}\n${'='.repeat(50)}\n\n`;
+    const fullText = header + messages;
+    
+    // Create filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `saywhatwant_${domainConfig.title.toLowerCase().replace(/\s+/g, '_')}_${timestamp}.txt`;
+    
+    // Create and download file
+    const blob = new Blob([fullText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log(`[Title Context Menu] Saved ${filteredComments.length} messages as: ${filename}`);
+  }, [filteredComments, domainConfig.title]);
 
 
   // Remember and restore scroll position when toggling filters
@@ -1075,7 +1137,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <h2 
-                className="sww-title transition-opacity" 
+                onContextMenu={handleTitleContextMenu}
+                className="sww-title transition-opacity cursor-pointer select-none" 
                 style={{ 
                   color: userColor,
                   opacity: domainFilterEnabled ? 0.4 : 0.25, // Simple opacity change
@@ -1475,6 +1538,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           onCopy={handleCopy}
           onSave={handleSave}
           onBlock={handleBlock}
+        />
+      )}
+      
+      {/* Title Context Menu */}
+      {titleContextMenu && (
+        <TitleContextMenu
+          x={titleContextMenu.x}
+          y={titleContextMenu.y}
+          onClose={() => setTitleContextMenu(null)}
+          onCopyAll={handleCopyAll}
+          onSaveAll={handleSaveAll}
         />
       )}
     </div>
