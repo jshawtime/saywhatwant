@@ -107,8 +107,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [dynamicMaxMessages, setDynamicMaxMessages] = useState(MAX_DISPLAY_MESSAGES);
   const [lazyLoadedCount, setLazyLoadedCount] = useState(0);
   
-  // Scroll position memory for filters and search
-  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
+  // Scroll position memory for search and message type filters
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
   const [savedHumansScrollPosition, setSavedHumansScrollPosition] = useState<number | null>(null);
   const [savedEntitiesScrollPosition, setSavedEntitiesScrollPosition] = useState<number | null>(null);
@@ -258,48 +257,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   );
   
-  // Apply domain filtering if enabled
-  const domainFilteredComments = useMemo(() => {
-    if (!domainFilterEnabled) return displayedComments;
-    return displayedComments.filter(comment => 
-      comment.domain === currentDomain || 
-      !comment.domain // Show old comments without domain field
-    );
-  }, [displayedComments, domainFilterEnabled, currentDomain]);
 
-  // Apply message-type filtering (Humans/Entities)
-  const messageTypeFilteredComments = useMemo(() => {
-    // If both are on or both are off, show all or none respectively
-    if (showHumans && showEntities) return domainFilteredComments;
-    if (!showHumans && !showEntities) return []; // Both off = show nothing
-    
-    // Filter based on message-type
-    return domainFilteredComments.filter(comment => {
-      const messageType = comment['message-type'];
-      
-      // If no message-type field, assume it's human (for backward compatibility)
-      if (!messageType) {
-        return showHumans;
-      }
-      
-      // Check message type
-      if (messageType === 'AI' && showEntities) return true;
-      if (messageType === 'human' && showHumans) return true;
-      
-      // For any other future message types, treat as human by default
-      if (messageType !== 'AI' && showHumans) return true;
-      
-      return false;
-    });
-  }, [domainFilteredComments, showHumans, showEntities]);
-
-  // Use the filters hook with message-type-filtered comments
+  // Use the filters hook with ALL comments (unfiltered pool)
   const {
     filterUsernames,
     filterWords,
     negativeFilterWords,
     isFilterEnabled,
-    filteredComments,
+    filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
     addToFilter,
     removeFromFilter,
     addWordToFilter,
@@ -314,7 +279,47 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     serverSideUsers,  // Server-side user search from #uss= parameter
     dateTimeFilter,
     clearDateTimeFilter
-  } = useFilters({ displayedComments: messageTypeFilteredComments, searchTerm });
+  } = useFilters({ displayedComments: displayedComments, searchTerm });
+  
+  // Apply ALL filters in the correct order
+  const filteredComments = useMemo(() => {
+    let result = userFilteredComments;
+    
+    // Apply domain filter
+    if (domainFilterEnabled) {
+      result = result.filter(comment => 
+        comment.domain === currentDomain || 
+        !comment.domain // Show old comments without domain field
+      );
+    }
+    
+    // Apply message type filter
+    if (!showHumans || !showEntities) {
+      if (!showHumans && !showEntities) {
+        return []; // Both off = show nothing
+      }
+      
+      result = result.filter(comment => {
+        const messageType = comment['message-type'];
+        
+        // If no message-type field, assume it's human (for backward compatibility)
+        if (!messageType) {
+          return showHumans;
+        }
+        
+        // Check message type
+        if (messageType === 'AI' && showEntities) return true;
+        if (messageType === 'human' && showHumans) return true;
+        
+        // For any other future message types, treat as human by default
+        if (messageType !== 'AI' && showHumans) return true;
+        
+        return false;
+      });
+    }
+    
+    return result;
+  }, [userFilteredComments, domainFilterEnabled, currentDomain, showHumans, showEntities]);
   
   // Sync search bar with URL search terms
   useEffect(() => {
@@ -1157,35 +1162,65 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Remember and restore scroll position when toggling filters
   const prevFilterEnabled = useRef(isFilterEnabled);
+  const scrollBeforeFilterToggle = useRef<number | null>(null);
+  
+  // Save scroll position BEFORE filter state changes
+  useEffect(() => {
+    // Save current scroll position whenever filter is about to change
+    if (streamRef.current && prevFilterEnabled.current !== isFilterEnabled) {
+      scrollBeforeFilterToggle.current = streamRef.current.scrollTop;
+      console.log('[Scroll] Pre-save scroll position:', scrollBeforeFilterToggle.current);
+    }
+  }, [isFilterEnabled]);
+  
+  // Restore scroll position AFTER filter state changes and content updates
   useEffect(() => {
     if (!streamRef.current) return;
     
     // Check if filter state actually changed
     if (prevFilterEnabled.current !== isFilterEnabled) {
-      if (isFilterEnabled) {
-        // Filters just turned ON - save current scroll position
-        const currentScroll = streamRef.current.scrollTop;
-        setSavedScrollPosition(currentScroll);
-        console.log('[Scroll] Saved scroll position before filter activation:', currentScroll);
-      } else if (!isFilterEnabled && savedScrollPosition !== null) {
-        // Filters just turned OFF - restore saved scroll position
-        // Wait for next render cycle and content to be ready
+      const savedPos = scrollBeforeFilterToggle.current;
+      
+      if (!isFilterEnabled && savedPos !== null) {
+        // Filters just turned OFF - need to restore position
+        // Use multiple frames to ensure content has rendered
+        const restoreScroll = () => {
+          if (streamRef.current && streamRef.current.scrollHeight > 0) {
+            const targetScroll = Math.min(savedPos, streamRef.current.scrollHeight - streamRef.current.clientHeight);
+            streamRef.current.scrollTop = targetScroll;
+            console.log('[Scroll] Restored scroll after filter OFF:', targetScroll, 'from saved:', savedPos);
+            
+            // Double-check it worked, try again if not
+            setTimeout(() => {
+              if (streamRef.current && Math.abs(streamRef.current.scrollTop - targetScroll) > 10) {
+                console.log('[Scroll] Re-applying scroll restoration, current:', streamRef.current.scrollTop, 'target:', targetScroll);
+                streamRef.current.scrollTop = targetScroll;
+              }
+            }, 50);
+          }
+        };
+        
+        // Try multiple times to ensure it sticks
+        requestAnimationFrame(() => {
+          requestAnimationFrame(restoreScroll);
+        });
+      } else if (isFilterEnabled && savedPos !== null) {
+        // Filters just turned ON - also restore to maintain position
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             if (streamRef.current && streamRef.current.scrollHeight > 0) {
-              // Only restore if there's content to scroll in
-              const targetScroll = Math.min(savedScrollPosition, streamRef.current.scrollHeight - streamRef.current.clientHeight);
+              const targetScroll = Math.min(savedPos, streamRef.current.scrollHeight - streamRef.current.clientHeight);
               streamRef.current.scrollTop = targetScroll;
-              console.log('[Scroll] Restored scroll position after filter deactivation:', targetScroll);
-              setSavedScrollPosition(null); // Clear saved position
+              console.log('[Scroll] Restored scroll after filter ON:', targetScroll);
             }
           });
         });
       }
       
       prevFilterEnabled.current = isFilterEnabled;
+      scrollBeforeFilterToggle.current = null;
     }
-  }, [isFilterEnabled, savedScrollPosition]);
+  }, [isFilterEnabled, filteredComments.length]); // Also depend on filtered comments length to run after content changes
 
   // Remember and restore scroll position when using search
   useEffect(() => {
@@ -1725,17 +1760,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         <form onSubmit={handleSubmit} className="w-full">
           <div className="relative w-full max-w-full">
-            {/* New Messages text indicator - positioned left of chevron */}
+            {/* New Messages text indicator - positioned left of chevron, clickable */}
             {hasNewComments && (
-              <span 
-                className="absolute top-2 text-xs z-20 font-medium"
+              <button
+                type="button"
+                onClick={() => {
+                  smoothScrollToBottom(false);
+                  setHasNewComments(false);
+                }}
+                className="absolute top-2 text-xs z-20 font-medium pr-2 hover:opacity-80 cursor-pointer"
                 style={{ 
                   color: userColor,
-                  right: '3.5rem' // Position just left of chevron (chevron is at right-12 = 3rem)
+                  right: '3.5rem', // Position just left of chevron with padding
+                  background: 'none',
+                  border: 'none',
+                  padding: '0 8px 0 0' // Add right padding for spacing from chevron
                 }}
+                tabIndex={-1}
+                aria-label="Jump to latest messages"
               >
                 New Messages
-              </span>
+              </button>
             )}
             
             {/* Scroll to bottom button - positioned left of character counter */}
