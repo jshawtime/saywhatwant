@@ -28,6 +28,7 @@ const INDEXEDDB_LAZY_LOAD_CHUNK = 100; // Load 100 more on each lazy load
 import { getRandomColor, getDarkerColor, COLOR_PALETTE } from '@/modules/colorSystem';
 import { getCommentColor } from '@/modules/usernameColorGenerator';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
+import { ContextMenu } from '@/components/ContextMenu';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -83,6 +84,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Scroll position memory for filters and search
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; comment: Comment } | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Sync comments to IndexedDB (stores every message you see locally)
   useIndexedDBSync(allComments);
@@ -753,6 +758,93 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
     setShowColorPicker(!showColorPicker);
   };
+  
+  // Context menu handlers
+  const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, comment });
+  }, []);
+  
+  const handleTouchStart = useCallback((e: React.TouchEvent, comment: Comment) => {
+    const touch = e.touches[0];
+    
+    // Clear any existing timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+    
+    // Set a new timer for long press (500ms)
+    longPressTimer.current = setTimeout(() => {
+      e.preventDefault();
+      setContextMenu({ x: touch.clientX, y: touch.clientY, comment });
+      // Haptic feedback for mobile if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(10);
+      }
+    }, 500);
+  }, []);
+  
+  const handleTouchEnd = useCallback(() => {
+    // Clear the timer if touch ends before long press
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+  
+  const handleCopy = useCallback(() => {
+    if (!contextMenu) return;
+    const { comment } = contextMenu;
+    const timestamp = new Date(comment.timestamp).toLocaleString();
+    const text = `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
+    
+    // Modern clipboard API with fallback
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    } else {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    
+    console.log('[Context Menu] Copied message to clipboard');
+  }, [contextMenu]);
+  
+  const handleSave = useCallback(() => {
+    if (!contextMenu) return;
+    const { comment } = contextMenu;
+    const timestamp = new Date(comment.timestamp).toLocaleString();
+    const filename = `message_${comment.username}_${Date.now()}.txt`;
+    const content = `Username: ${comment.username || 'anonymous'}\nDate/Time: ${timestamp}\n\nMessage:\n${comment.text}`;
+    
+    // Create and download file
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('[Context Menu] Saved message as:', filename);
+  }, [contextMenu]);
+  
+  const handleBlock = useCallback(() => {
+    if (!contextMenu) return;
+    const { comment } = contextMenu;
+    const username = comment.username || 'anonymous';
+    
+    // Add to negative filter
+    addNegativeWordFilter(username);
+    
+    console.log('[Context Menu] Blocked user:', username);
+  }, [contextMenu, addNegativeWordFilter]);
 
 
   // Remember and restore scroll position when toggling filters
@@ -1154,7 +1246,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           filteredComments.map((comment) => (
             <div 
               key={comment.id} 
-              className="comment-enter bg-white/5 rounded-lg px-3 py-2 hover:bg-white/[0.07] transition-colors"
+              className="comment-enter bg-white/5 rounded-lg px-3 py-2 hover:bg-white/[0.07] transition-colors cursor-pointer select-none"
+              onContextMenu={(e) => handleContextMenu(e, comment)}
+              onTouchStart={(e) => handleTouchStart(e, comment)}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchEnd}
             >
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
@@ -1293,6 +1389,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           </div>
         </form>
       </div>
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          comment={contextMenu.comment}
+          onClose={() => setContextMenu(null)}
+          onCopy={handleCopy}
+          onSave={handleSave}
+          onBlock={handleBlock}
+        />
+      )}
     </div>
   );
 };
