@@ -162,6 +162,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
   
+  // Clear "New Messages" indicator when user scrolls to bottom
+  useEffect(() => {
+    if (isNearBottom && hasNewComments) {
+      setHasNewComments(false);
+    }
+  }, [isNearBottom, hasNewComments]);
+  
   // Video sharing system
   const {
     pendingVideoKey,
@@ -1685,15 +1692,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       </div>
 
       {/* New Comments Indicator */}
-      {hasNewComments && (
-        <button
-          onClick={scrollToBottom}
-          className="absolute bottom-24 left-1/2 transform -translate-x-1/2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-full shadow-lg flex items-center gap-1.5 transition-all hover-scale"
-        >
-          <ChevronDown className="w-3 h-3" />
-          <span className="text-xs">New comments</span>
-        </button>
-      )}
 
       {/* Input Form - Always visible on mobile */}
       <div className="mobile-input-form flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden">
@@ -1705,21 +1703,26 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         <form onSubmit={handleSubmit} className="w-full">
           <div className="relative w-full max-w-full">
-            {/* Character counter at top of textarea */}
-            <StyledCharCounter 
-              current={inputText.length}
-              max={MAX_COMMENT_LENGTH}
-              userColor={userColor}
-            />
+            {/* New Messages text indicator - positioned left */}
+            {hasNewComments && (
+              <span 
+                className="absolute top-2 left-2 text-xs z-10"
+                style={{ 
+                  color: getDarkerColor(userColor, OPACITY_LEVELS.FULL) 
+                }}
+              >
+                New Messages
+              </span>
+            )}
             
-            {/* Scroll to bottom button */}
+            {/* Scroll to bottom button - positioned left of character counter */}
             <button
               type="button"
               onClick={() => {
                 smoothScrollToBottom(false);
                 setHasNewComments(false);
               }}
-              className="absolute bottom-2 right-10 p-1 rounded transition-all z-10 hover:opacity-80 cursor-pointer"
+              className="absolute top-2 right-12 p-0 rounded transition-all hover:opacity-80 cursor-pointer z-10"
               style={{ 
                 color: getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM)
               }}
@@ -1727,8 +1730,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               aria-label="Scroll to bottom"
               title="Jump to latest messages"
             >
-              <ChevronDown className="w-5 h-5" />
+              <ChevronDown className="w-4 h-4" />
             </button>
+            
+            {/* Character counter - keeps its absolute positioning */}
+            <StyledCharCounter 
+              current={inputText.length}
+              max={MAX_COMMENT_LENGTH}
+              userColor={userColor}
+            />
             
             {/* Send button - vertically centered between char count and input bottom */}
             <button

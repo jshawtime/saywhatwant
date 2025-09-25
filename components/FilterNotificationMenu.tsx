@@ -78,7 +78,7 @@ export const FilterNotificationMenu: React.FC<FilterNotificationMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-black/90 backdrop-blur-sm border border-gray-800 rounded-md shadow-2xl p-1"
+      className="fixed z-50 bg-black/80 backdrop-blur-sm border border-gray-800 rounded-md shadow-2xl p-1"
       style={{ left: x, top: y }}
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
@@ -86,24 +86,25 @@ export const FilterNotificationMenu: React.FC<FilterNotificationMenuProps> = ({
       <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-1">
         Notify
       </div>
-      {SOUND_OPTIONS.map(({ sound, icon, label }) => (
-        <button
-          key={sound}
-          onClick={() => {
-            onSelectSound(sound);
-            onClose();
-          }}
-          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-all text-left ${
-            currentSound === sound 
-              ? 'bg-white/20 text-white' 
-              : 'hover:bg-white/10 text-gray-400 hover:text-white'
-          }`}
-          title={label}
-        >
-          <span className="flex-shrink-0">{icon}</span>
-          <span className="text-xs">{label}</span>
-        </button>
-      ))}
+      <div className="flex gap-0.5">
+        {SOUND_OPTIONS.map(({ sound, icon, label }) => (
+          <button
+            key={sound}
+            onClick={() => {
+              onSelectSound(sound);
+              onClose();
+            }}
+            className={`p-2 rounded transition-all ${
+              currentSound === sound 
+                ? 'bg-white/20 text-white' 
+                : 'hover:bg-white/10 text-gray-400 hover:text-white'
+            }`}
+            title={label}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };

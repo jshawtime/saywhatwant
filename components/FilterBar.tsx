@@ -183,7 +183,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     }}
                     onContextMenu={(e) => handleFilterContextMenu(e, filterKey)}
                     onMouseEnter={() => handleFilterHover(filterKey)}
-                    title="Right click to alert this"
+                    title="Right click to set alert. Filter must be on."
                   >
                     {setting.sound !== 'none' && (
                       <span style={{ color: filter.color }}>
@@ -223,7 +223,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     }}
                     onContextMenu={(e) => handleFilterContextMenu(e, filterKey)}
                     onMouseEnter={() => handleFilterHover(filterKey)}
-                    title="Right click to alert this"
+                    title="Right click to set alert. Filter must be on."
                   >
                     {setting.sound !== 'none' && (
                       <span style={{ color: userColor }}>
