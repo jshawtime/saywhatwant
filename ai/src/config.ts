@@ -7,9 +7,9 @@ export const CONFIG = {
   // LM Studio Configuration
   LM_STUDIO: {
     // Toggle between local and production URLs
-    // PRODUCTION: https://aientities.saywhatwant.app (Cloudflare tunnel to local LM Studio)
-    // FALLBACK: http://10.0.0.102:1234 (direct local network access)
-    baseURL: process.env.LM_STUDIO_URL || 'https://aientities.saywhatwant.app',
+    // LOCAL: http://localhost:1234 (bot always uses localhost directly)
+    // CLOUD: https://aientities.saywhatwant.app (for external services only)
+    baseURL: process.env.LM_STUDIO_URL || 'http://localhost:1234',
     
     // Model configuration
     model: 'highermind_the-eternal-1',  // Your model's API identifier
