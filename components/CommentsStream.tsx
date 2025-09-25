@@ -165,9 +165,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Clear "New Messages" indicator when user scrolls to bottom
   useEffect(() => {
     if (isNearBottom && hasNewComments) {
+      console.log('[New Messages] Clearing indicator - user scrolled to bottom');
       setHasNewComments(false);
     }
   }, [isNearBottom, hasNewComments]);
+  
+  // Debug log for hasNewComments state
+  useEffect(() => {
+    console.log('[New Messages] hasNewComments state:', hasNewComments);
+  }, [hasNewComments]);
   
   // Video sharing system
   const {
@@ -835,8 +841,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         // Smart auto-scroll using the new system
         if (isNearBottom) {
+          console.log('[Polling] User near bottom, auto-scrolling');
           setTimeout(() => smoothScrollToBottom(), 50);
           } else {
+          console.log('[Polling] User scrolled up, showing New Messages indicator');
             setHasNewComments(true);
           }
         }
@@ -1145,22 +1153,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
 
   // Remember and restore scroll position when toggling filters
+  const prevFilterEnabled = useRef(isFilterEnabled);
   useEffect(() => {
     if (!streamRef.current) return;
     
-    if (isFilterEnabled) {
-      // Filters just turned ON - save current scroll position
-      setSavedScrollPosition(streamRef.current.scrollTop);
-      console.log('[Scroll] Saved scroll position before filter activation:', streamRef.current.scrollTop);
-    } else if (savedScrollPosition !== null) {
-      // Filters just turned OFF - restore saved scroll position
-      requestAnimationFrame(() => {
+    // Check if filter state actually changed
+    if (prevFilterEnabled.current !== isFilterEnabled) {
+      if (isFilterEnabled) {
+        // Filters just turned ON - save current scroll position
+        setSavedScrollPosition(streamRef.current.scrollTop);
+        console.log('[Scroll] Saved scroll position before filter activation:', streamRef.current.scrollTop);
+      } else if (savedScrollPosition !== null) {
+        // Filters just turned OFF - restore saved scroll position
+        // Use setTimeout to wait for content to render
+      setTimeout(() => {
         if (streamRef.current) {
-          streamRef.current.scrollTop = savedScrollPosition;
-          console.log('[Scroll] Restored scroll position after filter deactivation:', savedScrollPosition);
-          setSavedScrollPosition(null); // Clear saved position
+            streamRef.current.scrollTop = savedScrollPosition;
+            console.log('[Scroll] Restored scroll position after filter deactivation:', savedScrollPosition);
+            setSavedScrollPosition(null); // Clear saved position
         }
-      });
+      }, 50);
+    }
+      
+      prevFilterEnabled.current = isFilterEnabled;
     }
   }, [isFilterEnabled, savedScrollPosition]);
 
@@ -1664,7 +1679,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     onTouchEnd={handleTouchEnd}
                     onTouchMove={handleTouchEnd}
                     className="text-sm leading-snug break-all overflow-wrap-anywhere" 
-                    title="Click to filter by word | Right click more options"
                     style={{ 
                     lineHeight: '20px',
                     color: getCommentColor(comment) // Use actual or generated color
@@ -1706,9 +1720,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             {/* New Messages text indicator - positioned left */}
             {hasNewComments && (
               <span 
-                className="absolute top-2 left-2 text-xs z-10"
+                className="absolute top-2 left-2 text-xs z-20 font-medium"
                 style={{ 
-                  color: getDarkerColor(userColor, OPACITY_LEVELS.FULL) 
+                  color: userColor 
                 }}
               >
                 New Messages
