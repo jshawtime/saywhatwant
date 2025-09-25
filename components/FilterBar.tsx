@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { StyledFilterIcon } from '@/components/UIElements';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { UsernameFilter } from '@/hooks/useFilters';
 import { describeDateRange } from '@/utils/dateTimeParser';
+import { FilterNotificationMenu, getSoundIcon } from '@/components/FilterNotificationMenu';
+import { 
+  getFilterKey, 
+  getFilterNotificationSetting, 
+  updateFilterSound, 
+  markFilterAsRead,
+  NotificationSound 
+} from '@/modules/notificationSystem';
 
 interface FilterBarProps {
   filterUsernames: UsernameFilter[];
@@ -44,9 +52,40 @@ const FilterBar: React.FC<FilterBarProps> = ({
   // Use state to avoid hydration mismatch
   const [mounted, setMounted] = useState(false);
   
+  // Notification menu state
+  const [notificationMenu, setNotificationMenu] = useState<{ 
+    x: number; 
+    y: number; 
+    filterKey: string;
+    currentSound: NotificationSound;
+  } | null>(null);
+  
+  // Track notification settings for each filter
+  const [filterNotificationSettings, setFilterNotificationSettings] = useState<Record<string, { sound: NotificationSound; isUnread: boolean }>>({});
+  
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Load initial notification settings
+    const loadSettings = () => {
+      const settings: Record<string, { sound: NotificationSound; isUnread: boolean }> = {};
+      [...filterUsernames, ...filterWords.map(w => ({ username: w, color: userColor }))].forEach(filter => {
+        const key = getFilterKey(filter.username, filter.color || userColor);
+        settings[key] = getFilterNotificationSetting(key);
+      });
+      setFilterNotificationSettings(settings);
+    };
+    loadSettings();
+    
+    // Listen for notification updates
+    const handleNotificationUpdate = () => {
+      loadSettings();
+    };
+    
+    window.addEventListener('filterNotificationUpdate', handleNotificationUpdate);
+    return () => {
+      window.removeEventListener('filterNotificationUpdate', handleNotificationUpdate);
+    };
+  }, [filterUsernames, filterWords, userColor]);
   
   const hasDateTimeFilter = dateTimeFilter && (
     dateTimeFilter.from !== null || 
@@ -54,6 +93,47 @@ const FilterBar: React.FC<FilterBarProps> = ({
     dateTimeFilter.timeFrom !== null || 
     dateTimeFilter.timeTo !== null
   );
+  
+  // Handle right-click on filter item
+  const handleFilterContextMenu = useCallback((e: React.MouseEvent, filterKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentSetting = getFilterNotificationSetting(filterKey);
+    setNotificationMenu({
+      x: e.clientX,
+      y: e.clientY,
+      filterKey,
+      currentSound: currentSetting.sound
+    });
+  }, []);
+  
+  // Handle filter hover (mark as read)
+  const handleFilterHover = useCallback((filterKey: string) => {
+    const setting = filterNotificationSettings[filterKey];
+    if (setting?.isUnread) {
+      markFilterAsRead(filterKey);
+      setFilterNotificationSettings(prev => ({
+        ...prev,
+        [filterKey]: { ...prev[filterKey], isUnread: false }
+      }));
+    }
+  }, [filterNotificationSettings]);
+  
+  // Handle sound selection
+  const handleSoundSelect = useCallback((sound: NotificationSound) => {
+    if (notificationMenu) {
+      updateFilterSound(notificationMenu.filterKey, sound);
+      setFilterNotificationSettings(prev => ({
+        ...prev,
+        [notificationMenu.filterKey]: { 
+          ...prev[notificationMenu.filterKey], 
+          sound 
+        }
+      }));
+    }
+  }, [notificationMenu]);
+  
   return (
     <div className="relative flex items-center gap-2">
       <div className="flex-1 relative">
@@ -86,52 +166,84 @@ const FilterBar: React.FC<FilterBarProps> = ({
           ) : (
             <>
               {/* Username filters */}
-              {filterUsernames.map((filter, idx) => (
-                <span
-                  key={`user-${filter.username}-${idx}`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
-                  style={{ 
-                    backgroundColor: getDarkerColor(filter.color, OPACITY_LEVELS.DARKEST), // 10% opacity
-                    opacity: isFilterEnabled ? 1 : 0.4
-                  }}
-                >
-                  <span className="text-xs font-medium" style={{ color: filter.color }}>
-                    {filter.username}
-                  </span>
-                  <button
-                    onClick={() => onRemoveUsernameFilter(filter.username, filter.color)}
-                    className="hover:opacity-80"
-                    style={{ color: filter.color }}
-                    tabIndex={-1}
+              {filterUsernames.map((filter, idx) => {
+                const filterKey = getFilterKey(filter.username, filter.color);
+                const setting = filterNotificationSettings[filterKey] || { sound: 'none', isUnread: false };
+                
+                return (
+                  <span
+                    key={`user-${filter.username}-${idx}`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                      setting.isUnread ? 'font-bold' : ''
+                    }`}
+                    style={{ 
+                      backgroundColor: getDarkerColor(filter.color, OPACITY_LEVELS.DARKEST), // 10% opacity
+                      opacity: isFilterEnabled ? 1 : 0.4,
+                      boxShadow: setting.isUnread ? `0 0 0 2px ${filter.color}` : 'none'
+                    }}
+                    onContextMenu={(e) => handleFilterContextMenu(e, filterKey)}
+                    onMouseEnter={() => handleFilterHover(filterKey)}
+                    title="Right click to alert this"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
+                    {setting.sound !== 'none' && (
+                      <span style={{ color: filter.color }}>
+                        {getSoundIcon(setting.sound)}
+                      </span>
+                    )}
+                    <span className="text-xs font-medium" style={{ color: filter.color }}>
+                      {filter.username}
+                    </span>
+                    <button
+                      onClick={() => onRemoveUsernameFilter(filter.username, filter.color)}
+                      className="hover:opacity-80"
+                      style={{ color: filter.color }}
+                      tabIndex={-1}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              })}
               
               {/* Word filters */}
-              {filterWords.map((word) => (
-                <span
-                  key={`word-${word}`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-md transition-opacity"
-                  style={{ 
-                    backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
-                    opacity: isFilterEnabled ? 1 : 0.4
-                  }}
-                >
-                  <span className="text-xs" style={{ color: userColor }}>
-                    {word}
-                  </span>
-                  <button
-                    onClick={() => onRemoveWordFilter(word)}
-                    className="hover:opacity-80"
-                    style={{ color: userColor }}
-                    tabIndex={-1}
+              {filterWords.map((word) => {
+                const filterKey = getFilterKey(word, userColor);
+                const setting = filterNotificationSettings[filterKey] || { sound: 'none', isUnread: false };
+                
+                return (
+                  <span
+                    key={`word-${word}`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                      setting.isUnread ? 'font-bold' : ''
+                    }`}
+                    style={{ 
+                      backgroundColor: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST), // 10% opacity
+                      opacity: isFilterEnabled ? 1 : 0.4,
+                      boxShadow: setting.isUnread ? `0 0 0 2px ${userColor}` : 'none'
+                    }}
+                    onContextMenu={(e) => handleFilterContextMenu(e, filterKey)}
+                    onMouseEnter={() => handleFilterHover(filterKey)}
+                    title="Right click to alert this"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
+                    {setting.sound !== 'none' && (
+                      <span style={{ color: userColor }}>
+                        {getSoundIcon(setting.sound)}
+                      </span>
+                    )}
+                    <span className="text-xs" style={{ color: userColor }}>
+                      {word}
+                    </span>
+                    <button
+                      onClick={() => onRemoveWordFilter(word)}
+                      className="hover:opacity-80"
+                      style={{ color: userColor }}
+                      tabIndex={-1}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              })}
               
               {/* Negative word filters */}
               {negativeFilterWords.map((word) => (
@@ -191,6 +303,17 @@ const FilterBar: React.FC<FilterBarProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Notification context menu */}
+      {notificationMenu && (
+        <FilterNotificationMenu
+          x={notificationMenu.x}
+          y={notificationMenu.y}
+          currentSound={notificationMenu.currentSound}
+          onClose={() => setNotificationMenu(null)}
+          onSelectSound={handleSoundSelect}
+        />
+      )}
     </div>
   );
 };

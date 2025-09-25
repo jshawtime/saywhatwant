@@ -6,6 +6,13 @@ import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, S
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
 import { useIndexedDBSync } from '@/hooks/useIndexedDBSync';
+import { 
+  getNotificationSystem, 
+  getFilterKey, 
+  getFilterNotificationSetting,
+  markFilterAsUnread,
+  NotificationSound 
+} from '@/modules/notificationSystem';
 import { getStorage } from '@/modules/storage';
 import { initializeIndexedDBSystem } from '@/modules/storage/init';
 import FilterBar from '@/components/FilterBar';
@@ -711,6 +718,59 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Don't auto-scroll on resize - let user stay where they are
 
   // Check for new comments using cursor-based polling (ultra efficient!)
+  // Check if new comments match filters and trigger notifications
+  const checkNotificationMatches = useCallback((newComments: Comment[]) => {
+    const notificationSystem = getNotificationSystem();
+    const soundsToPlay: NotificationSound[] = [];
+    const filtersToMark: string[] = [];
+    
+    // Check each new comment
+    newComments.forEach(comment => {
+      // Check username filters
+      filterUsernames.forEach(filter => {
+        if (comment.username === filter.username) {
+          const filterKey = getFilterKey(filter.username, filter.color);
+          const setting = getFilterNotificationSetting(filterKey);
+          
+          if (setting.sound !== 'none' && !filtersToMark.includes(filterKey)) {
+            soundsToPlay.push(setting.sound);
+            filtersToMark.push(filterKey);
+          }
+        }
+      });
+      
+      // Check word filters
+      filterWords.forEach(word => {
+        if (comment.text && comment.text.toLowerCase().includes(word.toLowerCase())) {
+          const filterKey = getFilterKey(word, userColor);
+          const setting = getFilterNotificationSetting(filterKey);
+          
+          if (setting.sound !== 'none' && !filtersToMark.includes(filterKey)) {
+            soundsToPlay.push(setting.sound);
+            filtersToMark.push(filterKey);
+          }
+        }
+      });
+    });
+    
+    // Play sounds in order with cooldown
+    if (soundsToPlay.length > 0) {
+      notificationSystem.playSoundsInOrder(soundsToPlay);
+    }
+    
+    // Mark filters as unread (make them bold)
+    filtersToMark.forEach(filterKey => {
+      markFilterAsUnread(filterKey);
+    });
+    
+    // Force re-render of FilterBar to show bold state
+    if (filtersToMark.length > 0) {
+      // Trigger a re-render by updating a dummy state or dispatching an event
+      window.dispatchEvent(new CustomEvent('filterNotificationUpdate'));
+    }
+  }, [filterUsernames, filterWords, userColor]);
+
+  // Check for new comments using cursor-based polling (ultra efficient!)
   const checkForNewComments = useCallback(async () => {
       try {
       let newComments: Comment[] = [];
@@ -761,6 +821,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       }
       
       if (newComments.length > 0) {
+        // Check for notification matches if filters are active
+        if (isFilterEnabled && (filterUsernames.length > 0 || filterWords.length > 0)) {
+          checkNotificationMatches(newComments);
+        }
+        
         // Smart auto-scroll using the new system
         if (isNearBottom) {
           setTimeout(() => smoothScrollToBottom(), 50);
@@ -773,7 +838,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       } catch (err) {
         console.error('[Comments] Polling error:', err);
       }
-  }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages]);
+  }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages, 
+      isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches]);
   
   // Use the modular polling system
   useCommentsPolling({
