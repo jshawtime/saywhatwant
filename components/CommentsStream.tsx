@@ -1218,7 +1218,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               {/* Message counter - small and subtle, inheriting user color */}
               {messageCount > 0 && (
                 <span 
-                  className="text-xs mr-2 opacity-60" 
+                  className="text-xs mr-5 ml-1 opacity-60" 
                   style={{ color: userColor }}
                   title={`Total messages: ${messageCount.toLocaleString()}`}
                 >
