@@ -76,6 +76,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [isLoadingMoreFromIndexedDb, setIsLoadingMoreFromIndexedDb] = useState(false);
   const allIndexedDbMessages = useRef<Comment[]>([]);
   
+  // Dynamic message limit (expands with lazy loading)
+  const [dynamicMaxMessages, setDynamicMaxMessages] = useState(MAX_DISPLAY_MESSAGES);
+  const [lazyLoadedCount, setLazyLoadedCount] = useState(0);
+  
   // Scroll position memory for filters and search
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
@@ -419,6 +423,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     const loadInitialComments = async () => {
       setIsLoading(true);
       
+      // Reset dynamic limits on initial load/refresh
+      setDynamicMaxMessages(MAX_DISPLAY_MESSAGES);
+      setLazyLoadedCount(0);
+      console.log('[Init] Reset message limit to default:', MAX_DISPLAY_MESSAGES);
+      
       try {
         // In dev mode with localStorage enabled, try to load from static JSON first
         if (COMMENTS_CONFIG.useLocalStorage) {
@@ -529,28 +538,23 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Track if we've done initial scroll
   const hasScrolledRef = useRef(false);
   
-  // Helper to trim messages to max display limit while preserving scroll context
-  const trimToMaxMessages = useCallback((messages: Comment[], preserveOlder: boolean = false): Comment[] => {
-    if (messages.length <= MAX_DISPLAY_MESSAGES) {
+  // Helper to trim messages to dynamic display limit
+  const trimToMaxMessages = useCallback((messages: Comment[]): Comment[] => {
+    if (messages.length <= dynamicMaxMessages) {
       return messages;
     }
     
-    if (preserveOlder) {
-      // When loading older messages, keep the oldest and trim from the end
-      const trimmed = messages.slice(0, MAX_DISPLAY_MESSAGES);
-      console.log(`[Trim] Kept oldest ${MAX_DISPLAY_MESSAGES} messages, removed ${messages.length - MAX_DISPLAY_MESSAGES} newer ones`);
-      return trimmed;
-    } else {
-      // Normal case: keep the newest messages
-      const trimmed = messages.slice(-MAX_DISPLAY_MESSAGES);
-      console.log(`[Trim] Kept newest ${MAX_DISPLAY_MESSAGES} messages, removed ${messages.length - MAX_DISPLAY_MESSAGES} older ones`);
-      // When we trim from the beginning, there are more messages available to lazy load
-      if (messages.length > MAX_DISPLAY_MESSAGES) {
-        setHasMoreInIndexedDb(true);
-      }
-      return trimmed;
+    // Always keep the newest messages up to the dynamic limit
+    const trimmed = messages.slice(-dynamicMaxMessages);
+    console.log(`[Trim] Kept newest ${dynamicMaxMessages} messages (dynamic limit), removed ${messages.length - dynamicMaxMessages} older ones`);
+    
+    // When we trim from the beginning, there might be more messages available to lazy load
+    if (messages.length > dynamicMaxMessages && allIndexedDbMessages.current.length > messages.length) {
+      setHasMoreInIndexedDb(true);
     }
-  }, []);
+    
+    return trimmed;
+  }, [dynamicMaxMessages]);
   
   // Load more messages from IndexedDB (for lazy loading)
   const loadMoreFromIndexedDb = useCallback(() => {
@@ -566,7 +570,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // Get the older messages
       const olderMessages = allIndexedDbMessages.current.slice(newOffset, indexedDbOffset);
       
-      // Prepend to existing messages
+      // Update the dynamic max to accommodate new messages + headroom
+      const newLazyLoadedCount = lazyLoadedCount + loadCount;
+      const newDynamicMax = MAX_DISPLAY_MESSAGES + newLazyLoadedCount + 50; // +50 headroom
+      setLazyLoadedCount(newLazyLoadedCount);
+      setDynamicMaxMessages(newDynamicMax);
+      
+      console.log(`[Lazy Load] Expanding message limit: ${MAX_DISPLAY_MESSAGES} → ${newDynamicMax} (loaded ${newLazyLoadedCount} extra messages)`);
+      
+      // Prepend to existing messages (actually ADD them, don't trim!)
       setAllComments(prev => {
         // Create a Map to avoid duplicates
         const messageMap = new Map<string, Comment>();
@@ -581,11 +593,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const merged = Array.from(messageMap.values())
           .sort((a, b) => a.timestamp - b.timestamp);
         
-        // Trim to max, but preserve older messages since user is scrolling up
-        const trimmed = trimToMaxMessages(merged, true);
-        
-        console.log(`[IndexedDB] Loaded ${loadCount} more messages (${newOffset} remaining)`);
-        return trimmed;
+        console.log(`[IndexedDB] Added ${loadCount} older messages (${newOffset} remaining in storage)`);
+        return merged; // Don't trim! Let them all show
       });
       
       setIndexedDbOffset(newOffset);
@@ -593,7 +602,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
     
     setIsLoadingMoreFromIndexedDb(false);
-  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, trimToMaxMessages]);
+  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, lazyLoadedCount]);
   
   // Scroll to bottom ONLY on initial page load when comments first arrive
   useEffect(() => {
