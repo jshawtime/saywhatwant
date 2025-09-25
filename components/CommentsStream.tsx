@@ -86,7 +86,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
   
   // Context menu state
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; comment: Comment } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ 
+    x: number; 
+    y: number; 
+    comment: Comment;
+    clickedWord?: string;
+    isUsername?: boolean;
+  } | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Sync comments to IndexedDB (stores every message you see locally)
@@ -760,12 +766,46 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   };
   
   // Context menu handlers
-  const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment, isUsername: boolean = false) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, comment });
+    e.stopPropagation();
+    
+    let clickedWord: string | undefined;
+    
+    if (!isUsername) {
+      // Use selection API to get the word at click position
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const selectedText = selection.toString().trim();
+        if (selectedText && selectedText.split(/\s+/).length === 1) {
+          // Single word selected
+          clickedWord = selectedText.replace(/[^a-zA-Z0-9]/g, '');
+        }
+      }
+      
+      // If no selection, try to extract from the whole text
+      if (!clickedWord) {
+        const target = e.target as HTMLElement;
+        const text = target.textContent || '';
+        // Simple approach: just get the first word if it's a short message
+        const words = text.trim().split(/\s+/);
+        if (words.length <= 5) {
+          // For short messages, block the whole message makes sense
+          clickedWord = undefined; // Will block username instead
+        }
+      }
+    }
+    
+    setContextMenu({ 
+      x: e.clientX, 
+      y: e.clientY, 
+      comment,
+      clickedWord,
+      isUsername 
+    });
   }, []);
   
-  const handleTouchStart = useCallback((e: React.TouchEvent, comment: Comment) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent, comment: Comment, isUsername: boolean = false) => {
     const touch = e.touches[0];
     
     // Clear any existing timer
@@ -776,7 +816,28 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Set a new timer for long press (500ms)
     longPressTimer.current = setTimeout(() => {
       e.preventDefault();
-      setContextMenu({ x: touch.clientX, y: touch.clientY, comment });
+      
+      let clickedWord: string | undefined;
+      
+      if (!isUsername) {
+        // For touch, we can't easily determine the exact word
+        // So we'll just block the username unless text is selected
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const selectedText = selection.toString().trim();
+          if (selectedText && selectedText.split(/\s+/).length === 1) {
+            clickedWord = selectedText.replace(/[^a-zA-Z0-9]/g, '');
+          }
+        }
+      }
+      
+      setContextMenu({ 
+        x: touch.clientX, 
+        y: touch.clientY, 
+        comment,
+        clickedWord,
+        isUsername
+      });
       // Haptic feedback for mobile if available
       if ('vibrate' in navigator) {
         navigator.vibrate(10);
@@ -837,13 +898,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   
   const handleBlock = useCallback(() => {
     if (!contextMenu) return;
-    const { comment } = contextMenu;
-    const username = comment.username || 'anonymous';
+    const { comment, clickedWord, isUsername } = contextMenu;
     
-    // Add to negative filter
-    addNegativeWordFilter(username);
-    
-    console.log('[Context Menu] Blocked user:', username);
+    if (clickedWord && !isUsername) {
+      // Block the specific word
+      addNegativeWordFilter(clickedWord);
+      console.log('[Context Menu] Blocked word:', clickedWord);
+    } else {
+      // Block the username
+      const username = comment.username || 'anonymous';
+      addNegativeWordFilter(username);
+      console.log('[Context Menu] Blocked user:', username);
+    }
   }, [contextMenu, addNegativeWordFilter]);
 
 
@@ -1246,17 +1312,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           filteredComments.map((comment) => (
             <div 
               key={comment.id} 
-              className="comment-enter bg-white/5 rounded-lg px-3 py-2 hover:bg-white/[0.07] transition-colors cursor-pointer select-none"
-              onContextMenu={(e) => handleContextMenu(e, comment)}
-              onTouchStart={(e) => handleTouchStart(e, comment)}
-              onTouchEnd={handleTouchEnd}
-              onTouchMove={handleTouchEnd}
+              className="comment-enter bg-white/5 rounded-lg px-3 py-2 hover:bg-white/[0.07] transition-colors"
             >
               <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
                 {/* Username - vertically centered with first line of message */}
                 <button 
                   onClick={() => comment.username && addToFilter(comment.username, getCommentColor(comment))}
-                  className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer" 
+                  onContextMenu={(e) => handleContextMenu(e, comment, true)} // true = username clicked
+                  onTouchStart={(e) => handleTouchStart(e, comment, true)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd}
+                  className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer select-none" 
                   style={{ 
                     lineHeight: '20px',
                     color: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.LIGHT)  // Use generated color for consistency
@@ -1268,10 +1334,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 
                 {/* Message with right margin for timestamp */}
                 <div className="flex-1 pr-12">
-                  <div className="text-sm leading-snug break-all overflow-wrap-anywhere" style={{ 
-                    lineHeight: '20px',
-                    color: getCommentColor(comment) // Use actual or generated color
-                  }}>
+                  <div 
+                    onContextMenu={(e) => handleContextMenu(e, comment, false)} // false = message clicked
+                    onTouchStart={(e) => handleTouchStart(e, comment, false)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchEnd}
+                    className="text-sm leading-snug break-all overflow-wrap-anywhere" 
+                    style={{ 
+                      lineHeight: '20px',
+                      color: getCommentColor(comment) // Use actual or generated color
+                    }}
+                  >
                     {parseCommentTextWithHandlers(comment.text)}
                   </div>
                 </div>
@@ -1396,6 +1469,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           x={contextMenu.x}
           y={contextMenu.y}
           comment={contextMenu.comment}
+          clickedWord={contextMenu.clickedWord}
+          isUsername={contextMenu.isUsername}
           onClose={() => setContextMenu(null)}
           onCopy={handleCopy}
           onSave={handleSave}

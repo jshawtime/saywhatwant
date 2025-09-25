@@ -6,6 +6,8 @@ interface ContextMenuProps {
   x: number;
   y: number;
   comment: Comment;
+  clickedWord?: string;  // The specific word that was clicked
+  isUsername?: boolean;  // Whether the username was clicked
   onClose: () => void;
   onCopy: () => void;
   onSave: () => void;
@@ -16,6 +18,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   x,
   y,
   comment,
+  clickedWord,
+  isUsername,
   onClose,
   onCopy,
   onSave,
@@ -100,8 +104,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           onClose();
         }}
         className="p-2 hover:bg-white/10 rounded transition-all text-gray-400 hover:text-red-400"
-        title="Block user"
-        aria-label="Block user"
+        title={clickedWord ? `Block word: "${clickedWord}"` : `Block user: "${comment.username || 'anonymous'}"`}
+        aria-label={clickedWord ? "Block word" : "Block user"}
       >
         <Ban size={16} />
       </button>

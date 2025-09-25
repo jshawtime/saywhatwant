@@ -15,10 +15,14 @@ Right-click (desktop) or long-press (mobile) on any message to access a sleek co
 - Filename: `message_[username]_[timestamp].txt`
 - Includes username, date/time, and full message text
 
-### 🚫 Block
-- Adds the username to the negative filter (blocked users)
-- Message immediately disappears if filters are active
+### 🚫 Block (Context-Aware)
+- **Right-click on username**: Blocks that username
+- **Right-click on message text**: 
+  - If text is selected: Blocks the selected word
+  - If no selection: Blocks the username
+- Message/word immediately disappears if filters are active
 - Does NOT change the filter toggle state (as per current behavior)
+- Tooltip shows what will be blocked: "Block user: X" or "Block word: Y"
 
 ## User Experience
 
@@ -27,12 +31,14 @@ Right-click (desktop) or long-press (mobile) on any message to access a sleek co
 - Context menu appears at cursor position
 - Click any icon to perform action
 - Click outside or press ESC to dismiss
+- **Tip**: Select specific text before right-clicking to block just that word
 
 ### Mobile
 - **Long-press** (500ms) on any message or username
 - Haptic feedback when menu appears (if supported)
 - Tap any icon to perform action
 - Tap outside to dismiss
+- **Tip**: Select text first, then long-press to block specific words
 
 ## Visual Design
 
@@ -94,6 +100,7 @@ const url = URL.createObjectURL(blob);
 - `[Context Menu] Copied message to clipboard`
 - `[Context Menu] Saved message as: [filename]`
 - `[Context Menu] Blocked user: [username]`
+- `[Context Menu] Blocked word: [word]`
 
 ## Accessibility
 - All buttons have proper `aria-label` attributes
