@@ -103,6 +103,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Scroll position memory for filters and search
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
+  const [savedHumansScrollPosition, setSavedHumansScrollPosition] = useState<number | null>(null);
+  const [savedEntitiesScrollPosition, setSavedEntitiesScrollPosition] = useState<number | null>(null);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ 
@@ -838,12 +840,24 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Toggle message type filters
   const toggleShowHumans = () => {
+    // Save scroll position before toggling
+    if (streamRef.current && showHumans) {
+      setSavedHumansScrollPosition(streamRef.current.scrollTop);
+      console.log('[Scroll] Saved scroll position before hiding humans:', streamRef.current.scrollTop);
+    }
+    
     const newState = !showHumans;
     setShowHumans(newState);
     localStorage.setItem('sww-show-humans', String(newState));
   };
   
   const toggleShowEntities = () => {
+    // Save scroll position before toggling
+    if (streamRef.current && showEntities) {
+      setSavedEntitiesScrollPosition(streamRef.current.scrollTop);
+      console.log('[Scroll] Saved scroll position before hiding entities:', streamRef.current.scrollTop);
+    }
+    
     const newState = !showEntities;
     setShowEntities(newState);
     localStorage.setItem('sww-show-entities', String(newState));
@@ -1097,6 +1111,38 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [searchTerm, savedSearchScrollPosition]);
 
+  // Remember and restore scroll position when toggling Humans filter
+  useEffect(() => {
+    if (!streamRef.current) return;
+    
+    // If humans just turned back ON and we have a saved position
+    if (showHumans && savedHumansScrollPosition !== null) {
+      requestAnimationFrame(() => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = savedHumansScrollPosition;
+          console.log('[Scroll] Restored scroll position after showing humans:', savedHumansScrollPosition);
+          setSavedHumansScrollPosition(null); // Clear saved position
+        }
+      });
+    }
+  }, [showHumans, savedHumansScrollPosition]);
+
+  // Remember and restore scroll position when toggling Entities filter
+  useEffect(() => {
+    if (!streamRef.current) return;
+    
+    // If entities just turned back ON and we have a saved position
+    if (showEntities && savedEntitiesScrollPosition !== null) {
+      requestAnimationFrame(() => {
+        if (streamRef.current) {
+          streamRef.current.scrollTop = savedEntitiesScrollPosition;
+          console.log('[Scroll] Restored scroll position after showing entities:', savedEntitiesScrollPosition);
+          setSavedEntitiesScrollPosition(null); // Clear saved position
+        }
+      });
+    }
+  }, [showEntities, savedEntitiesScrollPosition]);
+
 
   // Handle mobile keyboard visibility - works for both iOS and Android
   useEffect(() => {
@@ -1255,7 +1301,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 className={`px-2.5 py-1.5 rounded-full transition-all ${
                   showHumans ? 'bg-black/40' : 'hover:bg-black/20'
                 }`}
-                title="Show human messages"
+                title={showHumans ? "Hide human messages" : "Show human messages"}
               >
                 <Users 
                   className="w-3.5 h-3.5"
@@ -1274,7 +1320,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 className={`px-2.5 py-1.5 rounded-full transition-all ${
                   showEntities ? 'bg-black/40' : 'hover:bg-black/20'
                 }`}
-                title="Show AI entity messages"
+                title={showEntities ? "Hide entity messages" : "Show entity messages"}
               >
                 <Sparkles 
                   className="w-3.5 h-3.5"
@@ -1600,11 +1646,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               userColor={userColor}
             />
             
-            {/* Send button inside field, under character count */}
+            {/* Scroll to bottom button */}
+            <button
+              type="button"
+              onClick={() => {
+                smoothScrollToBottom(false);
+                setHasNewComments(false);
+              }}
+              className="absolute bottom-2 right-10 p-1 rounded transition-all z-10 hover:opacity-80 cursor-pointer"
+              style={{ 
+                color: getDarkerColor(userColor, OPACITY_LEVELS.MEDIUM)
+              }}
+              tabIndex={-1}
+              aria-label="Scroll to bottom"
+              title="Jump to latest messages"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
+            
+            {/* Send button - vertically centered between char count and input bottom */}
             <button
               type="submit"
               disabled={isSubmitting || !inputText.trim()}
-              className={`absolute top-6 right-2 p-1 rounded transition-all z-10 ${
+              className={`absolute bottom-2 right-2 p-1 rounded transition-all z-10 ${
                 isSubmitting || !inputText.trim()
                   ? 'cursor-not-allowed'
                   : 'hover:opacity-80 cursor-pointer'
