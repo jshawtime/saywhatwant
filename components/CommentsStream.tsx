@@ -711,7 +711,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Scroll to bottom ONLY on initial page load when comments first arrive
   useEffect(() => {
     // Only scroll once when comments first arrive AND we haven't scrolled yet
-    if (allComments.length > 0 && !hasScrolledRef.current) {
+    // AND filters are not active (to avoid interfering with filter toggling)
+    if (allComments.length > 0 && !hasScrolledRef.current && !isFilterEnabled) {
       hasScrolledRef.current = true;
       
       // Initial scroll to bottom (only happens once per page load)
@@ -724,7 +725,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         });
       });
     }
-  }, [allComments.length]); // Only re-run when number of comments changes from 0
+  }, [allComments.length, isFilterEnabled]); // Check filter state to avoid conflicts
 
   // Don't auto-scroll when video area toggles - let user stay where they are
   
@@ -840,13 +841,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         }
         
         // Smart auto-scroll using the new system
-        if (isNearBottom) {
-          console.log('[Polling] User near bottom, auto-scrolling');
+        // Only auto-scroll if user is near bottom AND filters are NOT active
+        // When filters are active, never auto-scroll - let user control their position
+        if (isNearBottom && !isFilterEnabled) {
+          console.log('[Polling] User near bottom (unfiltered view), auto-scrolling');
           setTimeout(() => smoothScrollToBottom(), 50);
-          } else {
-          console.log('[Polling] User scrolled up, showing New Messages indicator');
-            setHasNewComments(true);
-          }
+        } else {
+          console.log('[Polling] User scrolled up or filters active, showing New Messages indicator');
+          setHasNewComments(true);
+        }
         }
         
         lastFetchTimeRef.current = Date.now();
@@ -1161,19 +1164,24 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     if (prevFilterEnabled.current !== isFilterEnabled) {
       if (isFilterEnabled) {
         // Filters just turned ON - save current scroll position
-        setSavedScrollPosition(streamRef.current.scrollTop);
-        console.log('[Scroll] Saved scroll position before filter activation:', streamRef.current.scrollTop);
-      } else if (savedScrollPosition !== null) {
+        const currentScroll = streamRef.current.scrollTop;
+        setSavedScrollPosition(currentScroll);
+        console.log('[Scroll] Saved scroll position before filter activation:', currentScroll);
+      } else if (!isFilterEnabled && savedScrollPosition !== null) {
         // Filters just turned OFF - restore saved scroll position
-        // Use setTimeout to wait for content to render
-      setTimeout(() => {
-        if (streamRef.current) {
-            streamRef.current.scrollTop = savedScrollPosition;
-            console.log('[Scroll] Restored scroll position after filter deactivation:', savedScrollPosition);
-            setSavedScrollPosition(null); // Clear saved position
-        }
-      }, 50);
-    }
+        // Wait for next render cycle and content to be ready
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (streamRef.current && streamRef.current.scrollHeight > 0) {
+              // Only restore if there's content to scroll in
+              const targetScroll = Math.min(savedScrollPosition, streamRef.current.scrollHeight - streamRef.current.clientHeight);
+              streamRef.current.scrollTop = targetScroll;
+              console.log('[Scroll] Restored scroll position after filter deactivation:', targetScroll);
+              setSavedScrollPosition(null); // Clear saved position
+            }
+          });
+        });
+      }
       
       prevFilterEnabled.current = isFilterEnabled;
     }
@@ -1717,12 +1725,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         <form onSubmit={handleSubmit} className="w-full">
           <div className="relative w-full max-w-full">
-            {/* New Messages text indicator - positioned left */}
+            {/* New Messages text indicator - positioned left of chevron */}
             {hasNewComments && (
               <span 
-                className="absolute top-2 left-2 text-xs z-20 font-medium"
+                className="absolute top-2 text-xs z-20 font-medium"
                 style={{ 
-                  color: userColor 
+                  color: userColor,
+                  right: '3.5rem' // Position just left of chevron (chevron is at right-12 = 3rem)
                 }}
               >
                 New Messages
