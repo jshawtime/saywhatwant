@@ -851,10 +851,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         if (isNearBottom && !isFilterEnabled) {
           console.log('[Polling] User near bottom (unfiltered view), auto-scrolling');
           setTimeout(() => smoothScrollToBottom(), 50);
-        } else {
+          } else {
           console.log('[Polling] User scrolled up or filters active, showing New Messages indicator');
-          setHasNewComments(true);
-        }
+            setHasNewComments(true);
+          }
         }
         
         lastFetchTimeRef.current = Date.now();
@@ -1191,13 +1191,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             console.log('[Scroll] Restored scroll after filter OFF:', targetScroll, 'from saved:', savedPos);
             
             // Double-check it worked, try again if not
-            setTimeout(() => {
+      setTimeout(() => {
               if (streamRef.current && Math.abs(streamRef.current.scrollTop - targetScroll) > 10) {
                 console.log('[Scroll] Re-applying scroll restoration, current:', streamRef.current.scrollTop, 'target:', targetScroll);
                 streamRef.current.scrollTop = targetScroll;
-              }
-            }, 50);
-          }
+        }
+      }, 50);
+    }
         };
         
         // Try multiple times to ensure it sticks
@@ -1771,10 +1771,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 className="absolute top-2 text-xs z-20 font-medium pr-2 hover:opacity-80 cursor-pointer"
                 style={{ 
                   color: userColor,
-                  right: '3.5rem', // Position just left of chevron with padding
+                  right: '4rem', // Position further left of chevron for better spacing
                   background: 'none',
                   border: 'none',
-                  padding: '0 8px 0 0' // Add right padding for spacing from chevron
+                  padding: '0 12px 0 0' // Increased right padding for better spacing from chevron
                 }}
                 tabIndex={-1}
                 aria-label="Jump to latest messages"
