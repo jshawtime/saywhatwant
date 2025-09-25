@@ -1189,6 +1189,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             
             {/* Username Input and TV Toggle - Always Visible */}
             <div className="flex items-center gap-2">
+              {/* Message counter - small and subtle, inheriting user color */}
+              {messageCount > 0 && (
+                <span 
+                  className="text-xs mr-2 opacity-60" 
+                  style={{ color: userColor }}
+                  title={`Total messages: ${messageCount.toLocaleString()}`}
+                >
+                  {formatNumber(messageCount)}
+                </span>
+              )}
               <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 65px)' }} ref={colorPickerRef}>
               <button
                 onClick={toggleColorPicker}
@@ -1214,16 +1224,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                     </button>
                   ))}
                 </div>
-              )}
-              {/* Message counter - small and subtle, inheriting user color */}
-              {messageCount > 0 && (
-                <span 
-                  className="text-xs mr-5 ml-1 opacity-60" 
-                  style={{ color: userColor }}
-                  title={`Total messages: ${messageCount.toLocaleString()}`}
-                >
-                  {formatNumber(messageCount)}
-                </span>
               )}
               <StyledUsernameInput
                 inputRef={usernameRef}
