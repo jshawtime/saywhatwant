@@ -19,19 +19,17 @@
       "name": "Mac Studio 2",
       "capabilities": {
         "maxMemory": 128,
-        "preferredModels": ["google/gemma-3-27b", "llama-30b", "qwen/qwen2.5-vl-7b"],
+        "preferredModels": ["highermind_the-eternal-1", "llama-30b", "qwen/qwen2.5-vl-7b"],
         "supportedFormats": ["GGUF", "MLX"],
         "maxConcurrentModels": 5
       }
     }
   ],
   "clusterSettings": {
-    "modelLoadTimeout": 120000,
-    "requestTimeout": 30000,
-    "healthCheckInterval": 10000,
-    "maxRetries": 3,
+    "pollInterval": 5000,
+    "maxLoadAttempts": 60,
     "loadBalancingStrategy": "model-affinity",
-    "modelUnloadDelay": 300000
+    "keepModelsLoaded": true
   },
   "entities": [
     {

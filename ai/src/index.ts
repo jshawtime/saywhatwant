@@ -13,7 +13,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { logger } from './console-logger.js';
-import { LMStudioCluster } from './modules/lmStudioCluster.js';
+import { LMStudioCluster } from './modules/lmStudioCluster-closed.js';
 
 // Load AI entities configuration
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,17 +29,14 @@ try {
   process.exit(1);
 }
 
-// Initialize LM Studio Cluster
-// This replaces the single OpenAI client with a distributed cluster
-console.log(chalk.blue('[CLUSTER]'), `Initializing cluster with ${entitiesConfig.lmStudioServers?.length || 0} servers`);
+// Initialize LM Studio Cluster (Closed System - No Background Processes)
+console.log(chalk.blue('[CLUSTER]'), `Initializing closed system cluster with ${entitiesConfig.lmStudioServers?.length || 0} servers`);
 const clusterConfig = {
   servers: entitiesConfig.lmStudioServers || [],
-  modelLoadTimeout: entitiesConfig.clusterSettings?.modelLoadTimeout || 120000,
-  requestTimeout: entitiesConfig.clusterSettings?.requestTimeout || 30000,
-  healthCheckInterval: entitiesConfig.clusterSettings?.healthCheckInterval || 10000,
-  maxRetries: entitiesConfig.clusterSettings?.maxRetries || 3,
+  pollInterval: entitiesConfig.clusterSettings?.pollInterval || 5000,
+  maxLoadAttempts: entitiesConfig.clusterSettings?.maxLoadAttempts || 60,
   loadBalancingStrategy: entitiesConfig.clusterSettings?.loadBalancingStrategy || 'model-affinity',
-  modelUnloadDelay: entitiesConfig.clusterSettings?.modelUnloadDelay || 300000,
+  keepModelsLoaded: entitiesConfig.clusterSettings?.keepModelsLoaded !== false,
 };
 const lmStudioCluster = new LMStudioCluster(clusterConfig);
 
