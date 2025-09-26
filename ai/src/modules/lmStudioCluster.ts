@@ -86,6 +86,13 @@ export class LMStudioCluster {
 
   constructor(config: ClusterConfig) {
     this.config = config;
+    
+    // Ensure config has required properties
+    if (!this.config.servers) {
+      this.config.servers = [];
+      logger.warn('[Cluster] No servers configured, cluster will run in fallback mode');
+    }
+    
     this.initializeServers();
     this.initializeModelSizes();
     this.startHealthMonitoring();
@@ -95,6 +102,11 @@ export class LMStudioCluster {
    * Initialize servers from configuration
    */
   private initializeServers() {
+    if (!this.config.servers || this.config.servers.length === 0) {
+      logger.warn('[Cluster] No servers to initialize');
+      return;
+    }
+    
     for (const serverConfig of this.config.servers) {
       if (!serverConfig.enabled) continue;
 
@@ -503,6 +515,89 @@ export class LMStudioCluster {
     return results;
   }
 
+  /**
+   * Process a request with the cluster (main entry point for external callers)
+   */
+  public async processRequest(request: any): Promise<any> {
+    const { entityId, modelName, prompt, parameters, resolve, reject } = request;
+    
+    try {
+      // Get an available server
+      const server = await this.getAvailableServer(modelName);
+      if (!server) {
+        throw new Error('No healthy LM Studio servers available');
+      }
+      
+      // Ensure the model is loaded
+      await this.ensureModelLoaded(server, modelName);
+      
+      // Send the actual request
+      server.requestsInFlight++;
+      
+      const response = await fetch(`http://${server.ip}:${server.port}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          messages: prompt,
+          ...parameters,
+        }),
+        timeout: this.config.requestTimeout || 30000,
+      } as any);
+      
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      server.requestsInFlight--;
+      
+      // Update server's last used info
+      server.lastUsedModel = modelName;
+      server.lastUsedTime = Date.now();
+      
+      if (resolve) resolve(data);
+      return data;
+    } catch (error) {
+      logger.error(`[Cluster] Error processing request for entity ${entityId}:`, error);
+      if (reject) reject(error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get cluster status (for monitoring)
+   */
+  public getClusterStatus(): any {
+    const healthyServers = this.getHealthyServers();
+    const totalMemory = Array.from(this.servers.values()).reduce((sum, s) => 
+      sum + s.capabilities.maxMemory, 0);
+    const availableMemory = Array.from(this.servers.values()).reduce((sum, s) => 
+      sum + s.capabilities.availableMemory, 0);
+    const loadedModels = new Set<string>();
+    
+    this.servers.forEach(s => {
+      s.loadedModels.forEach(m => loadedModels.add(m));
+    });
+    
+    return {
+      totalServers: this.servers.size,
+      healthyServers: healthyServers.length,
+      totalMemory,
+      availableMemory,
+      loadedModels: Array.from(loadedModels),
+      serverDetails: Array.from(this.servers.values()).map(s => ({
+        name: s.name,
+        ip: s.ip,
+        status: s.status,
+        memoryUsed: s.capabilities.maxMemory - s.capabilities.availableMemory,
+        maxMemory: s.capabilities.maxMemory,
+        models: Array.from(s.loadedModels),
+        requestsInFlight: s.requestsInFlight,
+      })),
+    };
+  }
+  
   /**
    * Send a request to a specific server
    */

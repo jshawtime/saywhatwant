@@ -1,4 +1,38 @@
 {
+  "lmStudioServers": [
+    {
+      "ip": "10.0.0.102",
+      "port": 1234,
+      "enabled": true,
+      "name": "Mac Studio 1",
+      "capabilities": {
+        "maxMemory": 128,
+        "preferredModels": ["highermind_the-eternal-1", "llama-70b", "mixtral-8x7b"],
+        "supportedFormats": ["GGUF", "MLX"],
+        "maxConcurrentModels": 5
+      }
+    },
+    {
+      "ip": "10.0.0.100",
+      "port": 1234,
+      "enabled": true,
+      "name": "Mac Studio 2",
+      "capabilities": {
+        "maxMemory": 128,
+        "preferredModels": ["google/gemma-3-27b", "llama-30b", "qwen/qwen2.5-vl-7b"],
+        "supportedFormats": ["GGUF", "MLX"],
+        "maxConcurrentModels": 5
+      }
+    }
+  ],
+  "clusterSettings": {
+    "modelLoadTimeout": 120000,
+    "requestTimeout": 30000,
+    "healthCheckInterval": 10000,
+    "maxRetries": 3,
+    "loadBalancingStrategy": "model-affinity",
+    "modelUnloadDelay": 300000
+  },
   "entities": [
     {
       "id": "philosopher",

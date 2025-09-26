@@ -13,6 +13,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { logger } from './console-logger.js';
+import { LMStudioCluster } from './modules/lmStudioCluster.js';
 
 // Load AI entities configuration
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,18 +29,30 @@ try {
   process.exit(1);
 }
 
-// Initialize OpenAI client for LM Studio
-// IMPORTANT: Bot should ALWAYS use local endpoint directly
-// The cloud endpoint is for EXTERNAL access only (other servers/services)
+// Initialize LM Studio Cluster
+// This replaces the single OpenAI client with a distributed cluster
+console.log(chalk.blue('[CLUSTER]'), `Initializing cluster with ${entitiesConfig.lmStudioServers?.length || 0} servers`);
+const clusterConfig = {
+  servers: entitiesConfig.lmStudioServers || [],
+  modelLoadTimeout: entitiesConfig.clusterSettings?.modelLoadTimeout || 120000,
+  requestTimeout: entitiesConfig.clusterSettings?.requestTimeout || 30000,
+  healthCheckInterval: entitiesConfig.clusterSettings?.healthCheckInterval || 10000,
+  maxRetries: entitiesConfig.clusterSettings?.maxRetries || 3,
+  loadBalancingStrategy: entitiesConfig.clusterSettings?.loadBalancingStrategy || 'model-affinity',
+  modelUnloadDelay: entitiesConfig.clusterSettings?.modelUnloadDelay || 300000,
+};
+const lmStudioCluster = new LMStudioCluster(clusterConfig);
+
+// Legacy single client kept for backward compatibility (will be removed in Phase 2)
+// IMPORTANT: Bot should ALWAYS use the cluster for new requests
 const lmStudio = new OpenAI({
-  baseURL: 'http://localhost:1234/v1',  // Always use localhost when running on same machine
+  baseURL: 'http://localhost:1234/v1',  // Fallback for non-cluster operations
   apiKey: CONFIG.LM_STUDIO.apiKey,
-  timeout: 30000, // 30 second timeout
-  maxRetries: 2,   // Retry up to 2 times if busy
+  timeout: 30000,
+  maxRetries: 2,
 });
 
-// Track if LM Studio is currently processing
-let isLMStudioBusy = false;
+// Cluster handles busy state internally - no need for global flag
 
 // Track rate limits per entity
 const entityRateLimits: { [entityId: string]: { 
@@ -340,16 +353,9 @@ function shouldRespond(context: ConversationContext): ResponseDecision {
  * Generate response using LM Studio
  */
 async function generateResponse(context: ConversationContext): Promise<string | null> {
-  // Check if LM Studio is busy
-  if (isLMStudioBusy) {
-    log.debug('LM Studio is busy, skipping this cycle');
-    return null;
-  }
+  // Cluster handles busy state internally, no need to check here
   
   try {
-    // Mark LM Studio as busy
-    isLMStudioBusy = true;
-    
     // Entity already selected in main loop before context analysis
     
     // Check if this is a ping request
@@ -361,25 +367,36 @@ async function generateResponse(context: ConversationContext): Promise<string | 
       : `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}`;
     const fullPrompt = currentEntity.systemPrompt + contextInfo;
     
-    log.debug(`Generating response as ${currentEntity.username} (${currentEntity.id}) using model: ${currentEntity.model}`);
+    log.debug(`[Cluster] Generating response as ${currentEntity.username} (${currentEntity.id}) using model: ${currentEntity.model}`);
     
-    const completion = await lmStudio.chat.completions.create({
-      model: currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model,
-      messages: [
-        { role: 'system', content: fullPrompt },
-        { role: 'user', content: currentEntity.userPrompt || 'Generate a response based on the conversation context. Keep it natural and conversational.' }
-      ],
-      temperature: currentEntity.temperature,
-      max_tokens: currentEntity.maxTokens,
-      top_p: currentEntity.topP,
-      frequency_penalty: 0.3,
-      presence_penalty: 0.3,
-      // Note: top_k, repeat_penalty, and min_p are LM Studio specific parameters
-      // They may not work with standard OpenAI API but LM Studio may support them
-      // as custom extensions
-    } as any);
+    // Use the cluster to process the request
+    const modelName = currentEntity.model || entitiesConfig.globalSettings.defaultModel || CONFIG.LM_STUDIO.model;
     
-    const response = completion.choices[0]?.message?.content || null;
+    // Process request through the cluster
+    const lmResponse = await new Promise<any>((resolve, reject) => {
+      lmStudioCluster.processRequest({
+        entityId: currentEntity.id,
+        modelName: modelName,
+        prompt: [
+          { role: 'system', content: fullPrompt },
+          { role: 'user', content: currentEntity.userPrompt || 'Generate a response based on the conversation context. Keep it natural and conversational.' }
+        ],
+        parameters: {
+          temperature: currentEntity.temperature,
+          max_tokens: currentEntity.maxTokens,
+          top_p: currentEntity.topP,
+          frequency_penalty: 0.3,
+          presence_penalty: 0.3,
+          // LM Studio specific parameters
+          top_k: currentEntity.topK,
+          repeat_penalty: currentEntity.repeatPenalty,
+          min_p: currentEntity.minP,
+        },
+        resolve,
+        reject
+      }).catch(reject);
+    });
+    const response = lmResponse.choices[0]?.message?.content || null;
     
     // Check if bot chose to skip
     if (response?.includes('[SKIP]')) {
@@ -387,22 +404,19 @@ async function generateResponse(context: ConversationContext): Promise<string | 
       return null;
     }
     
-    // Entity is now randomly selected for each response in generateResponse()
-    // No need to change username/color here anymore
+    // Log cluster status after each request
+    const clusterStatus = lmStudioCluster.getClusterStatus();
+    log.debug(`[Cluster] Status: ${clusterStatus.healthyServers}/${clusterStatus.totalServers} servers, ${clusterStatus.availableMemory}GB free`);
     
-    isLMStudioBusy = false; // Mark as not busy
     return response;
   } catch (error: any) {
-    isLMStudioBusy = false; // Mark as not busy even on error
-    // Check if LM Studio is busy or timeout
-    if (error.message?.includes('timeout') || error.message?.includes('ECONNREFUSED')) {
-      log.warn(`LM Studio busy/timeout for ${currentEntity.username}, will retry next cycle`);
-    } else if (error.status === 503 || error.status === 429) {
-      log.warn(`LM Studio overloaded (${error.status}), backing off...`);
-      // Add exponential backoff
-      await new Promise(resolve => setTimeout(resolve, 5000));
+    // Cluster handles retries internally, so this is a final failure
+    if (error.message?.includes('No healthy LM Studio servers')) {
+      log.warn(`[Cluster] All servers offline, will retry next cycle`);
+    } else if (error.message?.includes('timeout')) {
+      log.warn(`[Cluster] Request timeout for ${currentEntity.username}, servers may be overloaded`);
     } else {
-      log.error(`Failed to generate response: ${error}`);
+      log.error(`[Cluster] Failed to generate response: ${error.message}`);
     }
     return null;
   }
