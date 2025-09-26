@@ -4,7 +4,7 @@
  */
 
 import chalk from 'chalk';
-import { CONFIG } from './config';
+import { CONFIG } from './config.js';
 
 interface LogData {
   botId: string;

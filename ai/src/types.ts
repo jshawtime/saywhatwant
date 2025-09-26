@@ -12,6 +12,7 @@ export interface Comment {
   color?: string;
   language?: string;
   misc?: string;
+  'message-type'?: 'AI' | 'human' | string;
 }
 
 // Response from Say What Want API
