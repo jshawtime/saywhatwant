@@ -410,7 +410,6 @@
   "globalSettings": {
     "minTimeBetweenMessages": 30000,
     "maxMessagesPerMinute": 2,
-    "messagesToRead": 15,
     "requireHumanActivity": true,
     "defaultModel": "highermind_the-eternal-1",
     "cloudflareWorkerRateLimits": {
