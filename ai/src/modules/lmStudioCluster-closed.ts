@@ -15,7 +15,8 @@ export interface LMStudioServer {
   port: number;
   name: string;
   status: ServerStatus;
-  loadedModels: Set<string>;
+  loadedModels: Set<string>;      // Models currently in memory (state: loaded)
+  availableModels: Set<string>;    // All models on disk (loaded + not-loaded)
   lastHealthCheck: number;
   requestsInFlight: number;
   capabilities: {
@@ -89,6 +90,7 @@ export class LMStudioCluster {
         name: serverConfig.name,
         status: 'offline',
         loadedModels: new Set(),
+        availableModels: new Set(),
         lastHealthCheck: 0,
         requestsInFlight: 0,
         capabilities: {
@@ -121,10 +123,12 @@ export class LMStudioCluster {
 
   /**
    * Check server status RIGHT NOW (closed system)
+   * Uses the NEW LM Studio REST API for accurate model state
    */
   private async checkServerNow(server: LMStudioServer): Promise<boolean> {
     try {
-      const response = await fetch(`http://${server.ip}:${server.port}/v1/models`, {
+      // Use the LM Studio REST API that shows state field
+      const response = await fetch(`http://${server.ip}:${server.port}/api/v0/models`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -135,15 +139,47 @@ export class LMStudioCluster {
         // Update server state
         server.status = 'available';
         server.lastHealthCheck = Date.now();
-        server.loadedModels = new Set(data.data?.map((m: any) => m.id) || []);
         
-        // Calculate memory usage
+        // Accurately track loaded vs available models using state field
+        const loadedModels = new Set<string>();
+        const availableModels = new Set<string>();
+        
+        for (const model of (data.data || [])) {
+          availableModels.add(model.id);
+          if (model.state === 'loaded') {
+            loadedModels.add(model.id);
+          }
+        }
+        
+        server.loadedModels = loadedModels;
+        server.availableModels = availableModels;
+        
+        // Calculate memory usage based on ACTUALLY loaded models
         let usedMemory = 0;
-        for (const model of server.loadedModels) {
-          usedMemory += this.estimateModelSize(model);
+        for (const modelId of loadedModels) {
+          usedMemory += this.estimateModelSize(modelId);
         }
         server.capabilities.availableMemory = server.capabilities.maxMemory - usedMemory;
         
+        logger.debug(`[Cluster] ${server.name}: ${loadedModels.size} loaded, ${availableModels.size - loadedModels.size} available`);
+        
+        return true;
+      }
+      
+      // Fallback to OpenAI endpoint if v0 API not available (older LM Studio)
+      const fallbackResponse = await fetch(`http://${server.ip}:${server.port}/v1/models`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json() as any;
+        server.status = 'available';
+        server.lastHealthCheck = Date.now();
+        // With v1 API, we can't distinguish loaded vs available
+        server.loadedModels = new Set(data.data?.map((m: any) => m.id) || []);
+        server.availableModels = server.loadedModels; // Assume all shown are available
+        logger.warn(`[Cluster] ${server.name}: Using legacy API, can't distinguish loaded vs available`);
         return true;
       }
     } catch (error) {
