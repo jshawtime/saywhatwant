@@ -17,7 +17,13 @@ export class LMStudioCLI {
   async loadModel(modelName: string, host?: string): Promise<boolean> {
     try {
       const hostFlag = host ? `--host ${host}` : '';
-      const command = `lms load ${modelName} ${hostFlag}`;
+      // For highermind model, use full path to avoid interactive selection
+      // TODO: Make this configurable per model in config-aientities.json
+      let modelPath = modelName;
+      if (modelName === 'highermind_the-eternal-1') {
+        modelPath = 'HigherMind/HigherMind_The-Eternal-1_f32/HigherMind_The-Eternal-1_f32.gguf';
+      }
+      const command = `lms load "${modelPath}" ${hostFlag}`;
       
       logger.info(`[CLI] Executing: ${command}`);
       const { stdout, stderr } = await execAsync(command);
