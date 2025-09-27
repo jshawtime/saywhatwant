@@ -236,54 +236,52 @@ export class LMStudioCluster {
   }
 
   /**
-   * Load model and poll until ready
+   * Load model using LM Studio CLI (only works when bot runs locally!)
    */
   private async loadModelAndWait(server: LMStudioServer, modelName: string): Promise<void> {
-    // Request model load
+    logger.info(`[Cluster] Loading ${modelName} on ${server.name} via CLI...`);
+    
+    // Dynamic import to avoid issues if CLI not available
     try {
-      const response = await fetch(`http://${server.ip}:${server.port}/v1/models/load`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          model: modelName,
-          config: {
-            keep_in_memory: this.config.keepModelsLoaded
-          }
-        }),
-      });
+      const { LMStudioCLI } = await import('./lmStudioCliWrapper.js');
+      const cli = new LMStudioCLI();
       
-      if (!response.ok) {
-        logger.warn(`[Cluster] Load request returned ${response.status}`);
+      // Use the CLI to load the model on the remote host
+      const success = await cli.loadModel(modelName, server.ip);
+      
+      if (!success) {
+        throw new Error(`CLI failed to load ${modelName} on ${server.ip}`);
       }
-    } catch (error) {
-      logger.error(`[Cluster] Failed to request model load: ${error}`);
-      throw error;
-    }
-    
-    // Poll until loaded
-    let attempts = 0;
-    const maxAttempts = this.config.maxLoadAttempts || 60;
-    const pollInterval = this.config.pollInterval || 5000;
-    
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      attempts++;
       
-      // Check if model is loaded
-      if (await this.checkServerNow(server)) {
-        if (server.loadedModels.has(modelName)) {
-          logger.success(`[Cluster] Model ${modelName} loaded on ${server.name} after ${attempts * 5}s`);
+      // Poll until loaded (since CLI is async)
+      let attempts = 0;
+      const maxAttempts = 30; // 2.5 minutes max
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second polls
+        
+        if (await this.checkServerNow(server) && server.loadedModels.has(modelName)) {
+          logger.success(`[Cluster] Model ${modelName} loaded on ${server.name}!`);
           return;
         }
+        
+        attempts++;
       }
       
-      // Progress update every 30 seconds
-      if (attempts % 6 === 0) {
-        logger.info(`[Cluster] Still loading ${modelName}... (${attempts * 5}s elapsed)`);
+      throw new Error(`Model ${modelName} failed to load after ${attempts * 5} seconds`);
+      
+    } catch (error: any) {
+      if (error.message.includes('Cannot find module')) {
+        // CLI wrapper not available, fallback to error
+        logger.error(`[Cluster] CLI wrapper not available, cannot auto-load models`);
+        logger.error(`[Cluster] Please manually load ${modelName} on ${server.name}`);
+        throw new Error(
+          `Model ${modelName} not loaded. Bot cannot use CLI from Cloudflare. ` +
+          `Either run bot locally with PM2 or pre-load models manually.`
+        );
       }
+      throw error;
     }
-    
-    throw new Error(`Model ${modelName} failed to load after ${maxAttempts * 5} seconds`);
   }
 
   /**
