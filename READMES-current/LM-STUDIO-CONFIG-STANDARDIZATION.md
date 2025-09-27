@@ -1,77 +1,85 @@
-# LM Studio Configuration Standardization
+# LM Studio Server Configuration Standardization
 
-## Problem Statement
-The two LM Studio servers are reporting models differently via `/v1/models`:
-- **Mac Studio 1 (10.0.0.102)**: Shows only LOADED models (in memory)
-- **Mac Studio 2 (10.0.0.100)**: Shows ALL AVAILABLE models (on disk)
+## 📌 Issue Discovered
+**Date**: September 27, 2025
 
-This inconsistency breaks our assumptions about model state.
+### The Problem
+Two LM Studio servers returning different data from `/api/v0/models`:
 
-## Critical Distinction
-- **AVAILABLE models**: Models downloaded/stored on disk that CAN be loaded
-- **LOADED models**: Models currently in GPU/RAM memory, ready for inference
+**10.0.0.102 (Mac Studio 1):**
+- Returns: Only LOADED models (1 model)
+- Clean, efficient API response
+- Can't see unloaded models via API
 
-## Current Code Issue
-Our cluster code incorrectly assumes `/v1/models` always shows loaded models:
-```typescript
-server.loadedModels = new Set(data.data?.map((m: any) => m.id) || []);
+**10.0.0.100 (Mac Studio 2):**
+- Returns: ALL models (11 total - loaded + not-loaded)
+- Shows everything on disk
+- Creates verbose logs
+
+## ✅ Current Impact
+**MINIMAL** - Our cluster code handles both correctly by:
+- Using `loadedModels` for routing (works on both)
+- Not depending on `availableModels` for core logic
+- Load balancing based on what's actually loaded
+
+## 🔧 How to Standardize
+
+### Option A: Make 10.0.0.100 Match 10.0.0.102 (Recommended)
+**On Mac Studio 2 (10.0.0.100):**
+1. Open LM Studio GUI
+2. Go to **Developer** → **Server**
+3. Find setting: **"Include unloaded models in API"** or similar
+4. **UNCHECK** this option
+5. Restart the server
+6. Result: Only loaded models shown (cleaner logs)
+
+### Option B: Make 10.0.0.102 Match 10.0.0.100
+**On Mac Studio 1 (10.0.0.102):**
+1. Open LM Studio GUI
+2. Go to **Developer** → **Server**
+3. Find setting: **"Include unloaded models in API"** or similar
+4. **CHECK** this option
+5. Restart the server
+6. Result: All models shown (verbose but complete)
+
+## 🎯 Recommendation: Option A
+
+**Why only show loaded models?**
+- ✅ Cleaner logs
+- ✅ Faster API responses
+- ✅ Less network traffic
+- ✅ We use CLI to load models anyway
+
+**The CLI (`lms ls --host`) shows all models when needed.**
+
+## 📊 Verification
+
+After standardization, both servers should return the same count:
+
+```bash
+# Should return same number on both:
+curl -s http://10.0.0.102:1234/api/v0/models | jq '.data | length'
+curl -s http://10.0.0.100:1234/api/v0/models | jq '.data | length'
 ```
 
-## Solutions
+## 🔍 Why This Happened
 
-### Option 1: Standardize LM Studio Settings (RECOMMENDED)
-Configure both LM Studio instances identically:
-1. Check LM Studio settings on both machines
-2. Look for options like:
-   - "Show all models in API" vs "Show only loaded models"
-   - "API model visibility"
-   - "Model listing behavior"
-3. Set both to the same behavior
+LM Studio added this setting in recent versions to let users choose between:
+- **Performance** (only show loaded)
+- **Transparency** (show everything)
 
-### Option 2: Detect and Adapt
-Make our code smart enough to handle both behaviors:
-```typescript
-// Detect behavior by model count or memory usage
-const modelCount = data.data?.length || 0;
-const isShowingAvailable = modelCount > 3; // Heuristic
+When you updated both machines to the latest version, they may have retained different settings from their previous configs.
 
-if (isShowingAvailable) {
-  server.availableModels = new Set(data.data?.map((m: any) => m.id));
-  // Try to detect which are actually loaded via other means
-} else {
-  server.loadedModels = new Set(data.data?.map((m: any) => m.id));
-}
-```
+## 📝 Note for Future
 
-### Option 3: Use Additional Endpoints
-Try to find LM Studio endpoints that clearly distinguish:
-- `/v1/models` - All available
-- `/v1/models/loaded` - Only loaded (if exists)
-- Memory usage metrics to infer loaded models
+When adding new LM Studio servers:
+1. Check this setting first
+2. Match existing servers' configuration
+3. Document in `config-aientities.json` comments
 
-## Extensibility Requirements
+## 🚀 No Code Changes Needed
 
-For true extensibility, each server must:
-1. **Report consistently** - Same API behavior
-2. **Be predictable** - Known model states
-3. **Be manageable** - Can load/unload on demand
-4. **Be monitorable** - Clear status/health
-
-## Action Items
-
-1. [ ] Check LM Studio settings on Mac Studio 1 (when back online)
-2. [ ] Check LM Studio settings on Mac Studio 2  
-3. [ ] Find setting that controls model listing behavior
-4. [ ] Standardize both servers to same setting
-5. [ ] Update cluster code to handle the chosen behavior
-6. [ ] Document the required LM Studio configuration
-
-## Configuration Checklist
-
-When adding a new LM Studio server:
-- [ ] Set model listing behavior to: [CHOSEN STANDARD]
-- [ ] Enable CORS for all origins
-- [ ] Set to listen on 0.0.0.0:1234
-- [ ] Configure model directory paths
-- [ ] Set memory limits appropriately
-- [ ] Test `/v1/models` endpoint behavior
+Our cluster code is already robust enough to handle both configurations. This standardization is just for:
+- Cleaner logs
+- Consistent behavior
+- Easier debugging

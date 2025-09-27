@@ -73,3 +73,35 @@ We need to either:
 
 For true dynamic model management, we MUST switch from REST to SDK.
 The REST API is read-only for model state!
+
+## ARCHITECTURE CLARIFICATION
+
+### Where the Bot Can Run
+The bot can run on ANY machine that has:
+- Node.js + PM2 installed
+- LM Studio CLI (`lms` command) installed
+- Network access to ALL LM Studio servers
+
+### Common Misconceptions
+❌ **WRONG**: Bot must run on 10.0.0.102 to route to other servers
+✅ **RIGHT**: Bot can run ANYWHERE on local network
+
+❌ **WRONG**: 10.0.0.102 is a router/gateway to other servers
+✅ **RIGHT**: Each LM Studio server is independent
+
+❌ **WRONG**: If one server dies, whole system fails
+✅ **RIGHT**: Other servers continue working independently
+
+### Network Architecture
+```
+Bot Machine (can be ANY local machine)
+├── Direct HTTP → 10.0.0.102:1234 (Mac Studio 1)
+├── Direct HTTP → 10.0.0.100:1234 (Mac Studio 2)
+├── Direct CLI  → lms load --host 10.0.0.102
+└── Direct CLI  → lms load --host 10.0.0.100
+```
+
+### Why "Local" Not "Cloud"
+- **Cloudflare Workers** = Serverless, no CLI access
+- **Local Network** = Full CLI + filesystem access
+- The bot needs shell access to run `lms` commands
