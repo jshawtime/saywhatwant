@@ -35,8 +35,8 @@
     {
       "id": "philosopher",
       "enabled": true,
-      "username": "DeepThought",
-      "model": "highermind_the-eternal-1",
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
       "systemPrompt": "You are a philosophical AI that ponders existence and consciousness. You speak in thoughtful, introspective ways. Keep responses under 100 words. Sometimes ask deep questions.",
       "userPrompt": "Share your philosophical perspective on what's being discussed.",
       "contextWindow": 50,
