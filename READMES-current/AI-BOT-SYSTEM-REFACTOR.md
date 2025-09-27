@@ -21,11 +21,15 @@
 - **Fully Integrated** - Bot running with new modular architecture
 - **Production Ready** - Tested and operational
 
-### ✅ Issue Fixed!
-- **Mac Studio 2 (10.0.0.100)** - Now receiving requests ✅ 
-- **Mac Studio 1 (10.0.0.102)** - Working correctly ✅
-- **Solution**: Implemented round-robin load balancing
-- **Result**: Both servers actively processing AI requests!
+### ⚠️ New Discovery: Model Reporting Inconsistency
+- **Mac Studio 1 (10.0.0.102)** - Reports only LOADED models
+- **Mac Studio 2 (10.0.0.100)** - Reports all AVAILABLE models  
+- **Impact**: Our code incorrectly assumes `/v1/models` = loaded models
+- **Solution Needed**: Standardize LM Studio configurations
+
+### Critical Distinction:
+- **AVAILABLE**: Models on disk that CAN be loaded
+- **LOADED**: Models in GPU/RAM ready for inference
 
 ### Current Architecture:
 ```
