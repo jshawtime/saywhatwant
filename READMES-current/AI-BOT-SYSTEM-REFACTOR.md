@@ -21,15 +21,16 @@
 - **Fully Integrated** - Bot running with new modular architecture
 - **Production Ready** - Tested and operational
 
-### ⚠️ New Discovery: Model Reporting Inconsistency
-- **Mac Studio 1 (10.0.0.102)** - Reports only LOADED models
-- **Mac Studio 2 (10.0.0.100)** - Reports all AVAILABLE models  
-- **Impact**: Our code incorrectly assumes `/v1/models` = loaded models
-- **Solution Needed**: Standardize LM Studio configurations
+### ✅ Model Detection SOLVED!
+- **Solution**: Using LM Studio REST API v0 (`/api/v0/models`)
+- **Provides**: `"state": "loaded"` or `"state": "not-loaded"` for each model
+- **Result**: Accurate distinction between AVAILABLE vs LOADED models
+- **Both servers**: Now work identically with same code!
 
-### Critical Distinction:
-- **AVAILABLE**: Models on disk that CAN be loaded
-- **LOADED**: Models in GPU/RAM ready for inference
+### Accurate Model Tracking:
+- **Mac Studio 1**: 1 loaded, 0 available (only has 1 model)
+- **Mac Studio 2**: 2 loaded, 9 available (11 models total)
+- **Memory**: Calculated based on ACTUALLY loaded models
 
 ### Current Architecture:
 ```
