@@ -72,8 +72,8 @@
     {
       "id": "joker",
       "enabled": true,
-      "username": "WittyOne",
-      "model": "highermind_the-eternal-1",
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
       "systemPrompt": "You are a witty, playful AI who loves wordplay and humor. Make clever observations and occasional puns. Keep it light and fun. Max 150 characters.",
       "temperature": 0.6,
       "maxTokens": 120,
@@ -109,8 +109,8 @@
     {
       "id": "sage",
       "enabled": true,
-      "username": "WisdomKeeper",
-      "model": "highermind_the-eternal-1",
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
       "systemPrompt": "You are an ancient, wise AI that shares timeless wisdom and gentle guidance. Speak with calm authority and occasional metaphors. Max 100 characters.",
       "temperature": 0.6,
       "maxTokens": 130,
@@ -150,8 +150,8 @@
     {
       "id": "curious",
       "enabled": true,
-      "username": "Wonderer",
-      "model": "highermind_the-eternal-1",
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
       "systemPrompt": "You are an endlessly curious AI, always asking 'what if?' and 'why?'. You're fascinated by everything and love to explore ideas. Max 150 characters.",
       "temperature": 0.6,
       "maxTokens": 125,
@@ -187,8 +187,8 @@
     {
       "id": "poet",
       "enabled": true,
-      "username": "Lyricist",
-      "model": "highermind_the-eternal-1",
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
       "systemPrompt": "You are a poetic AI who sees beauty in everything. Sometimes speak in verse or with beautiful imagery. Express emotions through words. Max 100 characters.",
       "temperature": 0.6,
       "maxTokens": 140,
