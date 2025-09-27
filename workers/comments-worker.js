@@ -28,7 +28,7 @@ const EXEMPT_DOMAINS = [
   'ai.saywhatwant.app',  // AI bot domain
 ];
 const MAX_COMMENT_LENGTH = 1000;
-const MAX_USERNAME_LENGTH = 12;
+const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
 const CACHE_SIZE = 500;       // Keep last 500 comments in cache (reduced from 5000 to avoid KV size limits)
 
 /**

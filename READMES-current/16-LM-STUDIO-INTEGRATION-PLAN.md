@@ -454,7 +454,7 @@ interface BotService {
   
   // Message Processing
   messageHistory: Comment[];
-  contextWindow: number;       // Last N messages
+  messagesToRead: number;      // Last N messages
   
   // Response Generation
   personality: PersonalityConfig;

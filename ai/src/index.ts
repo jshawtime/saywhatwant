@@ -175,8 +175,9 @@ async function runBot() {
       const startTime = Date.now();
       const botId = `bot-${startTime}`;
       
-      // Fetch recent comments
-      const messages = await kvClient.fetchRecentComments(50);
+      // Fetch recent comments - use the maximum messagesToRead from all entities
+      const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.messagesToRead || 50));
+      const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
       
       if (messages.length > 0) {
         // Update message history

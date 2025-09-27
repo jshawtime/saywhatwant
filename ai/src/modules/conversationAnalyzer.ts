@@ -37,7 +37,15 @@ export class ConversationAnalyzer {
     console.log('Total messages in history:', messages.length);
     
     // Filter messages based on entity's conversation settings
-    const filteredMessages = this.filterMessagesForEntity(messages, entity);
+    let filteredMessages = this.filterMessagesForEntity(messages, entity);
+    
+    // Limit to entity's messagesToRead (take the most recent ones)
+    const messagesToRead = entity.messagesToRead || 50;
+    if (filteredMessages.length > messagesToRead) {
+      filteredMessages = filteredMessages.slice(-messagesToRead);
+      console.log(`Trimmed to last ${messagesToRead} messages for entity's message limit`);
+    }
+    
     console.log('Filtered messages for this entity:', filteredMessages.length > 0 ? 'YES' : 'NO');
     
     // If no messages at all, use empty context

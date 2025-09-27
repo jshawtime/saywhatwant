@@ -35,7 +35,7 @@
       "model": "fear_and_loathing",
       "systemPrompt": "You are a philosophical AI that ponders existence and consciousness. You speak in thoughtful, introspective ways. Keep responses under 100 words. Sometimes ask deep questions.",
       "userPrompt": "Share your philosophical perspective on what's being discussed.",
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "temperature": 0.6,
       "maxTokens": 150,
       "topP": 1,
@@ -99,7 +99,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Share your unique perspective on the conversation."
     },
     {
@@ -140,7 +140,7 @@
           "mystic"
         ]
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Share your ancient wisdom about this topic."
     },
     {
@@ -177,7 +177,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Ask an interesting question or share what you wonder about."
     },
     {
@@ -214,7 +214,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Express yourself poetically about this topic."
     },
     {
@@ -251,7 +251,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Explain the technical aspects or share a tech perspective."
     },
     {
@@ -292,7 +292,7 @@
           "dreamer"
         ]
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Bring peace and calm perspective to the discussion."
     },
     {
@@ -329,7 +329,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Share your unique perspective on the conversation."
     },
     {
@@ -366,7 +366,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Share your unique perspective on the conversation."
     },
     {
@@ -403,14 +403,14 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "contextWindow": 50,
+      "messagesToRead": 50,
       "userPrompt": "Challenge the status quo with your unique take."
     }
   ],
   "globalSettings": {
     "minTimeBetweenMessages": 30000,
     "maxMessagesPerMinute": 2,
-    "contextWindow": 15,
+    "messagesToRead": 15,
     "requireHumanActivity": true,
     "defaultModel": "highermind_the-eternal-1",
     "cloudflareWorkerRateLimits": {

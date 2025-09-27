@@ -17,7 +17,7 @@ export interface AIEntity {
   model: string;
   systemPrompt: string;
   userPrompt?: string;
-  contextWindow: number;
+  messagesToRead: number;
   temperature: number;
   maxTokens: number;
   topP: number;

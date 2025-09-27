@@ -153,7 +153,7 @@ async function fetchRecentComments(): Promise<Comment[]> {
       state.messageHistory = [
         ...state.messageHistory,
         ...data.comments
-      ].slice(-(currentEntity?.contextWindow || CONFIG.BOT.contextMessageCount));
+      ].slice(-(currentEntity?.messagesToRead || CONFIG.BOT.contextMessageCount));
       
       log.info(`Fetched ${data.comments.length} new messages`);
       
