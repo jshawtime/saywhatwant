@@ -22,64 +22,72 @@ Two LM Studio servers returning different data from `/api/v0/models`:
 - Not depending on `availableModels` for core logic
 - Load balancing based on what's actually loaded
 
-## 🔧 How to Standardize
+## 🔧 Unable to Find Standardization Setting
 
-### Option A: Make 10.0.0.100 Match 10.0.0.102 (Recommended)
-**On Mac Studio 2 (10.0.0.100):**
-1. Open LM Studio GUI
-2. Go to **Developer** → **Server**
-3. Find setting: **"Include unloaded models in API"** or similar
-4. **UNCHECK** this option
-5. Restart the server
-6. Result: Only loaded models shown (cleaner logs)
+### UPDATE: No such setting exists!
+After thorough investigation:
+- ❌ No "Include unloaded models" checkbox found
+- ❌ JIT loading setting doesn't control this
+- ❌ Both servers have JIT disabled
 
-### Option B: Make 10.0.0.102 Match 10.0.0.100
-**On Mac Studio 1 (10.0.0.102):**
-1. Open LM Studio GUI
-2. Go to **Developer** → **Server**
-3. Find setting: **"Include unloaded models in API"** or similar
-4. **CHECK** this option
-5. Restart the server
-6. Result: All models shown (verbose but complete)
+### Possible Causes of Difference:
+1. **Different installation paths** for models
+2. **Different LM Studio internal configurations**
+3. **Models added via different methods** (download vs import)
+4. **Possible version differences** despite both being updated
 
-## 🎯 Recommendation: Option A
+### Current Status:
+- **Difference is cosmetic only**
+- **Both servers work correctly**
+- **Cluster handles both behaviors**
 
-**Why only show loaded models?**
-- ✅ Cleaner logs
-- ✅ Faster API responses
-- ✅ Less network traffic
-- ✅ We use CLI to load models anyway
+## 🎯 Recommendation: Accept the Difference
 
-**The CLI (`lms ls --host`) shows all models when needed.**
+Since we can't find a setting to change this:
+- ✅ The difference is cosmetic only
+- ✅ Both servers function correctly
+- ✅ Our code handles both behaviors
+- ✅ No operational impact
 
-## 📊 Verification
+**For model visibility:**
+- Use `lms ls --host 10.0.0.102` to see all models on that server
+- The API differences don't affect functionality
 
-After standardization, both servers should return the same count:
+## 📊 Current Behavior
+
+The servers will continue to return different counts:
 
 ```bash
-# Should return same number on both:
+# 10.0.0.102 returns only loaded models:
 curl -s http://10.0.0.102:1234/api/v0/models | jq '.data | length'
+# Result: 1 (when model loaded) or 0 (when unloaded)
+
+# 10.0.0.100 returns all models:
 curl -s http://10.0.0.100:1234/api/v0/models | jq '.data | length'
+# Result: 11 (all models with state field)
 ```
+
+**This is fine - our cluster code handles both!**
 
 ## 🔍 Why This Happened
 
-LM Studio added this setting in recent versions to let users choose between:
-- **Performance** (only show loaded)
-- **Transparency** (show everything)
+Unknown - despite both servers running the same LM Studio version, they exhibit different API behaviors. Possible causes:
+- Internal configuration differences
+- Model storage path differences  
+- Installation method variations
 
-When you updated both machines to the latest version, they may have retained different settings from their previous configs.
+**The important point:** Both work correctly despite the difference.
 
 ## 📝 Note for Future
 
 When adding new LM Studio servers:
-1. Check this setting first
-2. Match existing servers' configuration
-3. Document in `config-aientities.json` comments
+1. Test API behavior: `curl http://NEW_IP:1234/api/v0/models`
+2. Note if it shows all models or only loaded ones
+3. Our cluster code will handle either behavior automatically
 
 ## 🚀 No Code Changes Needed
 
-Our cluster code is already robust enough to handle both configurations. This standardization is just for:
-- Cleaner logs
-- Consistent behavior
-- Easier debugging
+Our cluster code is already robust enough to handle both configurations. The difference is:
+- **Cosmetic only** (log verbosity)
+- **No functional impact**
+- **Both servers work perfectly**
