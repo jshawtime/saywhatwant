@@ -157,7 +157,6 @@ interface LMStudioServer {
     maxMemory: number
     availableMemory: number  // Track remaining GPU memory
     supportedFormats: ('GGUF' | 'MLX')[]  // MLX for Apple Silicon
-    maxConcurrentModels: number  // How many models can fit
   }
 }
 ```
@@ -302,7 +301,6 @@ Update `config-aientities.json`:
       "name": "Mac Studio 1",
       "capabilities": {
         "maxMemory": 128,  // 128GB RAM!
-        "preferredModels": ["highermind_the-eternal-1", "llama-70b", "mixtral-8x7b"],
         "supportedFormats": ["MLX", "GGUF"]
       }
     },
@@ -313,7 +311,6 @@ Update `config-aientities.json`:
       "name": "Mac Studio 2",
       "capabilities": {
         "maxMemory": 128,  // 128GB RAM!
-        "preferredModels": ["google/gemma-3-27b", "llama-30b", "claude-instant"],
         "supportedFormats": ["MLX", "GGUF"]
       }
     }
@@ -552,8 +549,7 @@ class HealthMonitor {
       "enabled": true,
       "name": "Mac Pro",
       "capabilities": {
-        "maxMemory": 192,
-        "preferredModels": ["*"]  // Can handle any model
+        "maxMemory": 192  // Can handle any model
       }
     }
   ]

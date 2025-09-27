@@ -23,7 +23,6 @@ export interface LMStudioServer {
     maxMemory: number;
     availableMemory: number;
     supportedFormats: ('GGUF' | 'MLX')[];
-    maxConcurrentModels: number;
   };
   lastUsedModel?: string;
   lastUsedTime?: number;
@@ -38,7 +37,6 @@ export interface ClusterConfig {
     enabled: boolean;
     capabilities: {
       maxMemory: number;
-      preferredModels?: string[];
       supportedFormats?: ('GGUF' | 'MLX')[];
     };
   }>;
@@ -97,7 +95,6 @@ export class LMStudioCluster {
           maxMemory: serverConfig.capabilities.maxMemory,
           availableMemory: serverConfig.capabilities.maxMemory,
           supportedFormats: serverConfig.capabilities.supportedFormats || ['GGUF', 'MLX'],
-          maxConcurrentModels: 5,
         },
       };
 

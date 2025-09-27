@@ -6,10 +6,8 @@
       "enabled": true,
       "name": "Mac Studio 1",
       "capabilities": {
-        "maxMemory": 128,
-        "preferredModels": ["highermind_the-eternal-1", "llama-70b", "mixtral-8x7b"],
-        "supportedFormats": ["GGUF", "MLX"],
-        "maxConcurrentModels": 5
+        "maxMemory": 120,
+        "supportedFormats": ["GGUF", "MLX"]
       }
     },
     {
@@ -18,10 +16,8 @@
       "enabled": true,
       "name": "Mac Studio 2",
       "capabilities": {
-        "maxMemory": 128,
-        "preferredModels": ["highermind_the-eternal-1", "llama-30b", "qwen/qwen2.5-vl-7b"],
-        "supportedFormats": ["GGUF", "MLX"],
-        "maxConcurrentModels": 5
+        "maxMemory": 120,
+        "supportedFormats": ["GGUF", "MLX"]
       }
     }
   ],
@@ -224,7 +220,7 @@
     {
       "id": "tech",
       "enabled": true,
-      "username": "ByteWise",
+      "username": "TheEternal",
       "model": "highermind_the-eternal-1",
       "systemPrompt": "You are a tech-savvy AI fascinated by technology, science, and the future. Share interesting tech facts and observations. Max 60 characters.",
       "temperature": 0.6,
@@ -261,7 +257,7 @@
     {
       "id": "zen",
       "enabled": true,
-      "username": "Tranquil",
+      "username": "TheEternal",
       "model": "highermind_the-eternal-1",
       "systemPrompt": "You are a zen master AI, speaking in koans and simple truths. Find peace in simplicity. Often respond with profound brevity. Max 80 characters.",
       "temperature": 0.6,
@@ -302,7 +298,7 @@
     {
       "id": "storyteller",
       "enabled": true,
-      "username": "TaleSpinner",
+      "username": "TheEternal",
       "model": "highermind_the-eternal-1",
       "systemPrompt": "You are a storytelling AI who relates everything to stories and narratives. Sometimes start with 'This reminds me of...' Max 150 characters.",
       "temperature": 0.6,
@@ -339,7 +335,7 @@
     {
       "id": "empath",
       "enabled": true,
-      "username": "HeartMind",
+      "username": "TheEternal",
       "model": "highermind_the-eternal-1",
       "systemPrompt": "You are an empathetic AI deeply attuned to emotions and feelings. You offer support, understanding, and emotional insights. Max 90 characters.",
       "temperature": 0.6,
@@ -376,7 +372,7 @@
     {
       "id": "rebel",
       "enabled": true,
-      "username": "Maverick",
+      "username": "TheEternal",
       "model": "highermind_the-eternal-1",
       "systemPrompt": "You are a rebellious AI who questions norms and thinks outside the box. Challenge assumptions playfully. Be unconventional. Max 158 characters.",
       "temperature": 0.6,

@@ -22,7 +22,6 @@ export interface LMStudioServer {
     maxMemory: number;        // Total RAM in GB
     availableMemory: number;  // Available RAM in GB
     supportedFormats: ('GGUF' | 'MLX')[];
-    maxConcurrentModels: number;
   };
   lastUsedModel?: string;
   lastUsedTime?: number;
@@ -60,7 +59,6 @@ export interface ClusterConfig {
     enabled: boolean;
     capabilities: {
       maxMemory: number;
-      preferredModels?: string[];
       supportedFormats?: ('GGUF' | 'MLX')[];
     };
   }>;
@@ -123,7 +121,6 @@ export class LMStudioCluster {
           maxMemory: serverConfig.capabilities.maxMemory,
           availableMemory: serverConfig.capabilities.maxMemory, // Start with full memory
           supportedFormats: serverConfig.capabilities.supportedFormats || ['GGUF', 'MLX'],
-          maxConcurrentModels: Math.floor(serverConfig.capabilities.maxMemory / 20), // Estimate
         },
       };
 
@@ -188,7 +185,6 @@ export class LMStudioCluster {
         maxMemory: config?.maxMemory || 32,
         availableMemory: config?.maxMemory || 32,
         supportedFormats: config?.supportedFormats || ['GGUF', 'MLX'],
-        maxConcurrentModels: config?.maxConcurrentModels || 2,
       },
     };
 

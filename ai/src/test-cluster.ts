@@ -26,7 +26,6 @@ const testConfig = {
       enabled: true,
       capabilities: {
         maxMemory: 128, // 128GB RAM
-        preferredModels: ['highermind_the-eternal-1'],
         supportedFormats: ['MLX', 'GGUF'] as ('MLX' | 'GGUF')[],
       },
     },
@@ -37,7 +36,6 @@ const testConfig = {
       enabled: true,
       capabilities: {
         maxMemory: 128, // 128GB RAM
-        preferredModels: ['highermind_the-eternal-1'],
         supportedFormats: ['MLX', 'GGUF'] as ('MLX' | 'GGUF')[],
       },
     },
