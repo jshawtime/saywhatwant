@@ -126,10 +126,9 @@ export class ConversationAnalyzer {
    * Get usernames for allowed bot IDs
    */
   private getAllowedBotUsernames(botIds: string[]): string[] {
-    // Import entity manager to resolve IDs
-    const { getEntityManager } = require('./entityManager.js');
-    const manager = getEntityManager();
-    return manager.getEntityUsernames(botIds).map((u: string) => u.toLowerCase());
+    // For now, return empty array - this needs to be injected from main
+    // TODO: Pass entity manager as dependency
+    return [];
   }
   
   /**

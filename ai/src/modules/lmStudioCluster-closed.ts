@@ -158,30 +158,44 @@ export class LMStudioCluster {
    */
   private async findAvailableServerNow(modelName: string): Promise<LMStudioServer | null> {
     const availableServers: LMStudioServer[] = [];
+    const serversWithModel: LMStudioServer[] = [];
     
-    // Check each server's current status
+    // Check ALL servers first to get complete picture
     for (const server of this.servers.values()) {
+      logger.debug(`[Cluster] Checking ${server.name} (${server.ip}:${server.port})...`);
       if (await this.checkServerNow(server)) {
         availableServers.push(server);
         
-        // Prefer server with model already loaded
+        // Track which servers have the model loaded
         if (server.loadedModels.has(modelName)) {
-          logger.debug(`[Cluster] Found ${modelName} already loaded on ${server.name}`);
-          return server;
+          serversWithModel.push(server);
+          logger.info(`[Cluster] ${server.name} has ${modelName} loaded (${server.capabilities.availableMemory}GB free)`);
         }
+      } else {
+        logger.warn(`[Cluster] ${server.name} is offline or unreachable`);
       }
     }
     
-    // Return server with most free memory
+    // If multiple servers have the model, choose based on memory/load
+    if (serversWithModel.length > 0) {
+      // Round-robin between servers with the model
+      // Use timestamp to distribute load
+      const index = Math.floor(Date.now() / 1000) % serversWithModel.length;
+      const selected = serversWithModel[index];
+      logger.success(`[Cluster] Load balanced to ${selected.name} (${index + 1}/${serversWithModel.length} with model)`);
+      return selected;
+    }
+    
+    // No server has the model, return one with most free memory
     if (availableServers.length > 0) {
       const bestServer = availableServers.sort((a, b) => 
         b.capabilities.availableMemory - a.capabilities.availableMemory
       )[0];
-      logger.debug(`[Cluster] Selected ${bestServer.name} (${bestServer.capabilities.availableMemory}GB free)`);
+      logger.info(`[Cluster] No server has ${modelName}, selected ${bestServer.name} (${bestServer.capabilities.availableMemory}GB free)`);
       return bestServer;
     }
     
-    logger.warn('[Cluster] No available servers found');
+    logger.error('[Cluster] No available servers found');
     return null;
   }
 
@@ -258,6 +272,7 @@ export class LMStudioCluster {
       
       // Step 3: Send request
       server.requestsInFlight++;
+      logger.success(`[Cluster] 🚀 Sending to ${server.name} (${server.ip}:${server.port}) - Entity: ${entityId}`);
       
       const response = await fetch(`http://${server.ip}:${server.port}/v1/chat/completions`, {
         method: 'POST',
@@ -275,6 +290,7 @@ export class LMStudioCluster {
       
       const data = await response.json();
       server.requestsInFlight--;
+      logger.success(`[Cluster] ✅ ${server.name} completed request for ${entityId}`);
       
       // Track usage
       server.lastUsedModel = modelName;
