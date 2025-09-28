@@ -136,7 +136,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     handleModelResponseComplete
   } = useCommentsWithModels({ 
     comments: allComments, 
-    setComments: setAllComments 
+    setComments: setAllComments,
+    addToFilter 
   });
 
   // Sync comments to IndexedDB (stores every message you see locally)
