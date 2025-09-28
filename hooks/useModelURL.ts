@@ -24,15 +24,75 @@ export interface UseModelURLReturn {
 }
 
 export function useModelURL(): UseModelURLReturn {
-  // State
-  const [isFilterActive, setIsFilterActive] = useState<boolean | null>(null);
+  // Parse URL immediately to get initial state
+  const getInitialState = () => {
+    const state = {
+      filterActive: null as boolean | null,
+      humanUsername: null as string | null,
+      humanColor: null as string | null,
+      aiUsername: null as string | null,
+      aiColor: null as string | null,
+    };
+    
+    if (typeof window === 'undefined') return state;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return state;
+    
+    const params = hash.split('&');
+    for (const param of params) {
+      const [key, value] = param.split('=');
+      
+      switch (key) {
+        case 'filteractive':
+          console.log('[useModelURL] Initial filteractive found:', value);
+          state.filterActive = value === 'true';
+          break;
+          
+        case 'uis':
+          const uisParts = value?.split(':');
+          if (uisParts?.length === 2) {
+            state.humanUsername = decodeURIComponent(uisParts[0]);
+            state.humanColor = uisParts[1];
+            console.log('[useModelURL] Initial uis found:', state.humanUsername, state.humanColor);
+          }
+          break;
+          
+        case 'ais':
+          const aisParts = value?.split(':');
+          if (aisParts?.length === 2) {
+            state.aiUsername = decodeURIComponent(aisParts[0]);
+            state.aiColor = aisParts[1];
+            console.log('[useModelURL] Initial ais found:', state.aiUsername, state.aiColor);
+          }
+          break;
+      }
+    }
+    
+    return state;
+  };
+  
+  // Get initial state from URL
+  const initialState = getInitialState();
+  
+  // Apply initial username/color to localStorage if present
+  if (typeof window !== 'undefined') {
+    if (initialState.humanUsername) {
+      localStorage.setItem('sww-username', initialState.humanUsername);
+    }
+    if (initialState.humanColor) {
+      localStorage.setItem('sww-usercolor', initialState.humanColor);
+    }
+  }
+  
+  // State - Initialize with URL values if present
+  const [isFilterActive, setIsFilterActive] = useState<boolean | null>(initialState.filterActive);
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [modelMessages, setModelMessages] = useState<ModelMessage[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
-  const [humanUsername, setHumanUsername] = useState<string | null>(null);
-  const [humanColor, setHumanColor] = useState<string | null>(null);
-  const [aiUsername, setAiUsername] = useState<string | null>(null);
-  const [aiColor, setAiColor] = useState<string | null>(null);
+  const [humanUsername, setHumanUsername] = useState<string | null>(initialState.humanUsername);
+  const [humanColor, setHumanColor] = useState<string | null>(initialState.humanColor);
+  const [aiUsername, setAiUsername] = useState<string | null>(initialState.aiUsername);
+  const [aiColor, setAiColor] = useState<string | null>(initialState.aiColor);
   
   const handlerRef = useRef<ModelURLHandler | null>(null);
   const initializedRef = useRef(false);
