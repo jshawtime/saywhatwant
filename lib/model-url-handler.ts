@@ -41,6 +41,14 @@ export class ModelURLHandler {
     this.urlEnhancementsManager = URLEnhancementsManager.getInstance();
     this.modelConfigLoader = ModelConfigLoader.getInstance();
     this.urlFilterManager = URLFilterManager.getInstance();
+    
+    // Listen for hash changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('hashchange', () => {
+        console.log('[ModelURLHandler] Hash changed, processing new URL');
+        this.processURLChange();
+      });
+    }
   }
   
   static getInstance(): ModelURLHandler {
@@ -62,7 +70,33 @@ export class ModelURLHandler {
     
     // Parse enhanced URL
     const state = this.urlEnhancementsManager.parseEnhancedHash();
-    console.log('[ModelURLHandler] Parsed state:', state);
+    console.log('[ModelURLHandler] Initial parsed state:', state);
+    
+    // Process random colors first
+    if (this.urlEnhancementsManager.hasRandomColors(state)) {
+      const updatedState = await this.urlEnhancementsManager.processRandomColors(state);
+      await this.applyState(updatedState);
+    } else {
+      await this.applyState(state);
+    }
+  }
+  
+  /**
+   * Process URL changes (hashchange event)
+   */
+  async processURLChange(): Promise<void> {
+    console.log('[ModelURLHandler] Processing URL change');
+    
+    // Parse enhanced URL
+    const state = this.urlEnhancementsManager.parseEnhancedHash();
+    console.log('[ModelURLHandler] New parsed state:', state);
+    
+    // Clear previous state
+    this.responseQueue = {
+      models: [],
+      currentIndex: 0,
+      isProcessing: false
+    };
     
     // Process random colors first
     if (this.urlEnhancementsManager.hasRandomColors(state)) {
