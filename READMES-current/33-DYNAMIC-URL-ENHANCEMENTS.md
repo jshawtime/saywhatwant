@@ -60,7 +60,7 @@ https://saywhatwant.app/#filteractive=false&u=alice:255000000
 - After all models respond, waits for human input
 - Changes domain/title to model name
 - Domain sent to KV uses "model" key value
-- Uses separate config files: `config-[modelname].json`
+- Uses centralized `config-highermind.json` for all private conversation AIs
 - Shows programmatic greeting on load (not from LM Studio)
 - **CRITICAL**: Only filtered conversation messages sent to LM Studio
 
@@ -69,16 +69,26 @@ https://saywhatwant.app/#filteractive=false&u=alice:255000000
 {
   "entities": [
     {
-      "id": "main",
+      "id": "eternal-main",
       "username": "TheEternal",
       "model": "highermind_the-eternal-1",
-      "greeting": "Hello! I'm here to help.",
+      "greeting": "Greetings! I'm here to help.",
       "systemPrompt": "...",
       "messagesToRead": 50,
-      "temperature": 0.7,
       // ... same structure as config-aientities.json
+    },
+    {
+      "id": "fear-main",
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
+      "greeting": "Hello! Ready to dive in.",
+      // ... additional entities
     }
-  ]
+  ],
+  "globalSettings": {
+    "brandName": "Highermind",
+    // ... global configuration
+  }
 }
 ```
 
@@ -195,26 +205,29 @@ updateURLWithGeneratedColors(): void
 **File Structure**:
 ```
 ai/
-├── config-aientities.json          (existing)
-├── config-highermind.json          (new)
-├── config-fear_and_loathing.json   (new)
-└── config-[modelname].json         (pattern)
+├── config-aientities.json   (existing - community bots)
+└── config-highermind.json   (new - all private conversation AIs)
 ```
 
 **Config Loader**:
 ```typescript
 class ModelConfigLoader {
-  async loadModelConfig(modelName: string): Promise<ModelConfig> {
-    // Try specific config first
-    const configPath = `config-${modelName}.json`;
-    if (exists(configPath)) {
-      return await loadConfig(configPath);
-    }
-    // Fallback to entities config
-    return findInEntitiesConfig(modelName);
+  async loadModelConfig(modelIdentifier: string): Promise<ModelConfig> {
+    // Try Highermind config first (by ID or model name)
+    const entity = await loadFromHighermindConfig(modelIdentifier);
+    if (entity) return entity;
+    
+    // Fallback to main entities config
+    return findInEntitiesConfig(modelIdentifier);
   }
 }
 ```
+
+**Key Features**:
+- Single `config-highermind.json` for all private conversation AIs
+- Find entities by ID (e.g., "eternal-tech") or model name
+- Centralized management of all Highermind brand entities
+- Same structure as `config-aientities.json` for consistency
 
 ### 3. Integration Points
 
@@ -439,24 +452,27 @@ The humans are trusting us to create magical conversation experiences. One URL s
 
 ---
 
-### ✅ Phase 2: Config System (COMPLETE)
+### ✅ Phase 2: Config System (COMPLETE - UPDATED)
 
 **Date**: September 28, 2025
 
 **What Was Built**:
 
-1. **`ai/config-highermind_the-eternal-1.json`** (45 lines)
-   - Complete model configuration for highermind_the-eternal-1
-   - Main entity with greeting message
-   - Optimized parameters for URL-triggered conversations
-   - Rate limits suitable for interactive chat
-   - Default greeting: "Greetings! I am TheEternal, here to explore ideas with you."
+1. **`ai/config-highermind.json`** (103 lines)
+   - Centralized configuration for ALL Highermind brand AIs
+   - Contains 4 entities initially:
+     - `eternal-main`: Main TheEternal personality
+     - `fear-main`: Main FearAndLoathing personality
+     - `eternal-tech`: Technical-focused TheEternal variant
+     - `fear-creative`: Creative-focused FearAndLoathing variant
+   - Each entity has unique ID, greeting, and personality
+   - Global settings with brand name "Highermind"
 
-2. **`ai/config-fear_and_loathing.json`** (45 lines)
-   - Complete model configuration for fear_and_loathing
-   - Dynamic personality settings
-   - Greeting: "Hello! Ready to dive into the conversation."
-   - Orange color theme (rgb(255, 165, 0))
+2. **Updated `lib/model-config-loader.ts`**
+   - Enhanced to search by both entity ID and model name
+   - Loads from single `config-highermind.json`
+   - Maintains cache for efficient access
+   - Falls back to `config-aientities.json` if needed
 
 3. **`test/test-config-loading.ts`** (187 lines)
    - Comprehensive config loading tests
@@ -465,37 +481,38 @@ The humans are trusting us to create magical conversation experiences. One URL s
    - Helper method testing
    - 5 test suites covering all aspects
 
-**Config Structure Standardized**:
+**Config Structure (Single File)**:
 ```json
 {
-  "entities": [{
-    "id": "main",
-    "username": "ModelName",
-    "model": "model_identifier",
-    "greeting": "Hello message",
-    "systemPrompt": "...",
-    "messagesToRead": 50,
-    // ... all standard entity fields
-  }],
+  "entities": [
+    {
+      "id": "eternal-main",  // Unique ID for each entity
+      "username": "TheEternal",
+      "model": "highermind_the-eternal-1",
+      "greeting": "Custom greeting",
+      // ... all standard entity fields
+    },
+    // ... more entities
+  ],
   "globalSettings": {
-    // Optional global config
+    "brandName": "Highermind",
+    // ... global config
   }
 }
 ```
 
-**Key Features Implemented**:
-- Config files follow exact structure of config-aientities.json
-- Automatic fallback to main entities config if specific config missing
-- Greeting messages for programmatic display
-- Response chance set to 1.0 for URL-triggered models (always respond)
-- Optimized rate limits for interactive conversations
+**Key Improvements**:
+- **Single file management** - All private conversation AIs in one place
+- **Entity IDs** - Each entity has unique ID (eternal-main, fear-creative, etc.)
+- **Dual lookup** - Can find entities by ID or model name
+- **Brand consistency** - All Highermind AIs managed together
+- **Easy scaling** - Just add new entities to the single config file
 
 **Testing Verified**:
-- Both configs load successfully
-- Cache system works (second loads are faster)
-- Helper methods generate correct prompts and parameters
-- Multi-config loading works in parallel
-- Fallback mechanism functional
+- Config loads successfully
+- Entity lookup by ID and model name works
+- Cache system functional
+- Fallback to main config operational
 
 **Ready for Phase 3**: Model Integration with UI
 

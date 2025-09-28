@@ -63,66 +63,65 @@ export class ModelConfigLoader {
   
   /**
    * Load model configuration from file
+   * @param modelIdentifier - Can be either a model name (e.g., "highermind_the-eternal-1") 
+   *                         or an entity ID (e.g., "eternal-tech")
    */
-  async loadModelConfig(modelName: string): Promise<ModelEntity | null> {
+  async loadModelConfig(modelIdentifier: string): Promise<ModelEntity | null> {
     try {
-      // Check cache first
-      let config = this.configCache.get(modelName);
-      
-      if (!config) {
-        // Check if already loading
-        let loadingPromise = this.loadingPromises.get(modelName);
-        
-        if (!loadingPromise) {
-          // Start loading
-          loadingPromise = this.fetchConfig(modelName);
-          this.loadingPromises.set(modelName, loadingPromise);
-        }
-        
-        config = await loadingPromise;
-        this.configCache.set(modelName, config);
-        this.loadingPromises.delete(modelName);
+      // First, try to load from Highermind config
+      const highermindEntity = await this.loadFromHighermindConfig(modelIdentifier);
+      if (highermindEntity) {
+        return highermindEntity;
       }
       
-      // Find the main entity (usually id: "main" or first entity)
-      const entity = config.entities.find(e => e.id === 'main') || config.entities[0];
-      
-      // Add default greeting if not present
-      if (entity && !entity.greeting) {
-        entity.greeting = 'Hello!';
-      }
-      
-      return entity || null;
+      // If not found in Highermind, try main entities config
+      return this.loadFromMainConfig(modelIdentifier);
       
     } catch (error) {
-      console.error(`[ModelConfigLoader] Failed to load config for ${modelName}:`, error);
-      
-      // Try fallback to main config
-      return this.loadFromMainConfig(modelName);
+      console.error(`[ModelConfigLoader] Failed to load config for ${modelIdentifier}:`, error);
+      return null;
     }
   }
   
   /**
-   * Fetch configuration file from server
+   * Load from Highermind config
    */
-  private async fetchConfig(modelName: string): Promise<ModelConfigFile> {
-    // Try specific model config file
-    const configPath = `/ai/config-${modelName}.json`;
-    
+  private async loadFromHighermindConfig(modelIdentifier: string): Promise<ModelEntity | null> {
     try {
-      const response = await fetch(configPath);
+      // Check cache for highermind config
+      const cacheKey = 'highermind-config';
+      let config = this.configCache.get(cacheKey);
       
-      if (!response.ok) {
-        throw new Error(`Config not found: ${configPath}`);
+      if (!config) {
+        // Load the highermind config
+        const response = await fetch('/ai/config-highermind.json');
+        
+        if (!response.ok) {
+          return null;
+        }
+        
+        config = await response.json();
+        this.configCache.set(cacheKey, config);
       }
       
-      const config: ModelConfigFile = await response.json();
-      return config;
+      // Find entity by ID first, then by model name
+      const entity = config.entities?.find(
+        (e: ModelEntity) => e.id === modelIdentifier || e.model === modelIdentifier
+      );
+      
+      if (entity) {
+        // Add default greeting if not present
+        if (!entity.greeting) {
+          entity.greeting = 'Hello!';
+        }
+        return entity;
+      }
+      
+      return null;
       
     } catch (error) {
-      // If specific config doesn't exist, try to load from main entities config
-      console.log(`[ModelConfigLoader] No specific config for ${modelName}, checking main config`);
-      throw error;
+      console.log(`[ModelConfigLoader] Could not load from highermind config:`, error);
+      return null;
     }
   }
   
