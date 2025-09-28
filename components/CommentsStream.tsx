@@ -51,6 +51,8 @@ import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSys
 import { useVideoSharing } from '@/modules/videoSharingSystem';
 // Import comment submission system
 import { useCommentSubmission, useUsernameValidation } from '@/modules/commentSubmission';
+// Import model URL integration
+import { useCommentsWithModels } from '@/hooks/useCommentsWithModels';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -123,6 +125,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [titleContextMenu, setTitleContextMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [messageCount, setMessageCount] = useState<number>(0);
+
+  // Model URL Integration - handles model messages, filter state, and user state from URL
+  const {
+    filterActiveOverride,
+    currentDomain: modelDomain,
+    isProcessingQueue,
+    addModelResponse,
+    getFilteredMessagesForModel,
+    handleModelResponseComplete
+  } = useCommentsWithModels({ 
+    comments: allComments, 
+    setComments: setAllComments 
+  });
 
   // Sync comments to IndexedDB (stores every message you see locally)
   useIndexedDBSync(allComments);
@@ -227,7 +242,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   } = useCommentSubmission(
     {
       maxLength: MAX_COMMENT_LENGTH,
-      domain: currentDomain,
+      domain: modelDomain || currentDomain,
       storageKey: COMMENTS_STORAGE_KEY,
     },
     {
@@ -1409,7 +1424,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   textShadow: 'none' // Explicitly remove any text shadow
                 }}
               >
-                {domainConfig.title}
+                {modelDomain || domainConfig.title}
               </h2>
               {mounted && (
                 <DomainFilter

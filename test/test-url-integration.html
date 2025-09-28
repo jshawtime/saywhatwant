@@ -226,7 +226,8 @@
     <script>
         // Test function - opens URL in new tab
         function testURL(hash) {
-            const baseUrl = window.location.origin;
+            // Use the live site URL
+            const baseUrl = 'https://saywhatwant.app';
             const testUrl = baseUrl + '/' + hash;
             window.open(testUrl, '_blank');
             
@@ -236,7 +237,8 @@
         
         // Copy URL to clipboard
         function copyURL(hash) {
-            const baseUrl = window.location.origin;
+            // Use the live site URL
+            const baseUrl = 'https://saywhatwant.app';
             const fullUrl = baseUrl + '/' + hash;
             
             navigator.clipboard.writeText(fullUrl).then(() => {
