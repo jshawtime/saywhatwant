@@ -17,7 +17,14 @@ export function useCommentsWithModels({
 }: UseCommentsWithModelsProps) {
   const modelURLHook = useModelURL();
   const hasInjectedGreetings = useRef(false);
-  const [filterActiveOverride, setFilterActiveOverride] = useState<boolean | null>(null);
+  
+  // CRITICAL: Use the filter override directly from the hook - no async state!
+  const filterActiveOverride = modelURLHook.isFilterActive;
+  
+  // Debug log to trace the override
+  useEffect(() => {
+    console.log('[useCommentsWithModels] filterActiveOverride:', filterActiveOverride);
+  }, [filterActiveOverride]);
   
   // Inject model messages (greetings)
   useEffect(() => {
@@ -39,14 +46,6 @@ export function useCommentsWithModels({
       setComments(prev => [...modelComments, ...prev]);
     }
   }, [modelURLHook.modelMessages, modelURLHook.currentDomain, setComments]);
-  
-  // Handle filter active state
-  useEffect(() => {
-    if (modelURLHook.isFilterActive !== null) {
-      console.log('[CommentsWithModels] Setting filter active override to:', modelURLHook.isFilterActive);
-      setFilterActiveOverride(modelURLHook.isFilterActive);
-    }
-  }, [modelURLHook.isFilterActive]);
   
   // Handle username/color from URL
   useEffect(() => {

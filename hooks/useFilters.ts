@@ -27,6 +27,11 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
   const isFilterEnabled = filterEnabledOverride !== null && filterEnabledOverride !== undefined 
     ? filterEnabledOverride 
     : baseFilterEnabled;
+    
+  // Debug logging
+  useEffect(() => {
+    console.log('[useFilters] filterEnabledOverride:', filterEnabledOverride, 'baseFilterEnabled:', baseFilterEnabled, 'final isFilterEnabled:', isFilterEnabled);
+  }, [filterEnabledOverride, baseFilterEnabled, isFilterEnabled]);
   
   // Get URL filter state and methods
   const { 
@@ -49,6 +54,12 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
+    
+    // CRITICAL: If we have an override from URL, don't let localStorage override it!
+    if (filterEnabledOverride !== null && filterEnabledOverride !== undefined) {
+      console.log('[useFilters] Skipping localStorage filter state - using URL override:', filterEnabledOverride);
+      // Still load filter CONTENT but not the enabled state
+    }
     
     // Ham radio mode - no persistent storage initialization needed
     
@@ -95,6 +106,13 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
     }
     
     // Load filter enabled state with special cases:
+    // CRITICAL: If we have a URL override, it takes absolute priority!
+    if (filterEnabledOverride !== null && filterEnabledOverride !== undefined) {
+      // URL parameter takes absolute priority - don't change it
+      console.log('[useFilters] URL override active, not loading filter state from localStorage');
+      return; // Don't set baseFilterEnabled when we have an override
+    }
+    
     // Special Case 1: Base URL (no filters) → Filters OFF
     // Special Case 2: URL has filters + empty filter bar → Filters ON
     // Otherwise: User's saved preference
@@ -114,7 +132,7 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
       // Default: filters OFF
       setBaseFilterEnabled(false);
     }
-  }, []); // Only run once on mount - special cases apply to initial load only
+  }, [filterEnabledOverride]); // Re-run if override changes
   
   // Ham radio mode - no filter recording to IndexedDB
   // Filters are ephemeral - only active while tab is open
