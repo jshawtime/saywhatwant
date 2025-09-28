@@ -46,13 +46,16 @@ export function useModelURL(): UseModelURLReturn {
     if (initializedRef.current) return;
     initializedRef.current = true;
     
+    console.log('[ModelURL] Initializing model URL handler');
     const handler = ModelURLHandler.getInstance();
     handlerRef.current = handler;
     
     // Subscribe to events
     const unsubscribe = handler.subscribe((event: ModelHandlerEvent) => {
+      console.log('[useModelURL] Received event:', event.type, event);
       switch (event.type) {
         case 'filter-active-changed':
+          console.log('[useModelURL] Setting isFilterActive to:', event.isActive);
           setIsFilterActive(event.isActive);
           // Also update the filter bar if needed
           const filterButton = document.querySelector('.filter-button');

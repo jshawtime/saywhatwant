@@ -278,7 +278,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     filterUsernames,
     filterWords,
     negativeFilterWords,
-    isFilterEnabled,
+    isFilterEnabled: baseFilterEnabled,
     filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
     addToFilter,
     removeFromFilter,
@@ -295,6 +295,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     dateTimeFilter,
     clearDateTimeFilter
   } = useFilters({ displayedComments: displayedComments, searchTerm });
+  
+  // Use URL override for filter state if present, otherwise use base filter state
+  const isFilterEnabled = filterActiveOverride !== null ? filterActiveOverride : baseFilterEnabled;
   
   // Apply ALL filters in the correct order
   const filteredComments = useMemo(() => {

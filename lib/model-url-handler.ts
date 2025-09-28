@@ -62,6 +62,7 @@ export class ModelURLHandler {
     
     // Parse enhanced URL
     const state = this.urlEnhancementsManager.parseEnhancedHash();
+    console.log('[ModelURLHandler] Parsed state:', state);
     
     // Process random colors first
     if (this.urlEnhancementsManager.hasRandomColors(state)) {
@@ -78,6 +79,7 @@ export class ModelURLHandler {
   private async applyState(state: EnhancedFilterState): Promise<void> {
     // Handle filter active state
     if (state.filterActive !== null && state.filterActive !== undefined) {
+      console.log('[ModelURLHandler] Emitting filter-active-changed:', state.filterActive);
       this.emit({
         type: 'filter-active-changed',
         isActive: state.filterActive

@@ -79,6 +79,7 @@ export class URLEnhancementsManager {
         case 'filteractive':
           // Parse filter bar active state
           enhancedState.filterActive = value === 'true';
+          console.log('[URLEnhancements] Parsed filteractive:', enhancedState.filterActive);
           break;
           
         case 'model':

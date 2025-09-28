@@ -43,29 +43,8 @@ export function useCommentsWithModels({
   // Handle filter active state
   useEffect(() => {
     if (modelURLHook.isFilterActive !== null) {
+      console.log('[CommentsWithModels] Setting filter active override to:', modelURLHook.isFilterActive);
       setFilterActiveOverride(modelURLHook.isFilterActive);
-      
-      // Apply to filter bar
-      const applyFilterState = () => {
-        const filterBar = document.querySelector('.filter-bar');
-        const ledButton = document.querySelector('.led-button');
-        
-        if (filterBar && ledButton) {
-          if (modelURLHook.isFilterActive) {
-            filterBar.classList.add('active');
-            ledButton.classList.add('active');
-            localStorage.setItem('filter-bar-active', 'true');
-          } else {
-            filterBar.classList.remove('active');
-            ledButton.classList.remove('active');
-            localStorage.setItem('filter-bar-active', 'false');
-          }
-        }
-      };
-      
-      // Apply immediately and after DOM ready
-      applyFilterState();
-      setTimeout(applyFilterState, 100);
     }
   }, [modelURLHook.isFilterActive]);
   
