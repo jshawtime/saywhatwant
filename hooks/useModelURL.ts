@@ -143,8 +143,8 @@ export function useModelURL(): UseModelURLReturn {
             const greeting: ModelMessage = {
               id: `greeting-${modelName}-${Date.now()}`,
               username: config.username,
-              color: config.color || '#60A5FA',
-              content: config.greeting || 'Hello! I\'m ready to help.',
+              userColor: config.color || '#60A5FA',
+              text: config.greeting || 'Hello! I\'m ready to help.',
               timestamp: Date.now(),
               isGreeting: true
             };

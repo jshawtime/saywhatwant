@@ -126,20 +126,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [messageCount, setMessageCount] = useState<number>(0);
 
-  // Model URL Integration - handles model messages, filter state, and user state from URL
-  const {
-    filterActiveOverride,
-    currentDomain: modelDomain,
-    isProcessingQueue,
-    addModelResponse,
-    getFilteredMessagesForModel,
-    handleModelResponseComplete
-  } = useCommentsWithModels({ 
-    comments: allComments, 
-    setComments: setAllComments,
-    addToFilter 
-  });
-
   // Sync comments to IndexedDB (stores every message you see locally)
   useIndexedDBSync(allComments);
   
@@ -235,6 +221,50 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
   
   // Comment submission system
+  // Comment Submission System will be moved after model integration
+  
+
+  // Use the filters hook with ALL comments (unfiltered pool)
+  const {
+    filterUsernames,
+    filterWords,
+    negativeFilterWords,
+    isFilterEnabled: baseFilterEnabled,
+    filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
+    addToFilter,
+    removeFromFilter,
+    addWordToFilter,
+    removeWordFromFilter,
+    addNegativeWordFilter,
+    removeNegativeWordFilter,
+    toggleFilter,
+    hasActiveFilters,
+    urlSearchTerms,
+    addSearchTermToURL,
+    removeSearchTermFromURL,
+    serverSideUsers,  // Server-side user search from #uss= parameter
+    dateTimeFilter,
+    clearDateTimeFilter
+  } = useFilters({ displayedComments: displayedComments, searchTerm });
+  
+  // Model URL Integration - handles model messages, filter state, and user state from URL
+  const {
+    filterActiveOverride,
+    currentDomain: modelDomain,
+    isProcessingQueue,
+    addModelResponse,
+    getFilteredMessagesForModel,
+    handleModelResponseComplete
+  } = useCommentsWithModels({ 
+    comments: allComments, 
+    setComments: setAllComments,
+    addToFilter 
+  });
+  
+  // Use URL override for filter state if present, otherwise use base filter state
+  const isFilterEnabled = filterActiveOverride !== null ? filterActiveOverride : baseFilterEnabled;
+  
+  // Comment Submission System (moved here so modelDomain is available)
   const {
     isSubmitting,
     error,
@@ -272,33 +302,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       clearVideoState,
     }
   );
-  
-
-  // Use the filters hook with ALL comments (unfiltered pool)
-  const {
-    filterUsernames,
-    filterWords,
-    negativeFilterWords,
-    isFilterEnabled: baseFilterEnabled,
-    filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
-    addToFilter,
-    removeFromFilter,
-    addWordToFilter,
-    removeWordFromFilter,
-    addNegativeWordFilter,
-    removeNegativeWordFilter,
-    toggleFilter,
-    hasActiveFilters,
-    urlSearchTerms,
-    addSearchTermToURL,
-    removeSearchTermFromURL,
-    serverSideUsers,  // Server-side user search from #uss= parameter
-    dateTimeFilter,
-    clearDateTimeFilter
-  } = useFilters({ displayedComments: displayedComments, searchTerm });
-  
-  // Use URL override for filter state if present, otherwise use base filter state
-  const isFilterEnabled = filterActiveOverride !== null ? filterActiveOverride : baseFilterEnabled;
   
   // Apply ALL filters in the correct order
   const filteredComments = useMemo(() => {
