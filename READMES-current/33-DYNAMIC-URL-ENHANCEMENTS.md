@@ -518,7 +518,7 @@ The humans are trusting us to create magical conversation experiences. One URL s
 
 ---
 
-### 🚧 Phase 3: Model Integration (IN PROGRESS)
+### ✅ Phase 3: Model Integration (COMPLETE)
 
 **Date**: September 28, 2025
 
@@ -575,10 +575,61 @@ useModelURL()
 3. Filter bar needs URL-driven state override
 4. Username/color inputs need URL initialization
 
+**Model Ambiguity Fixed**:
+- Updated config-highermind.json to use unique model names
+- Each entity now has its own model identifier
+- ModelConfigLoader uses first match if duplicates exist
+
+---
+
+### ✅ Phase 4: UI Updates (COMPLETE)
+
+**Date**: September 28, 2025
+
+**What Was Built**:
+
+1. **`components/ModelURLIntegration.tsx`** (101 lines)
+   - Logic-only component for model URL handling
+   - Converts model messages to Comment format
+   - Manages filter active state
+   - Updates user state from URL
+   - Exposes integration API via window object
+
+2. **`hooks/useCommentsWithModels.ts`** (125 lines)
+   - Hook to integrate models with comment stream
+   - Injects greeting messages
+   - Handles filter bar override
+   - Updates username/color from URL
+   - Manages model response queue
+   - Provides filtered context for AI
+
+**Key Integration Features**:
+
+- **Message Injection**: Model greetings prepended to comment stream
+- **Filter Override**: URL `filteractive` parameter controls LED state
+- **User State Sync**: Username/color from URL updates localStorage
+- **Context Filtering**: Only conversation participants in AI context
+- **Queue Management**: Handles multi-model sequential responses
+- **Global API**: Window objects for AI bot integration
+
+**Config Updates**:
+```json
+// config-highermind.json now has unique models:
+"eternal-main": "highermind_the-eternal-1"
+"eternal-tech": "highermind_the-eternal-tech"  // Changed
+"fear-main": "fear_and_loathing"
+"fear-creative": "fear_and_loathing_creative"  // Changed
+```
+
+**Integration Points Ready**:
+- `__modelURLIntegration` - Model handler API
+- `__commentsModelIntegration` - Comments integration API
+- Storage events for username/color updates
+- Filter bar class manipulation for LED control
+
 **Next Steps**:
-- Wire up useModelURL in CommentsStream
-- Integrate with AI bot response system
-- Test multi-model conversations
-- Verify context filtering
+- Add `useCommentsWithModels` to CommentsStream component
+- Connect to AI bot system for actual responses
+- Test complete flow end-to-end
 
 ---

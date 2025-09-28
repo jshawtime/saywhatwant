@@ -105,6 +105,7 @@ export class ModelConfigLoader {
       }
       
       // Find entity by ID first, then by model name
+      // Note: If multiple entities have the same model name, only the first match is used
       const entity = config.entities?.find(
         (e: ModelEntity) => e.id === modelIdentifier || e.model === modelIdentifier
       );
