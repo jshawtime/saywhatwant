@@ -51,11 +51,9 @@ export function ModelURLIntegration({
         timestamp: modelMsg.timestamp,
         username: modelMsg.username,
         text: modelMsg.text,
-        userColor: modelMsg.userColor,
+        color: modelMsg.userColor, // Use 'color' field name
         domain: modelMsg.domain || currentDomain || 'saywhatwant.app',
-        isAI: true, // Mark as AI message
-        isGreeting: modelMsg.isGreeting,
-        isModelResponse: modelMsg.isModelResponse
+        'message-type': 'AI' // Mark as AI message using correct field
       };
       
       onModelMessage(comment);

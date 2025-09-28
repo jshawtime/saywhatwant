@@ -30,11 +30,9 @@ export function useCommentsWithModels({
         timestamp: modelMsg.timestamp,
         username: modelMsg.username,
         text: modelMsg.text,
-        userColor: modelMsg.userColor,
+        color: modelMsg.userColor, // Use 'color' field name
         domain: modelMsg.domain || modelURLHook.currentDomain || 'saywhatwant.app',
-        isAI: true,
-        isGreeting: modelMsg.isGreeting,
-        isModelResponse: modelMsg.isModelResponse
+        'message-type': 'AI' // Mark as AI message using correct field
       }));
       
       // Add to beginning of comments

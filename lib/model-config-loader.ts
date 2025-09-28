@@ -101,7 +101,11 @@ export class ModelConfigLoader {
         }
         
         config = await response.json();
-        this.configCache.set(cacheKey, config);
+        if (config) {
+          this.configCache.set(cacheKey, config);
+        } else {
+          return null;
+        }
       }
       
       // Find entity by ID first, then by model name
