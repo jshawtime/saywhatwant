@@ -1,12 +1,22 @@
 # AI Bot System Refactor Documentation
 
 ## 📌 Version
-- **Date**: September 2025
-- **Version**: v1.01
-- **Status**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 🚀 READY TO START
+- **Date**: September 28, 2025
+- **Version**: v1.02
+- **Status**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 🎯 DESIGNED & READY
 - **Philosophy**: Logic over rules, simple strong solid code that scales to 10M+ users
 
-## 🚀 Latest Progress (Sept 27, 2025)
+## 🚀 Latest Progress (Sept 28, 2025)
+
+### 🔧 Recent Improvements ✅
+- **Removed Legacy Fields** - Cleaned up `preferredModels` and `maxConcurrentModels`
+- **Renamed contextWindow → messagesToRead** - Clearer naming throughout codebase
+- **Fixed Username Length** - Consistent 16 characters everywhere (was 12 in backend)
+- **Removed Dead Config** - Eliminated unused global `messagesToRead` field
+- **Entity Selection Design** - Created comprehensive smart selection system (31-AI-Entity-Selection.md)
+- **Multi-Model Testing** - Successfully tested fear_and_loathing model on 10.0.0.100
+- **Resilience Verified** - Cluster handles server failures gracefully
+- **CLI Integration** - Simplified model loading (no full paths needed)
 
 ### Distributed Cluster Architecture ✅
 - **Load Balancing** - Round-robin between all available servers
@@ -28,6 +38,7 @@
 - **Clean Architecture** - 4 focused modules with single responsibilities
 - **Fully Integrated** - Bot running with new modular architecture
 - **Production Ready** - Tested and operational
+- **Config Simplified** - Memory-based capacity only (no artificial limits)
 
 ### ✅ Model Detection SOLVED!
 - **Solution**: Using LM Studio REST API v0 (`/api/v0/models`)
@@ -45,10 +56,11 @@
 modules/
 ├── lmStudioCluster-closed.ts ✅ (Closed system, no timers)
 ├── entityManager.ts ✅ (Entity & rate limits)
-├── conversationAnalyzer.ts ✅ (Context analysis)
-└── kvClient.ts ✅ (KV operations)
+├── conversationAnalyzer.ts ✅ (Context analysis, messagesToRead support)
+├── kvClient.ts ✅ (KV operations)
+└── lmStudioCliWrapper.ts ✅ (CLI integration for local bot)
 
-index.ts (595 lines → refactoring in progress)
+index.ts (241 lines - clean & minimal)
 ```
 
 ## 🎯 Overview
@@ -300,7 +312,7 @@ Update `config-aientities.json`:
       "enabled": true,
       "name": "Mac Studio 1",
       "capabilities": {
-        "maxMemory": 128,  // 128GB RAM!
+        "maxMemory": 120,  // Adjusted for actual available memory
         "supportedFormats": ["MLX", "GGUF"]
       }
     },
@@ -310,7 +322,7 @@ Update `config-aientities.json`:
       "enabled": true,
       "name": "Mac Studio 2",
       "capabilities": {
-        "maxMemory": 128,  // 128GB RAM!
+        "maxMemory": 120,  // Adjusted for actual available memory
         "supportedFormats": ["MLX", "GGUF"]
       }
     }
@@ -569,19 +581,19 @@ LM Studio's **JIT (Just-In-Time) loading** combined with our cluster enables:
 ```typescript
 // Efficient multi-model servers
 class MultiModelStrategy {
-  // Each server can host MANY models simultaneously with 128GB!
+  // Each server can host MANY models simultaneously with 120GB!
   optimizeModelPlacement(cluster: LMStudioCluster) {
-    // Mac Studio 1 with 128GB RAM
+    // Mac Studio 1 with 120GB RAM
     const macStudio1 = cluster.getServer('10.0.0.102');
     // Can load: 1x 70B model (40GB) + 1x 30B model (29GB) + 2x 7B models (8GB) + headroom
     // Or: 10+ smaller models for maximum variety
     
-    // Mac Studio 2 with 128GB RAM  
+    // Mac Studio 2 with 120GB RAM  
     const macStudio2 = cluster.getServer('10.0.0.100');
     // Can load: Multiple large models simultaneously
     // Example: gemma-3-27b (17GB) + mixtral-8x7b (45GB) + llama-30b (20GB) + more!
     
-    // Total cluster capacity: ~256GB of models in memory!
+    // Total cluster capacity: ~240GB of models in memory!
     // This means ALL 10 entities can have their models loaded simultaneously
   }
   
@@ -943,11 +955,11 @@ Flexible architecture that adapts to needs rather than forcing rigid patterns. I
 - [x] Build request queue system ✅ **DONE** - Request routing and queueing implemented
 - [x] Add multi-model loading protocol ✅ **DONE** - Supports multiple models per server with LRU eviction
 - [x] Add memory tracking per server ✅ **DONE** - Tracking 62GB used / 194GB free across cluster
-- [x] Test with 10.0.0.102 (Mac Studio 1 - 128GB) ✅ **DONE** - Online with 3ms latency
-- [x] Add 10.0.0.100 (Mac Studio 2 - 128GB) to pool ✅ **DONE** - Online with 19ms latency
+- [x] Test with 10.0.0.102 (Mac Studio 1 - 120GB) ✅ **DONE** - Online with 3ms latency
+- [x] Add 10.0.0.100 (Mac Studio 2 - 120GB) to pool ✅ **DONE** - Online with 19ms latency
 - [x] Test loading 4-6 models per server ✅ **DONE** - 4 models currently loaded across cluster
 - [x] Verify model-affinity routing works ✅ **DONE** - Routes to server with model already loaded
-- [x] Test memory management (with 256GB total!) ✅ **DONE** - 194GB available, tracking working
+- [x] Test memory management (with 240GB total!) ✅ **DONE** - Memory tracking working
 - [x] Verify instant responses with ALL models pre-loaded ✅ **DONE** - Bot using cluster successfully
 - [x] Test failover with models preserved ✅ **DONE** - Cluster handles missing servers gracefully
 
@@ -963,10 +975,13 @@ Flexible architecture that adapts to needs rather than forcing rigid patterns. I
 - [x] Verify bot still works with all modules ✅ **DONE** - Bot operational
 - [x] Add module tests ✅ **DONE** - Bot tested and running in production
 
-### Phase 2: Entity System
-- [ ] Create Entity class
+### Phase 2: Entity System 🎯 DESIGNED
+- [ ] Create Entity class (Design complete in 31-AI-Entity-Selection.md)
 - [ ] Create EntityLoader
 - [ ] Create EntityPool
+- [ ] Implement Smart Selection Algorithm (100-point scoring system designed)
+- [ ] Add Direct Address Detection (Design complete)
+- [ ] Add Topic/Expertise Matching (Design complete)
 - [ ] Migrate JSON config usage
 - [ ] Add model field to entity selection
 - [ ] Test entity rotation with model switching
@@ -1025,7 +1040,7 @@ The architecture is designed to scale from **2 Macs to 200 servers**, from **1 m
 ## 💡 Why This Architecture Matters
 
 ### For You (Right Now)
-- **Two Mac Studios** - 10.0.0.102 + 10.0.0.100 with 256GB total RAM!
+- **Two Mac Studios** - 10.0.0.102 + 10.0.0.100 with 240GB total RAM!
 - **Multiple models per Mac** - Load 6-10 models on EACH machine
 - **Instant responses** - ALL models stay loaded simultaneously
 - **No model switching** - Every entity's model is ready instantly
@@ -1067,14 +1082,14 @@ The architecture is designed to scale from **2 Macs to 200 servers**, from **1 m
 - **Model-affinity routing** for instant responses
 
 ### Hardware Configuration  
-- **Mac Studio 1**: 10.0.0.102 (128GB RAM!)
-- **Mac Studio 2**: 10.0.0.100 (128GB RAM!)
-- **Total Cluster Memory**: 256GB for models
+- **Mac Studio 1**: 10.0.0.102 (120GB usable RAM)
+- **Mac Studio 2**: 10.0.0.100 (120GB usable RAM)
+- **Total Cluster Memory**: 240GB for models
 
-### Benefits of Multi-Model Architecture with 256GB
+### Benefits of Multi-Model Architecture with 240GB
 1. **Zero wait time** - ALL models stay loaded permanently
 2. **Massive capacity** - Each Mac Studio can host 6-10 models
-3. **No swapping needed** - 256GB fits all entity models + headroom
+3. **No swapping needed** - 240GB fits all entity models + headroom
 4. **Smart routing** - Requests go to least-loaded server with model
 5. **Future proof** - Room for 20+ more models
 
@@ -1085,7 +1100,7 @@ The architecture is designed to scale from **2 Macs to 200 servers**, from **1 m
 - Mac Studio 2: gemma-3-27b (17GB) + llama-30b (20GB) + 5x 7B models (40GB total)
 
 Result: Every single entity gets instant responses - no loading delays ever!
-Total used: ~200GB / 256GB available (56GB free for more models!)
+Total used: ~200GB / 240GB available (40GB free for more models!)
 ```
 
 ---
