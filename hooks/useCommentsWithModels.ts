@@ -10,12 +10,14 @@ interface UseCommentsWithModelsProps {
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   addToFilter?: (username: string, color: string) => void;
+  clearAllFilters?: () => void;
 }
 
 export function useCommentsWithModels({ 
   comments, 
   setComments,
-  addToFilter 
+  addToFilter,
+  clearAllFilters 
 }: UseCommentsWithModelsProps) {
   const modelURLHook = useModelURL();
   const hasInjectedGreetings = useRef(false);

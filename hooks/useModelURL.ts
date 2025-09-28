@@ -32,6 +32,7 @@ export function useModelURL(): UseModelURLReturn {
       humanColor: null as string | null,
       aiUsername: null as string | null,
       aiColor: null as string | null,
+      modelNames: [] as string[],
     };
     
     if (typeof window === 'undefined') return state;
@@ -46,6 +47,20 @@ export function useModelURL(): UseModelURLReturn {
         case 'filteractive':
           console.log('[useModelURL] Initial filteractive found:', value);
           state.filterActive = value === 'true';
+          break;
+          
+        case 'model':
+          // Parse model configurations (support multiple with +)
+          const models = value?.split('+') || [];
+          state.modelNames = models.map(modelStr => {
+            const [modelName] = modelStr.split(':'); // Ignore color for now
+            return modelName;
+          });
+          // When model is present, activate filters and clear existing filters
+          if (state.modelNames.length > 0) {
+            state.filterActive = true;
+            console.log('[useModelURL] Initial models found:', state.modelNames);
+          }
           break;
           
         case 'uis':
@@ -93,9 +108,54 @@ export function useModelURL(): UseModelURLReturn {
   const [humanColor, setHumanColor] = useState<string | null>(initialState.humanColor);
   const [aiUsername, setAiUsername] = useState<string | null>(initialState.aiUsername);
   const [aiColor, setAiColor] = useState<string | null>(initialState.aiColor);
+  const [initialModelNames] = useState<string[]>(initialState.modelNames);
   
   const handlerRef = useRef<ModelURLHandler | null>(null);
   const initializedRef = useRef(false);
+  const hasProcessedInitialModels = useRef(false);
+  
+  // Process initial models if present
+  useEffect(() => {
+    if (initialModelNames.length > 0 && !hasProcessedInitialModels.current) {
+      hasProcessedInitialModels.current = true;
+      console.log('[useModelURL] Processing initial models:', initialModelNames);
+      
+      // Load model configs and set up initial state
+      const processInitialModels = async () => {
+        const { ModelConfigLoader } = await import('../lib/model-config-loader');
+        const loader = ModelConfigLoader.getInstance();
+        
+        for (const modelName of initialModelNames) {
+          const config = await loader.loadModelConfig(modelName);
+          if (config) {
+            // Set domain from first model
+            if (!currentDomain) {
+              setCurrentDomain(config.model || modelName);
+            }
+            
+            // Add AI username to state (for filter bar)
+            if (!aiUsername) {
+              setAiUsername(config.username);
+              setAiColor(config.color || '#60A5FA');
+            }
+            
+            // Add greeting message
+            const greeting: ModelMessage = {
+              id: `greeting-${modelName}-${Date.now()}`,
+              username: config.username,
+              color: config.color || '#60A5FA',
+              content: config.greeting || 'Hello! I\'m ready to help.',
+              timestamp: Date.now(),
+              isGreeting: true
+            };
+            setModelMessages(prev => [...prev, greeting]);
+          }
+        }
+      };
+      
+      processInitialModels();
+    }
+  }, [initialModelNames, currentDomain, aiUsername]);
   
   // Initialize handler and process URL on mount
   useEffect(() => {
