@@ -517,3 +517,68 @@ The humans are trusting us to create magical conversation experiences. One URL s
 **Ready for Phase 3**: Model Integration with UI
 
 ---
+
+### 🚧 Phase 3: Model Integration (IN PROGRESS)
+
+**Date**: September 28, 2025
+
+**What Was Built**:
+
+1. **`lib/model-url-handler.ts`** (318 lines)
+   - Core handler for model URL parameters
+   - Manages response queue for multiple models
+   - Processes greetings and model responses
+   - Handles filter active state
+   - Updates domain/title for conversations
+   - Manages filtered context for models
+   - Event-based architecture for UI integration
+
+2. **`hooks/useModelURL.ts`** (159 lines)
+   - React hook for component integration
+   - Subscribes to model handler events
+   - Manages model messages state
+   - Applies filter active state to UI
+   - Handles username/color updates
+   - Provides filtered message context
+
+**Key Features Implemented**:
+
+- **Queue Management**: Sequential processing of multiple models
+- **Greeting System**: Programmatic greetings without LM Studio
+- **Context Filtering**: Only conversation participants in context
+- **Domain Updates**: Changes title/domain to model name
+- **User State**: Updates localStorage for current tab
+- **Filter Control**: Overrides filter bar state from URL
+- **Event System**: Clean pub/sub for UI updates
+
+**Architecture**:
+```typescript
+// Handler processes URL and emits events
+ModelURLHandler
+  ├── parseEnhancedHash()
+  ├── processModelConfigs()
+  ├── showGreeting()
+  ├── emit(event)
+  └── getFilteredContext()
+
+// Hook subscribes and updates UI
+useModelURL()
+  ├── subscribe(handler)
+  ├── updateFilterBar()
+  ├── manageMessages()
+  └── provideContext()
+```
+
+**Integration Points Identified**:
+1. CommentsStream component needs model message injection
+2. AI bot system needs filtered context access
+3. Filter bar needs URL-driven state override
+4. Username/color inputs need URL initialization
+
+**Next Steps**:
+- Wire up useModelURL in CommentsStream
+- Integrate with AI bot response system
+- Test multi-model conversations
+- Verify context filtering
+
+---
