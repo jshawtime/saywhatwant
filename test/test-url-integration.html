@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic URL Enhancement Test Suite</title>
+    <style>
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #60a5fa; margin-bottom: 30px; }
+        h2 { color: #34d399; margin-top: 40px; }
+        .test-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-url {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-family: 'SF Mono', monospace;
+            font-size: 14px;
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .test-button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        .copy-button {
+            background: #10b981;
+        }
+        .copy-button:hover {
+            background: #059669;
+        }
+        .description {
+            color: #9ca3af;
+            margin: 10px 0;
+        }
+        .expected {
+            background: #064e3b;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .status.success { background: #10b981; }
+        .status.info { background: #3b82f6; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Dynamic URL Enhancement Test Suite</h1>
+    <p class="description">Test all new URL parameters and their combinations</p>
+
+    <h2>1️⃣ Filter Bar Control</h2>
+    
+    <div class="test-card">
+        <h3>Filter Active = True</h3>
+        <div class="test-url">#filteractive=true</div>
+        <p class="description">Forces filter bar ON (LED lit) even on base URL</p>
+        <button class="test-button" onclick="testURL('#filteractive=true')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#filteractive=true')">Copy URL</button>
+        <div class="expected">✅ Expected: Filter bar LED should be lit</div>
+    </div>
+
+    <div class="test-card">
+        <h3>Filter Active = False with Filters</h3>
+        <div class="test-url">#filteractive=false&u=alice:255000000</div>
+        <p class="description">Filter bar has alice filter but LED is OFF</p>
+        <button class="test-button" onclick="testURL('#filteractive=false&u=alice:255000000')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#filteractive=false&u=alice:255000000')">Copy URL</button>
+        <div class="expected">✅ Expected: Filter bar shows alice but LED is dimmed</div>
+    </div>
+
+    <h2>2️⃣ Model Conversations</h2>
+    
+    <div class="test-card">
+        <h3>Single Model</h3>
+        <div class="test-url">#model=highermind_the-eternal-1</div>
+        <p class="description">Triggers TheEternal AI to greet and respond</p>
+        <button class="test-button" onclick="testURL('#model=highermind_the-eternal-1')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#model=highermind_the-eternal-1')">Copy URL</button>
+        <div class="expected">✅ Expected: TheEternal greeting appears, domain changes</div>
+    </div>
+
+    <div class="test-card">
+        <h3>Model with Random Color</h3>
+        <div class="test-url">#model=highermind_the-eternal-1:random</div>
+        <p class="description">Model gets random color, URL updates with actual color</p>
+        <button class="test-button" onclick="testURL('#model=highermind_the-eternal-1:random')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#model=highermind_the-eternal-1:random')">Copy URL</button>
+        <div class="expected">✅ Expected: Random color generated, URL shows RGB values</div>
+    </div>
+
+    <div class="test-card">
+        <h3>Multiple Models</h3>
+        <div class="test-url">#model=highermind_the-eternal-1+fear_and_loathing</div>
+        <p class="description">Both models respond in sequence</p>
+        <button class="test-button" onclick="testURL('#model=highermind_the-eternal-1+fear_and_loathing')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#model=highermind_the-eternal-1+fear_and_loathing')">Copy URL</button>
+        <div class="expected">✅ Expected: TheEternal greets, then FearAndLoathing greets</div>
+    </div>
+
+    <div class="test-card">
+        <h3>Model by Entity ID</h3>
+        <div class="test-url">#model=eternal-tech</div>
+        <p class="description">Uses entity ID instead of model name</p>
+        <button class="test-button" onclick="testURL('#model=eternal-tech')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#model=eternal-tech')">Copy URL</button>
+        <div class="expected">✅ Expected: TechEternal personality loads</div>
+    </div>
+
+    <h2>3️⃣ User State</h2>
+    
+    <div class="test-card">
+        <h3>Human Username & Color</h3>
+        <div class="test-url">#uis=Alice:255000000</div>
+        <p class="description">Sets human user as Alice with red color</p>
+        <button class="test-button" onclick="testURL('#uis=Alice:255000000')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#uis=Alice:255000000')">Copy URL</button>
+        <div class="expected">✅ Expected: Username input shows "Alice", color is red</div>
+    </div>
+
+    <div class="test-card">
+        <h3>Random Human Color</h3>
+        <div class="test-url">#uis=Bob:random</div>
+        <p class="description">Bob gets random color, URL updates</p>
+        <button class="test-button" onclick="testURL('#uis=Bob:random')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#uis=Bob:random')">Copy URL</button>
+        <div class="expected">✅ Expected: Bob with random color, URL shows actual RGB</div>
+    </div>
+
+    <div class="test-card">
+        <h3>AI Username & Color</h3>
+        <div class="test-url">#ais=Assistant:000255000</div>
+        <p class="description">Sets AI display name and color</p>
+        <button class="test-button" onclick="testURL('#ais=Assistant:000255000')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#ais=Assistant:000255000')">Copy URL</button>
+        <div class="expected">✅ Expected: AI appears as "Assistant" with green color</div>
+    </div>
+
+    <h2>4️⃣ Complete Scenarios</h2>
+    
+    <div class="test-card">
+        <h3>Private AI Conversation</h3>
+        <div class="test-url">#filteractive=true&model=highermind_the-eternal-1:random&uis=Alice:random</div>
+        <p class="description">Complete private conversation setup with random colors</p>
+        <button class="test-button" onclick="testURL('#filteractive=true&model=highermind_the-eternal-1:random&uis=Alice:random')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#filteractive=true&model=highermind_the-eternal-1:random&uis=Alice:random')">Copy URL</button>
+        <div class="expected">
+            ✅ Expected:<br>
+            - Filter bar ON<br>
+            - Alice with random color<br>
+            - TheEternal greets with random color<br>
+            - Domain changes to model name<br>
+            - Only Alice/TheEternal messages in context
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h3>Multi-Model Discussion</h3>
+        <div class="test-url">#filteractive=true&model=eternal-main+fear-main&uis=Human:138043226</div>
+        <p class="description">Two AI personalities in conversation</p>
+        <button class="test-button" onclick="testURL('#filteractive=true&model=eternal-main+fear-main&uis=Human:138043226')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#filteractive=true&model=eternal-main+fear-main&uis=Human:138043226')">Copy URL</button>
+        <div class="expected">
+            ✅ Expected:<br>
+            - Both AIs greet in sequence<br>
+            - Human has purple color<br>
+            - Filter shows all participants<br>
+            - Context isolated to conversation
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h3>Creative Session</h3>
+        <div class="test-url">#model=fear-creative&uis=Artist:random&filteractive=true</div>
+        <p class="description">Creative AI with artist user</p>
+        <button class="test-button" onclick="testURL('#model=fear-creative&uis=Artist:random&filteractive=true')">Test This URL</button>
+        <button class="test-button copy-button" onclick="copyURL('#model=fear-creative&uis=Artist:random&filteractive=true')">Copy URL</button>
+        <div class="expected">
+            ✅ Expected:<br>
+            - CreativeFear personality loads<br>
+            - "Artist" username with random color<br>
+            - Creative greeting message<br>
+            - Filter bar active
+        </div>
+    </div>
+
+    <h2>5️⃣ URL Updates</h2>
+    
+    <div class="test-card">
+        <h3>Random Color Resolution</h3>
+        <p class="description">After loading a URL with "random", the URL should update to show actual RGB values</p>
+        <div class="test-url">Before: #uis=User:random&model=highermind_the-eternal-1:random</div>
+        <div class="test-url">After: #uis=User:123045067&model=highermind_the-eternal-1:234156078</div>
+        <div class="expected">✅ URL updates with actual color values for bookmarking</div>
+    </div>
+
+    <script>
+        // Test function - opens URL in new tab
+        function testURL(hash) {
+            const baseUrl = window.location.origin;
+            const testUrl = baseUrl + '/' + hash;
+            window.open(testUrl, '_blank');
+            
+            // Show status
+            showStatus('Opened in new tab: ' + testUrl);
+        }
+        
+        // Copy URL to clipboard
+        function copyURL(hash) {
+            const baseUrl = window.location.origin;
+            const fullUrl = baseUrl + '/' + hash;
+            
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                showStatus('Copied to clipboard: ' + fullUrl, 'success');
+            }).catch(err => {
+                showStatus('Failed to copy URL', 'error');
+            });
+        }
+        
+        // Show status message
+        function showStatus(message, type = 'info') {
+            // Remove existing status
+            const existing = document.querySelector('.status-message');
+            if (existing) existing.remove();
+            
+            // Create new status
+            const status = document.createElement('div');
+            status.className = 'status ' + type;
+            status.textContent = message;
+            status.style.position = 'fixed';
+            status.style.bottom = '20px';
+            status.style.right = '20px';
+            status.style.zIndex = '9999';
+            document.body.appendChild(status);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => status.remove(), 3000);
+        }
+        
+        // Display current URL parameters on load
+        window.addEventListener('load', () => {
+            if (window.location.hash) {
+                showStatus('Current URL: ' + window.location.hash);
+            }
+        });
+    </script>
+</body>
+</html>
