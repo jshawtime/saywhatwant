@@ -316,9 +316,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Apply domain filter
     if (domainFilterEnabled) {
       result = result.filter(comment => 
-        comment.domain === currentDomain || 
-        !comment.domain // Show old comments without domain field
-      );
+      comment.domain === currentDomain || 
+      !comment.domain // Show old comments without domain field
+    );
     }
     
     // Apply message type filter
