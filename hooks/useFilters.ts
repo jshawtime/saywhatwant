@@ -13,14 +13,20 @@ export interface UsernameFilter {
 interface UseFiltersProps {
   displayedComments: Comment[];
   searchTerm: string;
+  filterEnabledOverride?: boolean | null;
 }
 
-export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) => {
+export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverride }: UseFiltersProps) => {
   const [filterUsernames, setFilterUsernames] = useState<UsernameFilter[]>([]);
   const [filterWords, setFilterWords] = useState<string[]>([]);
   const [negativeFilterWords, setNegativeFilterWords] = useState<string[]>([]);
-  const [isFilterEnabled, setIsFilterEnabled] = useState(false); // Default: OFF
+  const [baseFilterEnabled, setBaseFilterEnabled] = useState(false); // Default: OFF
   const [filterByColorToo, setFilterByColorToo] = useState(true);
+  
+  // Use override if provided, otherwise use base state
+  const isFilterEnabled = filterEnabledOverride !== null && filterEnabledOverride !== undefined 
+    ? filterEnabledOverride 
+    : baseFilterEnabled;
   
   // Get URL filter state and methods
   const { 
@@ -95,18 +101,18 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     
     if (!hasURLFilters) {
       // Special Case 1: Visiting with base URL → filters OFF
-      setIsFilterEnabled(false);
+      setBaseFilterEnabled(false);
     } else if (hasURLFilters && !savedFilters && !savedWordFilters && !savedNegativeFilters) {
       // Special Case 2: URL has filters but filter bar is empty → filters ON
       // This helps new users understand filters
-      setIsFilterEnabled(true);
+      setBaseFilterEnabled(true);
       localStorage.setItem('sww-filter-enabled', 'true');
     } else if (savedFilterEnabled !== null) {
       // Normal case: Use saved preference
-      setIsFilterEnabled(savedFilterEnabled === 'true');
+      setBaseFilterEnabled(savedFilterEnabled === 'true');
     } else {
       // Default: filters OFF
-      setIsFilterEnabled(false);
+      setBaseFilterEnabled(false);
     }
   }, []); // Only run once on mount - special cases apply to initial load only
   
@@ -251,11 +257,11 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   // This ONLY changes active/inactive state, NOT the URL
   // URL always reflects filter bar contents regardless of active state
   const toggleFilter = useCallback(() => {
-    const newState = !isFilterEnabled;
-    setIsFilterEnabled(newState);
+    const newState = !baseFilterEnabled;
+    setBaseFilterEnabled(newState);
     localStorage.setItem('sww-filter-enabled', String(newState));
     // URL remains unchanged - it always shows filter bar contents
-  }, [isFilterEnabled]);
+  }, [baseFilterEnabled]);
 
   // Apply filters to comments
   const filteredComments = useMemo(() => {

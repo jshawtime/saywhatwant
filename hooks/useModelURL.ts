@@ -47,6 +47,9 @@ export function useModelURL(): UseModelURLReturn {
         case 'filteractive':
           console.log('[useModelURL] Initial filteractive found:', value);
           state.filterActive = value === 'true';
+          // CRITICAL: filteractive=true should ONLY activate the filter state,
+          // it should NOT add any users to the filter
+          // The filter bar will use whatever is in localStorage
           break;
           
         case 'model':

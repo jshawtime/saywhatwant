@@ -9,15 +9,11 @@ import { useModelURL } from './useModelURL';
 interface UseCommentsWithModelsProps {
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  addToFilter?: (username: string, color: string) => void;
-  clearAllFilters?: () => void;
 }
 
 export function useCommentsWithModels({ 
   comments, 
-  setComments,
-  addToFilter,
-  clearAllFilters 
+  setComments
 }: UseCommentsWithModelsProps) {
   const modelURLHook = useModelURL();
   const hasInjectedGreetings = useRef(false);
@@ -77,14 +73,8 @@ export function useCommentsWithModels({
   }, [modelURLHook.humanUsername, modelURLHook.humanColor]);
   
   // Handle AI username/color from URL  
-  useEffect(() => {
-    if (modelURLHook.aiUsername && modelURLHook.aiColor) {
-      // Add AI to filter bar
-      if (addToFilter) {
-        addToFilter(modelURLHook.aiUsername, modelURLHook.aiColor);
-      }
-    }
-  }, [modelURLHook.aiUsername, modelURLHook.aiColor, addToFilter]);
+  // NOTE: Adding AI to filter bar should be handled in the main component
+  // after both hooks are initialized
   
   // Add a model response to comments
   const addModelResponse = useCallback((response: Comment) => {
@@ -128,6 +118,8 @@ export function useCommentsWithModels({
     isProcessingQueue: modelURLHook.isProcessingQueue,
     addModelResponse,
     getFilteredMessagesForModel,
-    handleModelResponseComplete
+    handleModelResponseComplete,
+    aiUsername: modelURLHook.aiUsername,
+    aiColor: modelURLHook.aiColor
   };
 }

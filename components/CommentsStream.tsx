@@ -220,16 +220,28 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Username validation
   const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
   
-  // Comment submission system
-  // Comment Submission System will be moved after model integration
+  // Model URL Integration - handles model messages, filter state, and user state from URL
+  // Must come BEFORE useFilters so filterActiveOverride is available
+  const {
+    filterActiveOverride,
+    currentDomain: modelDomain,
+    isProcessingQueue,
+    addModelResponse,
+    getFilteredMessagesForModel,
+    handleModelResponseComplete,
+    aiUsername,
+    aiColor
+  } = useCommentsWithModels({ 
+    comments: allComments, 
+    setComments: setAllComments
+  });
   
-
   // Use the filters hook with ALL comments (unfiltered pool)
   const {
     filterUsernames,
     filterWords,
     negativeFilterWords,
-    isFilterEnabled: baseFilterEnabled,
+    isFilterEnabled,
     filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
     addToFilter,
     removeFromFilter,
@@ -245,24 +257,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     serverSideUsers,  // Server-side user search from #uss= parameter
     dateTimeFilter,
     clearDateTimeFilter
-  } = useFilters({ displayedComments: displayedComments, searchTerm });
-  
-  // Model URL Integration - handles model messages, filter state, and user state from URL
-  const {
-    filterActiveOverride,
-    currentDomain: modelDomain,
-    isProcessingQueue,
-    addModelResponse,
-    getFilteredMessagesForModel,
-    handleModelResponseComplete
-  } = useCommentsWithModels({ 
-    comments: allComments, 
-    setComments: setAllComments,
-    addToFilter 
+  } = useFilters({ 
+    displayedComments: allComments, 
+    searchTerm,
+    filterEnabledOverride: filterActiveOverride 
   });
   
-  // Use URL override for filter state if present, otherwise use base filter state
-  const isFilterEnabled = filterActiveOverride !== null ? filterActiveOverride : baseFilterEnabled;
+  // Add AI to filter bar when AI username is set from URL
+  useEffect(() => {
+    if (aiUsername && aiColor && addToFilter) {
+      addToFilter(aiUsername, aiColor);
+    }
+  }, [aiUsername, aiColor, addToFilter]);
   
   // Comment Submission System (moved here so modelDomain is available)
   const {
