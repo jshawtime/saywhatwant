@@ -229,6 +229,7 @@
         <h3>Clear Local Storage</h3>
         <p class="description">Clear IndexedDB database and localStorage to start fresh</p>
         <button class="test-button" onclick="clearIndexedDB()">Clear IndexedDB</button>
+        <button class="test-button" onclick="clearCommentCache()">Clear Comment Cache Only</button>
         <button class="test-button" onclick="checkDatabaseStatus()">Check Database Status</button>
         <button class="test-button" onclick="clearAllStorage()">Clear Everything</button>
         <div id="db-status" style="margin-top: 20px; padding: 15px; background: #1f2937; border-radius: 4px; display: none;"></div>
@@ -347,13 +348,48 @@
         });
         
         // IndexedDB Management Functions
+        function clearCommentCache() {
+            const statusDiv = document.getElementById('db-status');
+            statusDiv.style.display = 'block';
+            
+            const cachedComments = localStorage.getItem('sww-comments');
+            if (cachedComments) {
+                try {
+                    const comments = JSON.parse(cachedComments);
+                    const count = comments.length;
+                    localStorage.removeItem('sww-comments');
+                    localStorage.removeItem('sww-comments-local'); // Also remove alternative key
+                    
+                    statusDiv.innerHTML = `<div style="color: #10b981;">✅ Cleared ${count} cached comments from localStorage!</div>`;
+                    showStatus(`Removed ${count} cached comments`, 'success');
+                } catch (e) {
+                    localStorage.removeItem('sww-comments');
+                    localStorage.removeItem('sww-comments-local');
+                    statusDiv.innerHTML = '<div style="color: #10b981;">✅ Cleared comment cache!</div>';
+                    showStatus('Comment cache cleared', 'success');
+                }
+            } else {
+                statusDiv.innerHTML = '<div style="color: #60a5fa;">ℹ️ No cached comments found in localStorage</div>';
+                showStatus('No comment cache to clear', 'info');
+            }
+        }
+        
         async function clearIndexedDB() {
             const statusDiv = document.getElementById('db-status');
             statusDiv.style.display = 'block';
             statusDiv.innerHTML = '<div style="color: #60a5fa;">🔄 Clearing IndexedDB...</div>';
             
             try {
-                // Clear localStorage items that might affect the app
+                // CRITICAL: Clear the comments from localStorage FIRST!
+                const commentsRemoved = localStorage.getItem('sww-comments');
+                if (commentsRemoved) {
+                    const commentCount = JSON.parse(commentsRemoved).length || 0;
+                    console.log(`Removing ${commentCount} cached comments from localStorage`);
+                    localStorage.removeItem('sww-comments');
+                }
+                
+                // Clear other localStorage items that might affect the app
+                localStorage.removeItem('sww-comments-local');  // Alternative comments key
                 localStorage.removeItem('sww-indexeddb-initialized');
                 localStorage.removeItem('sww-indexeddb-messages-count');
                 localStorage.removeItem('sww-filter-enabled');
@@ -427,8 +463,22 @@
                 const filterEnabled = localStorage.getItem('sww-filter-enabled');
                 const filters = localStorage.getItem('sww-filters');
                 const wordFilters = localStorage.getItem('sww-word-filters');
+                const cachedComments = localStorage.getItem('sww-comments');
                 
                 html += '<h4 style="color: #34d399; margin-top: 15px;">localStorage:</h4>';
+                
+                // HIGHLIGHT THE CACHED COMMENTS!
+                if (cachedComments) {
+                    try {
+                        const comments = JSON.parse(cachedComments);
+                        html += `<div style="color: #ef4444; font-weight: bold;">⚠️ Cached Comments: <span style="color: #fbbf24;">${comments.length} messages</span> (THIS IS WHY YOU SEE MESSAGES!)</div>`;
+                    } catch (e) {
+                        html += `<div style="color: #ef4444;">Cached Comments: <span style="color: #fbbf24;">corrupted data</span></div>`;
+                    }
+                } else {
+                    html += `<div style="color: #10b981;">✅ No cached comments in localStorage</div>`;
+                }
+                
                 html += `<div style="color: #9ca3af;">Filter Enabled: <span style="color: #60a5fa;">${filterEnabled || 'not set'}</span></div>`;
                 html += `<div style="color: #9ca3af;">User Filters: <span style="color: #60a5fa;">${filters ? 'set' : 'empty'}</span></div>`;
                 html += `<div style="color: #9ca3af;">Word Filters: <span style="color: #60a5fa;">${wordFilters ? 'set' : 'empty'}</span></div>`;
