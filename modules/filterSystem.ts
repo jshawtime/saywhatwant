@@ -59,7 +59,7 @@ export const FILTER_CONSTANTS = {
     USERNAMES: 'sww-filter-usernames',
     WORDS: 'sww-filter-words',
     NEGATIVE_WORDS: 'sww-filter-negative-words',
-    ENABLED: 'sww-filter-enabled',
+    // REMOVED: ENABLED - URL is now the single source of truth for filter state
   },
   COLORS: {
     NEGATIVE: '#8B0000',
@@ -302,7 +302,7 @@ export class FilterManager {
         const savedUsernames = localStorage.getItem(FILTER_CONSTANTS.STORAGE_KEYS.USERNAMES);
         const savedWords = localStorage.getItem(FILTER_CONSTANTS.STORAGE_KEYS.WORDS);
         const savedNegativeWords = localStorage.getItem(FILTER_CONSTANTS.STORAGE_KEYS.NEGATIVE_WORDS);
-        const savedEnabled = localStorage.getItem(FILTER_CONSTANTS.STORAGE_KEYS.ENABLED);
+        // Filter enabled state is now managed through URL only - removed localStorage check
 
         if (savedUsernames) {
           state.usernames = JSON.parse(savedUsernames);
@@ -313,9 +313,7 @@ export class FilterManager {
         if (savedNegativeWords) {
           state.negativeWords = JSON.parse(savedNegativeWords);
         }
-        if (savedEnabled) {
-          state.isEnabled = savedEnabled === 'true';
-        }
+        // isEnabled state comes from URL, not localStorage
       } catch (error) {
         console.error('Error loading filter state from localStorage:', error);
       }
@@ -520,10 +518,7 @@ export class FilterManager {
         FILTER_CONSTANTS.STORAGE_KEYS.NEGATIVE_WORDS,
         JSON.stringify(this.state.negativeWords)
       );
-      localStorage.setItem(
-        FILTER_CONSTANTS.STORAGE_KEYS.ENABLED,
-        String(this.state.isEnabled)
-      );
+      // Filter enabled state is now managed through URL only - no localStorage
     } catch (error) {
       console.error('Error persisting filter state:', error);
     }

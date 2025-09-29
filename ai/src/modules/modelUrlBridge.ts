@@ -1,8 +1,12 @@
 /**
  * Model URL Bridge
  * Connects the AI bot system to URL-triggered model conversations
- * This allows the bot to check if it should respond based on URL parameters
+ * This module is designed for browser context but provides stub implementations for Node.js
  */
+
+// Check if we're in a browser environment
+declare const global: any;
+const isBrowser = typeof global === 'undefined' || typeof global.window !== 'undefined';
 
 export interface ModelURLContext {
   isProcessingQueue: boolean;
@@ -15,71 +19,35 @@ export interface ModelURLContext {
  * Check if the bot should respond based on URL model triggers
  */
 export function checkModelURLContext(): ModelURLContext | null {
-  // This would be called from a browser context where the window APIs are available
-  // In the bot context (Node.js), this will return null
-  if (typeof window === 'undefined') {
+  // This is a browser-only feature, always return null in Node.js
+  if (!isBrowser) {
     return null;
   }
   
-  // Check for model URL integration
-  const integration = (window as any).__commentsModelIntegration;
-  if (!integration) {
-    return null;
-  }
-  
-  // Check if a model entity is currently active
-  const currentEntity = (window as any).__currentModelEntity;
-  if (!currentEntity) {
-    return null;
-  }
-  
-  return {
-    isProcessingQueue: integration.isProcessingQueue,
-    currentDomain: integration.currentDomain,
-    currentModelEntity: currentEntity,
-    filteredMessages: []
-  };
+  // Browser-specific code would go here, but we're in Node.js so skip it
+  return null;
 }
 
 /**
  * Get filtered messages for the current model conversation
  */
 export function getFilteredMessagesForModel(messages: any[]): any[] {
-  if (typeof window === 'undefined') {
-    return messages;
-  }
-  
-  const integration = (window as any).__commentsModelIntegration;
-  if (!integration || !integration.getFilteredMessagesForModel) {
-    return messages;
-  }
-  
-  return integration.getFilteredMessagesForModel(messages);
+  // In Node.js context, just return messages as-is
+  return messages;
 }
 
 /**
  * Signal that a model response has been completed
  */
 export async function signalModelResponseComplete(): Promise<void> {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  
-  const integration = (window as any).__commentsModelIntegration;
-  if (!integration || !integration.handleModelResponseComplete) {
-    return;
-  }
-  
-  await integration.handleModelResponseComplete();
+  // No-op in Node.js context
+  return;
 }
 
 /**
  * Check if URL-triggered models are active
  */
 export function isModelURLActive(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  
-  return !!(window as any).__currentModelEntity;
+  // Always false in Node.js context
+  return false;
 }

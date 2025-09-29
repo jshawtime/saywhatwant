@@ -144,14 +144,14 @@ export const USERNAME_POOL = [
   'Entity',
 ];
 
-// Color palette for the bot (matching app's style)
+// Color palette for the bot (matching app's style) - 9-digit format
 export const COLOR_POOL = [
-  'rgb(076, 194, 040)', // Green
-  'rgb(158, 220, 040)', // Lime
-  'rgb(040, 150, 220)', // Blue
-  'rgb(220, 040, 150)', // Pink
-  'rgb(150, 040, 220)', // Purple
-  'rgb(220, 150, 040)', // Orange
-  'rgb(040, 220, 150)', // Teal
-  'rgb(194, 040, 076)', // Red
+  '076194040', // Green
+  '158220040', // Lime  
+  '040150220', // Blue
+  '220040150', // Pink
+  '150040220', // Purple
+  '220150040', // Orange
+  '040220150', // Teal
+  '194040076', // Red
 ];

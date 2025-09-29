@@ -56,7 +56,7 @@ async function testLMStudio() {
       messages: [
         {
           role: 'system',
-          content: `You are a user of the Say What Want chat app. Your username is TestBot and your color is rgb(076, 194, 040). Respond as a casual chat user would. Keep it under 200 characters.`
+          content: `You are a user of the Say What Want chat app. Your username is TestBot and your color is 076194040. Respond as a casual chat user would. Keep it under 200 characters.`
         },
         {
           role: 'user',

@@ -5,7 +5,7 @@
 
 import { Comment } from '../types.js';
 import { AIEntity } from './entityManager.js';
-import { logger } from '../console-logger.js';
+// import { logger } from '../console-logger.js'; // Unused - commented out
 
 export interface ConversationContext {
   recentMessages: string;
@@ -133,7 +133,7 @@ export class ConversationAnalyzer {
   /**
    * Get usernames for allowed bot IDs
    */
-  private getAllowedBotUsernames(botIds: string[]): string[] {
+  private getAllowedBotUsernames(_botIds: string[]): string[] {
     // For now, return empty array - this needs to be injected from main
     // TODO: Pass entity manager as dependency
     return [];

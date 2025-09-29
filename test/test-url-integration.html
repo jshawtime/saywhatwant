@@ -249,6 +249,16 @@
     </div>
     
     <div class="test-card">
+        <h3>AI Bot Control</h3>
+        <p class="description">Manage the AI bot service</p>
+        <button class="test-button" onclick="checkBotStatus()">Check Bot Status</button>
+        <button class="test-button" onclick="restartBot()">Restart AI Bot</button>
+        <button class="test-button" onclick="stopBot()">Stop AI Bot</button>
+        <button class="test-button" onclick="startBot()">Start AI Bot</button>
+        <div id="bot-status" style="margin-top: 20px; padding: 15px; background: #1f2937; border-radius: 4px; display: none;"></div>
+    </div>
+    
+    <div class="test-card">
         <h3>Clear Cloudflare KV Storage</h3>
         <p class="description">Remove all comments from the server</p>
         <button class="test-button" onclick="showKVClearInstructions()">Show Clear Instructions</button>
@@ -321,6 +331,126 @@
                 clearInterval(autoRefreshInterval);
             }
         });
+        
+        // AI Bot Control Functions
+        function checkBotStatus() {
+            const statusDiv = document.getElementById('bot-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `
+                <h4 style="color: #10b981;">🤖 AI Bot Status Check</h4>
+                <p style="color: #e5e7eb;">Run this command to check if the bot is running:</p>
+                <div style="background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                    <code style="color: #60a5fa; font-size: 12px;">ps aux | grep -E "(tsx.*index\\.ts|node.*dist/index\\.js)" | grep -v grep</code>
+                </div>
+                <button onclick="copyCommand('ps aux | grep -E \\"(tsx.*index\\\\.ts|node.*dist/index\\\\.js)\\" | grep -v grep')" 
+                        style="padding: 4px 12px; background: #374151; color: #60a5fa; border: 1px solid #4b5563; border-radius: 4px; cursor: pointer;">
+                    Copy Command
+                </button>
+            `;
+            showStatus('Check terminal for bot processes', 'info');
+        }
+        
+        function restartBot() {
+            const statusDiv = document.getElementById('bot-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `
+                <h4 style="color: #fbbf24;">🔄 Restart AI Bot</h4>
+                <p style="color: #e5e7eb;">Run these commands to restart the bot with new configs:</p>
+                <div style="background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                    <code style="color: #10b981; font-size: 12px;">
+                        # 1. Find and stop current bot<br>
+                        pkill -f "node.*dist/index.js" || pkill -f "tsx.*src/index.ts"<br><br>
+                        # 2. Navigate to AI bot directory<br>
+                        cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/ai<br><br>
+                        # 3. Rebuild and start<br>
+                        npm run build && npm start
+                    </code>
+                </div>
+                <button onclick="copyRestartCommands()" 
+                        style="padding: 4px 12px; background: #374151; color: #10b981; border: 1px solid #4b5563; border-radius: 4px; cursor: pointer;">
+                    Copy All Commands
+                </button>
+                <p style="color: #94a3b8; font-size: 12px; margin-top: 10px;">
+                    💡 This will reload configs and ensure 9-digit colors are used
+                </p>
+            `;
+            showStatus('Restart commands ready - copy and run in terminal', 'success');
+        }
+        
+        function stopBot() {
+            const statusDiv = document.getElementById('bot-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `
+                <h4 style="color: #ef4444;">⏹️ Stop AI Bot</h4>
+                <p style="color: #e5e7eb;">Run this command to stop the bot:</p>
+                <div style="background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                    <code style="color: #ef4444; font-size: 12px;">pkill -f "node.*dist/index.js" || pkill -f "tsx.*src/index.ts"</code>
+                </div>
+                <button onclick="copyCommand('pkill -f \\"node.*dist/index.js\\" || pkill -f \\"tsx.*src/index.ts\\"')" 
+                        style="padding: 4px 12px; background: #374151; color: #ef4444; border: 1px solid #4b5563; border-radius: 4px; cursor: pointer;">
+                    Copy Command
+                </button>
+            `;
+            showStatus('Stop command ready', 'info');
+        }
+        
+        function startBot() {
+            const statusDiv = document.getElementById('bot-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `
+                <h4 style="color: #10b981;">▶️ Start AI Bot</h4>
+                <p style="color: #e5e7eb;">Choose your start mode:</p>
+                
+                <div style="margin-top: 15px;">
+                    <h5 style="color: #60a5fa;">Production Mode (Background):</h5>
+                    <div style="background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                        <code style="color: #10b981; font-size: 12px;">
+                            cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/ai<br>
+                            npm start &
+                        </code>
+                    </div>
+                    <button onclick="copyCommand('cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/ai && npm start &')" 
+                            style="padding: 4px 12px; background: #374151; color: #10b981; border: 1px solid #4b5563; border-radius: 4px; cursor: pointer;">
+                        Copy Production Command
+                    </button>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <h5 style="color: #a78bfa;">Development Mode (Live Reload):</h5>
+                    <div style="background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                        <code style="color: #a78bfa; font-size: 12px;">
+                            cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/ai<br>
+                            npm run dev
+                        </code>
+                    </div>
+                    <button onclick="copyCommand('cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/ai && npm run dev')" 
+                            style="padding: 4px 12px; background: #374151; color: #a78bfa; border: 1px solid #4b5563; border-radius: 4px; cursor: pointer;">
+                        Copy Dev Command
+                    </button>
+                </div>
+            `;
+            showStatus('Start commands ready - choose your mode', 'info');
+        }
+        
+        function copyCommand(command) {
+            navigator.clipboard.writeText(command).then(() => {
+                showStatus('✅ Command copied to clipboard', 'success');
+            }).catch(err => {
+                showStatus('❌ Failed to copy: ' + err, 'error');
+            });
+        }
+        
+        function copyRestartCommands() {
+            const commands = `pkill -f "node.*dist/index.js" || pkill -f "tsx.*src/index.ts"
+cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/ai
+npm run build && npm start`;
+            
+            navigator.clipboard.writeText(commands).then(() => {
+                showStatus('✅ All restart commands copied to clipboard', 'success');
+            }).catch(err => {
+                showStatus('❌ Failed to copy: ' + err, 'error');
+            });
+        }
         
         // Show status message
         function showStatus(message, type = 'info') {
@@ -532,7 +662,7 @@
                 // Clear other localStorage items that might affect the app
                 localStorage.removeItem('sww-indexeddb-initialized');
                 localStorage.removeItem('sww-indexeddb-messages-count');
-                localStorage.removeItem('sww-filter-enabled');
+                // Removed: sww-filter-enabled - URL is now the single source of truth
                 localStorage.removeItem('sww-filters');
                 localStorage.removeItem('sww-word-filters');
                 localStorage.removeItem('sww-negative-filters');
@@ -600,7 +730,8 @@
                 html += `<div style="margin-top: 10px; color: #f3f4f6;">Total messages: <span style="color: #60a5fa; font-weight: bold;">${totalMessages}</span></div>`;
                 
                 // Check localStorage
-                const filterEnabled = localStorage.getItem('sww-filter-enabled');
+                // Removed check for sww-filter-enabled - URL is now the single source of truth
+                const filterEnabled = null; // Filter state is now only in the URL
                 const filters = localStorage.getItem('sww-filters');
                 const wordFilters = localStorage.getItem('sww-word-filters');
                 const cachedComments = localStorage.getItem('sww-comments');

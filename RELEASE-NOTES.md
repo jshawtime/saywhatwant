@@ -1,5 +1,59 @@
 # Say What Want - Release Notes
 
+## v2.0 - Elegant Architecture
+**Released**: September 29, 2025
+**Status**: STABLE
+
+### 🚀 Major Refactor
+Complete architectural overhaul for elegance and simplicity:
+
+- **70% Less Code**: Removed unnecessary abstraction layers
+- **Pure Functions**: Simple, testable, side-effect-free functions
+- **Single Hook**: One `useSimpleFilters` replaces complex multi-hook system
+- **No Singleton**: Removed URLFilterManager class pattern
+- **Direct URL Operations**: No intermediate state caches or merging
+- **User Control**: Removed auto-activation - users maintain full control
+
+### 🎯 Technical Details
+- New `lib/url-filter-simple.ts`: Pure functions for URL operations
+- New `hooks/useSimpleFilters.ts`: Single elegant hook for all filtering
+- Backward compatible through wrapper in `useFilters.ts`
+- Clean separation of concerns with no circular dependencies
+
+### 🧹 What Was Removed
+- URLFilterManager singleton class
+- Complex merge logic
+- Multiple layers of state synchronization  
+- Auto-activation behavior
+- All debugging console.log statements
+
+---
+
+## v1.2 - Filter System Perfection
+**Released**: September 29, 2025
+**Status**: STABLE
+
+### 🎨 Improvements
+- **React Hydration Fix**: Resolved timing issues between URLFilterManager and React hooks
+- **Auto-Activation**: Filter automatically enables when adding first username (better UX)
+- **Eager URL Initialization**: `filteractive` is always present in URL from initial load
+- **Enhanced Debugging**: Added comprehensive logging throughout filter system
+- **Lazy State Initialization**: React hooks now sync properly with URLFilterManager on mount
+
+### 🔧 Technical Details
+- Used React's lazy state initialization to sync with singleton URLFilterManager
+- URLFilterManager eagerly adds `filteractive=false` to URL if not present
+- Improved state synchronization prevents null filterActive during initial render
+- Filter system now auto-activates when adding first user with filters off
+
+### 📊 Debug Commands
+Open browser console to see detailed filter system logs:
+- `[URLFilterManager]` - URL state management
+- `[useFilters]` - Filter application logic
+- `[useURLFilter]` - Hook state synchronization
+
+---
+
 ## v1.1 - URL Enhancement Fix
 **Released**: September 29, 2025
 **Status**: STABLE

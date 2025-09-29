@@ -8,22 +8,35 @@ import { useEffect, useState, useCallback } from 'react';
 import { URLFilterManager, SWWFilterState, UserWithColor } from '../lib/url-filter-manager';
 
 export function useURLFilter() {
-  // ALWAYS initialize with empty state to avoid hydration mismatch
-  const [urlState, setUrlState] = useState<SWWFilterState>({
-    users: [],
-    serverSideUsers: [],
-    colors: [],
-    searchTerms: [],
-    words: [],
-    negativeWords: [],
-    wordRemove: [],
-    videoPlaylist: [],
-    videoPanel: null,
-    from: null,
-    to: null,
-    timeFrom: null,
-    timeTo: null,
-    filterActive: null
+  // Initialize with the current state from URLFilterManager if available
+  // This ensures we get the correct initial state including filterActive
+  const [urlState, setUrlState] = useState<SWWFilterState>(() => {
+    // Use lazy initialization to get the current state synchronously
+    if (typeof window !== 'undefined') {
+      const manager = URLFilterManager.getInstance();
+      const currentState = manager.getCurrentState();
+      // If filterActive is present in the URL, use it
+      if (currentState.filterActive !== null) {
+        return currentState;
+      }
+    }
+    // Fall back to empty state with filterActive=false (not null)
+    return {
+      users: [],
+      serverSideUsers: [],
+      colors: [],
+      searchTerms: [],
+      words: [],
+      negativeWords: [],
+      wordRemove: [],
+      videoPlaylist: [],
+      videoPanel: null,
+      from: null,
+      to: null,
+      timeFrom: null,
+      timeTo: null,
+      filterActive: false  // Default to false, not null
+    };
   });
   
   useEffect(() => {
@@ -31,12 +44,15 @@ export function useURLFilter() {
     if (typeof window === 'undefined') return;
     
     const manager = URLFilterManager.getInstance();
+    const currentState = manager.getCurrentState();
+    console.log('[useURLFilter] useEffect - setting state from manager:', currentState);
     
-    // Set initial state from URL
-    setUrlState(manager.getCurrentState());
+    // Set initial state from URL (in case it changed since lazy init)
+    setUrlState(currentState);
     
     // Subscribe to URL changes
     const unsubscribe = manager.subscribe((newState) => {
+      console.log('[useURLFilter] Received update from URLFilterManager:', newState);
       setUrlState(newState);
     });
     

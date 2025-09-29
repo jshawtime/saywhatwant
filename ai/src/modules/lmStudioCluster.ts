@@ -76,7 +76,7 @@ export interface ClusterConfig {
  */
 export class LMStudioCluster {
   private servers: Map<string, LMStudioServer> = new Map();
-  private requestQueue: ModelRequest[] = [];
+  // private requestQueue: ModelRequest[] = []; // Unused - commented out
   private modelSizes: Map<string, number> = new Map();
   private healthCheckInterval?: NodeJS.Timeout;
   private config: ClusterConfig;
@@ -226,7 +226,7 @@ export class LMStudioCluster {
     
     // If not found, search all servers
     if (!server) {
-      for (const [id, s] of this.servers) {
+      for (const [_id, s] of this.servers) {
         if (s.ip === ip) {
           server = s;
           break;
@@ -240,11 +240,12 @@ export class LMStudioCluster {
   /**
    * Get servers that have a specific model loaded
    */
-  private getServersWithModel(modelName: string): LMStudioServer[] {
+  // Unused method - commented out for now
+  /* private getServersWithModel(modelName: string): LMStudioServer[] {
     return Array.from(this.servers.values()).filter(
       server => server.status !== 'offline' && server.loadedModels.has(modelName)
     );
-  }
+  } */
 
   /**
    * Find the best available server for a model request

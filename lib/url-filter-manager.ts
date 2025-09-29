@@ -46,6 +46,17 @@ export class URLFilterManager {
     
     // Parse initial URL
     this.handleHashChange();
+    
+    // CRITICAL: Ensure filterActive is ALWAYS in the URL
+    // This is the single source of truth - if it's not there, add it
+    if (this.currentState.filterActive === null) {
+      this.currentState.filterActive = false;
+      const hash = this.buildHash(this.currentState);
+      // Use replaceState for initial setup to avoid polluting history
+      window.history.replaceState(null, '', hash || '#filteractive=false');
+      // Notify subscribers of the updated state
+      this.notifySubscribers();
+    }
   }
   
   /**
@@ -520,9 +531,11 @@ export class URLFilterManager {
         // Remove specific user by username AND color combo
         const normalized = this.normalize(value);
         if (color) {
+          // Convert color to RGB for comparison (state stores RGB, input is 9-digit)
+          const colorRgb = this.nineDigitToRgb(color);
           // Remove specific username+color combination
           newState.users = newState.users.filter(u => 
-            !(u.username === normalized && u.color === color)
+            !(u.username === normalized && u.color === colorRgb)
           );
         } else {
           // Remove all instances of this username (all colors)

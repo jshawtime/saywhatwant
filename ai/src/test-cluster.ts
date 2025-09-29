@@ -5,7 +5,7 @@
  */
 
 import chalk from 'chalk';
-import { initializeCluster, LMStudioCluster } from './modules/lmStudioCluster.js';
+import { initializeCluster } from './modules/lmStudioCluster.js';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Load your configuration
 const configPath = join(__dirname, '..', 'config-aientities.json');
-const entitiesConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+JSON.parse(readFileSync(configPath, 'utf-8')); // Just validate the config exists
 
 // Test configuration for your two Mac Studios
 const testConfig = {

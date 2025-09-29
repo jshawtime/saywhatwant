@@ -6,7 +6,7 @@
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import chalk from 'chalk';
+// import chalk from 'chalk'; // Unused - commented out
 import { logger } from '../console-logger.js';
 
 // Types
