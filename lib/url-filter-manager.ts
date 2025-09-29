@@ -485,6 +485,9 @@ export class URLFilterManager {
     if (updates.timeTo !== undefined) {
       newState.timeTo = updates.timeTo;
     }
+    if (updates.filterActive !== undefined) {
+      newState.filterActive = updates.filterActive;
+    }
     
     const hash = this.buildHash(newState);
     
