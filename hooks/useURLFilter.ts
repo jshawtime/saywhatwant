@@ -54,14 +54,17 @@ export function useURLFilter() {
     const currentState = manager.getCurrentState();
     const normalized = manager.normalize(username);
     
+    // Ensure color is in 9-digit format (it might come as rgb() from comments)
+    const colorDigits = manager.rgbToNineDigit(color);
+    
     // Check if this exact username/color combo already exists
     // Same username with different color = different user
     const exists = currentState.users.some(u => 
-      u.username === normalized && u.color === color
+      u.username === normalized && u.color === colorDigits
     );
     if (!exists) {
       manager.mergeURL({ 
-        users: [...currentState.users, { username: normalized, color }] 
+        users: [...currentState.users, { username: normalized, color: colorDigits }] 
       });
     }
   }, []);
@@ -73,8 +76,10 @@ export function useURLFilter() {
       return;
     }
     const manager = URLFilterManager.getInstance();
+    // Ensure color is in 9-digit format before removal
+    const colorDigits = manager.rgbToNineDigit(color);
     // Pass both username and color to properly identify which user to remove
-    manager.removeFromURL('users', username, color);
+    manager.removeFromURL('users', username, colorDigits);
   }, []);
   
   // Add search term

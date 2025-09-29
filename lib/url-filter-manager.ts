@@ -52,7 +52,7 @@ export class URLFilterManager {
    * Convert rgb(r, g, b) format to 9-digit format (RRRGGGBBB)
    * Example: "rgb(76, 194, 40)" -> "076194040"
    */
-  private rgbToNineDigit(color: string): string {
+  public rgbToNineDigit(color: string): string {
     // Handle rgb() format
     const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     if (rgbMatch) {
@@ -86,7 +86,7 @@ export class URLFilterManager {
    * Convert 9-digit format (RRRGGGBBB) to rgb(r, g, b) format
    * Example: "076194040" -> "rgb(76, 194, 40)"
    */
-  private nineDigitToRgb(digits: string): string {
+  public nineDigitToRgb(digits: string): string {
     if (!/^\d{9}$/.test(digits)) {
       return 'rgb(255, 255, 255)'; // Default to white
     }

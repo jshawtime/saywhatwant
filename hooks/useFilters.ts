@@ -94,29 +94,48 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   const mergedUserFilters = useMemo(() => {
     // ONLY use URL as source of truth - no merging with localStorage
     // This ensures the filter bar only shows what's actually in the URL
-    return [...urlState.users, ...urlState.serverSideUsers];
+    // Convert 9-digit colors back to RGB for display in FilterBar
+    const manager = URLFilterManager.getInstance();
+    const users = [...urlState.users, ...urlState.serverSideUsers].map(user => ({
+      ...user,
+      // Convert 9-digit format to RGB for CSS styling
+      color: user.color.includes('rgb') ? user.color : manager.nineDigitToRgb(user.color)
+    }));
+    return users;
   }, [urlState.users, urlState.serverSideUsers]);
 
   // Add username to filter - ONLY to URL
   const addToFilter = useCallback((username: string, color: string) => {
+    // Convert color to 9-digit format for consistent comparison
+    const manager = URLFilterManager.getInstance();
+    const colorDigits = manager.rgbToNineDigit(color);
+    
     // Normalize username for comparison (URL stores normalized versions)
     const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
     
     // Check if this exact username/color combo already exists in URL
-    const exists = urlState.users.some(u => 
-      u.username === normalizedUsername && u.color === color
-    );
+    const exists = urlState.users.some(u => {
+      // URL colors are already in 9-digit format
+      const colorMatch = u.color === colorDigits;
+      const usernameMatch = u.username === normalizedUsername;
+      return usernameMatch && colorMatch;
+    });
     
     if (!exists) {
       // ONLY add to URL - this is the single source of truth
-      addUserToURL(username, color);
+      // Pass the 9-digit color format to URL
+      addUserToURL(username, colorDigits);
     }
   }, [urlState.users, addUserToURL]);
 
   // Remove username from filter - ONLY from URL
   const removeFromFilter = useCallback((username: string, color: string) => {
+    // Convert color to 9-digit format for consistent removal
+    const manager = URLFilterManager.getInstance();
+    const colorDigits = manager.rgbToNineDigit(color);
+    
     // Remove specific username+color combo from URL
-    removeUserFromURL(username, color);
+    removeUserFromURL(username, colorDigits);
     // TODO: Add support for removing server-side users if needed
   }, [removeUserFromURL]);
 
