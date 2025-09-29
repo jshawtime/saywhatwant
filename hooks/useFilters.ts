@@ -98,5 +98,6 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     addSearchTermToURL: () => {},
     removeSearchTermFromURL: () => {},
     dateTimeFilter: null,
+    serverSideUsers: [], // Server-side users not implemented in simple version yet
   };
 };
