@@ -79,12 +79,23 @@ export function prepareCommentData(
 ): Comment {
   const processedText = processVideo ? processVideo(text.trim()) : text.trim();
   
+  // Convert color to RGB for comment storage (backwards compatibility)
+  // Comments are stored with RGB colors in the database
+  let colorForStorage = userColor;
+  if (/^\d{9}$/.test(userColor)) {
+    // Convert 9-digit to RGB for storage
+    const r = parseInt(userColor.slice(0, 3), 10);
+    const g = parseInt(userColor.slice(3, 6), 10);
+    const b = parseInt(userColor.slice(6, 9), 10);
+    colorForStorage = `rgb(${r}, ${g}, ${b})`;
+  }
+  
   return {
     id: generateCommentId(),
     text: processedText,
     timestamp: Date.now(),
     username: username,
-    color: userColor,
+    color: colorForStorage,
     language: 'en', // Default for now
     misc: '', // Reserved for future features
   };

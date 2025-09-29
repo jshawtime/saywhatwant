@@ -17,23 +17,23 @@ export const RGB_RANGES = {
 // Total unique colors: 81 × 81 × 6 permutations = 39,366 unique colors
 // (6 permutations because we can assign these ranges to R,G,B in 6 different ways)
 
-// Legacy palette for backwards compatibility
+// Color palette in 9-digit format (RRRGGGBBB)
 export const COLOR_PALETTE = [
-  'rgb(96, 165, 250)',  // blue-400
-  'rgb(52, 211, 153)',  // emerald-400
-  'rgb(251, 191, 36)',  // amber-400
-  'rgb(248, 113, 113)', // red-400
-  'rgb(167, 139, 250)', // violet-400
-  'rgb(251, 146, 60)',  // orange-400
-  'rgb(74, 222, 128)',  // green-400
-  'rgb(244, 114, 182)', // pink-400
-  'rgb(56, 189, 248)',  // sky-400
-  'rgb(163, 230, 53)',  // lime-400
-  'rgb(232, 121, 249)', // fuchsia-400
-  'rgb(148, 163, 184)', // slate-400
+  '096165250',  // blue-400
+  '052211153',  // emerald-400
+  '251191036',  // amber-400
+  '248113113',  // red-400
+  '167139250',  // violet-400
+  '251146060',  // orange-400
+  '074222128',  // green-400
+  '244114182',  // pink-400
+  '056189248',  // sky-400
+  '163230053',  // lime-400
+  '232121249',  // fuchsia-400
+  '148163184',  // slate-400
 ] as const;
 
-export const DEFAULT_COLOR = 'rgb(96, 165, 250)'; // blue-400 in RGB
+export const DEFAULT_COLOR = '096165250'; // blue-400 in 9-digit format
 
 // Color brightness levels for different UI elements
 export const COLOR_BRIGHTNESS = {
@@ -112,7 +112,25 @@ export const adjustColorBrightness = (color: string, factor: number = 1): string
 export const getDarkerColor = adjustColorBrightness;
 
 /**
- * Gets a random RGB color using sophisticated range-based generation
+ * Convert 9-digit format (RRRGGGBBB) to rgb(r, g, b) string for CSS
+ */
+export const nineDigitToRgb = (digits: string): string => {
+  if (!/^\d{9}$/.test(digits)) {
+    // If already RGB format, return as-is (backwards compatibility)
+    if (digits.startsWith('rgb(')) return digits;
+    // Default fallback
+    return 'rgb(255, 255, 255)';
+  }
+  
+  const r = parseInt(digits.slice(0, 3), 10);
+  const g = parseInt(digits.slice(3, 6), 10);
+  const b = parseInt(digits.slice(6, 9), 10);
+  
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+/**
+ * Gets a random color in 9-digit format (RRRGGGBBB)
  * Creates bright, visible colors with good contrast on dark backgrounds
  * Total possible colors: 81 × 81 × 6 = 39,366 unique combinations
  */
@@ -161,7 +179,12 @@ export const getRandomColor = (): string => {
       break;
   }
   
-  return `rgb(${r}, ${g}, ${b})`;
+  // Return 9-digit format (RRRGGGBBB) instead of RGB string
+  const rStr = r.toString().padStart(3, '0');
+  const gStr = g.toString().padStart(3, '0');
+  const bStr = b.toString().padStart(3, '0');
+  
+  return `${rStr}${gStr}${bStr}`;
 };
 
 /**
