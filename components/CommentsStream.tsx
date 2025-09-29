@@ -770,9 +770,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Check each new comment
     newComments.forEach(comment => {
-      // Check username filters
+      // Check username filters (username+color combo)
       filterUsernames.forEach(filter => {
-        if (comment.username === filter.username) {
+        // Match both username AND color (username+color = unique identity)
+        if (comment.username === filter.username && comment.color === filter.color) {
           const filterKey = getFilterKey(filter.username, filter.color);
           const setting = getFilterNotificationSetting(filterKey);
           

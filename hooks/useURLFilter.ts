@@ -43,8 +43,13 @@ export function useURLFilter() {
     return unsubscribe;
   }, []);
   
-  // Add a user with color to filter
-  const addUserToURL = useCallback((username: string, color: string = '#60A5FA') => {
+  // Add a user with color to filter - color is REQUIRED
+  const addUserToURL = useCallback((username: string, color: string) => {
+    if (!username || !color) {
+      console.error('[useURLFilter] Username and color are both required');
+      return;
+    }
+    
     const manager = URLFilterManager.getInstance();
     const currentState = manager.getCurrentState();
     const normalized = manager.normalize(username);
@@ -61,8 +66,12 @@ export function useURLFilter() {
     }
   }, []);
   
-  // Remove a specific user+color combo from filter
-  const removeUserFromURL = useCallback((username: string, color?: string) => {
+  // Remove a specific user+color combo from filter - color is REQUIRED
+  const removeUserFromURL = useCallback((username: string, color: string) => {
+    if (!username || !color) {
+      console.error('[useURLFilter] Username and color are both required for removal');
+      return;
+    }
     const manager = URLFilterManager.getInstance();
     // Pass both username and color to properly identify which user to remove
     manager.removeFromURL('users', username, color);

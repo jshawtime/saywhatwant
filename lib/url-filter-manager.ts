@@ -433,10 +433,11 @@ export class URLFilterManager {
       const existingUsers = newState.users || [];
       const newUsers = updates.users;
       
-      // Merge by checking usernames to avoid duplicates
+      // Merge by checking username+color combo (same username with different color = different user)
       const merged = [...existingUsers];
       for (const newUser of newUsers) {
-        if (!merged.some(u => u.username === newUser.username)) {
+        // Username+Color is the unique identifier, not just username
+        if (!merged.some(u => u.username === newUser.username && u.color === newUser.color)) {
           merged.push(newUser);
         }
       }
@@ -447,10 +448,11 @@ export class URLFilterManager {
       const existingUsers = newState.serverSideUsers || [];
       const newUsers = updates.serverSideUsers;
       
-      // Merge by checking usernames to avoid duplicates
+      // Merge by checking username+color combo (same username with different color = different user)
       const merged = [...existingUsers];
       for (const newUser of newUsers) {
-        if (!merged.some(u => u.username === newUser.username)) {
+        // Username+Color is the unique identifier, not just username
+        if (!merged.some(u => u.username === newUser.username && u.color === newUser.color)) {
           merged.push(newUser);
         }
       }

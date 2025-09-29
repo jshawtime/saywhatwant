@@ -91,7 +91,8 @@ export function applyFilters(
 
   // Apply username filters
   if (filterState.usernames.length > 0) {
-    filtered = applyUsernameFilters(filtered, filterState.usernames, config.filterByColorToo);
+    // Username+Color filtering is always applied (they're atomic)
+    filtered = applyUsernameFilters(filtered, filterState.usernames);
   }
 
   // Apply word inclusion filters
@@ -122,20 +123,16 @@ export function applyFilters(
  */
 function applyUsernameFilters(
   comments: Comment[],
-  filters: UsernameFilter[],
-  filterByColor: boolean = false
+  filters: UsernameFilter[]
 ): Comment[] {
   return comments.filter(comment => {
     if (!comment.username) return false;
+    if (!comment.color) return false; // Comments must have colors
 
     return filters.some(filter => {
+      // Username+Color is atomic - ALWAYS check both
       const usernameMatches = filter.username === comment.username;
-      
-      if (!filterByColor) {
-        return usernameMatches;
-      }
-      
-      const colorMatches = filter.color === (comment.color || '#60A5FA');
+      const colorMatches = filter.color === comment.color;
       return usernameMatches && colorMatches;
     });
   });
