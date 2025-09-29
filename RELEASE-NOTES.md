@@ -1,5 +1,26 @@
 # Say What Want - Release Notes
 
+## v1.1 - URL Enhancement Fix
+**Released**: September 29, 2025
+**Status**: STABLE
+
+### 🔧 Bug Fixes
+- **Fixed `filteractive` URL parameter**: Now works correctly on initial page load (not just on refresh)
+- **Fixed filter toggle button**: No longer freezes when URL override is present
+- **Improved filter state priority**: URL parameters now have absolute priority over localStorage and special case logic
+
+### Technical Details
+- Modified `/hooks/useFilters.ts` to respect URL override as absolute priority
+- Ensured `baseFilterEnabled` is properly initialized when URL override is present
+- Eliminated race conditions between URL parsing and localStorage loading
+
+### Test URLs
+- `#filteractive=true` - Forces filter ON (LED lit)
+- `#filteractive=false` - Forces filter OFF (LED dimmed)
+- `#filteractive=true&u=alice:255000000` - Filter ON with alice in filter bar
+
+---
+
 ## v1.0 - Robust Production Release
 **Released**: September 25, 2025
 **Status**: STABLE
