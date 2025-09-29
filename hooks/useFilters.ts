@@ -16,9 +16,7 @@ interface UseFiltersProps {
 }
 
 export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) => {
-  const [filterUsernames, setFilterUsernames] = useState<UsernameFilter[]>([]);
-  const [filterWords, setFilterWords] = useState<string[]>([]);
-  const [negativeFilterWords, setNegativeFilterWords] = useState<string[]>([]);
+  // No longer using local state - URL is the single source of truth
   const [filterByColorToo, setFilterByColorToo] = useState(true);
   
   // Get URL filter state and methods
@@ -46,53 +44,21 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   // Use URL filterActive if explicitly set, otherwise use local default
   const isFilterEnabled = filterActive !== null ? filterActive : localFilterDefault;
 
-  // Initialize filters from localStorage on mount
+  // Initialize filter state preference only (not content)
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
-    // ALWAYS load filter CONTENT from localStorage (usernames, words, etc.)
-    const savedFilters = localStorage.getItem('sww-filters');
-    const savedWordFilters = localStorage.getItem('sww-word-filters');
-    const savedNegativeFilters = localStorage.getItem('sww-negative-filters');
+    // Clear old filter content from localStorage to prevent interference
+    // URL is now the ONLY source of truth for filter content
+    localStorage.removeItem('sww-filters');
+    localStorage.removeItem('sww-word-filters');
+    localStorage.removeItem('sww-negative-filters');
+    
+    // URL is the single source of truth for filter CONTENT
+    // Only use localStorage for filter enabled STATE when not in URL
+    
     const savedFilterEnabled = localStorage.getItem('sww-filter-enabled');
-    
-    if (savedFilters) {
-      try {
-        const filters = JSON.parse(savedFilters);
-        if (Array.isArray(filters)) {
-          // Handle both old format (strings) and new format (objects)
-          const processedFilters = filters.map(f => 
-            typeof f === 'string' ? {username: f, color: '#60A5FA'} : f
-          );
-          setFilterUsernames(processedFilters);
-        }
-      } catch (e) {
-        console.error('Error loading saved filters:', e);
-      }
-    }
-    
-    if (savedWordFilters) {
-      try {
-        const words = JSON.parse(savedWordFilters);
-        if (Array.isArray(words)) {
-          setFilterWords(words);
-        }
-      } catch (e) {
-        console.error('Error loading saved word filters:', e);
-      }
-    }
-    
-    if (savedNegativeFilters) {
-      try {
-        const words = JSON.parse(savedNegativeFilters);
-        if (Array.isArray(words)) {
-          setNegativeFilterWords(words);
-        }
-      } catch (e) {
-        console.error('Error loading saved negative filters:', e);
-      }
-    }
     
     // Only set local default if filterActive is not in URL
     if (filterActive === null) {
@@ -100,8 +66,8 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
       if (!hasURLFilters) {
         // Special Case 1: Base URL (no filters) → Filters OFF
         setLocalFilterDefault(false);
-      } else if (hasURLFilters && !savedFilters && !savedWordFilters && !savedNegativeFilters) {
-        // Special Case 2: URL has filters but filter bar is empty → filters ON
+      } else if (hasURLFilters) {
+        // Special Case 2: URL has filters → filters ON by default
         setLocalFilterDefault(true);
       } else if (savedFilterEnabled !== null) {
         // Normal case: Use saved preference from localStorage
@@ -116,139 +82,70 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
   // Ham radio mode - no filter recording to IndexedDB
   // Filters are ephemeral - only active while tab is open
   
-  // Merge URL filters with existing filters
+  // Use ONLY URL filters - no merging with localStorage
   const mergedFilterWords = useMemo(() => {
-    const merged = Array.from(new Set([...filterWords, ...urlState.words]));
-    return merged;
-  }, [filterWords, urlState.words]);
+    return urlState.words;
+  }, [urlState.words]);
   
   const mergedNegativeWords = useMemo(() => {
-    const merged = Array.from(new Set([...negativeFilterWords, ...urlState.negativeWords]));
-    return merged;
-  }, [negativeFilterWords, urlState.negativeWords]);
+    return urlState.negativeWords;
+  }, [urlState.negativeWords]);
   
   const mergedUserFilters = useMemo(() => {
-    // Merge URL users with existing filter usernames
-    const existingUsernames = filterUsernames.map(f => f.username.toLowerCase());
-    
-    // URL users now come with colors
-    const urlUserFilters = urlState.users.filter(u => 
-      !existingUsernames.includes(u.username.toLowerCase())
-    );
-    
-    // Server-side search users (from #uss=) also need to be in filter bar
-    const serverUserFilters = urlState.serverSideUsers.filter(u =>
-      !existingUsernames.includes(u.username.toLowerCase()) &&
-      !urlUserFilters.some(uf => uf.username.toLowerCase() === u.username.toLowerCase())
-    );
-    
-    return [...filterUsernames, ...urlUserFilters, ...serverUserFilters];
-  }, [filterUsernames, urlState.users, urlState.serverSideUsers]);
+    // ONLY use URL as source of truth - no merging with localStorage
+    // This ensures the filter bar only shows what's actually in the URL
+    return [...urlState.users, ...urlState.serverSideUsers];
+  }, [urlState.users, urlState.serverSideUsers]);
 
-  // Add username to filter
+  // Add username to filter - ONLY to URL
   const addToFilter = useCallback((username: string, color: string) => {
-    // Check if this exact username/color combo already exists
-    const exists = filterUsernames.some(f => 
-      f.username === username && f.color === color
+    // Check if this exact username/color combo already exists in URL
+    const exists = urlState.users.some(u => 
+      u.username === username && u.color === color
     );
     
     if (!exists) {
-      const newFilters = [...filterUsernames, {username, color}];
-      setFilterUsernames(newFilters);
-      localStorage.setItem('sww-filters', JSON.stringify(newFilters));
-      
-      // Always sync URL with filter bar contents
+      // ONLY add to URL - this is the single source of truth
       addUserToURL(username, color);
     }
-  }, [filterUsernames, addUserToURL]);
+  }, [urlState.users, addUserToURL]);
 
-  // Remove username from filter
+  // Remove username from filter - ONLY from URL
   const removeFromFilter = useCallback((username: string, color: string) => {
-    // Check if this is a URL user, server-side user, or local user
-    const normalizedUsername = username.toLowerCase();
-    const isUrlUser = urlState.users.some(u => u.username.toLowerCase() === normalizedUsername);
-    const isServerSideUser = urlState.serverSideUsers.some(u => u.username.toLowerCase() === normalizedUsername);
-    const isLocalUser = filterUsernames.some(f => f.username === username && f.color === color);
-    
-    if (isLocalUser) {
-      const newFilters = filterUsernames.filter(f => 
-        !(f.username === username && f.color === color)
-      );
-      setFilterUsernames(newFilters);
-      localStorage.setItem('sww-filters', JSON.stringify(newFilters));
-    }
-    
-    if (isUrlUser) {
-      removeUserFromURL(username);
-    }
-    
-    if (isServerSideUser) {
-      // For server-side users, we need to remove them from the URL
-      // This would require adding a removeServerSideUserFromURL function
-      // For now, removing from filter bar won't remove from URL
-      // TODO: Implement removeServerSideUserFromURL
-    }
-  }, [filterUsernames, urlState.users, urlState.serverSideUsers, removeUserFromURL]);
+    // Simply remove from URL - it's the single source of truth
+    removeUserFromURL(username);
+    // TODO: Add support for removing server-side users if needed
+  }, [removeUserFromURL]);
 
-  // Add word to filter
+  // Add word to filter - ONLY to URL
   const addWordToFilter = useCallback((word: string) => {
     const cleanWord = word.trim().toLowerCase();
-    if (cleanWord && !filterWords.includes(cleanWord)) {
-      const newWords = [...filterWords, cleanWord];
-      setFilterWords(newWords);
-      localStorage.setItem('sww-word-filters', JSON.stringify(newWords));
-      
-      // Always sync URL with filter bar contents
+    if (cleanWord && !urlState.words.includes(cleanWord)) {
+      // ONLY add to URL - this is the single source of truth
       addWordToURL(cleanWord);
     }
-  }, [filterWords, addWordToURL]);
+  }, [urlState.words, addWordToURL]);
 
-  // Remove word from filter
+  // Remove word from filter - ONLY from URL
   const removeWordFromFilter = useCallback((word: string) => {
-    // Check if this is a URL word or a local word
-    const isUrlWord = urlState.words.includes(word.toLowerCase());
-    const isLocalWord = filterWords.includes(word);
-    
-    if (isLocalWord) {
-      const newWords = filterWords.filter(w => w !== word);
-      setFilterWords(newWords);
-      localStorage.setItem('sww-word-filters', JSON.stringify(newWords));
-    }
-    
-    if (isUrlWord) {
-      removeWordFromURL(word);
-    }
-  }, [filterWords, urlState.words, removeWordFromURL]);
+    // Simply remove from URL - it's the single source of truth
+    removeWordFromURL(word);
+  }, [removeWordFromURL]);
 
-  // Add negative word filter
+  // Add negative word filter - ONLY to URL
   const addNegativeWordFilter = useCallback((word: string) => {
     const cleanWord = word.trim().toLowerCase();
-    if (cleanWord && !negativeFilterWords.includes(cleanWord)) {
-      const newWords = [...negativeFilterWords, cleanWord];
-      setNegativeFilterWords(newWords);
-      localStorage.setItem('sww-negative-filters', JSON.stringify(newWords));
-      
-      // Also update URL
+    if (cleanWord && !urlState.negativeWords.includes(cleanWord)) {
+      // ONLY add to URL - this is the single source of truth
       addNegativeWordToURL(cleanWord);
     }
-  }, [negativeFilterWords, addNegativeWordToURL]);
+  }, [urlState.negativeWords, addNegativeWordToURL]);
 
-  // Remove negative word filter
+  // Remove negative word filter - ONLY from URL
   const removeNegativeWordFilter = useCallback((word: string) => {
-    // Check if this is a URL negative word or a local negative word
-    const isUrlNegativeWord = urlState.negativeWords.includes(word.toLowerCase());
-    const isLocalNegativeWord = negativeFilterWords.includes(word);
-    
-    if (isLocalNegativeWord) {
-      const newWords = negativeFilterWords.filter(w => w !== word);
-      setNegativeFilterWords(newWords);
-      localStorage.setItem('sww-negative-filters', JSON.stringify(newWords));
-    }
-    
-    if (isUrlNegativeWord) {
-      removeNegativeWordFromURL(word);
-    }
-  }, [negativeFilterWords, urlState.negativeWords, removeNegativeWordFromURL]);
+    // Simply remove from URL - it's the single source of truth
+    removeNegativeWordFromURL(word);
+  }, [removeNegativeWordFromURL]);
 
   // Toggle filter enabled state - Updates URL
   const toggleFilter = useCallback(() => {

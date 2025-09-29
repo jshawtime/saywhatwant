@@ -101,6 +101,10 @@ export class URLFilterManager {
   static getInstance(): URLFilterManager {
     if (!URLFilterManager.instance) {
       URLFilterManager.instance = new URLFilterManager();
+      // Force initialization immediately
+      if (typeof window !== 'undefined') {
+        URLFilterManager.instance.initialize();
+      }
     }
     return URLFilterManager.instance;
   }
