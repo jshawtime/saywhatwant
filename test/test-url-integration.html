@@ -223,6 +223,17 @@
         <div class="expected">✅ URL updates with actual color values for bookmarking</div>
     </div>
 
+    <h2>🗑️ IndexedDB Management</h2>
+    
+    <div class="test-card">
+        <h3>Clear Local Storage</h3>
+        <p class="description">Clear IndexedDB database and localStorage to start fresh</p>
+        <button class="test-button" onclick="clearIndexedDB()">Clear IndexedDB</button>
+        <button class="test-button" onclick="checkDatabaseStatus()">Check Database Status</button>
+        <button class="test-button" onclick="clearAllStorage()">Clear Everything</button>
+        <div id="db-status" style="margin-top: 20px; padding: 15px; background: #1f2937; border-radius: 4px; display: none;"></div>
+    </div>
+
     <script>
         // Test function - opens URL in new tab
         function testURL(hash) {
@@ -274,6 +285,125 @@
                 showStatus('Current URL: ' + window.location.hash);
             }
         });
+        
+        // IndexedDB Management Functions
+        async function clearIndexedDB() {
+            const statusDiv = document.getElementById('db-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="color: #60a5fa;">🔄 Clearing IndexedDB...</div>';
+            
+            try {
+                // Clear localStorage items that might affect the app
+                localStorage.removeItem('sww-indexeddb-initialized');
+                localStorage.removeItem('sww-indexeddb-messages-count');
+                localStorage.removeItem('sww-filter-enabled');
+                localStorage.removeItem('sww-filters');
+                localStorage.removeItem('sww-word-filters');
+                localStorage.removeItem('sww-negative-filters');
+                
+                // Delete the database
+                const deleteReq = indexedDB.deleteDatabase('SayWhatWant');
+                
+                await new Promise((resolve, reject) => {
+                    deleteReq.onsuccess = resolve;
+                    deleteReq.onerror = reject;
+                    deleteReq.onblocked = () => {
+                        statusDiv.innerHTML = '<div style="color: #f59e0b;">⚠️ Database is blocked. Please close all Say What Want tabs and try again.</div>';
+                    };
+                });
+                
+                statusDiv.innerHTML = '<div style="color: #10b981;">✅ IndexedDB cleared successfully!</div>';
+                showStatus('IndexedDB cleared!', 'success');
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+                showStatus('Failed to clear IndexedDB', 'error');
+            }
+        }
+        
+        async function checkDatabaseStatus() {
+            const statusDiv = document.getElementById('db-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="color: #60a5fa;">🔍 Checking database...</div>';
+            
+            try {
+                const openReq = indexedDB.open('SayWhatWant', 1);
+                
+                const db = await new Promise((resolve, reject) => {
+                    openReq.onsuccess = () => resolve(openReq.result);
+                    openReq.onerror = reject;
+                    openReq.onupgradeneeded = () => {
+                        statusDiv.innerHTML = '<div style="color: #10b981;">✨ Database is empty (will be created on first use)</div>';
+                        reject(new Error('Database not initialized'));
+                    };
+                });
+                
+                const storeNames = ['messages_temp', 'messages_perm', 'lifetime_filters', 'filter_stats'];
+                let html = '<h3 style="color: #34d399;">Database Status:</h3>';
+                let totalMessages = 0;
+                
+                for (const storeName of storeNames) {
+                    if (db.objectStoreNames.contains(storeName)) {
+                        const transaction = db.transaction([storeName], 'readonly');
+                        const store = transaction.objectStore(storeName);
+                        const countReq = store.count();
+                        
+                        const count = await new Promise((resolve) => {
+                            countReq.onsuccess = () => resolve(countReq.result);
+                        });
+                        
+                        html += `<div style="color: #9ca3af;">${storeName}: <span style="color: #60a5fa;">${count} items</span></div>`;
+                        
+                        if (storeName.startsWith('messages_')) {
+                            totalMessages += count;
+                        }
+                    } else {
+                        html += `<div style="color: #6b7280;">${storeName}: <span style="color: #ef4444;">Not found</span></div>`;
+                    }
+                }
+                
+                html += `<div style="margin-top: 10px; color: #f3f4f6;">Total messages: <span style="color: #60a5fa; font-weight: bold;">${totalMessages}</span></div>`;
+                
+                // Check localStorage
+                const filterEnabled = localStorage.getItem('sww-filter-enabled');
+                const filters = localStorage.getItem('sww-filters');
+                const wordFilters = localStorage.getItem('sww-word-filters');
+                
+                html += '<h4 style="color: #34d399; margin-top: 15px;">localStorage:</h4>';
+                html += `<div style="color: #9ca3af;">Filter Enabled: <span style="color: #60a5fa;">${filterEnabled || 'not set'}</span></div>`;
+                html += `<div style="color: #9ca3af;">User Filters: <span style="color: #60a5fa;">${filters ? 'set' : 'empty'}</span></div>`;
+                html += `<div style="color: #9ca3af;">Word Filters: <span style="color: #60a5fa;">${wordFilters ? 'set' : 'empty'}</span></div>`;
+                
+                statusDiv.innerHTML = html;
+                db.close();
+            } catch (error) {
+                if (error.message !== 'Database not initialized') {
+                    statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+                }
+            }
+        }
+        
+        async function clearAllStorage() {
+            const statusDiv = document.getElementById('db-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="color: #60a5fa;">🗑️ Clearing all storage...</div>';
+            
+            try {
+                // Clear localStorage completely
+                localStorage.clear();
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                
+                // Clear IndexedDB
+                await clearIndexedDB();
+                
+                statusDiv.innerHTML = '<div style="color: #10b981;">✅ All storage cleared successfully!</div>';
+                showStatus('All storage cleared!', 'success');
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+                showStatus('Failed to clear storage', 'error');
+            }
+        }
     </script>
 </body>
 </html>
