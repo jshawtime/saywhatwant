@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Comment } from '@/types';
 import { useURLFilter } from './useURLFilter';
 import { URLFilterManager } from '@/lib/url-filter-manager';
@@ -22,7 +22,6 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
   const [negativeFilterWords, setNegativeFilterWords] = useState<string[]>([]);
   const [baseFilterEnabled, setBaseFilterEnabled] = useState(false); // Default: OFF
   const [filterByColorToo, setFilterByColorToo] = useState(true);
-  const isInitialMount = useRef(true);
   
   // Use override if provided, otherwise use base state
   const isFilterEnabled = filterEnabledOverride !== null && filterEnabledOverride !== undefined 
@@ -51,13 +50,14 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
     setURLFromFilters
   } = useURLFilter();
 
-  // Initialize IndexedDB and load filters on mount
+  // Initialize filters from localStorage on mount
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
     // Ham radio mode - no persistent storage initialization needed
     
+    // ALWAYS load filter CONTENT from localStorage (usernames, words, etc.)
     const savedFilters = localStorage.getItem('sww-filters');
     const savedWordFilters = localStorage.getItem('sww-word-filters');
     const savedNegativeFilters = localStorage.getItem('sww-negative-filters');
@@ -100,23 +100,16 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
       }
     }
     
-    // Load filter enabled state with special cases:
-    // CRITICAL: If we have a URL override, it takes absolute priority!
+    // Load filter ENABLED state with URL override taking absolute priority
+    // CRITICAL: Check filterEnabledOverride FIRST, before any special cases
     if (filterEnabledOverride !== null && filterEnabledOverride !== undefined) {
-      // URL parameter takes absolute priority
-      // Set baseFilterEnabled to match override so toggle works from this state
+      // URL parameter takes absolute priority over EVERYTHING
       console.log('[useFilters] Using URL override for filter state:', filterEnabledOverride);
       setBaseFilterEnabled(filterEnabledOverride);
       localStorage.setItem('sww-filter-enabled', String(filterEnabledOverride));
-      return; // Don't run any special case logic
-    }
-    
-    // Special Case 1: Base URL (no filters) → Filters OFF
-    // Special Case 2: URL has filters + empty filter bar → Filters ON
-    // Otherwise: User's saved preference
-    
-    if (!hasURLFilters) {
-      // Special Case 1: Visiting with base URL → filters OFF
+      // DON'T RETURN HERE - we still loaded the filter content above
+    } else if (!hasURLFilters) {
+      // Special Case 1: Base URL (no filters) → Filters OFF
       setBaseFilterEnabled(false);
     } else if (hasURLFilters && !savedFilters && !savedWordFilters && !savedNegativeFilters) {
       // Special Case 2: URL has filters but filter bar is empty → filters ON
@@ -124,29 +117,13 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
       setBaseFilterEnabled(true);
       localStorage.setItem('sww-filter-enabled', 'true');
     } else if (savedFilterEnabled !== null) {
-      // Normal case: Use saved preference
+      // Normal case: Use saved preference from localStorage
       setBaseFilterEnabled(savedFilterEnabled === 'true');
     } else {
       // Default: filters OFF
       setBaseFilterEnabled(false);
     }
-  }, []); // Remove dependency on filterEnabledOverride to avoid re-runs
-  
-  // Handle changes to filterEnabledOverride after mount
-  useEffect(() => {
-    // Skip on initial mount (handled by the main useEffect above)
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    
-    // If override changes after mount, update baseFilterEnabled
-    if (filterEnabledOverride !== null && filterEnabledOverride !== undefined) {
-      console.log('[useFilters] Override changed after mount:', filterEnabledOverride);
-      setBaseFilterEnabled(filterEnabledOverride);
-      localStorage.setItem('sww-filter-enabled', String(filterEnabledOverride));
-    }
-  }, [filterEnabledOverride]);
+  }, [filterEnabledOverride, hasURLFilters]); // Include dependencies that affect filter state
   
   // Ham radio mode - no filter recording to IndexedDB
   // Filters are ephemeral - only active while tab is open
