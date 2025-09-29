@@ -13,7 +13,7 @@ import {
   type FilterState,
   type FilterUser 
 } from '@/lib/url-filter-simple';
-import type { Comment } from '@/types/database';
+import type { Comment } from '@/types';
 
 interface UseSimpleFiltersProps {
   comments: Comment[];

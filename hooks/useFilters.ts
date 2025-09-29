@@ -41,7 +41,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     addWordToFilter,
     removeWordFromFilter,
     addNegativeWordFilter,
-    removeNegativeWordFromFilter,
+    removeNegativeWordFilter,
   } = useSimpleFilters({ 
     comments: displayedComments, 
     filterByColorToo: true 
@@ -73,8 +73,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     addWordToFilter,
     removeWordFromFilter,
     addNegativeWordFilter,
-    removeNegativeWordFromFilter,
-    removeNegativeWordFilter: removeNegativeWordFromFilter, // Alias for compatibility
+    removeNegativeWordFilter, // Alias for compatibility
     
     // General operations
     toggleFilter,
@@ -97,7 +96,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     urlSearchTerms: [], // Search terms not implemented in simple version yet
     addSearchTermToURL: () => {},
     removeSearchTermFromURL: () => {},
-    dateTimeFilter: null,
-    serverSideUsers: [], // Server-side users not implemented in simple version yet
+    dateTimeFilter: undefined,
+    serverSideUsers: [] as Array<{ username: string; color: string }>, // Server-side users not implemented in simple version yet
   };
 };
