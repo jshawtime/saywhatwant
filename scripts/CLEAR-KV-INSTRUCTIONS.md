@@ -12,7 +12,11 @@ Since we have 12,500+ keys, the fastest approach is to delete the entire KV name
 
 ### Step 1: Delete Current Namespace
 ```bash
-npx wrangler kv:namespace delete --binding COMMENTS_KV --namespace-id ddf6162d4c874d52bb6e41d1c3889a0f
+npx wrangler kv:namespace delete --namespace-id ddf6162d4c874d52bb6e41d1c3889a0f
+```
+Or use the binding name:
+```bash
+npx wrangler kv:namespace delete --binding COMMENTS_KV
 ```
 
 ### Step 2: Create New Namespace
