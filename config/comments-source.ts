@@ -17,11 +17,11 @@ export const COMMENTS_CONFIG = {
   // Maximum comments to store locally (when using localStorage)
   maxLocalComments: 1000,
   
-  // Initial load count (reduced for efficiency - Ham Radio Mode)
-  initialLoadCount: 50,
+  // Initial load count (PRESENCE-BASED: only from IndexedDB)
+  initialLoadCount: 0,  // NO catch-up from KV
   
-  // Lazy load batch size
-  lazyLoadBatch: 50,
+  // Lazy load batch size  
+  lazyLoadBatch: 200,
   
   // Enable console logging for debugging
   debugMode: false,

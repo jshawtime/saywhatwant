@@ -27,8 +27,8 @@ const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = 50; // Max new messages per poll
 const MAX_USERNAME_LENGTH = 16;
-const MAX_DISPLAY_MESSAGES = 2000; // Maximum messages to display at once (increased from 500)
-const INDEXEDDB_INITIAL_LOAD = 2000; // Load 2000 messages from IndexedDB initially
+const MAX_DISPLAY_MESSAGES = 200; // Maximum messages to display at once (PRESENCE-BASED)
+const INDEXEDDB_INITIAL_LOAD = 200; // Load 200 messages from IndexedDB initially
 const INDEXEDDB_LAZY_LOAD_CHUNK = 200; // Load 200 more on each lazy load
 
 // Import color functions from the color system
@@ -547,26 +547,46 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // REMOVED: Static JSON loading - we don't want any pre-populated messages
         // Messages should only come from real-time sources (KV or new posts)
         
-        // DISABLED: Don't load from IndexedDB on startup - start fresh each session
-        // We want a clean slate, not old cached messages
+        // PRESENCE-BASED: Load from IndexedDB - this is your history  
+        // You only see what you've collected while present
         let indexedDbMessages: Comment[] = [];
         
-        // Still initialize the system but don't load old messages
+        // Initialize IndexedDB and load existing messages
         try {
           await initializeIndexedDBSystem();
           const storage = getStorage();
           
-          // Clear all old messages on startup for a fresh experience
           if (storage.isInitialized()) {
-            await storage.clearAll();  // Clear everything for a fresh start
-            console.log('[IndexedDB] Cleared all old messages - starting fresh');
+            // Load messages from IndexedDB (PRESENCE-BASED)
+            const messages = await storage.getMessages({
+              store: 'all',
+              limit: INDEXEDDB_INITIAL_LOAD,
+              offset: 0
+            });
+            
+            indexedDbMessages = messages.map((msg: any) => ({
+              id: msg.id?.toString() || '',
+              text: msg.text || '',
+              timestamp: typeof msg.timestamp === 'string' ? parseInt(msg.timestamp, 10) : msg.timestamp,
+              username: msg.username,
+              color: msg.userColor,
+              domain: 'saywhatwant.app',
+              language: 'en',
+              'message-type': 'human'
+            }));
+            
+            console.log(`[IndexedDB] Loaded ${indexedDbMessages.length} messages from storage`);
+            
+            // Check if there are more messages available
+            const totalCount = await storage.getMessageCount('all');
+            setHasMoreInIndexedDb(totalCount > INDEXEDDB_INITIAL_LOAD);
+            console.log(`[IndexedDB] Total messages in storage: ${totalCount}, has more: ${totalCount > INDEXEDDB_INITIAL_LOAD}`);
           }
         } catch (err) {
-          console.warn('[IndexedDB] Initialization error:', err);
+          console.warn('[IndexedDB] Error loading messages:', err);
         }
         
-        setHasMoreInIndexedDb(false);
-        allIndexedDbMessages.current = [];
+        allIndexedDbMessages.current = indexedDbMessages;
         
         // Fetch latest from cloud API
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);

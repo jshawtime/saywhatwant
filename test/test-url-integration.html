@@ -528,10 +528,31 @@ npm run build && npm start`;
                                     openReq.onerror = reject;
                                 });
                                 
-                                if (database.objectStoreNames.contains('messages_temp') || 
-                                    database.objectStoreNames.contains('messages_perm')) {
-                                    html += '<div style="color: #ef4444;">  → Contains message stores!</div>';
+                                let totalMessages = 0;
+                                if (database.objectStoreNames.contains('messages_temp')) {
+                                    const tx = database.transaction(['messages_temp'], 'readonly');
+                                    const store = tx.objectStore('messages_temp');
+                                    const countReq = store.count();
+                                    const tempCount = await new Promise((resolve) => {
+                                        countReq.onsuccess = () => resolve(countReq.result);
+                                    });
+                                    totalMessages += tempCount;
+                                    html += `<div style="color: #fbbf24;">  → messages_temp: ${tempCount} messages</div>`;
                                 }
+                                
+                                if (database.objectStoreNames.contains('messages_perm')) {
+                                    const tx = database.transaction(['messages_perm'], 'readonly');
+                                    const store = tx.objectStore('messages_perm');
+                                    const countReq = store.count();
+                                    const permCount = await new Promise((resolve) => {
+                                        countReq.onsuccess = () => resolve(countReq.result);
+                                    });
+                                    totalMessages += permCount;
+                                    html += `<div style="color: #fbbf24;">  → messages_perm: ${permCount} messages</div>`;
+                                }
+                                
+                                html += `<div style="color: #ef4444; font-weight: bold;">  📊 TOTAL MESSAGES: ${totalMessages}</div>`;
+                                
                                 database.close();
                             } catch (e) {
                                 html += '<div style="color: #6b7280;">  → Could not open database</div>';

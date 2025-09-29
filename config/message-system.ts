@@ -28,19 +28,19 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Cloud/KV Settings
   cloudInitialLoad: 0,          // NO catch-up - be present or miss out
   cloudPollingInterval: 5000,   // Poll every 5 seconds
-  cloudPollBatch: 50,           // Max 50 per poll
+  cloudPollBatch: 200,           // Max n per poll
   
   // Display Settings
-  maxDisplayMessages: 2000,     // Show max 2000 in DOM
+  maxDisplayMessages: 200,     // Show max n in DOM
   
   // Storage Settings
-  maxIndexedDBMessages: 10000,  // Store max 10k messages
-  indexedDBCleanupThreshold: 12000, // Cleanup at 12k
+  maxIndexedDBMessages: 100000,  // Store max nk messages
+  indexedDBCleanupThreshold: 12000, // Cleanup at nk
   
   // Absence Detection
-  absenceThreshold: 60,         // 60 seconds away = show indicator
+  absenceThreshold: 60,         // n seconds away = show indicator
   
   // Lazy Loading
-  lazyLoadChunkSize: 200,       // Load 200 at a time
-  scrollThreshold: 100,         // 100px from top
+  lazyLoadChunkSize: 200,       // Load n at a time
+  scrollThreshold: 100,         // 'n'px from top
 };

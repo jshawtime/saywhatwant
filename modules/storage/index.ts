@@ -35,12 +35,12 @@ export async function initStorage(): Promise<void> {
   if (!storage.isInitialized()) {
   await storage.init();
   
-  // DISABLED: No migration - we want a clean start
+  // DISABLED: No migration - we want to keep existing data
   // await storage.migrateFromLocalStorage();
   
-  // Clear any existing messages for a fresh start
-  await storage.clearAll();
-  console.log('[Storage] Cleared all existing messages for fresh start');
+  // PRESENCE-BASED: Keep existing messages - they're your history
+  // DO NOT clear on startup
+  console.log('[Storage] Preserving existing messages (presence-based)');
   
   // Start background cleanup task
   startCleanupTask();
