@@ -431,6 +431,19 @@ const exists = state.users.some(u =>
 - [ ] Clear filters clears URL
 - [ ] Bookmark captures complete filter state
 
+## 📝 TODO: Server-Side Users Feature
+
+### Future Implementation: `#uss=` Parameter
+- **Purpose**: Pre-filter users from URL without colors
+- **Format**: `#uss=username1+username2+username3`
+- **Use Case**: Share links with pre-configured user filters
+- **Example**: `https://saywhatwant.app/#uss=alice+bob&filteractive=true`
+- **Difference from `#u=`**: 
+  - `#u=` includes colors: `alice:255000000`
+  - `#uss=` just usernames: `alice`
+- **Status**: Currently returns empty array for backward compatibility
+- **Implementation**: Would add ~10 lines to `url-filter-simple.ts`
+
 ## 🚀 New URL Parameters
 
 ### 1. `filteractive` - Filter Bar State Control
