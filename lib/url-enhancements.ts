@@ -7,7 +7,7 @@ import { URLFilterManager, SWWFilterState, UserWithColor } from './url-filter-ma
 
 // Extended filter state with new parameters
 export interface EnhancedFilterState extends SWWFilterState {
-  filterActive?: boolean | null;      // Filter bar active state
+  // filterActive is already in base SWWFilterState
   modelConfigs?: ModelConfig[];       // AI models to trigger
   userInitialState?: UserWithColor;   // Human user initial state
   aiInitialState?: UserWithColor;     // AI initial state
