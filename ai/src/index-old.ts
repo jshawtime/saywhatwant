@@ -434,11 +434,19 @@ async function postComment(text: string): Promise<boolean> {
       id: generateId(),
       text,
       username: state.currentUsername,
-      color: state.currentColor,
+      color: state.currentColor, // Will be converted to RGB if needed
       timestamp: Date.now(),
       domain: 'saywhatwant.app', // Set proper domain so messages appear
       'message-type': 'AI', // Mark as AI-generated message
     };
+    
+    // Convert 9-digit color to RGB for backwards compatibility
+    if (/^\d{9}$/.test(comment.color)) {
+      const r = parseInt(comment.color.slice(0, 3), 10);
+      const g = parseInt(comment.color.slice(3, 6), 10);
+      const b = parseInt(comment.color.slice(6, 9), 10);
+      comment.color = `rgb(${r}, ${g}, ${b})`;
+    }
     
     // Log the exact payload being sent
     console.log('=== SENDING TO KV ===');
