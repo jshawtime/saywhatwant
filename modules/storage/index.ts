@@ -33,13 +33,17 @@ export async function initStorage(): Promise<void> {
   const storage = getStorage();
   
   if (!storage.isInitialized()) {
-    await storage.init();
-    
-    // Perform one-time migration from localStorage if needed
-    await storage.migrateFromLocalStorage();
-    
-    // Start background cleanup task
-    startCleanupTask();
+  await storage.init();
+  
+  // DISABLED: No migration - we want a clean start
+  // await storage.migrateFromLocalStorage();
+  
+  // Clear any existing messages for a fresh start
+  await storage.clearAll();
+  console.log('[Storage] Cleared all existing messages for fresh start');
+  
+  // Start background cleanup task
+  startCleanupTask();
   }
 }
 

@@ -563,29 +563,27 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async migrateFromLocalStorage(): Promise<void> {
+    // DISABLED: No migration - we don't want old messages
     if (typeof window === 'undefined') return;
     
-    const localKey = 'sww-comments-local';
-    const localData = localStorage.getItem(localKey);
+    console.log('[IndexedDB] Migration disabled - starting fresh');
     
-    if (!localData) {
-      console.log('[IndexedDB] No localStorage data to migrate');
-      return;
-    }
-    
-    try {
-      const messages = JSON.parse(localData) as Message[];
-      
-      if (Array.isArray(messages) && messages.length > 0) {
-        await this.saveMessages(messages);
-        
-        // Clear localStorage after successful migration
-        localStorage.removeItem(localKey);
-        console.log(`[IndexedDB] Migrated ${messages.length} messages from localStorage`);
+    // Clean up any old localStorage message caches
+    const messageCacheKeys = ['sww-comments', 'sww-comments-local'];
+    messageCacheKeys.forEach(key => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed)) {
+            console.log(`[IndexedDB] Found and removing ${parsed.length} old messages from ${key}`);
+          }
+        } catch (e) {
+          // Just remove it
+        }
+        localStorage.removeItem(key);
       }
-    } catch (error) {
-      console.error('[IndexedDB] Failed to migrate from localStorage:', error);
-    }
+    });
   }
   
   async performCleanup(): Promise<{ deletedMessages: number; removedFilters: number }> {

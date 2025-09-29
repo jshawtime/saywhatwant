@@ -22,11 +22,12 @@ export async function initAdapter(): Promise<void> {
   // Initialize IndexedDB
   await initStorage();
   
-  // Load initial messages into cache
-  await refreshCache();
+  // DON'T load initial messages - we want a clean slate
+  // await refreshCache();  // DISABLED
+  commentsCache = []; // Start with empty cache
   
   cacheInitialized = true;
-  console.log('[StorageAdapter] Initialized with IndexedDB backend');
+  console.log('[StorageAdapter] Initialized with empty cache - no message preloading');
 }
 
 /**

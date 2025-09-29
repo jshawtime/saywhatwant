@@ -41,18 +41,15 @@ export async function initializeIndexedDBSystem(): Promise<void> {
     
     initialized = true;
     
-    // Log migration status
-    const localStorageData = localStorage.getItem('sww-comments-local');
-    if (localStorageData) {
-      try {
-        const messages = JSON.parse(localStorageData);
-        if (Array.isArray(messages) && messages.length > 0) {
-          console.log(`[Storage] Found ${messages.length} messages in localStorage ready for migration`);
-        }
-      } catch (e) {
-        // Ignore parsing errors
+    // DISABLED: No migration from localStorage - we don't want old messages
+    // Clean up any old localStorage message data
+    const messageCacheKeys = ['sww-comments', 'sww-comments-local'];
+    messageCacheKeys.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        console.log(`[Storage] Removed old message cache: ${key}`);
       }
-    }
+    });
   } catch (error) {
     console.error('[Storage] Failed to initialize IndexedDB system:', error);
     console.log('[Storage] Falling back to localStorage');

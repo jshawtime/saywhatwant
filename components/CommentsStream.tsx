@@ -189,34 +189,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     clearVideoState,
   } = useVideoSharing(inputRef, setInputText);
   
-  // Storage functions (needed before submission system)
+  // Storage functions DISABLED - We only use IndexedDB for messages now
   const loadCommentsFromStorage = useCallback((): Comment[] => {
-    if (typeof window === 'undefined') return [];
-    
-    try {
-      const stored = localStorage.getItem(COMMENTS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (err) {
-      console.error('[Comments] Failed to load from localStorage:', err);
-    }
+    // DISABLED: No localStorage for messages - only IndexedDB
     return [];
   }, [COMMENTS_STORAGE_KEY]);
 
   const saveCommentsToStorage = useCallback((comments: Comment[]) => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      // Keep only the last 1000 comments
-      const toSave = comments.slice(-1000);
-      localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(toSave));
-    } catch (err) {
-      console.error('[Comments] Failed to save to localStorage:', err);
-    }
+    // DISABLED: No localStorage for messages - only IndexedDB
+    // localStorage should only store settings, not message data
+    return;
   }, [COMMENTS_STORAGE_KEY]);
   
   // Username validation
@@ -562,72 +544,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.log('[Init] Reset message limit to default:', MAX_DISPLAY_MESSAGES);
       
       try {
-        // In dev mode with localStorage enabled, try to load from static JSON first
-        if (COMMENTS_CONFIG.useLocalStorage) {
-          try {
-            const response = await fetch('/kv-data-export.json');
-            if (response.ok) {
-              const exportData = await response.json();
-              const comments = exportData.comments || [];
-              
-              // Store in localStorage for consistency
-              localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(comments));
-              
-              // Apply max display limit even for static JSON
-              const trimmedComments = trimToMaxMessages(comments);
-              setAllComments(trimmedComments);
-              console.log(`[Dev Mode] Loaded ${trimmedComments.length} of ${comments.length} comments from static JSON`);
-              
-              // Initial scroll is handled by the useEffect
-              
-              setIsLoading(false);
-              return;
-            }
-          } catch (err) {
-            console.log('[Dev Mode] Static JSON not found, falling back to localStorage');
+        // REMOVED: Static JSON loading - we don't want any pre-populated messages
+        // Messages should only come from real-time sources (KV or new posts)
+        
+        // DISABLED: Don't load from IndexedDB on startup - start fresh each session
+        // We want a clean slate, not old cached messages
+        let indexedDbMessages: Comment[] = [];
+        
+        // Still initialize the system but don't load old messages
+        try {
+          await initializeIndexedDBSystem();
+          const storage = getStorage();
+          
+          // Clear all old messages on startup for a fresh experience
+          if (storage.isInitialized()) {
+            await storage.clearAll();  // Clear everything for a fresh start
+            console.log('[IndexedDB] Cleared all old messages - starting fresh');
           }
+        } catch (err) {
+          console.warn('[IndexedDB] Initialization error:', err);
         }
         
-        // ENHANCED: Load from IndexedDB first (limited to INDEXEDDB_INITIAL_LOAD for performance)
-        let indexedDbMessages: Comment[] = [];
-        try {
-          // Initialize IndexedDB if needed
-          await initializeIndexedDBSystem();
-          
-          const storage = getStorage();
-          if (storage.isInitialized()) {
-            const allStoredMessages = await storage.getMessages({ store: 'all' });
-            
-            // Store all messages in ref for lazy loading
-            allIndexedDbMessages.current = allStoredMessages.map((msg: any) => ({
-              id: msg.id,
-              text: msg.text,
-              timestamp: new Date(msg.timestamp).getTime(),
-              username: msg.username,
-              userColor: msg.userColor || msg.color,
-              videoRef: msg.videoRef,
-              domain: msg.domain,
-            }));
-            
-            // Sort by timestamp (oldest first)
-            allIndexedDbMessages.current.sort((a, b) => a.timestamp - b.timestamp);
-            
-            // Take only the most recent INDEXEDDB_INITIAL_LOAD messages for initial display
-            const totalStored = allIndexedDbMessages.current.length;
-            if (totalStored > INDEXEDDB_INITIAL_LOAD) {
-              indexedDbMessages = allIndexedDbMessages.current.slice(-INDEXEDDB_INITIAL_LOAD);
-              setHasMoreInIndexedDb(true);
-              setIndexedDbOffset(totalStored - INDEXEDDB_INITIAL_LOAD);
-              console.log(`[IndexedDB] Loaded ${INDEXEDDB_INITIAL_LOAD} of ${totalStored} messages (more available)`);
-            } else {
-              indexedDbMessages = allIndexedDbMessages.current;
-              setHasMoreInIndexedDb(false);
-              console.log(`[IndexedDB] Loaded all ${totalStored} messages from local storage`);
-            }
-          }
-      } catch (err) {
-          console.warn('[IndexedDB] Failed to load stored messages:', err);
-        }
+        setHasMoreInIndexedDb(false);
+        allIndexedDbMessages.current = [];
         
         // Fetch latest from cloud API
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
