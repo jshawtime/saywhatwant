@@ -5,7 +5,7 @@
 
 export interface MessageSystemConfig {
   // Cloud/KV Settings
-  cloudInitialLoad: number;      // How many to fetch from KV on startup
+  cloudInitialLoad: number;      // ALWAYS 0 - no catch-up from KV
   cloudPollingInterval: number;  // How often to poll for new messages (ms)
   cloudPollBatch: number;        // Max messages per poll
   
@@ -16,8 +16,8 @@ export interface MessageSystemConfig {
   maxIndexedDBMessages: number;  // Max messages in IndexedDB (disk protection)
   indexedDBCleanupThreshold: number; // When to trigger cleanup
   
-  // Gap Detection
-  messageGapThreshold: number;   // Seconds before showing "gap" indicator
+  // Absence Detection
+  absenceThreshold: number;      // Seconds before showing "missed messages" indicator
   
   // Lazy Loading
   lazyLoadChunkSize: number;     // Messages per lazy load
@@ -26,7 +26,7 @@ export interface MessageSystemConfig {
 
 export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Cloud/KV Settings
-  cloudInitialLoad: 100,        // Fetch last 100 from KV on startup
+  cloudInitialLoad: 0,          // NO catch-up - be present or miss out
   cloudPollingInterval: 5000,   // Poll every 5 seconds
   cloudPollBatch: 50,           // Max 50 per poll
   
@@ -37,8 +37,8 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   maxIndexedDBMessages: 10000,  // Store max 10k messages
   indexedDBCleanupThreshold: 12000, // Cleanup at 12k
   
-  // Gap Detection
-  messageGapThreshold: 300,     // 5 minutes = gap
+  // Absence Detection
+  absenceThreshold: 60,         // 60 seconds away = show indicator
   
   // Lazy Loading
   lazyLoadChunkSize: 200,       // Load 200 at a time

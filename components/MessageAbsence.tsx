@@ -1,16 +1,16 @@
 /**
- * MessageGap Component
- * Displays a visual indicator when there's a time gap between messages
+ * MessageAbsence Component
+ * Displays a visual indicator when user has been away and may have missed messages
  */
 
 import React from 'react';
 
-interface MessageGapProps {
-  duration: number;  // Gap duration in milliseconds
+interface MessageAbsenceProps {
+  duration: number;  // Absence duration in milliseconds
   userColor: string; // User's color for styling
 }
 
-export function MessageGap({ duration, userColor }: MessageGapProps) {
+export function MessageAbsence({ duration, userColor }: MessageAbsenceProps) {
   // Format duration into human-readable string
   const formatDuration = (ms: number): string => {
     const seconds = Math.floor(ms / 1000);
@@ -19,18 +19,10 @@ export function MessageGap({ duration, userColor }: MessageGapProps) {
     const days = Math.floor(hours / 24);
     
     if (days > 0) {
-      const remainingHours = hours % 24;
-      if (remainingHours > 0) {
-        return `${days} day${days > 1 ? 's' : ''}, ${remainingHours} hour${remainingHours > 1 ? 's' : ''}`;
-      }
       return `${days} day${days > 1 ? 's' : ''}`;
     }
     
     if (hours > 0) {
-      const remainingMinutes = minutes % 60;
-      if (remainingMinutes > 0) {
-        return `${hours} hour${hours > 1 ? 's' : ''}, ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`;
-      }
       return `${hours} hour${hours > 1 ? 's' : ''}`;
     }
     
@@ -38,14 +30,14 @@ export function MessageGap({ duration, userColor }: MessageGapProps) {
       return `${minutes} minute${minutes > 1 ? 's' : ''}`;
     }
     
-    return `${seconds} second${seconds > 1 ? 's' : ''}`;
+    return 'a moment';
   };
   
   return (
     <div 
-      className="message-gap flex items-center justify-center my-4 px-4"
+      className="message-absence flex items-center justify-center my-4 px-4"
       style={{
-        opacity: 0.6
+        opacity: 0.5
       }}
     >
       <div className="flex items-center gap-2">
@@ -53,20 +45,20 @@ export function MessageGap({ duration, userColor }: MessageGapProps) {
           className="h-px flex-1" 
           style={{ 
             backgroundColor: userColor,
-            minWidth: '50px'
+            minWidth: '30px'
           }} 
         />
         <span 
           className="text-xs font-medium px-2 whitespace-nowrap"
           style={{ color: userColor }}
         >
-          Gap: {formatDuration(duration)}
+          You were away for {formatDuration(duration)} and may have missed messages
         </span>
         <div 
           className="h-px flex-1" 
           style={{ 
             backgroundColor: userColor,
-            minWidth: '50px'
+            minWidth: '30px'
           }} 
         />
       </div>
@@ -75,4 +67,4 @@ export function MessageGap({ duration, userColor }: MessageGapProps) {
 }
 
 // Memoized version for performance
-export default React.memo(MessageGap);
+export default React.memo(MessageAbsence);

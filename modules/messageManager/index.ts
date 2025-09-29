@@ -10,9 +10,9 @@ import type { Comment } from '@/types';
 import type { Message } from '@/modules/storage';
 import { FilterState } from '@/lib/url-filter-simple';
 
-export interface MessageWithGap extends Comment {
-  hasGapBefore?: boolean;
-  gapDuration?: number;
+export interface MessageWithAbsence extends Comment {
+  showAbsenceIndicator?: boolean;
+  absenceDuration?: number;
 }
 
 export interface QueryOptions {
@@ -29,24 +29,24 @@ export interface QueryOptions {
 
 class MessageManager {
   private config: MessageSystemConfig;
-  private lastSeenTimestamp: number;
-  private storageKey = 'sww-last-seen-timestamp';
+  private lastPollTimestamp: number;
+  private storageKey = 'sww-last-poll-timestamp';
   
   constructor(config: MessageSystemConfig = MESSAGE_SYSTEM_CONFIG) {
     this.config = config;
-    this.lastSeenTimestamp = this.loadLastSeenTimestamp();
+    this.lastPollTimestamp = this.loadLastPollTimestamp();
   }
   
-  // Load last seen timestamp from localStorage
-  private loadLastSeenTimestamp(): number {
+  // Load last poll timestamp from localStorage
+  private loadLastPollTimestamp(): number {
     const stored = localStorage.getItem(this.storageKey);
     return stored ? parseInt(stored, 10) : Date.now();
   }
   
-  // Save last seen timestamp to localStorage
-  private saveLastSeenTimestamp(timestamp: number): void {
+  // Save last poll timestamp to localStorage
+  private saveLastPollTimestamp(timestamp: number): void {
     localStorage.setItem(this.storageKey, timestamp.toString());
-    this.lastSeenTimestamp = timestamp;
+    this.lastPollTimestamp = timestamp;
   }
   
   /**
@@ -83,10 +83,10 @@ class MessageManager {
   
   /**
    * Single entry point for initial message load
-   * Loads from IndexedDB first, then catches up from cloud
+   * ONLY loads from IndexedDB - no cloud catch-up (be present or miss out)
    */
-  async loadInitialMessages(): Promise<MessageWithGap[]> {
-    console.log('[MessageManager] Loading initial messages...');
+  async loadInitialMessages(): Promise<MessageWithAbsence[]> {
+    console.log('[MessageManager] Loading initial messages (IndexedDB only)...');
     
     // 1. Load all available from IndexedDB
     const localStorageMessages = await storage.getMessages({
@@ -98,78 +98,54 @@ class MessageManager {
     const localMessages = localStorageMessages.map(msg => this.messageToComment(msg));
     console.log(`[MessageManager] Loaded ${localMessages.length} messages from IndexedDB`);
     
-    // 2. Get the timestamp of the most recent local message
-    const mostRecentLocal = localMessages.length > 0 
-      ? Math.max(...localMessages.map(m => m.timestamp))
-      : 0;
+    // 2. Check if user was away
+    const timeSinceLastPoll = Date.now() - this.lastPollTimestamp;
+    const wasAway = timeSinceLastPoll > (this.config.absenceThreshold * 1000);
     
-    // 3. Fetch latest from cloud to catch up
-    try {
-      const cloudMessages = await cloudAPI.fetchCommentsFromCloud(
-        0, 
-        this.config.cloudInitialLoad
-      );
-      console.log(`[MessageManager] Fetched ${cloudMessages.comments?.length || 0} messages from cloud`);
-      
-      // 4. Merge and deduplicate
-      const merged = this.mergeMessages(localMessages, cloudMessages.comments || []);
-      
-      // 5. Store new messages in IndexedDB
-      const newMessages = cloudMessages.comments?.filter(
-        msg => msg.timestamp > mostRecentLocal
-      ) || [];
-      
-      if (newMessages.length > 0) {
-        const messagesToStore = newMessages.map(msg => this.commentToMessage(msg));
-        await storage.bulkAddMessages(messagesToStore);
-        console.log(`[MessageManager] Stored ${newMessages.length} new messages in IndexedDB`);
-      }
-      
-      // 6. Detect gaps and trim to display limit
-      const withGaps = this.detectMessageGaps(merged);
-      const trimmed = withGaps.slice(-this.config.maxDisplayMessages);
-      
-      // 7. Update last seen timestamp
-      if (trimmed.length > 0) {
-        this.saveLastSeenTimestamp(trimmed[trimmed.length - 1].timestamp);
-      }
-      
-      return trimmed;
-    } catch (error) {
-      console.error('[MessageManager] Error fetching from cloud:', error);
-      // Fall back to just local messages
-      const withGaps = this.detectMessageGaps(localMessages);
-      return withGaps.slice(-this.config.maxDisplayMessages);
+    // 3. Trim to display limit
+    let trimmed: MessageWithAbsence[] = localMessages.slice(-this.config.maxDisplayMessages);
+    
+    // 4. Add absence indicator if user was away
+    if (wasAway && trimmed.length > 0) {
+      trimmed[0] = {
+        ...trimmed[0],
+        showAbsenceIndicator: true,
+        absenceDuration: timeSinceLastPoll
+      };
+      console.log(`[MessageManager] User was away for ${Math.floor(timeSinceLastPoll / 1000)} seconds`);
     }
+    
+    // 5. Update poll timestamp
+    this.saveLastPollTimestamp(Date.now());
+    
+    return trimmed;
   }
   
   /**
    * Poll for new messages from cloud
    */
-  async pollNewMessages(): Promise<MessageWithGap[]> {
+  async pollNewMessages(): Promise<MessageWithAbsence[]> {
     try {
+      // Update poll timestamp
+      this.saveLastPollTimestamp(Date.now());
+      
       const response = await cloudAPI.fetchCommentsFromCloud(
         0,
         this.config.cloudPollBatch
       );
       
-      const newMessages = response.comments?.filter(
-        msg => msg.timestamp > this.lastSeenTimestamp
-      ) || [];
+      // Get all new messages since our last poll
+      const newMessages = response.comments || [];
       
       if (newMessages.length > 0) {
         // Store in IndexedDB
         const messagesToStore = newMessages.map(msg => this.commentToMessage(msg));
         await storage.bulkAddMessages(messagesToStore);
         
-        // Update last seen
-        const newest = Math.max(...newMessages.map(m => m.timestamp));
-        this.saveLastSeenTimestamp(newest);
-        
         console.log(`[MessageManager] Polled ${newMessages.length} new messages`);
       }
       
-      return this.detectMessageGaps(newMessages);
+      return newMessages;
     } catch (error) {
       console.error('[MessageManager] Polling error:', error);
       return [];
@@ -179,7 +155,7 @@ class MessageManager {
   /**
    * Filter searches IndexedDB directly
    */
-  async getFilteredMessages(filters: FilterState): Promise<MessageWithGap[]> {
+  async getFilteredMessages(filters: FilterState): Promise<MessageWithAbsence[]> {
     console.log('[MessageManager] Applying filters to IndexedDB...', filters);
     
     // Get all messages from IndexedDB (up to max)
@@ -228,11 +204,8 @@ class MessageManager {
       });
     }
     
-    // Add gap detection
-    const withGaps = this.detectMessageGaps(filtered);
-    
-    // Trim to display limit
-    return withGaps.slice(-this.config.maxDisplayMessages);
+    // Trim to display limit (no gap detection needed for filtered messages)
+    return filtered.slice(-this.config.maxDisplayMessages);
   }
   
   /**
@@ -262,48 +235,9 @@ class MessageManager {
   /**
    * Merge new messages with existing and trim to limit
    */
-  mergeAndTrim(existing: MessageWithGap[], newMessages: MessageWithGap[]): MessageWithGap[] {
+  mergeAndTrim(existing: MessageWithAbsence[], newMessages: MessageWithAbsence[]): MessageWithAbsence[] {
     const merged = this.mergeMessages(existing, newMessages);
-    const withGaps = this.detectMessageGaps(merged);
-    return withGaps.slice(-this.config.maxDisplayMessages);
-  }
-  
-  /**
-   * Detect and mark gaps in messages
-   */
-  detectMessageGaps(messages: Comment[]): MessageWithGap[] {
-    if (messages.length === 0) return [];
-    
-    const sorted = [...messages].sort((a, b) => a.timestamp - b.timestamp);
-    const threshold = this.config.messageGapThreshold * 1000; // Convert to ms
-    
-    return sorted.map((msg, idx): MessageWithGap => {
-      if (idx === 0) {
-        // Check gap from last seen timestamp
-        const gapFromLastSeen = msg.timestamp - this.lastSeenTimestamp;
-        if (gapFromLastSeen > threshold) {
-          return {
-            ...msg,
-            hasGapBefore: true,
-            gapDuration: gapFromLastSeen
-          };
-        }
-        return msg;
-      }
-      
-      const prevMsg = sorted[idx - 1];
-      const gap = msg.timestamp - prevMsg.timestamp;
-      
-      if (gap > threshold) {
-        return {
-          ...msg,
-          hasGapBefore: true,
-          gapDuration: gap
-        };
-      }
-      
-      return msg;
-    });
+    return merged.slice(-this.config.maxDisplayMessages);
   }
   
   /**

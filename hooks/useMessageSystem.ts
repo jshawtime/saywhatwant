@@ -4,12 +4,12 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { messageManager, type MessageWithGap } from '@/modules/messageManager';
+import { messageManager, type MessageWithAbsence } from '@/modules/messageManager';
 import { FilterState } from '@/lib/url-filter-simple';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
 interface UseMessageSystemReturn {
-  messages: MessageWithGap[];
+  messages: MessageWithAbsence[];
   isLoading: boolean;
   isFiltered: boolean;
   hasMoreMessages: boolean;
@@ -26,7 +26,7 @@ interface UseMessageSystemReturn {
 }
 
 export function useMessageSystem(): UseMessageSystemReturn {
-  const [messages, setMessages] = useState<MessageWithGap[]>([]);
+  const [messages, setMessages] = useState<MessageWithAbsence[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFiltered, setIsFiltered] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);

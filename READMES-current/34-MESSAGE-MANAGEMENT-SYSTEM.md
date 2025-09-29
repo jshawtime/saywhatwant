@@ -1,20 +1,23 @@
-# Message Management System Architecture v1.0
+# Message Management System Architecture v2.0 - Presence-Based
 
-## 🎯 Core Problem
+## 🎯 Core Philosophy
+**"Be present or miss out"** - This app rewards real-time participation. If your tab isn't open, you miss messages. This is intentional and part of the app's ethos.
+
+## 📋 Core Problem (Unchanged)
 Currently, message loading, storage, and display logic is scattered across multiple files with competing control systems:
 - `config/comments-source.ts` controls cloud fetch limits
 - `CommentsStream.tsx` controls display limits and IndexedDB loading
 - `useFilters.ts` only sees displayed messages, not IndexedDB content
 - Multiple competing constants for the same purpose
 
-## 📋 Requirements
+## 🏗️ Requirements
 
 ### 1. **Centralized Configuration**
 All message limits and loading parameters in ONE place:
 ```typescript
 interface MessageSystemConfig {
   // Cloud/KV Settings
-  cloudInitialLoad: number;      // How many to fetch from KV on startup
+  cloudInitialLoad: number;      // ALWAYS 0 - no catch-up from KV
   cloudPollingInterval: number;  // How often to poll for new messages
   cloudPollBatch: number;        // Max messages per poll
   
@@ -25,8 +28,8 @@ interface MessageSystemConfig {
   maxIndexedDBMessages: number;  // Max messages in IndexedDB (disk protection)
   indexedDBCleanupThreshold: number; // When to trigger cleanup
   
-  // Gap Detection
-  messageGapThreshold: number;   // Seconds before showing "gap" indicator
+  // Absence Detection
+  absenceThreshold: number;      // Seconds away before showing "missed" indicator
   
   // Lazy Loading
   lazyLoadChunkSize: number;     // Messages per lazy load
@@ -34,18 +37,18 @@ interface MessageSystemConfig {
 }
 ```
 
-### 2. **Filter Architecture Change**
+### 2. **Filter Architecture Change** (Unchanged)
 Filters MUST search IndexedDB, not just displayed messages:
 - When filter is active, query IndexedDB directly
 - Return up to `maxDisplayMessages` filtered results
 - No longer limited by what's currently in the DOM
 
-### 3. **Message Gap Indicator**
-When messages have a time gap > threshold:
-- Show a visual separator line in the UI
+### 3. **Absence Indicator**
+When user has been away (tab closed/inactive) > threshold:
+- Show a subtle indicator: "— You were away and may have missed messages —"
 - Line color matches user's color
-- Text: "— Gap: X minutes/hours —"
-- Store last message timestamp in localStorage
+- Store last poll timestamp in localStorage
+- Calculate time away based on last poll vs current time
 
 ## 🏗️ Proposed Architecture
 
@@ -57,29 +60,34 @@ class MessageManager {
   private config: MessageSystemConfig;
   private indexedDB: IndexedDBProvider;
   private cloudAPI: CloudAPIClient;
+  private lastPollTimestamp: number;
   
   constructor(config: MessageSystemConfig) {
     this.config = config;
+    this.lastPollTimestamp = Date.now();
   }
   
   // Single entry point for initial load
   async loadInitialMessages(): Promise<Message[]> {
-    // 1. Load from IndexedDB first (all available)
+    // 1. ONLY load from IndexedDB - no cloud catch-up
     const localMessages = await this.indexedDB.getMessages({
       limit: this.config.maxIndexedDBMessages
     });
     
-    // 2. Fetch latest from cloud to catch up
-    const cloudMessages = await this.cloudAPI.fetchMessages({
-      limit: this.config.cloudInitialLoad,
-      since: this.getLastMessageTimestamp()
-    });
+    // 2. Check if user was away
+    const lastPoll = this.getLastPollTimestamp();
+    const timeSinceLastPoll = Date.now() - lastPoll;
+    const wasAway = timeSinceLastPoll > this.config.absenceThreshold * 1000;
     
-    // 3. Merge and deduplicate
-    const merged = this.mergeMessages(localMessages, cloudMessages);
+    // 3. Trim to display limit and mark if was away
+    const messages = localMessages.slice(-this.config.maxDisplayMessages);
     
-    // 4. Trim to display limit
-    return merged.slice(-this.config.maxDisplayMessages);
+    if (wasAway && messages.length > 0) {
+      messages[0].showAbsenceIndicator = true;
+      messages[0].absenceDuration = timeSinceLastPoll;
+    }
+    
+    return messages;
   }
   
   // Filter searches IndexedDB directly
