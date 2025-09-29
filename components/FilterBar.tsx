@@ -68,8 +68,14 @@ const FilterBar: React.FC<FilterBarProps> = ({
     // Load initial notification settings
     const loadSettings = () => {
       const settings: Record<string, { sound: NotificationSound; isUnread: boolean }> = {};
-      [...filterUsernames, ...filterWords.map(w => ({ username: w, color: userColor }))].forEach(filter => {
+      // Only usernames have colors - words don't have colors
+      filterUsernames.forEach(filter => {
         const key = getFilterKey(filter.username, filter.color || userColor);
+        settings[key] = getFilterNotificationSetting(key);
+      });
+      // Words don't have colors - just use the word as the key
+      filterWords.forEach(word => {
+        const key = getFilterKey(word, '');
         settings[key] = getFilterNotificationSetting(key);
       });
       setFilterNotificationSettings(settings);
@@ -207,7 +213,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
               
               {/* Word filters */}
               {filterWords.map((word) => {
-                const filterKey = getFilterKey(word, userColor);
+                // Words don't have colors - just use the word as the key
+                const filterKey = getFilterKey(word, '');
                 const setting = filterNotificationSettings[filterKey] || { sound: 'none', isUnread: false };
                 
                 return (

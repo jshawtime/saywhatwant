@@ -786,7 +786,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // Check word filters
       filterWords.forEach(word => {
         if (comment.text && comment.text.toLowerCase().includes(word.toLowerCase())) {
-          const filterKey = getFilterKey(word, userColor);
+          // Words don't have colors - just use the word as the key
+          const filterKey = getFilterKey(word, '');
           const setting = getFilterNotificationSetting(filterKey);
           
           if (setting.sound !== 'none' && !filtersToMark.includes(filterKey)) {
