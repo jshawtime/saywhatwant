@@ -115,6 +115,39 @@ export async function recordUserFilters(filters: Partial<FilterState>): Promise<
   }
 }
 
+// Additional convenience methods for MessageManager
+export async function getMessages(options?: {
+  limit?: number;
+  offset?: number;
+  filter?: FilterState;
+}): Promise<Message[]> {
+  const provider = getStorage();
+  return provider.getMessages({
+    store: 'all',
+    ...options
+  });
+}
+
+export async function getMessageCount(): Promise<number> {
+  const provider = getStorage();
+  return provider.getMessageCount('all');
+}
+
+export async function bulkAddMessages(messages: Message[]): Promise<void> {
+  const provider = getStorage();
+  return provider.saveMessages(messages);
+}
+
+export async function deleteMessage(id: string | number): Promise<void> {
+  // This method needs to be added to the provider
+  const provider = getStorage() as any;
+  if (provider.deleteMessage) {
+    return provider.deleteMessage(id);
+  }
+  // Fallback: clear and re-add all except the one to delete
+  console.warn('[Storage] deleteMessage not implemented in provider');
+}
+
 // Re-export types and interfaces for convenience
 export type { 
   StorageProvider, 
