@@ -231,6 +231,7 @@
         <button class="test-button" onclick="clearIndexedDB()">Clear IndexedDB</button>
         <button class="test-button" onclick="clearCommentCache()">Clear Comment Cache Only</button>
         <button class="test-button" onclick="checkDatabaseStatus()">Check Database Status</button>
+        <button class="test-button" onclick="diagnoseProblem()">🔍 Diagnose Storage</button>
         <button class="test-button" onclick="clearAllStorage()">Clear Everything</button>
         <div id="db-status" style="margin-top: 20px; padding: 15px; background: #1f2937; border-radius: 4px; display: none;"></div>
     </div>
@@ -348,28 +349,155 @@
         });
         
         // IndexedDB Management Functions
+        async function diagnoseProblem() {
+            const statusDiv = document.getElementById('db-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="color: #60a5fa;">🔍 Diagnosing storage issue...</div>';
+            
+            let html = '<h3 style="color: #fbbf24;">Storage Diagnosis Report</h3>';
+            
+            // Check ALL localStorage keys
+            html += '<h4 style="color: #34d399; margin-top: 15px;">LocalStorage Keys:</h4>';
+            const suspectKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('comment') || key.includes('message') || key.includes('sww'))) {
+                    const value = localStorage.getItem(key);
+                    let info = 'unknown';
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (Array.isArray(parsed)) {
+                            info = `${parsed.length} items`;
+                            if (parsed.length > 0) suspectKeys.push(key);
+                        } else {
+                            info = typeof parsed;
+                        }
+                    } catch (e) {
+                        info = `${value?.length || 0} chars`;
+                    }
+                    const color = key.includes('comment') || key.includes('message') ? '#ef4444' : '#60a5fa';
+                    html += `<div style="color: ${color};">• ${key}: ${info}</div>`;
+                }
+            }
+            
+            // Check IndexedDB
+            html += '<h4 style="color: #34d399; margin-top: 15px;">IndexedDB Status:</h4>';
+            try {
+                const databases = await indexedDB.databases();
+                if (databases.length > 0) {
+                    for (const db of databases) {
+                        if (db.name === 'SayWhatWant') {
+                            html += `<div style="color: #ef4444;">⚠️ Database exists: ${db.name} (version ${db.version})</div>`;
+                            
+                            // Try to open and check content
+                            try {
+                                const openReq = indexedDB.open(db.name);
+                                const database = await new Promise((resolve, reject) => {
+                                    openReq.onsuccess = () => resolve(openReq.result);
+                                    openReq.onerror = reject;
+                                });
+                                
+                                if (database.objectStoreNames.contains('messages_temp') || 
+                                    database.objectStoreNames.contains('messages_perm')) {
+                                    html += '<div style="color: #ef4444;">  → Contains message stores!</div>';
+                                }
+                                database.close();
+                            } catch (e) {
+                                html += '<div style="color: #6b7280;">  → Could not open database</div>';
+                            }
+                        }
+                    }
+                } else {
+                    html += '<div style="color: #10b981;">✅ No IndexedDB databases found</div>';
+                }
+            } catch (e) {
+                html += '<div style="color: #6b7280;">Could not enumerate databases</div>';
+            }
+            
+            // Check KV status
+            html += '<h4 style="color: #34d399; margin-top: 15px;">KV Store Status:</h4>';
+            try {
+                const response = await fetch('https://sww-comments.bootloaders.workers.dev/api/comments?limit=1');
+                const data = await response.json();
+                if (data.comments && data.comments.length > 0) {
+                    html += `<div style="color: #ef4444;">⚠️ KV has ${data.total || 'some'} messages!</div>`;
+                } else {
+                    html += '<div style="color: #10b981;">✅ KV is empty</div>';
+                }
+            } catch (e) {
+                html += '<div style="color: #6b7280;">Could not check KV</div>';
+            }
+            
+            // Recommendation
+            html += '<h4 style="color: #fbbf24; margin-top: 20px;">Recommendation:</h4>';
+            if (suspectKeys.length > 0) {
+                html += '<div style="color: #ef4444; font-weight: bold;">⚠️ Found suspect localStorage keys with data!</div>';
+                html += '<div style="color: #e5e7eb;">Click "Clear Everything" and restart Chrome completely.</div>';
+                html += '<div style="color: #e5e7eb; margin-top: 5px;">Then check this diagnosis again before visiting the app.</div>';
+            } else {
+                html += '<div style="color: #10b981;">Storage appears clean. If you still see messages, they may be:</div>';
+                html += '<div style="color: #e5e7eb; margin-left: 20px;">• Coming from browser cache (try Incognito mode)</div>';
+                html += '<div style="color: #e5e7eb; margin-left: 20px;">• Service worker cache (check DevTools → Application)</div>';
+                html += '<div style="color: #e5e7eb; margin-left: 20px;">• CDN cache (wait or use cache-bust params)</div>';
+            }
+            
+            statusDiv.innerHTML = html;
+        }
+        
         function clearCommentCache() {
             const statusDiv = document.getElementById('db-status');
             statusDiv.style.display = 'block';
             
-            const cachedComments = localStorage.getItem('sww-comments');
-            if (cachedComments) {
-                try {
-                    const comments = JSON.parse(cachedComments);
-                    const count = comments.length;
-                    localStorage.removeItem('sww-comments');
-                    localStorage.removeItem('sww-comments-local'); // Also remove alternative key
-                    
-                    statusDiv.innerHTML = `<div style="color: #10b981;">✅ Cleared ${count} cached comments from localStorage!</div>`;
-                    showStatus(`Removed ${count} cached comments`, 'success');
-                } catch (e) {
-                    localStorage.removeItem('sww-comments');
-                    localStorage.removeItem('sww-comments-local');
-                    statusDiv.innerHTML = '<div style="color: #10b981;">✅ Cleared comment cache!</div>';
-                    showStatus('Comment cache cleared', 'success');
+            // List of ALL possible comment storage keys
+            const commentKeys = [
+                'sww-comments',           // Main app storage
+                'sww-comments-local',      // IndexedDB adapter key
+                'COMMENTS_STORAGE_KEY',    // Just in case
+                'sww-comments-backup',     // Possible backup
+                'sww-messages'             // Alternative naming
+            ];
+            
+            let totalRemoved = 0;
+            let details = [];
+            
+            commentKeys.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        const count = Array.isArray(parsed) ? parsed.length : 1;
+                        totalRemoved += count;
+                        details.push(`${key}: ${count} messages`);
+                        localStorage.removeItem(key);
+                    } catch (e) {
+                        localStorage.removeItem(key);
+                        details.push(`${key}: removed (invalid JSON)`);
+                    }
                 }
+            });
+            
+            // Also check for any keys containing 'comment' or 'message'
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('comment') || key.includes('message')) && !commentKeys.includes(key)) {
+                    details.push(`Found and removing: ${key}`);
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            if (totalRemoved > 0 || details.length > 0) {
+                let html = `<div style="color: #10b981;">✅ Cleared ${totalRemoved} cached comments!</div>`;
+                if (details.length > 0) {
+                    html += '<div style="margin-top: 10px; font-size: 12px; color: #94a3b8;">';
+                    details.forEach(d => {
+                        html += `<div>• ${d}</div>`;
+                    });
+                    html += '</div>';
+                }
+                statusDiv.innerHTML = html;
+                showStatus(`Removed ${totalRemoved} cached comments`, 'success');
             } else {
-                statusDiv.innerHTML = '<div style="color: #60a5fa;">ℹ️ No cached comments found in localStorage</div>';
+                statusDiv.innerHTML = '<div style="color: #60a5fa;">ℹ️ No cached comments found in any localStorage keys</div>';
                 showStatus('No comment cache to clear', 'info');
             }
         }
@@ -380,16 +508,27 @@
             statusDiv.innerHTML = '<div style="color: #60a5fa;">🔄 Clearing IndexedDB...</div>';
             
             try {
-                // CRITICAL: Clear the comments from localStorage FIRST!
-                const commentsRemoved = localStorage.getItem('sww-comments');
-                if (commentsRemoved) {
-                    const commentCount = JSON.parse(commentsRemoved).length || 0;
-                    console.log(`Removing ${commentCount} cached comments from localStorage`);
-                    localStorage.removeItem('sww-comments');
-                }
+                // CRITICAL: Clear ALL comment-related storage FIRST!
+                const commentKeys = [
+                    'sww-comments',
+                    'sww-comments-local',
+                    'COMMENTS_STORAGE_KEY'
+                ];
+                
+                commentKeys.forEach(key => {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        try {
+                            const count = JSON.parse(data).length || 0;
+                            console.log(`Removing ${key}: ${count} messages`);
+                        } catch (e) {
+                            console.log(`Removing ${key}: invalid data`);
+                        }
+                        localStorage.removeItem(key);
+                    }
+                });
                 
                 // Clear other localStorage items that might affect the app
-                localStorage.removeItem('sww-comments-local');  // Alternative comments key
                 localStorage.removeItem('sww-indexeddb-initialized');
                 localStorage.removeItem('sww-indexeddb-messages-count');
                 localStorage.removeItem('sww-filter-enabled');
