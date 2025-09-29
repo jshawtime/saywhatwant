@@ -117,8 +117,18 @@ export class IndexedDBProvider implements StorageProvider {
   }
   
   async saveMessage(message: Message): Promise<void> {
-    if (!this.db || !this.lifetimeFilters) {
+    if (!this.db) {
       throw new Error('Database not initialized');
+    }
+    
+    // Initialize lifetimeFilters if not set (for presence-based system)
+    if (!this.lifetimeFilters) {
+      console.log('[IndexedDB] Initializing empty lifetimeFilters for presence-based system');
+      this.lifetimeFilters = {
+        users: [],
+        words: [],
+        searchTerms: []
+      };
     }
     
     // Determine if message should be permanent
@@ -146,8 +156,19 @@ export class IndexedDBProvider implements StorageProvider {
   
   async saveMessages(messages: Message[]): Promise<void> {
     // During SSR/build, silently return
-    if (typeof window === 'undefined' || !this.db || !this.lifetimeFilters) {
+    if (typeof window === 'undefined' || !this.db) {
+      console.warn('[IndexedDB] Cannot save messages - DB not initialized');
       return;
+    }
+    
+    // Initialize lifetimeFilters if not set (for presence-based system)
+    if (!this.lifetimeFilters) {
+      console.log('[IndexedDB] Initializing empty lifetimeFilters for presence-based system');
+      this.lifetimeFilters = {
+        users: [],
+        words: [],
+        searchTerms: []
+      };
     }
     
     // Separate messages into temporary and permanent

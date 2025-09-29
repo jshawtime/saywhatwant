@@ -274,7 +274,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               text: comment.text || '',
               timestamp: comment.timestamp.toString(),
               username: comment.username || '',
-              userColor: comment.color || '',
+              userColor: comment.color || comment.userColor || '',  // Check both color fields
               videoRef: undefined,
               matchedFilters: [],
               _store: 'permanent' as const
@@ -623,7 +623,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 text: msg.text || '',
                 timestamp: msg.timestamp.toString(),
                 username: msg.username || '',
-                userColor: msg.color || '',
+                userColor: msg.color || msg.userColor || '',  // Check both color fields
                 videoRef: undefined,
                 matchedFilters: [],
                 _store: 'permanent' as const
@@ -852,13 +852,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 text: msg.text || '',
                 timestamp: msg.timestamp.toString(),
                 username: msg.username || '',
-                userColor: msg.color || '',
+                userColor: msg.color || msg.userColor || '',  // Check both color fields
                 videoRef: undefined,
                 matchedFilters: [],
                 _store: 'permanent' as const
               }));
               await storage.saveMessages(messagesToStore);
               console.log(`[IndexedDB] Saved ${messagesToStore.length} new messages to storage`);
+              console.log('[IndexedDB] First message saved:', messagesToStore[0]);
             }
           } catch (err) {
             console.warn('[IndexedDB] Failed to save polled messages:', err);
