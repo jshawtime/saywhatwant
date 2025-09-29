@@ -223,7 +223,7 @@
         <div class="expected">✅ URL updates with actual color values for bookmarking</div>
     </div>
 
-    <h2>🗑️ IndexedDB Management</h2>
+    <h2>🗑️ Storage Management</h2>
     
     <div class="test-card">
         <h3>Clear Local Storage</h3>
@@ -232,6 +232,49 @@
         <button class="test-button" onclick="checkDatabaseStatus()">Check Database Status</button>
         <button class="test-button" onclick="clearAllStorage()">Clear Everything</button>
         <div id="db-status" style="margin-top: 20px; padding: 15px; background: #1f2937; border-radius: 4px; display: none;"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>Clear Cloudflare KV Storage</h3>
+        <p class="description">Remove all comments from the server (12,500+ entries)</p>
+        <button class="test-button" onclick="showKVClearInstructions()">Show Clear Instructions</button>
+        <button class="test-button copy-button" onclick="copyKVClearCommand()">Copy Terminal Command</button>
+        <div id="kv-instructions" style="margin-top: 20px; padding: 20px; background: #1f2937; border-radius: 4px; display: none;">
+            <h4 style="color: #fbbf24; margin-top: 0;">⚠️ Clear Cloudflare KV Store</h4>
+            <p style="color: #e5e7eb; margin: 10px 0;">Run this command in your terminal:</p>
+            <div style="background: #111827; padding: 12px; border-radius: 4px; font-family: 'Courier New', monospace; margin: 10px 0; border: 1px solid #374151;">
+                <code id="kv-command" style="color: #10b981; font-size: 12px;">cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant && echo "yes" | node scripts/clear-kv.js</code>
+            </div>
+            <p style="color: #ef4444; font-weight: bold; margin: 10px 0;">⚠️ WARNING: This will permanently delete ALL 12,500+ comments!</p>
+            
+            <div style="background: #1e3a5f; padding: 10px; border-radius: 4px; margin: 15px 0; border: 1px solid #3b82f6;">
+                <p style="color: #93c5fd; margin: 5px 0; font-weight: bold;">After clearing:</p>
+                <ul style="color: #ddd6fe; margin: 5px 0 5px 20px;">
+                    <li>New comments use 9-digit format: <code style="color: #10b981;">255020147</code></li>
+                    <li>Old RGB format removed: <code style="color: #ef4444;">rgb(255, 20, 147)</code></li>
+                    <li>Consistent color format throughout</li>
+                </ul>
+            </div>
+            
+            <details style="margin-top: 15px;">
+                <summary style="color: #fbbf24; cursor: pointer;">Alternative: Faster Method (Delete & Recreate)</summary>
+                <ol style="color: #e5e7eb; margin: 10px 0 0 20px; font-size: 14px;">
+                    <li style="margin: 10px 0;">Delete namespace:
+                        <div style="background: #111827; padding: 8px; border-radius: 4px; font-family: monospace; margin: 5px 0;">
+                            <code style="color: #10b981; font-size: 11px;">npx wrangler kv:namespace delete --binding COMMENTS_KV --namespace-id ddf6162d4c874d52bb6e41d1c3889a0f</code>
+                        </div>
+                    </li>
+                    <li style="margin: 10px 0;">Create new:
+                        <div style="background: #111827; padding: 8px; border-radius: 4px; font-family: monospace; margin: 5px 0;">
+                            <code style="color: #10b981; font-size: 11px;">npx wrangler kv:namespace create COMMENTS_KV</code>
+                        </div>
+                    </li>
+                    <li style="margin: 10px 0;">Update both wrangler.toml files with new ID</li>
+                    <li style="margin: 10px 0;">Redeploy: <code style="color: #10b981;">npm run cloudflare:deploy</code></li>
+                </ol>
+            </details>
+        </div>
+        <div class="expected">✅ Use this to clear KV and start fresh with 9-digit colors</div>
     </div>
 
     <script>
@@ -380,6 +423,27 @@
                     statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
                 }
             }
+        }
+        
+        // Show KV clear instructions
+        function showKVClearInstructions() {
+            const instructionsDiv = document.getElementById('kv-instructions');
+            if (instructionsDiv.style.display === 'none') {
+                instructionsDiv.style.display = 'block';
+                showStatus('KV clear instructions displayed - follow the terminal commands');
+            } else {
+                instructionsDiv.style.display = 'none';
+            }
+        }
+        
+        // Copy KV clear command to clipboard
+        function copyKVClearCommand() {
+            const command = 'cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant && echo "yes" | node scripts/clear-kv.js';
+            navigator.clipboard.writeText(command).then(() => {
+                showStatus('✅ KV clear command copied to clipboard! Paste in terminal to run.');
+            }).catch(err => {
+                showStatus('❌ Failed to copy command: ' + err);
+            });
         }
         
         async function clearAllStorage() {
