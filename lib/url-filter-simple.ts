@@ -53,7 +53,7 @@ export function parseURL(): FilterState {
             const [username, color] = pair.split(':');
             return { 
               username: username || '', 
-              color: color ? nineDigitToRgb(color) : 'rgb(96, 165, 250)'
+              color: color || '096165250' // Store as 9-digit, not RGB
             };
           });
         }

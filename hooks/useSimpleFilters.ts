@@ -10,6 +10,7 @@ import {
   ensureFilterActive,
   normalizeUsername,
   rgbToNineDigit,
+  nineDigitToRgb,
   type FilterState,
   type FilterUser 
 } from '@/lib/url-filter-simple';
@@ -51,13 +52,13 @@ export function useSimpleFilters({
     // Check if already exists
     const exists = filterState.users.some(u => 
       u.username === normalized && 
-      rgbToNineDigit(u.color) === colorDigits
+      u.color === colorDigits  // No conversion needed - colors are stored as 9-digit
     );
     
     if (!exists) {
       const newState: FilterState = {
         ...filterState,
-        users: [...filterState.users, { username: normalized, color }]
+        users: [...filterState.users, { username: normalized, color: colorDigits }]  // Store as 9-digit
       };
       updateURL(newState);
     }
@@ -70,7 +71,7 @@ export function useSimpleFilters({
     const newState: FilterState = {
       ...filterState,
       users: filterState.users.filter(u => 
-        !(u.username === normalized && rgbToNineDigit(u.color) === colorDigits)
+        !(u.username === normalized && u.color === colorDigits)  // No conversion needed
       )
     };
     updateURL(newState);
@@ -150,7 +151,10 @@ export function useSimpleFilters({
           const usernameMatches = filter.username === normalizedComment;
           if (!filterByColorToo) return usernameMatches;
           
-          const colorMatches = filter.color === (comment.color || 'rgb(96, 165, 250)');
+          // Both filter.color and comment.color should be in 9-digit format
+          // Convert comment.color to 9-digit if it's in RGB format
+          const commentColorDigits = comment.color ? rgbToNineDigit(comment.color) : '096165250';
+          const colorMatches = filter.color === commentColorDigits;
           return usernameMatches && colorMatches;
         });
       });
@@ -197,7 +201,11 @@ export function useSimpleFilters({
     clearAllFilters,
     
     // For compatibility during transition
-    mergedUserFilters: filterState.users,
+    // Convert colors to RGB for display in FilterBar
+    mergedUserFilters: filterState.users.map(user => ({
+      ...user,
+      color: nineDigitToRgb(user.color)
+    })),
     mergedFilterWords: filterState.words,
     mergedNegativeWords: filterState.negativeWords,
     addToFilter: addUser,
