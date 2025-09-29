@@ -220,10 +220,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Username validation
   const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
   
-  // Model URL Integration - handles model messages, filter state, and user state from URL
-  // Must come BEFORE useFilters so filterActiveOverride is available
+  // Model URL Integration - handles model messages and user state from URL
   const {
-    filterActiveOverride,
     currentDomain: modelDomain,
     isProcessingQueue,
     addModelResponse,
@@ -259,8 +257,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     clearDateTimeFilter
   } = useFilters({ 
     displayedComments: allComments, 
-    searchTerm,
-    filterEnabledOverride: filterActiveOverride 
+    searchTerm
   });
   
   // Add AI to filter bar when AI username is set from URL

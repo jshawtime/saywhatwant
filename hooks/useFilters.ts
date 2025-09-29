@@ -13,25 +13,13 @@ export interface UsernameFilter {
 interface UseFiltersProps {
   displayedComments: Comment[];
   searchTerm: string;
-  filterEnabledOverride?: boolean | null;
 }
 
-export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverride }: UseFiltersProps) => {
+export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) => {
   const [filterUsernames, setFilterUsernames] = useState<UsernameFilter[]>([]);
   const [filterWords, setFilterWords] = useState<string[]>([]);
   const [negativeFilterWords, setNegativeFilterWords] = useState<string[]>([]);
-  const [baseFilterEnabled, setBaseFilterEnabled] = useState(false); // Default: OFF
   const [filterByColorToo, setFilterByColorToo] = useState(true);
-  
-  // Use override if provided, otherwise use base state
-  const isFilterEnabled = filterEnabledOverride !== null && filterEnabledOverride !== undefined 
-    ? filterEnabledOverride 
-    : baseFilterEnabled;
-    
-  // Debug logging
-  useEffect(() => {
-    console.log('[useFilters] filterEnabledOverride:', filterEnabledOverride, 'baseFilterEnabled:', baseFilterEnabled, 'final isFilterEnabled:', isFilterEnabled);
-  }, [filterEnabledOverride, baseFilterEnabled, isFilterEnabled]);
   
   // Get URL filter state and methods
   const { 
@@ -47,15 +35,21 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
     removeSearchTermFromURL,
     clearDateTimeFilter,
     clearURLFilters,
-    setURLFromFilters
+    setURLFromFilters,
+    setFilterActive,
+    filterActive
   } = useURLFilter();
+  
+  // Get filter enabled state from URL, with special cases as fallback
+  const [localFilterDefault, setLocalFilterDefault] = useState(false);
+  
+  // Use URL filterActive if explicitly set, otherwise use local default
+  const isFilterEnabled = filterActive !== null ? filterActive : localFilterDefault;
 
   // Initialize filters from localStorage on mount
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
-    
-    // Ham radio mode - no persistent storage initialization needed
     
     // ALWAYS load filter CONTENT from localStorage (usernames, words, etc.)
     const savedFilters = localStorage.getItem('sww-filters');
@@ -100,30 +94,24 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
       }
     }
     
-    // Load filter ENABLED state with URL override taking absolute priority
-    // CRITICAL: Check filterEnabledOverride FIRST, before any special cases
-    if (filterEnabledOverride !== null && filterEnabledOverride !== undefined) {
-      // URL parameter takes absolute priority over EVERYTHING
-      console.log('[useFilters] Using URL override for filter state:', filterEnabledOverride);
-      setBaseFilterEnabled(filterEnabledOverride);
-      localStorage.setItem('sww-filter-enabled', String(filterEnabledOverride));
-      // DON'T RETURN HERE - we still loaded the filter content above
-    } else if (!hasURLFilters) {
-      // Special Case 1: Base URL (no filters) → Filters OFF
-      setBaseFilterEnabled(false);
-    } else if (hasURLFilters && !savedFilters && !savedWordFilters && !savedNegativeFilters) {
-      // Special Case 2: URL has filters but filter bar is empty → filters ON
-      // This helps new users understand filters
-      setBaseFilterEnabled(true);
-      localStorage.setItem('sww-filter-enabled', 'true');
-    } else if (savedFilterEnabled !== null) {
-      // Normal case: Use saved preference from localStorage
-      setBaseFilterEnabled(savedFilterEnabled === 'true');
-    } else {
-      // Default: filters OFF
-      setBaseFilterEnabled(false);
+    // Only set local default if filterActive is not in URL
+    if (filterActive === null) {
+      // Apply special cases for default filter state
+      if (!hasURLFilters) {
+        // Special Case 1: Base URL (no filters) → Filters OFF
+        setLocalFilterDefault(false);
+      } else if (hasURLFilters && !savedFilters && !savedWordFilters && !savedNegativeFilters) {
+        // Special Case 2: URL has filters but filter bar is empty → filters ON
+        setLocalFilterDefault(true);
+      } else if (savedFilterEnabled !== null) {
+        // Normal case: Use saved preference from localStorage
+        setLocalFilterDefault(savedFilterEnabled === 'true');
+      } else {
+        // Default: filters OFF
+        setLocalFilterDefault(false);
+      }
     }
-  }, [filterEnabledOverride, hasURLFilters]); // Include dependencies that affect filter state
+  }, [filterActive, hasURLFilters]); // Include dependencies that affect filter state
   
   // Ham radio mode - no filter recording to IndexedDB
   // Filters are ephemeral - only active while tab is open
@@ -262,15 +250,14 @@ export const useFilters = ({ displayedComments, searchTerm, filterEnabledOverrid
     }
   }, [negativeFilterWords, urlState.negativeWords, removeNegativeWordFromURL]);
 
-  // Toggle filter enabled state - USER CONTROL ONLY
-  // This ONLY changes active/inactive state, NOT the URL
-  // URL always reflects filter bar contents regardless of active state
+  // Toggle filter enabled state - Updates URL
   const toggleFilter = useCallback(() => {
-    const newState = !baseFilterEnabled;
-    setBaseFilterEnabled(newState);
+    const newState = !isFilterEnabled;
+    // Update URL with new filter state
+    setFilterActive(newState);
+    // Also save to localStorage for defaults
     localStorage.setItem('sww-filter-enabled', String(newState));
-    // URL remains unchanged - it always shows filter bar contents
-  }, [baseFilterEnabled]);
+  }, [isFilterEnabled, setFilterActive]);
 
   // Apply filters to comments
   const filteredComments = useMemo(() => {

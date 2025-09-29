@@ -22,7 +22,8 @@ export function useURLFilter() {
     from: null,
     to: null,
     timeFrom: null,
-    timeTo: null
+    timeTo: null,
+    filterActive: null
   });
   
   useEffect(() => {
@@ -185,6 +186,12 @@ export function useURLFilter() {
     }
   }, []);
   
+  // Set filter active state in URL
+  const setFilterActive = useCallback((active: boolean) => {
+    const manager = URLFilterManager.getInstance();
+    manager.mergeURL({ filterActive: active });
+  }, []);
+  
   // Check if URL has active filters
   const hasURLFilters = 
     urlState.users.length > 0 ||
@@ -227,6 +234,10 @@ export function useURLFilter() {
     clearURLFilters,
     
     // Set URL from filters (for toggle)
-    setURLFromFilters
+    setURLFromFilters,
+    
+    // Filter active state
+    setFilterActive,
+    filterActive: urlState.filterActive
   };
 }

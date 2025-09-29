@@ -8,7 +8,6 @@ import { ModelURLHandler, ModelHandlerEvent, ModelMessage } from '../lib/model-u
 
 export interface UseModelURLReturn {
   // State
-  isFilterActive: boolean | null;
   currentDomain: string | null;
   modelMessages: ModelMessage[];
   isProcessingQueue: boolean;
@@ -27,7 +26,6 @@ export function useModelURL(): UseModelURLReturn {
   // Parse URL immediately to get initial state
   const getInitialState = () => {
     const state = {
-      filterActive: null as boolean | null,
       humanUsername: null as string | null,
       humanColor: null as string | null,
       aiUsername: null as string | null,
@@ -44,14 +42,6 @@ export function useModelURL(): UseModelURLReturn {
       const [key, value] = param.split('=');
       
       switch (key) {
-        case 'filteractive':
-          console.log('[useModelURL] Initial filteractive found:', value);
-          state.filterActive = value === 'true';
-          // CRITICAL: filteractive=true should ONLY activate the filter state,
-          // it should NOT add any users to the filter
-          // The filter bar will use whatever is in localStorage
-          break;
-          
         case 'model':
           // Parse model configurations (support multiple with +)
           const models = value?.split('+') || [];
@@ -59,11 +49,7 @@ export function useModelURL(): UseModelURLReturn {
             const [modelName] = modelStr.split(':'); // Ignore color for now
             return modelName;
           });
-          // When model is present, activate filters and clear existing filters
-          if (state.modelNames.length > 0) {
-            state.filterActive = true;
-            console.log('[useModelURL] Initial models found:', state.modelNames);
-          }
+          console.log('[useModelURL] Initial models found:', state.modelNames);
           break;
           
         case 'uis':
@@ -103,7 +89,6 @@ export function useModelURL(): UseModelURLReturn {
   }
   
   // State - Initialize with URL values if present
-  const [isFilterActive, setIsFilterActive] = useState<boolean | null>(initialState.filterActive);
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [modelMessages, setModelMessages] = useState<ModelMessage[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
@@ -177,16 +162,6 @@ export function useModelURL(): UseModelURLReturn {
     const unsubscribe = handler.subscribe((event: ModelHandlerEvent) => {
       console.log('[useModelURL] Received event:', event.type, event);
       switch (event.type) {
-        case 'filter-active-changed':
-          console.log('[useModelURL] Setting isFilterActive to:', event.isActive);
-          setIsFilterActive(event.isActive);
-          // Also update the filter bar if needed
-          const filterButton = document.querySelector('.filter-button');
-          if (filterButton) {
-            filterButton.classList.toggle('active', event.isActive);
-          }
-          break;
-          
         case 'user-state-changed':
           setHumanUsername(event.username);
           setHumanColor(event.color);
@@ -256,35 +231,7 @@ export function useModelURL(): UseModelURLReturn {
     setModelMessages(prev => [...prev, message]);
   }, []);
   
-  // Apply filter active state to LED button on mount
-  useEffect(() => {
-    if (isFilterActive === null) return;
-    
-    // Wait for DOM to be ready
-    const applyFilterState = () => {
-      const filterBar = document.querySelector('.filter-bar');
-      const ledButton = document.querySelector('.led-button');
-      
-      if (filterBar && ledButton) {
-        if (isFilterActive) {
-          filterBar.classList.add('active');
-          ledButton.classList.add('active');
-        } else {
-          filterBar.classList.remove('active');
-          ledButton.classList.remove('active');
-        }
-      }
-    };
-    
-    // Try immediately and after a delay (in case DOM is still loading)
-    applyFilterState();
-    const timer = setTimeout(applyFilterState, 100);
-    
-    return () => clearTimeout(timer);
-  }, [isFilterActive]);
-  
   return {
-    isFilterActive,
     currentDomain,
     modelMessages,
     isProcessingQueue,

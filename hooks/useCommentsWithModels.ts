@@ -18,14 +18,6 @@ export function useCommentsWithModels({
   const modelURLHook = useModelURL();
   const hasInjectedGreetings = useRef(false);
   
-  // CRITICAL: Use the filter override directly from the hook - no async state!
-  const filterActiveOverride = modelURLHook.isFilterActive;
-  
-  // Debug log to trace the override
-  useEffect(() => {
-    console.log('[useCommentsWithModels] filterActiveOverride:', filterActiveOverride);
-  }, [filterActiveOverride]);
-  
   // Inject model messages (greetings)
   useEffect(() => {
     if (!hasInjectedGreetings.current && modelURLHook.modelMessages.length > 0) {
@@ -112,7 +104,6 @@ export function useCommentsWithModels({
   }, [addModelResponse, getFilteredMessagesForModel, handleModelResponseComplete, modelURLHook.isProcessingQueue, modelURLHook.currentDomain]);
   
   return {
-    filterActiveOverride,
     currentDomain: modelURLHook.currentDomain,
     isProcessingQueue: modelURLHook.isProcessingQueue,
     addModelResponse,

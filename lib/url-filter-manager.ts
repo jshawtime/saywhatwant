@@ -22,6 +22,7 @@ export interface SWWFilterState {
   to: string | null;           // End time (YYYY-MM-DD, YYYY-MM-DDTHH:MM, T[minutes], keywords)
   timeFrom: number | null;     // Alternative: minutes ago (number only)
   timeTo: number | null;       // Alternative: minutes ago (number only)
+  filterActive: boolean | null; // Filter enabled/disabled state (true/false/null for default)
 }
 
 export class URLFilterManager {
@@ -131,7 +132,8 @@ export class URLFilterManager {
       from: null,
       to: null,
       timeFrom: null,
-      timeTo: null
+      timeTo: null,
+      filterActive: null
     };
   }
   
@@ -269,6 +271,15 @@ export class URLFilterManager {
             state.timeTo = timeToNum;
           }
           break;
+          
+        case 'filteractive':
+          // Parse filter active state (true/false)
+          if (values[0] === 'true') {
+            state.filterActive = true;
+          } else if (values[0] === 'false') {
+            state.filterActive = false;
+          }
+          break;
       }
     }
     
@@ -345,6 +356,11 @@ export class URLFilterManager {
     }
     if (state.timeTo !== null) {
       params.push(`timeTo=${state.timeTo}`);
+    }
+    
+    // Add filter active state (only if explicitly set)
+    if (state.filterActive !== null) {
+      params.push(`filteractive=${state.filterActive}`);
     }
     
     return params.length > 0 ? `#${params.join('&')}` : '';
