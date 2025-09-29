@@ -21,7 +21,6 @@ export function ModelURLIntegration({
   onUserStateChange 
 }: ModelURLIntegrationProps) {
   const {
-    isFilterActive,
     currentDomain,
     modelMessages,
     isProcessingQueue,
@@ -60,13 +59,6 @@ export function ModelURLIntegration({
       lastProcessedMessageId.current = modelMsg.id;
     });
   }, [modelMessages, onModelMessage, currentDomain]);
-  
-  // Handle filter active state
-  useEffect(() => {
-    if (isFilterActive !== null && onFilterActiveChange) {
-      onFilterActiveChange(isFilterActive);
-    }
-  }, [isFilterActive, onFilterActiveChange]);
   
   // Handle user state changes
   useEffect(() => {
