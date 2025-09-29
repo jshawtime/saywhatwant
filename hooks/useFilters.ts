@@ -112,8 +112,8 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
 
   // Remove username from filter - ONLY from URL
   const removeFromFilter = useCallback((username: string, color: string) => {
-    // Simply remove from URL - it's the single source of truth
-    removeUserFromURL(username);
+    // Remove specific username+color combo from URL
+    removeUserFromURL(username, color);
     // TODO: Add support for removing server-side users if needed
   }, [removeUserFromURL]);
 

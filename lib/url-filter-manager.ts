@@ -505,7 +505,7 @@ export class URLFilterManager {
   /**
    * Remove specific filter value
    */
-  removeFromURL(filterType: keyof SWWFilterState, value?: string): void {
+  removeFromURL(filterType: keyof SWWFilterState, value?: string, color?: string): void {
     if (typeof window === 'undefined') return;
     this.initialize(); // Ensure initialized
     
@@ -515,9 +515,17 @@ export class URLFilterManager {
       newState.videoPanel = null;
     } else if (filterType === 'users' && Array.isArray(newState.users)) {
       if (value) {
-        // Remove specific user by username
+        // Remove specific user by username AND color combo
         const normalized = this.normalize(value);
-        newState.users = newState.users.filter(u => u.username !== normalized);
+        if (color) {
+          // Remove specific username+color combination
+          newState.users = newState.users.filter(u => 
+            !(u.username === normalized && u.color === color)
+          );
+        } else {
+          // Remove all instances of this username (all colors)
+          newState.users = newState.users.filter(u => u.username !== normalized);
+        }
       } else {
         // Clear all users
         newState.users = [];

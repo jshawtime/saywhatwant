@@ -49,8 +49,11 @@ export function useURLFilter() {
     const currentState = manager.getCurrentState();
     const normalized = manager.normalize(username);
     
-    // Check if user already exists
-    const exists = currentState.users.some(u => u.username === normalized);
+    // Check if this exact username/color combo already exists
+    // Same username with different color = different user
+    const exists = currentState.users.some(u => 
+      u.username === normalized && u.color === color
+    );
     if (!exists) {
       manager.mergeURL({ 
         users: [...currentState.users, { username: normalized, color }] 
@@ -58,10 +61,11 @@ export function useURLFilter() {
     }
   }, []);
   
-  // Remove a user from filter
-  const removeUserFromURL = useCallback((username: string) => {
+  // Remove a specific user+color combo from filter
+  const removeUserFromURL = useCallback((username: string, color?: string) => {
     const manager = URLFilterManager.getInstance();
-    manager.removeFromURL('users', username);
+    // Pass both username and color to properly identify which user to remove
+    manager.removeFromURL('users', username, color);
   }, []);
   
   // Add search term
