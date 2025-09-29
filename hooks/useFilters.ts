@@ -99,9 +99,12 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
 
   // Add username to filter - ONLY to URL
   const addToFilter = useCallback((username: string, color: string) => {
+    // Normalize username for comparison (URL stores normalized versions)
+    const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
     // Check if this exact username/color combo already exists in URL
     const exists = urlState.users.some(u => 
-      u.username === username && u.color === color
+      u.username === normalizedUsername && u.color === color
     );
     
     if (!exists) {
