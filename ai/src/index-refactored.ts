@@ -138,14 +138,9 @@ async function generateResponse(context: any): Promise<string | null> {
 async function postComment(text: string): Promise<boolean> {
   const entity = entityManager.getCurrentEntity();
   
-  // Convert 9-digit color to RGB for backwards compatibility
+  // Store color as-is (9-digit format)
+  // KV should store 9-digit format, not RGB
   let colorForStorage = entity.color;
-  if (/^\d{9}$/.test(entity.color)) {
-    const r = parseInt(entity.color.slice(0, 3), 10);
-    const g = parseInt(entity.color.slice(3, 6), 10);
-    const b = parseInt(entity.color.slice(6, 9), 10);
-    colorForStorage = `rgb(${r}, ${g}, ${b})`;
-  }
   
   const comment: Comment = {
     id: kvClient.generateId(),

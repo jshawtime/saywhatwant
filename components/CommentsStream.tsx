@@ -37,6 +37,7 @@ import { getCommentColor } from '@/modules/usernameColorGenerator';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { ContextMenu } from '@/components/ContextMenu';
 import { TitleContextMenu } from '@/components/TitleContextMenu';
+import { URLFilterManager } from '@/lib/url-filter-manager';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
