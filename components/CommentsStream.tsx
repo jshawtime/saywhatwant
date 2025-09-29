@@ -264,7 +264,28 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       storageKey: COMMENTS_STORAGE_KEY,
     },
     {
-      onOptimisticUpdate: (comment) => {
+      onOptimisticUpdate: async (comment) => {
+        // Save to IndexedDB (PRESENCE-BASED: Store your own messages)
+        try {
+          const storage = getStorage();
+          if (storage.isInitialized()) {
+            const messageToStore = {
+              id: comment.id?.toString() || '',
+              text: comment.text || '',
+              timestamp: comment.timestamp.toString(),
+              username: comment.username || '',
+              userColor: comment.color || '',
+              videoRef: undefined,
+              matchedFilters: [],
+              _store: 'permanent' as const
+            };
+            await storage.saveMessage(messageToStore);
+            console.log('[IndexedDB] Saved user message to storage');
+          }
+        } catch (err) {
+          console.warn('[IndexedDB] Failed to save user message:', err);
+        }
+        
         setAllComments(prev => {
           const combined = [...prev, comment];
           return trimToMaxMessages(combined);
@@ -588,9 +609,32 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         allIndexedDbMessages.current = indexedDbMessages;
         
-        // Fetch latest from cloud API
+        // Fetch latest from cloud API (PRESENCE-BASED: Should be 0 messages)
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
         const cloudMessages = data.comments;
+        
+        // Save any cloud messages to IndexedDB (though should be 0 with INITIAL_LOAD_COUNT=0)
+        if (cloudMessages.length > 0) {
+          try {
+            const storage = getStorage();
+            if (storage.isInitialized()) {
+              const messagesToStore = cloudMessages.map((msg: any) => ({
+                id: msg.id?.toString() || '',
+                text: msg.text || '',
+                timestamp: msg.timestamp.toString(),
+                username: msg.username || '',
+                userColor: msg.color || '',
+                videoRef: undefined,
+                matchedFilters: [],
+                _store: 'permanent' as const
+              }));
+              await storage.saveMessages(messagesToStore);
+              console.log(`[IndexedDB] Saved ${messagesToStore.length} initial cloud messages to storage`);
+            }
+          } catch (err) {
+            console.warn('[IndexedDB] Failed to save initial cloud messages:', err);
+          }
+        }
         
         // Merge messages: IndexedDB messages + new cloud messages (avoid duplicates)
         const messageMap = new Map<string, Comment>();
@@ -798,6 +842,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         if (newComments.length > 0) {
           console.log(`[Cursor Polling] Found ${newComments.length} new messages after timestamp ${latestTimestamp}`);
+          
+          // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
+          try {
+            const storage = getStorage();
+            if (storage.isInitialized()) {
+              const messagesToStore = newComments.map((msg: any) => ({
+                id: msg.id?.toString() || '',
+                text: msg.text || '',
+                timestamp: msg.timestamp.toString(),
+                username: msg.username || '',
+                userColor: msg.color || '',
+                videoRef: undefined,
+                matchedFilters: [],
+                _store: 'permanent' as const
+              }));
+              await storage.saveMessages(messagesToStore);
+              console.log(`[IndexedDB] Saved ${messagesToStore.length} new messages to storage`);
+            }
+          } catch (err) {
+            console.warn('[IndexedDB] Failed to save polled messages:', err);
+          }
           
           // Append new messages but respect max display limit
           setAllComments(prev => {
