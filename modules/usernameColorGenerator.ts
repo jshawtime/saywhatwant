@@ -13,7 +13,7 @@ import { nineDigitToRgb } from '@/modules/colorSystem';
 export function getCommentColor(comment: { color?: string; username?: string }): string {
   if (!comment.color) {
     // If no color exists, return a default gray (this shouldn't happen in normal flow)
-    return 'rgb(156, 163, 175)';
+    return '156163175'; // 9-digit format
   }
   
   // Convert 9-digit format to RGB for CSS

@@ -27,9 +27,9 @@ const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = 50; // Max new messages per poll
 const MAX_USERNAME_LENGTH = 16;
-const MAX_DISPLAY_MESSAGES = 500; // Maximum messages to display at once
-const INDEXEDDB_INITIAL_LOAD = 500; // Load 500 messages from IndexedDB initially
-const INDEXEDDB_LAZY_LOAD_CHUNK = 100; // Load 100 more on each lazy load
+const MAX_DISPLAY_MESSAGES = 2000; // Maximum messages to display at once (increased from 500)
+const INDEXEDDB_INITIAL_LOAD = 2000; // Load 2000 messages from IndexedDB initially
+const INDEXEDDB_LAZY_LOAD_CHUNK = 200; // Load 200 more on each lazy load
 
 // Import color functions from the color system
 import { getRandomColor, getDarkerColor, COLOR_PALETTE, nineDigitToRgb } from '@/modules/colorSystem';
