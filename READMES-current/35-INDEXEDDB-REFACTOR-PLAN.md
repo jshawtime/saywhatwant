@@ -16,19 +16,19 @@ The IndexedDB refactor implements a simple, presence-based message system where 
 - ✅ Phase 0: Comment type matches KV structure
 - ✅ Phase 1: SimpleIndexedDB manager created
 - ✅ Phase 2: Schema migration working
-- **🔴 Phase 3: BROKEN - Polling not getting NEW messages**
-- ⏳ Phase 4: Remove legacy systems
+- ✅ **Phase 3: FIXED - Polling now gets ALL messages since page load**
+- ⏳ Phase 4: Remove legacy systems (optional)
 - ⏳ Phase 5: Testing & validation
 
-### Critical Issue:
-**Problem**: After page load with `cloudInitialLoad: 0`, new messages from KV aren't appearing
-**Root Cause**: Polling is using "latest message timestamp" instead of "page load timestamp"
-**Result**: Missing all new messages that should stream in at ~5/minute
+### What Was Fixed:
+**Problem**: Messages weren't appearing with `cloudInitialLoad: 0`
+**Solution**: Changed polling to use page load timestamp instead of latest message timestamp
+**Result**: Now correctly gets ALL messages created while you're present (~5/minute)
 
-## 🔥 CRITICAL FIX NEEDED: Polling Logic
+## ✅ FIX IMPLEMENTED: Polling Logic
 
-### The Problem:
-Current polling in `CommentsStream.tsx` uses:
+### The Problem (FIXED):
+Previous polling in `CommentsStream.tsx` was using:
 ```typescript
 const latestTimestamp = allComments.length > 0
   ? Math.max(...allComments.map(c => c.timestamp))
