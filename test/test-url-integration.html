@@ -239,6 +239,7 @@
     <div class="test-card">
         <h3>🆕 Simple IndexedDB Manager (NEW!)</h3>
         <p class="description">Test the new simplified IndexedDB system that stores Comments exactly as KV</p>
+        <button class="test-button" onclick="initSimpleDB()" style="background-color: #fbbf24;">Initialize SimpleDB</button>
         <button class="test-button" onclick="testSimpleDB()" style="background-color: #10b981;">Test Simple DB</button>
         <button class="test-button" onclick="simpleDBDebug()" style="background-color: #3b82f6;">Debug Simple DB</button>
         <button class="test-button" onclick="simpleDBClear()" style="background-color: #ef4444;">Clear Simple DB</button>
@@ -489,15 +490,233 @@ npm run build && npm start`;
         });
         
         // SimpleIndexedDB Testing Functions (NEW!)
+        async function initSimpleDB() {
+            const statusDiv = document.getElementById('simpleDbStatus');
+            if (!statusDiv) return;
+            statusDiv.style.display = 'block';
+            
+            try {
+                // Create SimpleIndexedDB instance directly
+                const DB_NAME = 'SayWhatWant';
+                const DB_VERSION = 3;
+                const STORE_NAME = 'messages';
+                const MAX_MESSAGES = 100000;
+                const CLEANUP_THRESHOLD = 120000;
+                
+                class SimpleIndexedDB {
+                    constructor() {
+                        this.db = null;
+                        this.isInitialized = false;
+                    }
+                    
+                    async init() {
+                        if (this.isInitialized) return;
+                        
+                        return new Promise((resolve, reject) => {
+                            const request = indexedDB.open(DB_NAME, DB_VERSION);
+                            
+                            request.onerror = () => {
+                                console.error('[SimpleIndexedDB] Failed to open database:', request.error);
+                                reject(request.error);
+                            };
+                            
+                            request.onsuccess = () => {
+                                this.db = request.result;
+                                this.isInitialized = true;
+                                console.log('[SimpleIndexedDB] Database initialized successfully');
+                                resolve();
+                            };
+                            
+                            request.onupgradeneeded = (event) => {
+                                const db = event.target.result;
+                                console.log('[SimpleIndexedDB] Upgrading database from version', event.oldVersion, 'to', event.newVersion);
+                                
+                                // Delete old stores if they exist
+                                const oldStores = ['messages_temp', 'messages_perm', 'lifetime_filters', 'filter_stats'];
+                                oldStores.forEach(storeName => {
+                                    if (db.objectStoreNames.contains(storeName)) {
+                                        console.log(`[SimpleIndexedDB] Removing old store: ${storeName}`);
+                                        db.deleteObjectStore(storeName);
+                                    }
+                                });
+                                
+                                // Create new simple store if it doesn't exist
+                                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                                    console.log('[SimpleIndexedDB] Creating messages store');
+                                    const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                                    store.createIndex('timestamp', 'timestamp', { unique: false });
+                                    store.createIndex('username', 'username', { unique: false });
+                                    store.createIndex('color', 'color', { unique: false });
+                                    store.createIndex('message-type', 'message-type', { unique: false });
+                                }
+                            };
+                        });
+                    }
+                    
+                    isInit() {
+                        return this.isInitialized && this.db !== null;
+                    }
+                    
+                    async saveMessage(message) {
+                        if (!this.isInit()) {
+                            throw new Error('[SimpleIndexedDB] Database not initialized');
+                        }
+                        
+                        return new Promise((resolve, reject) => {
+                            const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+                            const store = transaction.objectStore(STORE_NAME);
+                            const request = store.put(message);
+                            
+                            request.onsuccess = () => {
+                                console.log('[SimpleIndexedDB] Message saved:', message.id);
+                                resolve();
+                            };
+                            
+                            request.onerror = () => {
+                                console.error('[SimpleIndexedDB] Failed to save message:', request.error);
+                                reject(request.error);
+                            };
+                        });
+                    }
+                    
+                    async getMessages(limit = 200, offset = 0) {
+                        if (!this.isInit()) {
+                            throw new Error('[SimpleIndexedDB] Database not initialized');
+                        }
+                        
+                        return new Promise((resolve, reject) => {
+                            const transaction = this.db.transaction([STORE_NAME], 'readonly');
+                            const store = transaction.objectStore(STORE_NAME);
+                            const index = store.index('timestamp');
+                            
+                            const messages = [];
+                            let skipped = 0;
+                            
+                            const request = index.openCursor(null, 'prev');
+                            
+                            request.onsuccess = (event) => {
+                                const cursor = event.target.result;
+                                
+                                if (cursor && messages.length < limit) {
+                                    if (skipped < offset) {
+                                        skipped++;
+                                        cursor.continue();
+                                    } else {
+                                        messages.push(cursor.value);
+                                        cursor.continue();
+                                    }
+                                } else {
+                                    console.log(`[SimpleIndexedDB] Retrieved ${messages.length} messages`);
+                                    resolve(messages);
+                                }
+                            };
+                            
+                            request.onerror = () => {
+                                console.error('[SimpleIndexedDB] Failed to retrieve messages:', request.error);
+                                reject(request.error);
+                            };
+                        });
+                    }
+                    
+                    async getMessageCount() {
+                        if (!this.isInit()) {
+                            throw new Error('[SimpleIndexedDB] Database not initialized');
+                        }
+                        
+                        return new Promise((resolve, reject) => {
+                            const transaction = this.db.transaction([STORE_NAME], 'readonly');
+                            const store = transaction.objectStore(STORE_NAME);
+                            const request = store.count();
+                            
+                            request.onsuccess = () => {
+                                resolve(request.result);
+                            };
+                            
+                            request.onerror = () => {
+                                console.error('[SimpleIndexedDB] Failed to count messages:', request.error);
+                                reject(request.error);
+                            };
+                        });
+                    }
+                    
+                    async clear() {
+                        if (!this.isInit()) {
+                            throw new Error('[SimpleIndexedDB] Database not initialized');
+                        }
+                        
+                        return new Promise((resolve, reject) => {
+                            const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+                            const store = transaction.objectStore(STORE_NAME);
+                            const request = store.clear();
+                            
+                            request.onsuccess = () => {
+                                console.log('[SimpleIndexedDB] All messages cleared');
+                                resolve();
+                            };
+                            
+                            request.onerror = () => {
+                                console.error('[SimpleIndexedDB] Failed to clear messages:', request.error);
+                                reject(request.error);
+                            };
+                        });
+                    }
+                    
+                    async debug() {
+                        console.log('=== SimpleIndexedDB Debug ===');
+                        console.log('Database:', this.db?.name);
+                        console.log('Version:', this.db?.version);
+                        console.log('Stores:', this.db ? Array.from(this.db.objectStoreNames) : 'Not initialized');
+                        console.log('Initialized:', this.isInitialized);
+                        
+                        if (this.isInit()) {
+                            const count = await this.getMessageCount();
+                            console.log('Message Count:', count);
+                            
+                            const sample = await this.getMessages(1);
+                            if (sample.length > 0) {
+                                console.log('Sample Message:', sample[0]);
+                                console.log('Has all KV fields:', {
+                                    id: 'id' in sample[0],
+                                    text: 'text' in sample[0],
+                                    timestamp: 'timestamp' in sample[0],
+                                    username: 'username' in sample[0],
+                                    color: 'color' in sample[0],
+                                    domain: 'domain' in sample[0],
+                                    language: 'language' in sample[0],
+                                    'message-type': 'message-type' in sample[0],
+                                    misc: 'misc' in sample[0]
+                                });
+                            }
+                        }
+                        
+                        console.log('=======================');
+                    }
+                }
+                
+                // Create and initialize
+                window.simpleIndexedDB = new SimpleIndexedDB();
+                await window.simpleIndexedDB.init();
+                
+                statusDiv.innerHTML = '<div style="color: #10b981;">✅ SimpleIndexedDB initialized and ready!</div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error initializing: ${error.message}</div>`;
+                console.error('Init error:', error);
+            }
+        }
+        
         async function testSimpleDB() {
             const statusDiv = document.getElementById('simpleDbStatus');
             if (!statusDiv) return;
             statusDiv.style.display = 'block';
             
             try {
-                // Dynamic import of SimpleIndexedDB
-                const module = await import('/modules/storage/simple-indexeddb.js');
-                const { simpleIndexedDB } = module;
+                // Access SimpleIndexedDB directly (it's exposed globally in the module)
+                if (typeof window.simpleIndexedDB === 'undefined') {
+                    statusDiv.innerHTML = '<div style="color: #ef4444;">❌ SimpleIndexedDB not loaded. Please visit the main app first to initialize it.</div>';
+                    return;
+                }
+                
+                const simpleIndexedDB = window.simpleIndexedDB;
                 
                 // Initialize
                 await simpleIndexedDB.init();
@@ -538,8 +757,12 @@ ${messages.map(m => `<div style="color: #d1d5db; padding-left: 10px;">• ${m.us
             statusDiv.style.display = 'block';
             
             try {
-                const module = await import('/modules/storage/simple-indexeddb.js');
-                const { simpleIndexedDB } = module;
+                if (typeof window.simpleIndexedDB === 'undefined') {
+                    statusDiv.innerHTML = '<div style="color: #ef4444;">❌ SimpleIndexedDB not loaded. Please visit the main app first to initialize it.</div>';
+                    return;
+                }
+                
+                const simpleIndexedDB = window.simpleIndexedDB;
                 
                 await simpleIndexedDB.debug();
                 statusDiv.innerHTML = '<div style="color: #10b981;">✅ Debug info logged to console</div>';
@@ -556,8 +779,12 @@ ${messages.map(m => `<div style="color: #d1d5db; padding-left: 10px;">• ${m.us
             if (!confirm('Clear all messages from SimpleIndexedDB?')) return;
             
             try {
-                const module = await import('/modules/storage/simple-indexeddb.js');
-                const { simpleIndexedDB } = module;
+                if (typeof window.simpleIndexedDB === 'undefined') {
+                    statusDiv.innerHTML = '<div style="color: #ef4444;">❌ SimpleIndexedDB not loaded. Please visit the main app first to initialize it.</div>';
+                    return;
+                }
+                
+                const simpleIndexedDB = window.simpleIndexedDB;
                 
                 await simpleIndexedDB.clear();
                 statusDiv.innerHTML = '<div style="color: #10b981;">✅ SimpleIndexedDB cleared</div>';

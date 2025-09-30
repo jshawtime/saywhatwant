@@ -336,7 +336,7 @@ class SimpleIndexedDB {
 // Export singleton instance
 export const simpleIndexedDB = new SimpleIndexedDB();
 
-// Make available for debugging in browser console
+// Expose globally for debugging and test page
 if (typeof window !== 'undefined') {
   (window as any).simpleIndexedDB = simpleIndexedDB;
 }

@@ -26,7 +26,7 @@ export interface MessageSystemConfig {
 
 export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Cloud/KV Settings
-  cloudInitialLoad: 0,          // NO catch-up - be present or miss out
+  cloudInitialLoad: 50,         // Get last 50 messages to ensure some content
   cloudPollingInterval: 5000,   // Poll every 5 seconds
   cloudPollBatch: 200,           // Max n per poll
   

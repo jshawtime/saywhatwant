@@ -583,11 +583,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         allIndexedDbMessages.current = indexedDbMessages;
         
-        // Fetch latest from cloud API (PRESENCE-BASED: Should be 0 messages)
+        // Fetch latest from cloud API (Get recent messages to populate IndexedDB)
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
         const cloudMessages = data.comments;
         
-        // Save any cloud messages to IndexedDB (though should be 0 with INITIAL_LOAD_COUNT=0)
+        // Save any cloud messages to IndexedDB
         if (cloudMessages.length > 0) {
           try {
             if (simpleIndexedDB.isInit()) {
