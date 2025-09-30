@@ -13,8 +13,7 @@ import {
   markFilterAsUnread,
   NotificationSound 
 } from '@/modules/notificationSystem';
-import { getStorage } from '@/modules/storage';
-import { initializeIndexedDBSystem } from '@/modules/storage/init';
+import { simpleIndexedDB } from '@/modules/storage/simple-indexeddb';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
@@ -267,23 +266,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       onOptimisticUpdate: async (comment) => {
         // Save to IndexedDB (PRESENCE-BASED: Store your own messages)
         try {
-          const storage = getStorage();
-          if (storage.isInitialized()) {
-            const messageToStore = {
-              id: comment.id?.toString() || '',
-              text: comment.text || '',
-              timestamp: comment.timestamp.toString(),
-              username: comment.username || '',
-              userColor: comment.color || '',  // Use color from Comment type
-              videoRef: undefined,
-              matchedFilters: [],
-              _store: 'permanent' as const
-            };
-            await storage.saveMessage(messageToStore);
-            console.log('[IndexedDB] Saved user message to storage');
+          if (simpleIndexedDB.isInit()) {
+            // Store Comment exactly as-is - no transformation needed!
+            await simpleIndexedDB.saveMessage(comment);
+            console.log('[SimpleIndexedDB] Saved user message to storage');
           }
         } catch (err) {
-          console.warn('[IndexedDB] Failed to save user message:', err);
+          console.warn('[SimpleIndexedDB] Failed to save user message:', err);
         }
         
         setAllComments(prev => {
@@ -574,38 +563,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         // Initialize IndexedDB and load existing messages
         try {
-          await initializeIndexedDBSystem();
-          const storage = getStorage();
+          await simpleIndexedDB.init();
           
-          if (storage.isInitialized()) {
+          if (simpleIndexedDB.isInit()) {
             // Load messages from IndexedDB (PRESENCE-BASED)
-            const messages = await storage.getMessages({
-              store: 'all',
-              limit: INDEXEDDB_INITIAL_LOAD,
-              offset: 0
-            });
+            // SimpleIndexedDB returns Comments exactly as stored - no transformation needed!
+            indexedDbMessages = await simpleIndexedDB.getMessages(INDEXEDDB_INITIAL_LOAD, 0);
             
-            indexedDbMessages = messages.map((msg: any) => ({
-              id: msg.id?.toString() || '',
-              text: msg.text || '',
-              timestamp: typeof msg.timestamp === 'string' ? parseInt(msg.timestamp, 10) : msg.timestamp,
-              username: msg.username || '',
-              color: msg.color || msg.userColor || '',  // Handle both new (color) and old (userColor) format
-              domain: msg.domain || 'saywhatwant.app',
-              language: msg.language || 'en',
-              'message-type': msg['message-type'] || 'human',
-              misc: msg.misc || ''  // Add missing misc field
-            }));
-            
-            console.log(`[IndexedDB] Loaded ${indexedDbMessages.length} messages from storage`);
+            console.log(`[SimpleIndexedDB] Loaded ${indexedDbMessages.length} messages from storage`);
             
             // Check if there are more messages available
-            const totalCount = await storage.getMessageCount('all');
+            const totalCount = await simpleIndexedDB.getMessageCount();
             setHasMoreInIndexedDb(totalCount > INDEXEDDB_INITIAL_LOAD);
-            console.log(`[IndexedDB] Total messages in storage: ${totalCount}, has more: ${totalCount > INDEXEDDB_INITIAL_LOAD}`);
+            console.log(`[SimpleIndexedDB] Total messages in storage: ${totalCount}, has more: ${totalCount > INDEXEDDB_INITIAL_LOAD}`);
           }
         } catch (err) {
-          console.warn('[IndexedDB] Error loading messages:', err);
+          console.warn('[SimpleIndexedDB] Error loading messages:', err);
         }
         
         allIndexedDbMessages.current = indexedDbMessages;
@@ -617,23 +590,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Save any cloud messages to IndexedDB (though should be 0 with INITIAL_LOAD_COUNT=0)
         if (cloudMessages.length > 0) {
           try {
-            const storage = getStorage();
-            if (storage.isInitialized()) {
-              const messagesToStore = cloudMessages.map((msg: any) => ({
-                id: msg.id?.toString() || '',
-                text: msg.text || '',
-                timestamp: msg.timestamp.toString(),
-                username: msg.username || '',
-                userColor: msg.color || '',  // Use color from cloud message
-                videoRef: undefined,
-                matchedFilters: [],
-                _store: 'permanent' as const
-              }));
-              await storage.saveMessages(messagesToStore);
-              console.log(`[IndexedDB] Saved ${messagesToStore.length} initial cloud messages to storage`);
+            if (simpleIndexedDB.isInit()) {
+              // Cloud messages are already Comments - no transformation needed!
+              await simpleIndexedDB.saveMessages(cloudMessages);
+              console.log(`[SimpleIndexedDB] Saved ${cloudMessages.length} initial cloud messages to storage`);
             }
           } catch (err) {
-            console.warn('[IndexedDB] Failed to save initial cloud messages:', err);
+            console.warn('[SimpleIndexedDB] Failed to save initial cloud messages:', err);
           }
         }
         
@@ -846,24 +809,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           
           // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
           try {
-            const storage = getStorage();
-            if (storage.isInitialized()) {
-              const messagesToStore = newComments.map((msg: any) => ({
-                id: msg.id?.toString() || '',
-                text: msg.text || '',
-                timestamp: msg.timestamp.toString(),
-                username: msg.username || '',
-                userColor: msg.color || '',  // Use color from polled message
-                videoRef: undefined,
-                matchedFilters: [],
-                _store: 'permanent' as const
-              }));
-              await storage.saveMessages(messagesToStore);
-              console.log(`[IndexedDB] Saved ${messagesToStore.length} new messages to storage`);
-              console.log('[IndexedDB] First message saved:', messagesToStore[0]);
+            if (simpleIndexedDB.isInit()) {
+              // New comments are already Comments - no transformation needed!
+              await simpleIndexedDB.saveMessages(newComments);
+              console.log(`[SimpleIndexedDB] Saved ${newComments.length} new messages to storage`);
+              if (newComments.length > 0) {
+                console.log('[SimpleIndexedDB] First message saved:', newComments[0]);
+              }
             }
           } catch (err) {
-            console.warn('[IndexedDB] Failed to save polled messages:', err);
+            console.warn('[SimpleIndexedDB] Failed to save polled messages:', err);
           }
           
           // Append new messages but respect max display limit

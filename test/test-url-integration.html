@@ -237,6 +237,15 @@
     </div>
     
     <div class="test-card">
+        <h3>🆕 Simple IndexedDB Manager (NEW!)</h3>
+        <p class="description">Test the new simplified IndexedDB system that stores Comments exactly as KV</p>
+        <button class="test-button" onclick="testSimpleDB()" style="background-color: #10b981;">Test Simple DB</button>
+        <button class="test-button" onclick="simpleDBDebug()" style="background-color: #3b82f6;">Debug Simple DB</button>
+        <button class="test-button" onclick="simpleDBClear()" style="background-color: #ef4444;">Clear Simple DB</button>
+        <div id="simpleDbStatus" style="margin-top: 20px; padding: 15px; background: #1f2937; border-radius: 4px; display: none;"></div>
+    </div>
+    
+    <div class="test-card">
         <h3>View KV Storage Status</h3>
         <p class="description">Monitor KV store contents and color formats in real-time</p>
             <button class="test-button" onclick="checkKVStatus()">Check KV Status</button>
@@ -479,7 +488,85 @@ npm run build && npm start`;
             }
         });
         
-        // IndexedDB Management Functions
+        // SimpleIndexedDB Testing Functions (NEW!)
+        async function testSimpleDB() {
+            const statusDiv = document.getElementById('simpleDbStatus');
+            if (!statusDiv) return;
+            statusDiv.style.display = 'block';
+            
+            try {
+                // Dynamic import of SimpleIndexedDB
+                const module = await import('/modules/storage/simple-indexeddb.js');
+                const { simpleIndexedDB } = module;
+                
+                // Initialize
+                await simpleIndexedDB.init();
+                
+                // Test saving a message
+                const testMessage = {
+                    id: `test-${Date.now()}`,
+                    text: 'Test message from test-url-integration',
+                    timestamp: Date.now(),
+                    username: 'TestUser',
+                    color: '255000000',
+                    domain: 'saywhatwant.app',
+                    language: 'en',
+                    'message-type': 'human',
+                    misc: ''
+                };
+                
+                await simpleIndexedDB.saveMessage(testMessage);
+                
+                // Get count
+                const count = await simpleIndexedDB.getMessageCount();
+                
+                // Get latest messages
+                const messages = await simpleIndexedDB.getMessages(5, 0);
+                
+                statusDiv.innerHTML = `<div style="color: #10b981;">✅ SimpleIndexedDB Working!</div>
+<div style="color: #fbbf24;">Message Count: ${count}</div>
+<div style="color: #60a5fa;">Latest 5 messages:</div>
+${messages.map(m => `<div style="color: #d1d5db; padding-left: 10px;">• ${m.username}: ${m.text.substring(0, 50)}...</div>`).join('')}`;
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function simpleDBDebug() {
+            const statusDiv = document.getElementById('simpleDbStatus');
+            if (!statusDiv) return;
+            statusDiv.style.display = 'block';
+            
+            try {
+                const module = await import('/modules/storage/simple-indexeddb.js');
+                const { simpleIndexedDB } = module;
+                
+                await simpleIndexedDB.debug();
+                statusDiv.innerHTML = '<div style="color: #10b981;">✅ Debug info logged to console</div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function simpleDBClear() {
+            const statusDiv = document.getElementById('simpleDbStatus');
+            if (!statusDiv) return;
+            statusDiv.style.display = 'block';
+            
+            if (!confirm('Clear all messages from SimpleIndexedDB?')) return;
+            
+            try {
+                const module = await import('/modules/storage/simple-indexeddb.js');
+                const { simpleIndexedDB } = module;
+                
+                await simpleIndexedDB.clear();
+                statusDiv.innerHTML = '<div style="color: #10b981;">✅ SimpleIndexedDB cleared</div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Legacy IndexedDB Management Functions
         async function diagnoseProblem() {
             const statusDiv = document.getElementById('db-status');
             statusDiv.style.display = 'block';
