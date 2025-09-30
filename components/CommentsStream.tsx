@@ -274,7 +274,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               text: comment.text || '',
               timestamp: comment.timestamp.toString(),
               username: comment.username || '',
-              userColor: comment.color || comment.userColor || '',  // Check both color fields
+              userColor: comment.color || '',  // Use color from Comment type
               videoRef: undefined,
               matchedFilters: [],
               _store: 'permanent' as const
@@ -623,7 +623,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 text: msg.text || '',
                 timestamp: msg.timestamp.toString(),
                 username: msg.username || '',
-                userColor: msg.color || msg.userColor || '',  // Check both color fields
+                userColor: msg.color || '',  // Use color from cloud message
                 videoRef: undefined,
                 matchedFilters: [],
                 _store: 'permanent' as const
@@ -852,7 +852,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 text: msg.text || '',
                 timestamp: msg.timestamp.toString(),
                 username: msg.username || '',
-                userColor: msg.color || msg.userColor || '',  // Check both color fields
+                userColor: msg.color || '',  // Use color from polled message
                 videoRef: undefined,
                 matchedFilters: [],
                 _store: 'permanent' as const
