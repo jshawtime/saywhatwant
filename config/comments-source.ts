@@ -17,8 +17,8 @@ export const COMMENTS_CONFIG = {
   // Maximum comments to store locally (when using localStorage)
   maxLocalComments: 1000,
   
-  // Initial load count (PRESENCE-BASED: minimal catch-up from KV)
-  initialLoadCount: 50,  // Get last 50 messages to ensure some content
+  // Initial load count (PRESENCE-BASED: NO catch-up from KV)
+  initialLoadCount: 0,  // Pure presence - only see what happens while you're here
   
   // Lazy load batch size  
   lazyLoadBatch: 200,

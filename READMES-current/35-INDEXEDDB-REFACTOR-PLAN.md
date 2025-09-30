@@ -2,21 +2,62 @@
 
 ## 📋 Executive Summary
 
-**🎉 UPDATE: Phases 0-3 COMPLETE! The new SimpleIndexedDB system is now live and working!**
+**⚠️ UPDATE: Critical polling issue identified - NEW MESSAGES NOT APPEARING**
 
-The IndexedDB refactor has successfully simplified the system to store KV data exactly as-is. The new `SimpleIndexedDB` manager is integrated into CommentsStream.tsx and functioning perfectly.
+The IndexedDB refactor implements a simple, presence-based message system where users build their own history.
 
-### ✅ Completed (Phases 0-3)
-- Comment type matches exact KV structure
-- SimpleIndexedDB manager created with automatic cleanup
-- Schema migration built-in (removes old stores)
-- CommentsStream fully integrated
+### The Simple Flow (THIS IS ALL IT IS):
+1. **Messages produced → KV**
+2. **App polls KV → receives NEW messages (created since page load)**
+3. **Received messages → SimpleIndexedDB**
+4. **On page load: SimpleIndexedDB → serves your history to app**
 
-### 🚀 Remaining Work (Phases 4-5)
-- Remove legacy storage systems
-- Final testing and validation
+### Current Status:
+- ✅ Phase 0: Comment type matches KV structure
+- ✅ Phase 1: SimpleIndexedDB manager created
+- ✅ Phase 2: Schema migration working
+- **🔴 Phase 3: BROKEN - Polling not getting NEW messages**
+- ⏳ Phase 4: Remove legacy systems
+- ⏳ Phase 5: Testing & validation
 
-**Original Goal:** This refactor simplifies the system to store KV data exactly as-is, remove all legacy filter systems, and create a dedicated component for IndexedDB operations.
+### Critical Issue:
+**Problem**: After page load with `cloudInitialLoad: 0`, new messages from KV aren't appearing
+**Root Cause**: Polling is using "latest message timestamp" instead of "page load timestamp"
+**Result**: Missing all new messages that should stream in at ~5/minute
+
+## 🔥 CRITICAL FIX NEEDED: Polling Logic
+
+### The Problem:
+Current polling in `CommentsStream.tsx` uses:
+```typescript
+const latestTimestamp = allComments.length > 0
+  ? Math.max(...allComments.map(c => c.timestamp))
+  : Date.now() - 60000;
+```
+This asks for messages AFTER the latest message we have, which is WRONG for a presence-based system.
+
+### The Solution:
+Track when the page loaded and poll for messages created after that:
+```typescript
+// On component mount
+const pageLoadTimestamp = useRef(Date.now());
+
+// When polling
+const response = await fetch(
+  `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}`
+);
+```
+
+This ensures we get ALL messages created since we opened the page.
+
+### Configuration (message-system.ts):
+```typescript
+{
+  cloudInitialLoad: 0,           // NO catch-up, pure presence
+  cloudPollingInterval: 5000,    // Poll every 5 seconds
+  cloudPollBatch: 200,           // Get up to 200 new messages
+}
+```
 
 ## 🔴 Current State Analysis
 

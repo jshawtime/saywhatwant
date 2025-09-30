@@ -160,6 +160,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const usernameRef = useRef<HTMLInputElement>(null);
   const lastFetchTimeRef = useRef<number>(Date.now());
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const pageLoadTimestamp = useRef<number>(Date.now()); // Track when page loaded for presence-based polling
   
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
@@ -583,11 +584,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         allIndexedDbMessages.current = indexedDbMessages;
         
-        // Fetch latest from cloud API (Get recent messages to populate IndexedDB)
+        // Fetch latest from cloud API (PRESENCE-BASED: Should be 0 messages)
         const data = await fetchComments(0, INITIAL_LOAD_COUNT);
         const cloudMessages = data.comments;
         
-        // Save any cloud messages to IndexedDB
+        // Save any cloud messages to IndexedDB (should be 0 with INITIAL_LOAD_COUNT=0)
         if (cloudMessages.length > 0) {
           try {
             if (simpleIndexedDB.isInit()) {
@@ -782,20 +783,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [filterUsernames, filterWords, userColor]);
 
-  // Check for new comments using cursor-based polling (ultra efficient!)
+  // Check for new comments - presence-based (only messages since page load)
   const checkForNewComments = useCallback(async () => {
       try {
       let newComments: Comment[] = [];
         
       if (isCloudAPIEnabled()) {
-        // Get the latest timestamp we have
-        const latestTimestamp = allComments.length > 0 
-          ? Math.max(...allComments.map(c => c.timestamp))
-          : Date.now() - 60000; // Start from 1 minute ago if no comments
-        
-        // Use cursor-based polling - only get messages AFTER our latest
+        // PRESENCE-BASED: Get all messages created since we loaded the page
+        // This ensures we see everything that happens while we're present
         const response = await fetch(
-          `${COMMENTS_CONFIG.apiUrl}?after=${latestTimestamp}&limit=${POLL_BATCH_LIMIT}`
+          `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}`
         );
         
         if (!response.ok) {
@@ -805,7 +802,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         newComments = await response.json();
         
         if (newComments.length > 0) {
-          console.log(`[Cursor Polling] Found ${newComments.length} new messages after timestamp ${latestTimestamp}`);
+          console.log(`[Presence Polling] Found ${newComments.length} new messages since page load at ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
           
           // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
           try {
@@ -821,11 +818,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             console.warn('[SimpleIndexedDB] Failed to save polled messages:', err);
           }
           
-          // Append new messages but respect max display limit
+          // Append new messages but avoid duplicates and respect max display limit
           setAllComments(prev => {
-            const combined = [...prev, ...newComments];
-            // Trim to max limit (keep newest messages)
-            return trimToMaxMessages(combined);
+            // Create a Set of existing IDs for fast lookup
+            const existingIds = new Set(prev.map(c => c.id));
+            // Only add messages we don't already have
+            const uniqueNewMessages = newComments.filter(msg => !existingIds.has(msg.id));
+            
+            if (uniqueNewMessages.length > 0) {
+              console.log(`[Presence Polling] Adding ${uniqueNewMessages.length} unique messages (${newComments.length - uniqueNewMessages.length} duplicates filtered)`);
+              const combined = [...prev, ...uniqueNewMessages];
+              // Trim to max limit (keep newest messages)
+              return trimToMaxMessages(combined);
+            }
+            return prev;
           });
         }
       } else {
@@ -868,7 +874,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       } catch (err) {
         console.error('[Comments] Polling error:', err);
       }
-  }, [allComments, loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages, 
+  }, [loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages, 
       isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches]);
   
   // Use the modular polling system
