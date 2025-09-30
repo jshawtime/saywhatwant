@@ -1486,7 +1486,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             
             {/* Username Input and TV Toggle - Always Visible */}
             <div className="flex items-center gap-2">
-              {/* Message counter - small and subtle, inheriting user color */}
+              {/* Messages window count */}
+              {displayedComments.length > 0 && (
+                <span 
+                  className="text-xs mr-2 opacity-60" 
+                  style={{ color: userColorRgb }}
+                  title="Messages in current window"
+                >
+                  {formatNumber(displayedComments.length)}
+                </span>
+              )}
+              
+              {/* Global message counter - small and subtle, inheriting user color */}
               {messageCount > 0 && (
                 <span 
                   className="text-xs mr-2 opacity-60" 

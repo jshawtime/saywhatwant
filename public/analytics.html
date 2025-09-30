@@ -397,9 +397,9 @@
             </h3>
             
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('kv')">KV Store (Latest 20)</div>
-                <div class="tab" onclick="switchTab('indexeddb')">IndexedDB (Latest 20)</div>
-                <div class="tab" onclick="switchTab('users')">User Activity</div>
+                <div class="tab active" onclick="switchTab('kv', event)">KV Store (Latest 20)</div>
+                <div class="tab" onclick="switchTab('indexeddb', event)">IndexedDB (Latest 20)</div>
+                <div class="tab" onclick="switchTab('users', event)">User Activity</div>
             </div>
             
             <div id="messages-container">
@@ -699,13 +699,20 @@
         }
         
         // Switch tab
-        async function switchTab(tab) {
+        async function switchTab(tab, event = null) {
             currentTab = tab;
             
             // Update tab styling
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event?.target?.classList.add('active') || 
-                document.querySelector(`.tab:nth-child(${tab === 'kv' ? 1 : tab === 'indexeddb' ? 2 : 3})`).classList.add('active');
+            if (event?.target) {
+                event.target.classList.add('active');
+            } else {
+                const tabIndex = tab === 'kv' ? 1 : tab === 'indexeddb' ? 2 : 3;
+                const tabElement = document.querySelector(`.tab:nth-child(${tabIndex})`);
+                if (tabElement) {
+                    tabElement.classList.add('active');
+                }
+            }
             
             // Update content
             const container = document.getElementById('messages-container');
