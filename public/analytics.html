@@ -538,10 +538,13 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const messages = await response.json();
+                const data = await response.json();
+                
+                // API returns { comments: [...], total: n }
+                const messages = data.comments || data || [];
                 
                 if (!Array.isArray(messages)) {
-                    throw new Error('Invalid response format');
+                    throw new Error('Invalid response format - expected array of messages');
                 }
                 
                 // Update KV count
