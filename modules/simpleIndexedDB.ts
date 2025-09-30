@@ -1,51 +1,61 @@
 /**
- * Simple IndexedDB Manager
- * Stores Comment data exactly as received from KV - no transformation
+ * SimpleIndexedDB - The ONLY storage system for Say What Want
+ * Stores Comment objects exactly as they come from KV
+ * 
+ * THIS IS THE ONLY INDEXEDDB SYSTEM IN USE
+ * ALL OLD STORAGE SYSTEMS HAVE BEEN REMOVED
  */
 
-import type { Comment } from '@/types';
+import { Comment } from '@/types';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
 const DB_NAME = 'SayWhatWant';
-const DB_VERSION = 3; // New version for migration
+const DB_VERSION = 3;
 const STORE_NAME = 'messages';
 
-// Use config from message-system.ts
-const MAX_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxIndexedDBMessages; // 100000
-const CLEANUP_THRESHOLD = MESSAGE_SYSTEM_CONFIG.indexedDBCleanupThreshold; // 120000
+// Use config values for limits
+const MAX_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxIndexedDBMessages;
+const CLEANUP_THRESHOLD = MESSAGE_SYSTEM_CONFIG.indexedDBCleanupThreshold;
 
+/**
+ * SimpleIndexedDB - Direct storage for Comment objects
+ * No transformation, no filters, just storage
+ */
 class SimpleIndexedDB {
   private db: IDBDatabase | null = null;
   private isInitialized = false;
-  
+
   /**
    * Initialize the database
+   * Creates or upgrades the database schema
    */
   async init(): Promise<void> {
-    if (this.isInitialized) return;
-    
+    if (this.isInitialized) {
+      console.log('[SimpleIndexedDB] Already initialized');
+      return;
+    }
+
     return new Promise((resolve, reject) => {
+      console.log('[SimpleIndexedDB] Initializing database...');
       const request = indexedDB.open(DB_NAME, DB_VERSION);
-      
+
       request.onerror = () => {
         console.error('[SimpleIndexedDB] Failed to open database:', request.error);
         reject(request.error);
       };
-      
+
       request.onsuccess = () => {
         this.db = request.result;
         this.isInitialized = true;
         console.log('[SimpleIndexedDB] Database initialized successfully');
         resolve();
       };
-      
+
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        const transaction = (event.target as IDBOpenDBRequest).transaction!;
-        
         console.log('[SimpleIndexedDB] Upgrading database from version', event.oldVersion, 'to', event.newVersion);
-        
-        // Delete old stores if they exist (migration from old structure)
+
+        // Delete ALL old stores - we only use 'messages' now
         const oldStores = ['messages_temp', 'messages_perm', 'lifetime_filters', 'filter_stats'];
         oldStores.forEach(storeName => {
           if (db.objectStoreNames.contains(storeName)) {
@@ -53,13 +63,11 @@ class SimpleIndexedDB {
             db.deleteObjectStore(storeName);
           }
         });
-        
+
         // Create new simple store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           console.log('[SimpleIndexedDB] Creating messages store');
           const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-          
-          // Add indexes for efficient queries
           store.createIndex('timestamp', 'timestamp', { unique: false });
           store.createIndex('username', 'username', { unique: false });
           store.createIndex('color', 'color', { unique: false });
@@ -68,98 +76,89 @@ class SimpleIndexedDB {
       };
     });
   }
-  
+
   /**
    * Check if database is initialized
    */
   isInit(): boolean {
     return this.isInitialized && this.db !== null;
   }
-  
+
   /**
    * Save a single message
-   * Stores EXACTLY as received from KV - no transformation!
+   * Stores Comment exactly as-is
    */
   async saveMessage(message: Comment): Promise<void> {
     if (!this.isInit()) {
+      console.error('[SimpleIndexedDB] Cannot save - database not initialized');
       throw new Error('[SimpleIndexedDB] Database not initialized');
     }
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
-      // Store message EXACTLY as-is - all fields preserved
       const request = store.put(message);
-      
+
       request.onsuccess = () => {
         console.log('[SimpleIndexedDB] Message saved:', message.id);
+        this.performCleanupIfNeeded();
         resolve();
       };
-      
+
       request.onerror = () => {
         console.error('[SimpleIndexedDB] Failed to save message:', request.error);
         reject(request.error);
       };
     });
   }
-  
+
   /**
    * Save multiple messages in bulk
    * Checks for cleanup threshold
    */
   async saveMessages(messages: Comment[]): Promise<void> {
     if (!this.isInit()) {
+      console.error('[SimpleIndexedDB] Cannot save - database not initialized');
       throw new Error('[SimpleIndexedDB] Database not initialized');
     }
-    
-    // Check if we need to cleanup
-    const count = await this.getMessageCount();
-    if (count > CLEANUP_THRESHOLD) {
-      console.log(`[SimpleIndexedDB] Message count (${count}) exceeds threshold (${CLEANUP_THRESHOLD}), triggering cleanup`);
-      await this.cleanup(MAX_MESSAGES);
-    }
-    
+
+    if (messages.length === 0) return;
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
       let savedCount = 0;
-      
+
       // Save each message
       messages.forEach(message => {
         const request = store.put(message);
-        
         request.onsuccess = () => {
           savedCount++;
           if (savedCount === messages.length) {
-            console.log(`[SimpleIndexedDB] Bulk saved ${savedCount} messages`);
+            console.log(`[SimpleIndexedDB] Saved ${savedCount} messages`);
+            this.performCleanupIfNeeded();
             resolve();
           }
         };
-        
-        request.onerror = () => {
-          console.error('[SimpleIndexedDB] Failed to save message in bulk:', request.error);
-          reject(request.error);
-        };
       });
-      
-      // Handle empty array case
-      if (messages.length === 0) {
-        resolve();
-      }
+
+      transaction.onerror = () => {
+        console.error('[SimpleIndexedDB] Failed to save messages:', transaction.error);
+        reject(transaction.error);
+      };
     });
   }
-  
+
   /**
-   * Get messages with pagination
-   * Returns messages in exact KV format
+   * Get messages from the database
+   * Returns newest messages first
    */
-  async getMessages(limit = 200, offset = 0): Promise<Comment[]> {
+  async getMessages(limit: number = 200, offset: number = 0): Promise<Comment[]> {
     if (!this.isInit()) {
-      throw new Error('[SimpleIndexedDB] Database not initialized');
+      console.warn('[SimpleIndexedDB] Cannot get messages - database not initialized');
+      return [];
     }
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
@@ -168,7 +167,7 @@ class SimpleIndexedDB {
       const messages: Comment[] = [];
       let skipped = 0;
       
-      // Open cursor to iterate through messages (newest first)
+      // Open cursor in reverse order (newest first)
       const request = index.openCursor(null, 'prev');
       
       request.onsuccess = (event) => {
@@ -179,7 +178,6 @@ class SimpleIndexedDB {
             skipped++;
             cursor.continue();
           } else {
-            // Return message exactly as stored - no transformation
             messages.push(cursor.value);
             cursor.continue();
           }
@@ -188,114 +186,106 @@ class SimpleIndexedDB {
           resolve(messages);
         }
       };
-      
+
       request.onerror = () => {
         console.error('[SimpleIndexedDB] Failed to retrieve messages:', request.error);
         reject(request.error);
       };
     });
   }
-  
+
   /**
    * Get total message count
    */
   async getMessageCount(): Promise<number> {
     if (!this.isInit()) {
-      throw new Error('[SimpleIndexedDB] Database not initialized');
+      console.warn('[SimpleIndexedDB] Cannot get count - database not initialized');
+      return 0;
     }
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.count();
-      
+
       request.onsuccess = () => {
         resolve(request.result);
       };
-      
+
       request.onerror = () => {
         console.error('[SimpleIndexedDB] Failed to count messages:', request.error);
         reject(request.error);
       };
     });
   }
-  
-  /**
-   * FIFO cleanup when over threshold
-   * Keeps most recent `keepCount` messages
-   */
-  async cleanup(keepCount: number): Promise<void> {
-    if (!this.isInit()) {
-      throw new Error('[SimpleIndexedDB] Database not initialized');
-    }
-    
-    const totalCount = await this.getMessageCount();
-    
-    if (totalCount <= keepCount) {
-      console.log(`[SimpleIndexedDB] No cleanup needed (${totalCount} <= ${keepCount})`);
-      return;
-    }
-    
-    const deleteCount = totalCount - keepCount;
-    console.log(`[SimpleIndexedDB] Cleaning up ${deleteCount} old messages (keeping ${keepCount} newest)`);
-    
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const index = store.index('timestamp');
-      
-      let deletedCount = 0;
-      
-      // Open cursor to iterate through oldest messages first
-      const request = index.openCursor(null, 'next');
-      
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest).result;
-        
-        if (cursor && deletedCount < deleteCount) {
-          cursor.delete();
-          deletedCount++;
-          cursor.continue();
-        } else {
-          console.log(`[SimpleIndexedDB] Cleanup complete: deleted ${deletedCount} messages`);
-          resolve();
-        }
-      };
-      
-      request.onerror = () => {
-        console.error('[SimpleIndexedDB] Cleanup failed:', request.error);
-        reject(request.error);
-      };
-    });
-  }
-  
+
   /**
    * Clear all messages
    */
   async clear(): Promise<void> {
     if (!this.isInit()) {
+      console.warn('[SimpleIndexedDB] Cannot clear - database not initialized');
       throw new Error('[SimpleIndexedDB] Database not initialized');
     }
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.clear();
-      
+
       request.onsuccess = () => {
         console.log('[SimpleIndexedDB] All messages cleared');
         resolve();
       };
-      
+
       request.onerror = () => {
         console.error('[SimpleIndexedDB] Failed to clear messages:', request.error);
         reject(request.error);
       };
     });
   }
-  
+
   /**
-   * Debug helper
+   * Perform cleanup if we exceed threshold
+   * Deletes oldest messages to maintain MAX_MESSAGES
+   */
+  private async performCleanupIfNeeded(): Promise<void> {
+    try {
+      const count = await this.getMessageCount();
+      
+      if (count > CLEANUP_THRESHOLD) {
+        console.log(`[SimpleIndexedDB] Cleanup triggered: ${count} messages (threshold: ${CLEANUP_THRESHOLD})`);
+        
+        const toDelete = count - MAX_MESSAGES;
+        if (toDelete <= 0) return;
+        
+        // Delete oldest messages
+        const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const index = store.index('timestamp');
+        
+        let deleted = 0;
+        const request = index.openCursor(null, 'next'); // Start from oldest
+        
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result;
+          
+          if (cursor && deleted < toDelete) {
+            store.delete(cursor.primaryKey);
+            deleted++;
+            cursor.continue();
+          } else if (!cursor || deleted >= toDelete) {
+            console.log(`[SimpleIndexedDB] Cleanup complete: deleted ${deleted} messages`);
+          }
+        };
+      }
+    } catch (error) {
+      console.error('[SimpleIndexedDB] Cleanup error:', error);
+    }
+  }
+
+  /**
+   * Debug helper - logs database state
    */
   async debug(): Promise<void> {
     console.log('=== SimpleIndexedDB Debug ===');
@@ -325,10 +315,6 @@ class SimpleIndexedDB {
       }
     }
     
-    console.log('Config:', {
-      MAX_MESSAGES,
-      CLEANUP_THRESHOLD
-    });
     console.log('=======================');
   }
 }

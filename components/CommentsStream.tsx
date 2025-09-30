@@ -5,7 +5,6 @@ import { Send, ChevronDown, Tv, Ban, Users, Sparkles } from 'lucide-react';
 import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
 import { Comment, CommentsResponse } from '@/types';
 import { useFilters } from '@/hooks/useFilters';
-import { useIndexedDBSync } from '@/hooks/useIndexedDBSync';
 import { 
   getNotificationSystem, 
   getFilterKey, 
@@ -13,7 +12,7 @@ import {
   markFilterAsUnread,
   NotificationSound 
 } from '@/modules/notificationSystem';
-import { simpleIndexedDB } from '@/modules/storage/simple-indexeddb';
+import { simpleIndexedDB } from '@/modules/simpleIndexedDB';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
@@ -128,7 +127,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [messageCount, setMessageCount] = useState<number>(0);
 
   // Sync comments to IndexedDB (stores every message you see locally)
-  useIndexedDBSync(allComments);
   
   // Fetch message count every 5 minutes
   useEffect(() => {
@@ -552,6 +550,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // Reset dynamic limits on initial load/refresh
       setDynamicMaxMessages(MAX_DISPLAY_MESSAGES);
       setLazyLoadedCount(0);
+      console.log('[Init] Starting initial load...');
+      console.log('[Init] Cloud API enabled:', isCloudAPIEnabled());
+      console.log('[Init] API URL:', COMMENTS_CONFIG.apiUrl);
+      console.log('[Init] Page load timestamp:', new Date(pageLoadTimestamp.current).toLocaleTimeString());
       console.log('[Init] Reset message limit to default:', MAX_DISPLAY_MESSAGES);
       
       try {
@@ -791,15 +793,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       if (isCloudAPIEnabled()) {
         // PRESENCE-BASED: Get all messages created since we loaded the page
         // This ensures we see everything that happens while we're present
-        const response = await fetch(
-          `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}`
-        );
+        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}`;
+        console.log(`[Presence Polling] Polling for messages after ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
+        console.log(`[Presence Polling] URL: ${pollUrl}`);
+        
+        const response = await fetch(pollUrl);
         
         if (!response.ok) {
+          console.error(`[Presence Polling] HTTP error: ${response.status}`);
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         newComments = await response.json();
+        console.log(`[Presence Polling] Response: ${newComments.length} messages`);
         
         if (newComments.length > 0) {
           console.log(`[Presence Polling] Found ${newComments.length} new messages since page load at ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
