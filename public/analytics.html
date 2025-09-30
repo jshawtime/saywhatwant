@@ -366,7 +366,7 @@
             </div>
             
             <div class="stat-card">
-                <div class="label">Active Tabs (5min)</div>
+                <div class="label">Active Users (5min)</div>
                 <div class="value" id="active-users">-</div>
                 <div class="change" id="users-change">Loading...</div>
             </div>
@@ -566,34 +566,34 @@
                 }
                 lastKvCount = kvCount;
                 
-                // Calculate active tabs (unique username+color pairs in last 5 minutes)
-                // Each tab typically has a unique username+color combination
+                // Calculate active users (unique usernames in last 5 minutes)
+                // Proxy for unique IPs/users - 1 user = 1 username
                 const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
                 const recentActivityMessages = messages.filter(m => m.timestamp > fiveMinutesAgo);
-                const activeTabs = new Set(
-                    recentActivityMessages.map(m => `${m.username}:${m.color}`)
+                const activeUsers = new Set(
+                    recentActivityMessages.map(m => m.username)
                 ).size;
-                document.getElementById('active-users').textContent = activeTabs.toLocaleString();
+                document.getElementById('active-users').textContent = activeUsers.toLocaleString();
                 
                 // Calculate message rate (messages in last hour)
                 const oneHourAgo = Date.now() - (60 * 60 * 1000);
                 const recentMessages = messages.filter(m => m.timestamp > oneHourAgo);
                 document.getElementById('message-rate').textContent = recentMessages.length.toLocaleString();
                 
-                // Update active tabs change
-                const userChange = activeTabs - lastUserCount;
+                // Update active users change
+                const userChange = activeUsers - lastUserCount;
                 const userChangeEl = document.getElementById('users-change');
                 if (userChange > 0) {
-                    userChangeEl.textContent = `+${userChange} new tabs`;
+                    userChangeEl.textContent = `+${userChange} new`;
                     userChangeEl.className = 'change positive';
                 } else if (userChange < 0) {
-                    userChangeEl.textContent = `${userChange} tabs`;
+                    userChangeEl.textContent = `${userChange}`;
                     userChangeEl.className = 'change negative';
                 } else {
-                    userChangeEl.textContent = `${activeTabs} active now`;
+                    userChangeEl.textContent = `${activeUsers} active`;
                     userChangeEl.className = 'change';
                 }
-                lastUserCount = activeTabs;
+                lastUserCount = activeUsers;
                 
                 // Update timeline chart
                 updateTimelineChart(messages);
