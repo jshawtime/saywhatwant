@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Say What Want - Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+        
+        .header .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            color: #22c55e;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .header .live-indicator::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(96, 165, 250, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-card .label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .stat-card .value {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        
+        .stat-card .change {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .stat-card .change.positive {
+            color: #22c55e;
+        }
+        
+        .stat-card .change.negative {
+            color: #ef4444;
+        }
+        
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .chart-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .chart-card h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: #e2e8f0;
+        }
+        
+        .messages-section {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .messages-section h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .message-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: start;
+            font-size: 0.9rem;
+        }
+        
+        .message-item .username {
+            color: #60a5fa;
+            font-weight: 600;
+            min-width: 100px;
+        }
+        
+        .message-item .text {
+            color: #cbd5e1;
+            word-break: break-word;
+        }
+        
+        .message-item .time {
+            color: #64748b;
+            white-space: nowrap;
+            font-size: 0.8rem;
+        }
+        
+        .message-item.ai {
+            border-left: 3px solid #a78bfa;
+        }
+        
+        .message-item.human {
+            border-left: 3px solid #22c55e;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #94a3b8;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .tab:hover:not(.active) {
+            border-color: rgba(96, 165, 250, 0.5);
+            color: #e2e8f0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .last-update {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .message-item {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .stat-card .value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>Say What Want Analytics</h1>
+            <div class="subtitle">Real-time message monitoring and insights</div>
+            <div class="live-indicator">LIVE</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">IndexedDB Messages</div>
+                <div class="value" id="indexeddb-count">-</div>
+                <div class="change positive" id="indexeddb-change">Loading...</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="label">KV Store Messages</div>
+                <div class="value" id="kv-count">-</div>
+                <div class="change" id="kv-change">Loading...</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="label">Active Users</div>
+                <div class="value" id="active-users">-</div>
+                <div class="change" id="users-change">Loading...</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="label">Messages/Hour</div>
+                <div class="value" id="message-rate">-</div>
+                <div class="change" id="rate-change">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="charts-section">
+            <div class="chart-card">
+                <h3>Message Timeline (Last Hour)</h3>
+                <canvas id="timeline-chart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <h3>Message Types Distribution</h3>
+                <canvas id="type-chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="messages-section">
+            <h3>
+                <span id="message-section-title">Latest Messages from KV</span>
+                <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
+            </h3>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('kv')">KV Store (Latest 20)</div>
+                <div class="tab" onclick="switchTab('indexeddb')">IndexedDB (Latest 20)</div>
+                <div class="tab" onclick="switchTab('users')">User Activity</div>
+            </div>
+            
+            <div id="messages-container">
+                <div class="loading">Loading messages</div>
+            </div>
+        </div>
+        
+        <div class="last-update">Last updated: <span id="last-update-time">Never</span></div>
+    </div>
+    
+    <script>
+        // Global state
+        let currentTab = 'kv';
+        let timelineChart = null;
+        let typeChart = null;
+        let lastKvCount = 0;
+        let lastIndexedDbCount = 0;
+        let lastUserCount = 0;
+        let autoRefreshInterval = null;
+        
+        // Initialize
+        async function init() {
+            await refreshData();
+            setupCharts();
+            
+            // Auto-refresh every 5 seconds
+            autoRefreshInterval = setInterval(refreshData, 5000);
+        }
+        
+        // Setup charts
+        function setupCharts() {
+            // Timeline chart
+            const timelineCtx = document.getElementById('timeline-chart').getContext('2d');
+            timelineChart = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Messages',
+                        data: [],
+                        borderColor: 'rgb(96, 165, 250)',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            },
+                            ticks: {
+                                color: '#64748b'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            },
+                            ticks: {
+                                color: '#64748b'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Type distribution chart
+            const typeCtx = document.getElementById('type-chart').getContext('2d');
+            typeChart = new Chart(typeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Human', 'AI'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(167, 139, 250, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(167, 139, 250)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Refresh all data
+        async function refreshData() {
+            try {
+                // Update KV data
+                await updateKvData();
+                
+                // Update IndexedDB data
+                await updateIndexedDbData();
+                
+                // Update timestamp
+                document.getElementById('last-update-time').textContent = new Date().toLocaleTimeString();
+                
+                // Refresh current tab
+                await switchTab(currentTab);
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showError('Failed to refresh data: ' + error.message);
+            }
+        }
+        
+        // Update KV data
+        async function updateKvData() {
+            try {
+                const response = await fetch('https://sww-comments.bootloaders.workers.dev/api/comments?limit=200');
+                const messages = await response.json();
+                
+                // Update KV count
+                const kvCount = messages.length;
+                document.getElementById('kv-count').textContent = kvCount.toLocaleString();
+                
+                // Calculate change
+                const kvChange = kvCount - lastKvCount;
+                const kvChangeEl = document.getElementById('kv-change');
+                if (kvChange > 0) {
+                    kvChangeEl.textContent = `+${kvChange} new`;
+                    kvChangeEl.className = 'change positive';
+                } else if (kvChange < 0) {
+                    kvChangeEl.textContent = `${kvChange}`;
+                    kvChangeEl.className = 'change negative';
+                } else {
+                    kvChangeEl.textContent = 'No change';
+                    kvChangeEl.className = 'change';
+                }
+                lastKvCount = kvCount;
+                
+                // Calculate unique users
+                const uniqueUsers = new Set(messages.map(m => m.username)).size;
+                document.getElementById('active-users').textContent = uniqueUsers.toLocaleString();
+                
+                // Calculate message rate (messages in last hour)
+                const oneHourAgo = Date.now() - (60 * 60 * 1000);
+                const recentMessages = messages.filter(m => m.timestamp > oneHourAgo);
+                document.getElementById('message-rate').textContent = recentMessages.length.toLocaleString();
+                
+                // Update user change
+                const userChange = uniqueUsers - lastUserCount;
+                const userChangeEl = document.getElementById('users-change');
+                if (userChange > 0) {
+                    userChangeEl.textContent = `+${userChange} new users`;
+                    userChangeEl.className = 'change positive';
+                } else if (userChange < 0) {
+                    userChangeEl.textContent = `${userChange} users`;
+                    userChangeEl.className = 'change negative';
+                } else {
+                    userChangeEl.textContent = `${uniqueUsers} total users`;
+                    userChangeEl.className = 'change';
+                }
+                lastUserCount = uniqueUsers;
+                
+                // Update timeline chart
+                updateTimelineChart(messages);
+                
+                // Update type chart
+                updateTypeChart(messages);
+                
+                // Store messages for display
+                window.kvMessages = messages;
+            } catch (error) {
+                console.error('Error fetching KV data:', error);
+                document.getElementById('kv-count').textContent = 'Error';
+                document.getElementById('kv-change').textContent = 'Failed to load';
+            }
+        }
+        
+        // Update IndexedDB data
+        async function updateIndexedDbData() {
+            try {
+                const db = await openIndexedDB();
+                const transaction = db.transaction(['messages'], 'readonly');
+                const store = transaction.objectStore('messages');
+                
+                // Get count
+                const countRequest = store.count();
+                const count = await new Promise(resolve => {
+                    countRequest.onsuccess = () => resolve(countRequest.result);
+                });
+                
+                document.getElementById('indexeddb-count').textContent = count.toLocaleString();
+                
+                // Calculate change
+                const change = count - lastIndexedDbCount;
+                const changeEl = document.getElementById('indexeddb-change');
+                if (change > 0) {
+                    changeEl.textContent = `+${change} new`;
+                    changeEl.className = 'change positive';
+                } else if (change < 0) {
+                    changeEl.textContent = `${change}`;
+                    changeEl.className = 'change negative';
+                } else {
+                    changeEl.textContent = `${count} total`;
+                    changeEl.className = 'change';
+                }
+                lastIndexedDbCount = count;
+                
+                // Get all messages for display
+                const getAllRequest = store.getAll();
+                const messages = await new Promise(resolve => {
+                    getAllRequest.onsuccess = () => resolve(getAllRequest.result);
+                });
+                
+                window.indexedDbMessages = messages;
+                db.close();
+            } catch (error) {
+                console.error('Error accessing IndexedDB:', error);
+                document.getElementById('indexeddb-count').textContent = 'Error';
+                document.getElementById('indexeddb-change').textContent = 'Failed to load';
+            }
+        }
+        
+        // Open IndexedDB
+        function openIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('SayWhatWant', 4);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+        
+        // Update timeline chart
+        function updateTimelineChart(messages) {
+            const now = Date.now();
+            const hourAgo = now - (60 * 60 * 1000);
+            const interval = 5 * 60 * 1000; // 5 minute intervals
+            
+            // Group messages by 5-minute intervals
+            const buckets = {};
+            for (let time = hourAgo; time <= now; time += interval) {
+                buckets[time] = 0;
+            }
+            
+            messages.forEach(msg => {
+                if (msg.timestamp > hourAgo) {
+                    const bucket = Math.floor(msg.timestamp / interval) * interval;
+                    if (buckets[bucket] !== undefined) {
+                        buckets[bucket]++;
+                    }
+                }
+            });
+            
+            const labels = Object.keys(buckets).map(time => 
+                new Date(parseInt(time)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            );
+            const data = Object.values(buckets);
+            
+            timelineChart.data.labels = labels;
+            timelineChart.data.datasets[0].data = data;
+            timelineChart.update();
+        }
+        
+        // Update type chart
+        function updateTypeChart(messages) {
+            const humanCount = messages.filter(m => m['message-type'] === 'human').length;
+            const aiCount = messages.filter(m => m['message-type'] === 'AI').length;
+            
+            typeChart.data.datasets[0].data = [humanCount, aiCount];
+            typeChart.update();
+        }
+        
+        // Switch tab
+        async function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab styling
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event?.target?.classList.add('active') || 
+                document.querySelector(`.tab:nth-child(${tab === 'kv' ? 1 : tab === 'indexeddb' ? 2 : 3})`).classList.add('active');
+            
+            // Update content
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '<div class="loading">Loading messages</div>';
+            
+            let html = '';
+            
+            if (tab === 'kv') {
+                document.getElementById('message-section-title').textContent = 'Latest Messages from KV';
+                const messages = (window.kvMessages || []).slice(0, 20);
+                html = messages.map(msg => createMessageHtml(msg)).join('');
+            } else if (tab === 'indexeddb') {
+                document.getElementById('message-section-title').textContent = 'Latest Messages from IndexedDB';
+                const messages = (window.indexedDbMessages || [])
+                    .sort((a, b) => b.timestamp - a.timestamp)
+                    .slice(0, 20);
+                html = messages.map(msg => createMessageHtml(msg)).join('');
+            } else if (tab === 'users') {
+                document.getElementById('message-section-title').textContent = 'User Activity';
+                const messages = window.kvMessages || [];
+                const userStats = {};
+                
+                messages.forEach(msg => {
+                    const key = `${msg.username}:${msg.color}`;
+                    if (!userStats[key]) {
+                        userStats[key] = {
+                            username: msg.username,
+                            color: msg.color,
+                            count: 0,
+                            lastActive: msg.timestamp
+                        };
+                    }
+                    userStats[key].count++;
+                    userStats[key].lastActive = Math.max(userStats[key].lastActive, msg.timestamp);
+                });
+                
+                const sortedUsers = Object.values(userStats)
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 20);
+                
+                html = sortedUsers.map(user => `
+                    <div class="message-item">
+                        <div class="username" style="background: rgb(${nineDigitToRgb(user.color)}); padding: 4px 8px; border-radius: 4px; color: white;">
+                            ${user.username}
+                        </div>
+                        <div class="text">
+                            ${user.count} messages
+                        </div>
+                        <div class="time">
+                            Last: ${formatTime(user.lastActive)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            container.innerHTML = html || '<div class="loading">No messages found</div>';
+        }
+        
+        // Create message HTML
+        function createMessageHtml(msg) {
+            const type = msg['message-type'] || 'human';
+            const time = formatTime(msg.timestamp);
+            const color = msg.color ? `rgb(${nineDigitToRgb(msg.color)})` : '#60a5fa';
+            
+            return `
+                <div class="message-item ${type.toLowerCase()}">
+                    <div class="username" style="color: ${color}">${msg.username || 'Anonymous'}</div>
+                    <div class="text">${escapeHtml(msg.text || '')}</div>
+                    <div class="time">${time}</div>
+                </div>
+            `;
+        }
+        
+        // Format timestamp
+        function formatTime(timestamp) {
+            const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            return date.toLocaleDateString();
+        }
+        
+        // Convert 9-digit color to RGB
+        function nineDigitToRgb(color) {
+            if (!color || color.length !== 9) return '96, 165, 250';
+            const r = parseInt(color.substr(0, 3));
+            const g = parseInt(color.substr(3, 3));
+            const b = parseInt(color.substr(6, 3));
+            return `${r}, ${g}, ${b}`;
+        }
+        
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Show error
+        function showError(message) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        // Start the dashboard
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
