@@ -18,16 +18,17 @@ import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
 import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
 import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggleDomainFilter } from '@/config/domain-config';
+import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
-// Configuration - Now using config file
-const INITIAL_LOAD_COUNT = COMMENTS_CONFIG.initialLoadCount; // 50 (Ham Radio Mode)
-const POLLING_INTERVAL = COMMENTS_CONFIG.pollingInterval;
+// Configuration - Now using config files
+const INITIAL_LOAD_COUNT = MESSAGE_SYSTEM_CONFIG.cloudInitialLoad; // ALWAYS 0 - presence-based
+const POLLING_INTERVAL = MESSAGE_SYSTEM_CONFIG.cloudPollingInterval; // 5000ms
 const MAX_COMMENT_LENGTH = 201;
-const POLL_BATCH_LIMIT = 50; // Max new messages per poll
+const POLL_BATCH_LIMIT = MESSAGE_SYSTEM_CONFIG.cloudPollBatch; // From config
 const MAX_USERNAME_LENGTH = 16;
-const MAX_DISPLAY_MESSAGES = 200; // Maximum messages to display at once (PRESENCE-BASED)
-const INDEXEDDB_INITIAL_LOAD = 200; // Load 200 messages from IndexedDB initially
-const INDEXEDDB_LAZY_LOAD_CHUNK = 200; // Load 200 more on each lazy load
+const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages; // From config
+const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages; // Load same amount initially
+const INDEXEDDB_LAZY_LOAD_CHUNK = MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize; // From config
 
 // Import color functions from the color system
 import { getRandomColor, getDarkerColor, COLOR_PALETTE, nineDigitToRgb } from '@/modules/colorSystem';
