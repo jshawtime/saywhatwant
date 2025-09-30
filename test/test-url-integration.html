@@ -1095,7 +1095,23 @@ ${messages.map(m => `<div style="color: #d1d5db; padding-left: 10px;">• ${m.us
             statusDiv.innerHTML = '<div style="color: #60a5fa;">🔍 Checking database...</div>';
             
             try {
-                const openReq = indexedDB.open('SayWhatWant', 1);
+                // Check if running as local file
+                if (window.location.protocol === 'file:') {
+                    statusDiv.innerHTML = `
+                        <div style="color: #fbbf24; padding: 15px; background: rgba(251, 191, 36, 0.1); border-radius: 8px;">
+                            <strong>⚠️ Running as Local File</strong><br><br>
+                            You're viewing this test page as a local file (file:///).<br><br>
+                            To properly test IndexedDB integration with the main app, please:<br>
+                            1. Visit <a href="https://saywhatwant.app" target="_blank" style="color: #60a5fa;">https://saywhatwant.app</a> first<br>
+                            2. Then open <a href="https://saywhatwant.app/test-url-integration.html" target="_blank" style="color: #60a5fa;">https://saywhatwant.app/test-url-integration.html</a><br><br>
+                            This ensures the test page can access the same IndexedDB instance as the main app.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Try opening the new SimpleIndexedDB database (version 4)
+                const openReq = indexedDB.open('SayWhatWant', 4);
                 
                 const db = await new Promise((resolve, reject) => {
                     openReq.onsuccess = () => resolve(openReq.result);
@@ -1106,28 +1122,36 @@ ${messages.map(m => `<div style="color: #d1d5db; padding-left: 10px;">• ${m.us
                     };
                 });
                 
-                const storeNames = ['messages_temp', 'messages_perm', 'lifetime_filters', 'filter_stats'];
                 let html = '<h3 style="color: #34d399;">Database Status:</h3>';
                 let totalMessages = 0;
                 
-                for (const storeName of storeNames) {
-                    if (db.objectStoreNames.contains(storeName)) {
-                        const transaction = db.transaction([storeName], 'readonly');
-                        const store = transaction.objectStore(storeName);
-                        const countReq = store.count();
-                        
-                        const count = await new Promise((resolve) => {
-                            countReq.onsuccess = () => resolve(countReq.result);
+                // Check for the new 'messages' store
+                if (db.objectStoreNames.contains('messages')) {
+                    const transaction = db.transaction(['messages'], 'readonly');
+                    const store = transaction.objectStore('messages');
+                    const countReq = store.count();
+                    
+                    const count = await new Promise((resolve) => {
+                        countReq.onsuccess = () => resolve(countReq.result);
+                    });
+                    
+                    totalMessages = count;
+                    html += `<div style="color: #10b981;">✅ SimpleIndexedDB 'messages' store: <span style="color: #60a5fa; font-weight: bold;">${count} messages</span></div>`;
+                    
+                    // Get a sample message if available
+                    if (count > 0) {
+                        const getAllReq = store.getAll(undefined, 1);
+                        const sample = await new Promise((resolve) => {
+                            getAllReq.onsuccess = () => resolve(getAllReq.result[0]);
                         });
                         
-                        html += `<div style="color: #9ca3af;">${storeName}: <span style="color: #60a5fa;">${count} items</span></div>`;
-                        
-                        if (storeName.startsWith('messages_')) {
-                            totalMessages += count;
+                        if (sample) {
+                            html += '<div style="margin-top: 10px; color: #9ca3af;">Sample message:</div>';
+                            html += `<pre style="background: #1f2937; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;">${JSON.stringify(sample, null, 2)}</pre>`;
                         }
-                    } else {
-                        html += `<div style="color: #6b7280;">${storeName}: <span style="color: #ef4444;">Not found</span></div>`;
                     }
+                } else {
+                    html += `<div style="color: #ef4444;">❌ No 'messages' store found - SimpleIndexedDB not initialized</div>`;
                 }
                 
                 html += `<div style="margin-top: 10px; color: #f3f4f6;">Total messages: <span style="color: #60a5fa; font-weight: bold;">${totalMessages}</span></div>`;
