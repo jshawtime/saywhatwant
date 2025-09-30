@@ -589,11 +589,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               id: msg.id?.toString() || '',
               text: msg.text || '',
               timestamp: typeof msg.timestamp === 'string' ? parseInt(msg.timestamp, 10) : msg.timestamp,
-              username: msg.username,
-              color: msg.userColor,
-              domain: 'saywhatwant.app',
-              language: 'en',
-              'message-type': 'human'
+              username: msg.username || '',
+              color: msg.color || msg.userColor || '',  // Handle both new (color) and old (userColor) format
+              domain: msg.domain || 'saywhatwant.app',
+              language: msg.language || 'en',
+              'message-type': msg['message-type'] || 'human',
+              misc: msg.misc || ''  // Add missing misc field
             }));
             
             console.log(`[IndexedDB] Loaded ${indexedDbMessages.length} messages from storage`);

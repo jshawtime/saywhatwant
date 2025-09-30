@@ -89,7 +89,9 @@ export function prepareCommentData(
     timestamp: Date.now(),
     username: username,
     color: colorForStorage,
+    domain: 'saywhatwant.app', // Always this domain
     language: 'en', // Default for now
+    'message-type': 'human', // Human-generated message
     misc: '', // Reserved for future features
   };
 }

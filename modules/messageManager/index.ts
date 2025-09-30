@@ -53,15 +53,18 @@ class MessageManager {
    * Convert storage Message to Comment format
    */
   private messageToComment(msg: Message): Comment {
+    // Convert old Message format to new Comment format
+    // Message uses userColor, Comment uses color
     return {
       id: msg.id?.toString() || '',
       text: msg.text || '',
       timestamp: typeof msg.timestamp === 'string' ? parseInt(msg.timestamp, 10) : msg.timestamp,
-      username: msg.username,
-      color: msg.userColor,  // Map userColor to color
-      domain: 'saywhatwant.app',
-      language: 'en',
-      'message-type': 'human'
+      username: msg.username || '',
+      color: msg.userColor || '',  // Message has userColor, Comment needs color
+      domain: 'saywhatwant.app',  // Message doesn't have domain
+      language: 'en',  // Message doesn't have language
+      'message-type': 'human',  // Message doesn't have message-type
+      misc: ''  // Message doesn't have misc
     };
   }
   

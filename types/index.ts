@@ -1,15 +1,14 @@
-// Comment types
+// Comment types - MUST match KV structure exactly
 export interface Comment {
-  id: string;
-  text: string;
-  timestamp: number;
-  username?: string;
-  domain?: string; // Domain where comment was posted
-  color?: string; // User's chosen color
-  language?: string; // Language of the comment (default: "en")
-  'message-type'?: 'AI' | 'human' | string; // Message type: AI, human, or future types
-  misc?: string; // Miscellaneous data field for future use
-  // userAgent removed - not needed
+  id: string;                    // e.g., "1759244943773-z4timztmx"
+  text: string;                   // Message content
+  timestamp: number;              // Unix timestamp as NUMBER (not string!)
+  username: string;               // User's display name (required in KV)
+  domain: string;                 // Always "saywhatwant.app" (required in KV)
+  color: string;                  // 9-digit format like "220020060" (required in KV)
+  language: string;               // Language code, e.g., "en" (required in KV)
+  'message-type': string;         // "AI" or "human" - hyphenated key! (required in KV)
+  misc: string;                   // Additional data, usually empty string (required in KV)
 }
 
 export interface CommentsResponse {

@@ -52,7 +52,9 @@ export function ModelURLIntegration({
         text: modelMsg.text,
         color: modelMsg.userColor, // Use 'color' field name
         domain: modelMsg.domain || currentDomain || 'saywhatwant.app',
-        'message-type': 'AI' // Mark as AI message using correct field
+        language: 'en', // Default language for model messages
+        'message-type': 'AI', // Mark as AI message using correct field
+        misc: '' // Default empty misc field for model messages
       };
       
       onModelMessage(comment);
