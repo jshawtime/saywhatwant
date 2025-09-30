@@ -615,7 +615,7 @@ npm run build && npm start`;
                                     store.createIndex('timestamp', 'timestamp', { unique: false });
                                     store.createIndex('username', 'username', { unique: false });
                                     store.createIndex('color', 'color', { unique: false });
-                                    store.createIndex('message-type', 'message-type', { unique: false });
+                                    // NOTE: Cannot index 'message-type' due to hyphen in field name
                                 }
                             };
                         });

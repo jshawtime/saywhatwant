@@ -10,7 +10,7 @@ import { Comment } from '@/types';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
 const DB_NAME = 'SayWhatWant';
-const DB_VERSION = 3;
+const DB_VERSION = 4; // Bumped to fix index creation error with 'message-type'
 const STORE_NAME = 'messages';
 
 // Use config values for limits
@@ -71,7 +71,9 @@ class SimpleIndexedDB {
           store.createIndex('timestamp', 'timestamp', { unique: false });
           store.createIndex('username', 'username', { unique: false });
           store.createIndex('color', 'color', { unique: false });
-          store.createIndex('message-type', 'message-type', { unique: false });
+          // NOTE: We cannot create an index on 'message-type' because IndexedDB
+          // doesn't support hyphens in keyPath names. The field still exists
+          // in the stored data, we just can't index by it.
         }
       };
     });
