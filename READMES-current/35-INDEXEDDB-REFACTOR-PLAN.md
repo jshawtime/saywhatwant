@@ -12,6 +12,14 @@ The IndexedDB refactor implements a simple, presence-based message system where 
 3. **Received messages → SimpleIndexedDB**
 4. **On page load: SimpleIndexedDB → serves your history to app**
 
+### CRITICAL: How SimpleIndexedDB Initializes
+**For ALL users (including testing):**
+1. User visits saywhatwant.app
+2. `CommentsStream.tsx` automatically calls `simpleIndexedDB.init()` on mount
+3. SimpleIndexedDB is exposed globally on `window.simpleIndexedDB`
+4. Test page uses the SAME `window.simpleIndexedDB` instance
+5. **NO SEPARATE INITIALIZATION** - everyone uses the same auto-initialized instance
+
 ### Current Status:
 - ✅ Phase 0: Comment type matches KV structure
 - ✅ Phase 1: SimpleIndexedDB manager created

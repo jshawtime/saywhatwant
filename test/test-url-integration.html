@@ -238,8 +238,11 @@
     
     <div class="test-card">
         <h3>🆕 Simple IndexedDB Manager (NEW!)</h3>
-        <p class="description">Test the new simplified IndexedDB system that stores Comments exactly as KV</p>
-        <button class="test-button" onclick="initSimpleDB()" style="background-color: #fbbf24;">Initialize SimpleDB</button>
+        <p class="description">Test the SAME SimpleIndexedDB that the main app uses</p>
+        <div id="simpleDbInitStatus" style="margin-bottom: 15px; padding: 10px; background: #1f2937; border-radius: 4px;">
+            <div id="simpleDbInitMessage">⚠️ Checking SimpleIndexedDB status...</div>
+        </div>
+        <button class="test-button" onclick="checkSimpleDBStatus()" style="background-color: #10b981;">Check DB Status</button>
         <button class="test-button" onclick="testSimpleDB()" style="background-color: #10b981;">Test Simple DB</button>
         <button class="test-button" onclick="simpleDBDebug()" style="background-color: #3b82f6;">Debug Simple DB</button>
         <button class="test-button" onclick="simpleDBClear()" style="background-color: #ef4444;">Clear Simple DB</button>
@@ -490,20 +493,85 @@ npm run build && npm start`;
         });
         
         // SimpleIndexedDB Testing Functions (NEW!)
-        async function initSimpleDB() {
+        // Check SimpleIndexedDB status on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkSimpleDBInitialization();
+        });
+        
+        function checkSimpleDBInitialization() {
+            const messageDiv = document.getElementById('simpleDbInitMessage');
+            if (!messageDiv) return;
+            
+            if (window.simpleIndexedDB) {
+                if (window.simpleIndexedDB.isInit()) {
+                    messageDiv.innerHTML = '✅ SimpleIndexedDB is initialized and ready!';
+                    messageDiv.style.color = '#10b981';
+                } else {
+                    messageDiv.innerHTML = '⚠️ SimpleIndexedDB found but not initialized. Visit the main app to initialize it.';
+                    messageDiv.style.color = '#fbbf24';
+                }
+            } else {
+                messageDiv.innerHTML = '❌ SimpleIndexedDB not loaded. Please visit the main app first to initialize it.';
+                messageDiv.style.color = '#ef4444';
+            }
+        }
+        
+        async function checkSimpleDBStatus() {
             const statusDiv = document.getElementById('simpleDbStatus');
             if (!statusDiv) return;
             statusDiv.style.display = 'block';
             
+            checkSimpleDBInitialization(); // Update initialization status
+            
+            if (!window.simpleIndexedDB) {
+                statusDiv.innerHTML = '<div style="color: #ef4444;">❌ SimpleIndexedDB not available. Please visit the main app first.</div>';
+                return;
+            }
+            
             try {
-                // Create SimpleIndexedDB instance directly
-                const DB_NAME = 'SayWhatWant';
-                const DB_VERSION = 3;
-                const STORE_NAME = 'messages';
-                const MAX_MESSAGES = 100000;
-                const CLEANUP_THRESHOLD = 120000;
+                if (!window.simpleIndexedDB.isInit()) {
+                    // Try to initialize it (same as main app does)
+                    await window.simpleIndexedDB.init();
+                    checkSimpleDBInitialization();
+                }
                 
-                class SimpleIndexedDB {
+                const count = await window.simpleIndexedDB.getMessageCount();
+                const sample = await window.simpleIndexedDB.getMessages(3);
+                
+                let html = `<div style="color: #10b981;">✅ Database Status:</div>`;
+                html += `<div style="margin-top: 10px;">Total Messages: <strong>${count}</strong></div>`;
+                
+                if (sample.length > 0) {
+                    html += `<div style="margin-top: 15px;">Latest Messages:</div>`;
+                    sample.forEach(msg => {
+                        const time = new Date(msg.timestamp).toLocaleTimeString();
+                        html += `<div style="margin-top: 5px; padding: 8px; background: #111827; border-radius: 4px;">`;
+                        html += `<strong>${msg.username}</strong> (${time}): ${msg.text.substring(0, 100)}...`;
+                        html += `<br><small>Color: ${msg.color} | Type: ${msg['message-type']}</small>`;
+                        html += `</div>`;
+                    });
+                } else {
+                    html += `<div style="margin-top: 10px; color: #9ca3af;">No messages in database yet.</div>`;
+                }
+                
+                statusDiv.innerHTML = html;
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function oldInitSimpleDB() {
+            // REMOVED - We don't create our own instance anymore!
+            // The main app creates the instance, we just use it
+            const statusDiv = document.getElementById('simpleDbStatus');
+            if (!statusDiv) return;
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="color: #fbbf24;">⚠️ This function has been removed. SimpleIndexedDB is initialized by the main app.</div>';
+        }
+        
+        // Keep the original class definition commented out for reference
+        /*
+        class SimpleIndexedDB {
                     constructor() {
                         this.db = null;
                         this.isInitialized = false;
