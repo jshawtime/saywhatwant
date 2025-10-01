@@ -1177,3 +1177,196 @@ return (
 **If yes**: I'll create the hook, refactor CommentsStream, test, and deploy.
 
 **If no**: The current implementation works, just less organized.
+
+---
+
+## Phase 5 Implementation: DEBUG SESSION
+
+### Bug Report: Search Not Finding Older Messages
+
+**Scenario**:
+- Old tab (2 hours open): Has message with "exploration" from 36 min ago
+- New tab (hard refresh): Shows 50 newest messages
+- Search for "exploration": **No results** ❌
+
+**Expected**: Should find the message in IndexedDB
+
+### Investigation: Tracing the Entire Logic Chain
+
+#### **POTENTIAL ISSUE #1: Hook Initialization Race Condition**
+
+**The Flow**:
+1. Component mounts → `initialMessages = []` (empty)
+2. Hook receives `initialMessages: []`
+3. Hook's useEffect runs → `isFilterMode = false` (no search yet)
+4. Hook sets `messages = []` (empty initialMessages)
+5. Component's `loadInitialComments()` completes
+6. Sets `initialMessages = [50 messages]`
+7. Hook's useEffect should re-run... **but does it?**
+
+**The Problem**:
+```typescript
+// Hook useEffect dependencies
+}, [
+  isFilterMode,
+  params.filterUsernames,
+  // ...
+  params.initialMessages,  // <-- This is the dependency
+  // ...
+]);
+```
+
+If `params.initialMessages` reference doesn't change (e.g., same empty array), the useEffect won't re-run!
+
+**Test**:
+- Check if `initialMessages` state updates actually trigger hook re-render
+- Verify console shows "[FilterHook] Browse mode - using initial messages"
+
+#### **POTENTIAL ISSUE #2: Search Doesn't Activate Filter Mode When isFilterEnabled=false**
+
+**The Code**:
+```typescript
+const isFilterMode = params.isFilterEnabled || params.searchTerm.length > 0;
+```
+
+**The Flow**:
+1. User types "exploration" in search bar
+2. `searchTerm` state updates in CommentsStream
+3. Hook receives new `params.searchTerm`
+4. Hook calculates `isFilterMode = false || 10 > 0 = true` ✓
+5. Hook's useEffect should trigger...
+
+**But**:
+```typescript
+useEffect(() => {
+  const queryWithFilters = async () => {
+    if (!isFilterMode) {
+      // Browse mode - use initialMessages from parent
+      if (params.initialMessages) {
+        console.log('[FilterHook] Browse mode - using initial messages');
+        setMessages(params.initialMessages);
+      }
+      return;  // <-- EXITS EARLY
+    }
+    // ... query code
+  };
+  queryWithFilters();
+}, [
+  isFilterMode,  // <-- isFilterMode is a dependency
+  // BUT isFilterMode is calculated OUTSIDE the useEffect
+  // It's recalculated on every render
+  // useEffect only re-runs if searchTerm changes (in dependencies)
+  params.searchTerm,  // <-- This IS in dependencies, should work
+  // ...
+]);
+```
+
+**Wait, I see it!** The `params.searchTerm` IS in the dependency array, so it should work.
+
+But let me check if there's a deeper issue...
+
+#### **POTENTIAL ISSUE #3: The Hook Query Happens BEFORE IndexedDB Is Populated**
+
+**Critical Timing Issue**:
+
+**New Tab Hard Refresh Flow**:
+1. Component mounts
+2. `pageLoadTimestamp.current = Date.now()` → **Sets to NOW**
+3. Initial load starts:
+   ```typescript
+   indexedDbMessages = await simpleIndexedDB.getMessages(INDEXEDDB_INITIAL_LOAD, 0);
+   ```
+4. **On first ever load**: IndexedDB might be empty OR only have messages from previous session
+5. **Presence-based polling**: Only gets messages AFTER pageLoadTimestamp (NOW)
+6. **The 36-minute-old message was received by the OLD tab**
+7. **Did the old tab save it to IndexedDB?** That's the question!
+
+**The Real Question**:
+- Old tab: Uses OLD code or NEW code?
+- If old tab uses OLD code → saving to OLD IndexedDB stores
+- New tab: Uses NEW code → reading from NEW SimpleIndexedDB store
+- **They're different databases!**
+
+This is likely the issue - but let me find more...
+
+#### **POTENTIAL ISSUE #4: IndexedDB Schema Version Mismatch**
+
+**Current Setup**:
+```typescript
+const DB_VERSION = 4;
+```
+
+**The Problem**:
+- Old tab might be on DB_VERSION 3 or lower
+- New tab opens DB_VERSION 4
+- On upgrade, we DELETE old stores:
+  ```typescript
+  db.deleteObjectStore('messages_temp');
+  db.deleteObjectStore('messages_perm');
+  ```
+- **We don't migrate data from old stores to new!**
+- All old messages are LOST on version upgrade!
+
+This is a CRITICAL issue!
+
+#### **POTENTIAL ISSUE #5: Initial Messages Not Passing to Hook Correctly**
+
+**The Code Flow**:
+```typescript
+// CommentsStream.tsx
+setInitialMessages(trimmedMessages);  // Updates state
+
+// Hook receives via params
+initialMessages: initialMessages  // Passed as prop
+
+// Hook's useEffect
+if (params.initialMessages) {
+  setMessages(params.initialMessages);
+}
+```
+
+**Potential Problem**:
+- If `initialMessages` starts as `undefined` or `[]`
+- And hook's useEffect runs BEFORE it's populated
+- And dependency doesn't trigger re-run
+- Messages stay empty
+
+#### **POTENTIAL ISSUE #6: Search Criteria Building Bug**
+
+Let me check the actual criteria building:
+```typescript
+if (params.searchTerm.length > 0) {
+  criteria.searchTerm = params.searchTerm;
+}
+```
+
+This looks correct. And the matching logic:
+```typescript
+if (criteria.searchTerm) {
+  const searchLower = criteria.searchTerm.toLowerCase();
+  const textLower = message.text.toLowerCase();
+  const usernameLower = message.username?.toLowerCase() || '';
+  
+  if (!textLower.includes(searchLower) && !usernameLower.includes(searchLower)) {
+    return false;
+  }
+}
+```
+
+This also looks correct.
+
+So my 3+ issues are:
+1. **Schema version migration doesn't preserve data**
+2. **Old tab vs new tab using different IndexedDB stores**
+3. **Hook initialization race condition with initialMessages**
+4. **Presence-based system means new tab doesn't have old messages**
+5. **Initial messages might not trigger hook re-query**
+
+Let me document these properly.
+</thinking>
+
+I'll trace through the ENTIRE system very carefully and find all potential failure points:
+
+<function_calls>
+<invoke name="write">
+<parameter name="file_path">saywhatwant/READMES-current/36-SEARCH-FILTER-DEBUG.md
