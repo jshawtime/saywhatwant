@@ -13,6 +13,7 @@ import {
   NotificationSound 
 } from '@/modules/notificationSystem';
 import { simpleIndexedDB, FilterCriteria } from '@/modules/simpleIndexedDB';
+import { useIndexedDBFiltering } from '@/hooks/useIndexedDBFiltering';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
@@ -68,8 +69,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [domainFilterEnabled, setDomainFilterEnabled] = useState(() => isDomainFilterEnabled());
   const currentDomain = getCurrentDomain();
   
-  // State management
-  const [allComments, setAllComments] = useState<Comment[]>([]);
+  // State management - initial messages from IndexedDB
+  const [initialMessages, setInitialMessages] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
   const [inputText, setInputText] = useState('');
   const [username, setUsername] = useState('');
@@ -203,21 +204,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Username validation
   const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
   
-  // Model URL Integration - handles model messages and user state from URL
-  const {
-    currentDomain: modelDomain,
-    isProcessingQueue,
-    addModelResponse,
-    getFilteredMessagesForModel,
-    handleModelResponseComplete,
-    aiUsername,
-    aiColor
-  } = useCommentsWithModels({ 
-    comments: allComments, 
-    setComments: setAllComments
-  });
-  
-  // Use the filters hook with ALL comments (unfiltered pool)
+  // Use the filters hook with initial messages
   const {
     filterUsernames,
     filterWords,
@@ -239,8 +226,45 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     dateTimeFilter,
     clearDateTimeFilter
   } = useFilters({ 
-    displayedComments: allComments, 
+    displayedComments: initialMessages, 
     searchTerm
+  });
+  
+  // Use IndexedDB filtering hook for efficient querying
+  const {
+    messages: allComments,
+    isLoading: isFilterQueryLoading,
+    isFilterMode,
+    matchesCurrentFilter,
+    addMessages: addFilteredMessages,
+    setMessages: setAllComments
+  } = useIndexedDBFiltering({
+    isFilterEnabled,
+    filterUsernames,
+    filterWords,
+    negativeFilterWords,
+    searchTerm,
+    dateTimeFilter,
+    domainFilterEnabled,
+    currentDomain,
+    showHumans,
+    showEntities,
+    maxDisplayMessages: MAX_DISPLAY_MESSAGES,
+    initialMessages
+  });
+  
+  // Model URL Integration - handles model messages and user state from URL
+  const {
+    currentDomain: modelDomain,
+    isProcessingQueue,
+    addModelResponse,
+    getFilteredMessagesForModel,
+    handleModelResponseComplete,
+    aiUsername,
+    aiColor
+  } = useCommentsWithModels({ 
+    comments: allComments, 
+    setComments: setAllComments
   });
   
   // Add AI to filter bar when AI username is set from URL
@@ -275,16 +299,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           console.warn('[SimpleIndexedDB] Failed to save user message:', err);
         }
         
-        // In filter mode: only add if matches current filter
-        if (isFilterMode && !matchesCurrentFilter(comment)) {
-          console.log('[FilterMode] User message does not match filter, saved but not displayed');
-          return; // Save but don't display
-        }
-        
-        setAllComments(prev => {
-          const combined = [...prev, comment];
-          return trimToMaxMessages(combined);
-        });
+        // Add to display using filtering hook
+        // Hook handles filter testing and trimming
+        addFilteredMessages([comment]);
       },
       onOptimisticRemove: (commentId) => {
         setAllComments(prev => prev.filter(c => c.id !== commentId));
@@ -454,7 +471,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               
               // Apply max display limit
               const trimmedComments = trimToMaxMessages(mergedComments);
-              setAllComments(trimmedComments);
+              // Update initial messages - hook will re-filter if needed
+              setInitialMessages(trimmedComments);
           } else {
             console.log('[Comments] No new messages from server search');
           }
@@ -632,7 +650,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Trim to max display limit (keep newest)
         const trimmedMessages = trimToMaxMessages(mergedMessages);
         
-        setAllComments(trimmedMessages);
+        // Set initial messages - the hook will handle filtering if needed
+        setInitialMessages(trimmedMessages);
         
         // Initial scroll is handled by the useEffect
       } catch (err) {
@@ -647,144 +666,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
   // Track if we've done initial scroll
   const hasScrolledRef = useRef(false);
-  
-  // Detect if we're in filter mode
-  const isFilterMode = isFilterEnabled || searchTerm.length > 0;
-  
-  // Helper to test if message matches current filter criteria
-  const matchesCurrentFilter = useCallback((message: Comment): boolean => {
-    if (!isFilterMode) return true; // No filters = all messages match
-    
-    // Username filter
-    if (filterUsernames.length > 0) {
-      const usernameMatch = filterUsernames.some(
-        filter => message.username === filter.username && message.color === filter.color
-      );
-      if (!usernameMatch) return false;
-    }
-    
-    // Include words
-    if (filterWords.length > 0) {
-      const textLower = message.text.toLowerCase();
-      const hasAllWords = filterWords.every(word => textLower.includes(word.toLowerCase()));
-      if (!hasAllWords) return false;
-    }
-    
-    // Exclude words
-    if (negativeFilterWords.length > 0) {
-      const textLower = message.text.toLowerCase();
-      const hasExcludedWord = negativeFilterWords.some(word => textLower.includes(word.toLowerCase()));
-      if (hasExcludedWord) return false;
-    }
-    
-    // Search term
-    if (searchTerm.length > 0) {
-      const searchLower = searchTerm.toLowerCase();
-      const textLower = message.text.toLowerCase();
-      const usernameLower = message.username?.toLowerCase() || '';
-      if (!textLower.includes(searchLower) && !usernameLower.includes(searchLower)) {
-        return false;
-      }
-    }
-    
-    // Domain filter
-    if (domainFilterEnabled && message.domain !== currentDomain) {
-      return false;
-    }
-    
-    // Message type filters
-    if (!showHumans && message['message-type'] === 'human') return false;
-    if (!showEntities && message['message-type'] === 'AI') return false;
-    
-    return true;
-  }, [isFilterMode, filterUsernames, filterWords, negativeFilterWords, searchTerm, 
-      domainFilterEnabled, currentDomain, showHumans, showEntities]);
-  
-  // Re-query IndexedDB when filters change
-  useEffect(() => {
-    const reloadWithFilters = async () => {
-      if (!isFilterMode) {
-        // Browse mode - load newest messages
-        return;
-      }
-      
-      setIsLoading(true);
-      
-      try {
-        await simpleIndexedDB.init();
-        
-        if (!simpleIndexedDB.isInit()) {
-          console.warn('[FilterMode] IndexedDB not initialized');
-          setIsLoading(false);
-          return;
-        }
-        
-        // Build filter criteria
-        const criteria: any = {};
-        
-        if (filterUsernames.length > 0) {
-          criteria.usernames = filterUsernames;
-        }
-        
-        if (filterWords.length > 0) {
-          criteria.includeWords = filterWords;
-        }
-        
-        if (negativeFilterWords.length > 0) {
-          criteria.excludeWords = negativeFilterWords;
-        }
-        
-        if (searchTerm.length > 0) {
-          criteria.searchTerm = searchTerm;
-        }
-        
-        if (dateTimeFilter && typeof dateTimeFilter === 'object') {
-          const dtFilter = dateTimeFilter as any;
-          if (dtFilter.from) {
-            criteria.afterTimestamp = new Date(dtFilter.from).getTime();
-          }
-          if (dtFilter.to) {
-            criteria.beforeTimestamp = new Date(dtFilter.to).getTime();
-          }
-        }
-        
-        if (domainFilterEnabled) {
-          criteria.domain = currentDomain;
-        }
-        
-        // Message type filters
-        const messageTypes: string[] = [];
-        if (showHumans) messageTypes.push('human');
-        if (showEntities) messageTypes.push('AI');
-        if (messageTypes.length > 0 && messageTypes.length < 2) {
-          criteria.messageTypes = messageTypes;
-        }
-        
-        console.log('[FilterMode] Querying IndexedDB with criteria:', criteria);
-        
-        // Query IndexedDB with filter criteria
-        const filtered = await simpleIndexedDB.queryMessages(
-          criteria,
-          MESSAGE_SYSTEM_CONFIG.maxDisplayMessages
-        );
-        
-        console.log(`[FilterMode] Found ${filtered.length} matching messages`);
-        
-        // Optionally get total count for UI feedback
-        // const totalMatches = await simpleIndexedDB.countMatches(criteria);
-        // console.log(`[FilterMode] Showing ${filtered.length} of ${totalMatches} matches`);
-        
-        setAllComments(filtered);
-      } catch (err) {
-        console.error('[FilterMode] Error querying IndexedDB:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    reloadWithFilters();
-  }, [isFilterEnabled, filterUsernames, filterWords, negativeFilterWords, searchTerm, 
-      dateTimeFilter, domainFilterEnabled, currentDomain, showHumans, showEntities]);
   
   // Helper to trim messages to dynamic display limit
   const trimToMaxMessages = useCallback((messages: Comment[]): Comment[] => {
@@ -969,28 +850,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             console.warn('[SimpleIndexedDB] Failed to save polled messages:', err);
           }
           
-          // Append new messages but avoid duplicates and respect max display limit
-          // In filter mode: only add messages that match current filter
-          setAllComments(prev => {
-            // Create a Set of existing IDs for fast lookup
-            const existingIds = new Set(prev.map(c => c.id));
-            // Only add messages we don't already have
-            let uniqueNewMessages = newComments.filter(msg => !existingIds.has(msg.id));
-            
-            // In filter mode: test each message against active filters
-            if (isFilterMode) {
-              uniqueNewMessages = uniqueNewMessages.filter(msg => matchesCurrentFilter(msg));
-              console.log(`[FilterMode Polling] ${uniqueNewMessages.length} of ${newComments.length} new messages match filter`);
-            }
-            
-            if (uniqueNewMessages.length > 0) {
-              console.log(`[Presence Polling] Adding ${uniqueNewMessages.length} unique messages (${newComments.length - uniqueNewMessages.length} duplicates filtered)`);
-              const combined = [...prev, ...uniqueNewMessages];
-              // Trim to max limit (keep newest messages)
-              return trimToMaxMessages(combined);
-            }
-            return prev;
-          });
+          // Add new messages using the filtering hook
+          // Hook handles deduplication, filtering, and trimming
+          addFilteredMessages(newComments);
         }
       } else {
         // Use localStorage polling - simple check for new messages
@@ -1003,10 +865,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         if (newComments.length > 0) {
           console.log(`[LocalStorage] Found ${newComments.length} new comments`);
-          setAllComments(prev => {
-            const combined = [...prev, ...newComments];
-            return trimToMaxMessages(combined); // Append but respect max limit
-          });
+          addFilteredMessages(newComments);
         }
       }
       
