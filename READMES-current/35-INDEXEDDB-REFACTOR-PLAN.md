@@ -867,3 +867,313 @@ indexedDBCleanupThreshold: 120000 // Trigger cleanup
 - Memory-efficient
 
 Ready for your approval to proceed!
+
+---
+
+## Phase 5: Extract to Custom Hook (Code Organization)
+
+### The Problem
+
+**Current State**:
+- `CommentsStream.tsx` is **2,092 lines** and growing
+- Mixing multiple concerns in one component
+- Filter query logic (150 lines) buried in component
+- Hard to test, maintain, and understand
+
+**What's in CommentsStream.tsx**:
+- Message loading ✓
+- Filter querying ✓ (NEW - should be extracted)
+- Polling ✓
+- UI rendering ✓
+- Submission handling ✓
+- Scroll management ✓
+- Video sharing ✓
+- Color picker ✓
+- Keyboard shortcuts ✓
+- Notifications ✓
+
+### The Solution: `useIndexedDBFiltering` Hook
+
+**Single Responsibility**: Handle all IndexedDB querying and filter mode logic
+
+### Hook Interface Design
+
+```typescript
+// Location: saywhatwant/hooks/useIndexedDBFiltering.ts
+
+interface UseIndexedDBFilteringParams {
+  // Filter criteria (from useFilters)
+  isFilterEnabled: boolean;
+  filterUsernames: Array<{username: string, color: string}>;
+  filterWords: string[];
+  negativeFilterWords: string[];
+  searchTerm: string;
+  dateTimeFilter?: any;
+  domainFilterEnabled: boolean;
+  currentDomain: string;
+  showHumans: boolean;
+  showEntities: boolean;
+  
+  // Configuration
+  maxDisplayMessages: number;
+  
+  // Initial messages (from initial load)
+  initialMessages?: Comment[];
+  
+  // New messages to test (from polling)
+  newMessages?: Comment[];
+}
+
+interface UseIndexedDBFilteringReturn {
+  // Messages ready for display
+  messages: Comment[];
+  
+  // Loading state
+  isLoading: boolean;
+  
+  // Mode detection
+  isFilterMode: boolean;
+  
+  // Helper to test if message matches current filters
+  matchesCurrentFilter: (message: Comment) => boolean;
+  
+  // Optional: total match count
+  totalMatches?: number;
+  
+  // Force reload (when user clears filter, etc)
+  reloadMessages: () => Promise<void>;
+}
+
+export function useIndexedDBFiltering(
+  params: UseIndexedDBFilteringParams
+): UseIndexedDBFilteringReturn
+```
+
+### What the Hook Does
+
+**1. Mode Detection**:
+```typescript
+const isFilterMode = params.isFilterEnabled || params.searchTerm.length > 0;
+```
+
+**2. Build Filter Criteria**:
+```typescript
+const buildCriteria = useCallback(() => {
+  const criteria: FilterCriteria = {};
+  
+  if (params.filterUsernames.length > 0) {
+    criteria.usernames = params.filterUsernames;
+  }
+  
+  if (params.filterWords.length > 0) {
+    criteria.includeWords = params.filterWords;
+  }
+  
+  // ... all other filters
+  
+  return criteria;
+}, [params]);
+```
+
+**3. Query on Filter Change**:
+```typescript
+useEffect(() => {
+  if (!isFilterMode) {
+    // Browse mode - use initialMessages passed from parent
+    setMessages(params.initialMessages || []);
+    return;
+  }
+  
+  // Filter mode - query IndexedDB
+  const query = async () => {
+    setIsLoading(true);
+    const criteria = buildCriteria();
+    const results = await simpleIndexedDB.queryMessages(
+      criteria, 
+      params.maxDisplayMessages
+    );
+    setMessages(results);
+    setIsLoading(false);
+  };
+  
+  query();
+}, [isFilterMode, params.filterUsernames, params.filterWords, /* ... */]);
+```
+
+**4. Test New Messages**:
+```typescript
+const matchesCurrentFilter = useCallback((message: Comment) => {
+  if (!isFilterMode) return true;
+  
+  const criteria = buildCriteria();
+  return simpleIndexedDB.messageMatchesCriteria(message, criteria);
+}, [isFilterMode, buildCriteria]);
+```
+
+**5. Handle New Messages from Parent**:
+```typescript
+useEffect(() => {
+  if (!params.newMessages || params.newMessages.length === 0) return;
+  
+  if (isFilterMode) {
+    // Filter mode - only add matching messages
+    const matching = params.newMessages.filter(matchesCurrentFilter);
+    if (matching.length > 0) {
+      setMessages(prev => [...prev, ...matching].slice(-params.maxDisplayMessages));
+    }
+  } else {
+    // Browse mode - add all new messages
+    setMessages(prev => [...prev, ...params.newMessages!].slice(-params.maxDisplayMessages));
+  }
+}, [params.newMessages]);
+```
+
+### What Stays in CommentsStream
+
+**UI & User Interaction**:
+- Rendering (JSX)
+- Input handling
+- Button clicks
+- Scroll management
+- Color picker
+- Video sharing UI
+
+**Data Orchestration**:
+- Initial IndexedDB load (pass to hook)
+- Polling (pass results to hook)
+- Submission (pass to hook for testing)
+- Save to IndexedDB
+
+**Becomes**:
+```typescript
+// In CommentsStream.tsx
+
+// Initial load from IndexedDB
+const [initialMessages, setInitialMessages] = useState<Comment[]>([]);
+const [newPolledMessages, setNewPolledMessages] = useState<Comment[]>([]);
+
+// Load initial messages
+useEffect(() => {
+  const load = async () => {
+    const messages = await simpleIndexedDB.getMessages(MAX_DISPLAY_MESSAGES);
+    setInitialMessages(messages);
+  };
+  load();
+}, []);
+
+// Use the filtering hook
+const {
+  messages: displayMessages,
+  isLoading: isFilterQueryLoading,
+  isFilterMode,
+  matchesCurrentFilter
+} = useIndexedDBFiltering({
+  isFilterEnabled,
+  filterUsernames,
+  filterWords,
+  // ... all filter params
+  maxDisplayMessages: MAX_DISPLAY_MESSAGES,
+  initialMessages,
+  newMessages: newPolledMessages
+});
+
+// Polling - when new messages arrive
+const checkForNewComments = async () => {
+  const newMessages = await fetch(/* ... */);
+  
+  // Save to IndexedDB
+  await simpleIndexedDB.saveMessages(newMessages);
+  
+  // Pass to hook for filtering
+  setNewPolledMessages(newMessages);
+};
+
+// Render
+return (
+  <div>
+    {displayMessages.map(msg => /* ... */)}
+  </div>
+);
+```
+
+### Code Reduction
+
+**Before**:
+- CommentsStream.tsx: **2,092 lines**
+
+**After**:
+- CommentsStream.tsx: ~**1,850 lines** (-242 lines)
+- useIndexedDBFiltering.ts: ~**250 lines** (new file)
+- **Total**: Same functionality, better organized
+
+### Files Modified
+
+1. **NEW**: `saywhatwant/hooks/useIndexedDBFiltering.ts`
+   - FilterCriteria building
+   - Mode detection
+   - IndexedDB querying
+   - Message testing
+   - Loading states
+
+2. **MODIFIED**: `saywhatwant/components/CommentsStream.tsx`
+   - Remove filter query logic
+   - Remove mode detection
+   - Remove matchesCurrentFilter
+   - Add hook import
+   - Pass params to hook
+   - Use returned values
+
+3. **MODIFIED**: `saywhatwant/modules/simpleIndexedDB.ts`
+   - Make `messageMatchesCriteria` **public** (not private)
+   - Hook needs to call it for real-time testing
+   - Export it alongside queryMessages
+
+### Migration Strategy (Safe Refactor)
+
+**Step 1**: Create hook with extracted logic
+**Step 2**: Import hook in CommentsStream
+**Step 3**: Run both old and new logic side-by-side (temporary)
+**Step 4**: Verify output matches
+**Step 5**: Remove old logic
+**Step 6**: Test thoroughly
+**Step 7**: Deploy
+
+### What Won't Change
+
+- ✅ Functionality remains identical
+- ✅ All config from MESSAGE_SYSTEM_CONFIG
+- ✅ Performance characteristics same
+- ✅ UI behavior unchanged
+- ✅ No breaking changes
+
+### Benefits
+
+**Immediate**:
+- Smaller component files
+- Easier to read
+- Clearer responsibilities
+
+**Long-term**:
+- Easier to test
+- Easier to optimize
+- Reusable in other components
+- Follows React best practices
+
+### Timeline
+
+- **Phase 5A**: Create `useIndexedDBFiltering` hook (30 min)
+- **Phase 5B**: Refactor CommentsStream to use hook (30 min)
+- **Phase 5C**: Test and verify (15 min)
+- **Phase 5D**: Deploy (5 min)
+
+**Total**: ~80 minutes
+
+---
+
+## Approval Checkpoint
+
+**Question**: Should I proceed with Phase 5 (hook extraction)?
+
+**If yes**: I'll create the hook, refactor CommentsStream, test, and deploy.
+
+**If no**: The current implementation works, just less organized.
