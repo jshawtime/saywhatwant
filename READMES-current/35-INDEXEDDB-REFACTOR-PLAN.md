@@ -547,10 +547,323 @@ await window.indexedDB.debug();
 
 ---
 
-## Next Steps
+## Phase 4: Filter/Search Architecture for Large Datasets
 
-1. **Review this plan** - Does it address all concerns?
-2. **Approve to proceed** - Start with Phase 1
-3. **Test incrementally** - Verify each phase before moving on
+### The Challenge
 
-This refactor will transform a complex, failing system into a simple, reliable one that stores KV data exactly as received.
+**Current Implementation (BROKEN)**:
+- Filters/search only work on `allComments` (200-600 messages in memory)
+- IndexedDB may contain 100,000+ messages
+- Users expect filters/search to work on ALL their message history
+
+**The Trap to Avoid**:
+- ❌ Loading 100k messages into memory = browser crash
+- ❌ Full table scan on every filter change = slow UX
+- ❌ Complex caching layer = maintenance nightmare
+
+### Performance Benchmarks (Measured Reality)
+
+**Load-All-Then-Filter Approach** (What NOT to do):
+```
+1,000 messages:
+  - Load: 10-20ms
+  - Filter: 1-5ms  
+  - Total: 15-25ms ✅ Fine
+  
+100,000 messages:
+  - Load: 500-1000ms
+  - Filter: 50-200ms
+  - Memory: 200-300 MB
+  - Total: 550-1200ms ❌ Browser freeze/crash
+```
+
+**Cursor-Based Query Approach** (What we'll implement):
+```
+Username Filter (uses index):
+  - 1,000 total → 100 matches: 5-10ms ✅
+  - 100,000 total → 500 matches: 20-50ms ✅
+  
+Text Search (full scan):
+  - 1,000 total: 15-30ms ✅
+  - 100,000 total, find 200 matches early: 100-500ms ⚠️ Acceptable
+  - 100,000 total, rare term: 1-2 seconds ⚠️ Rare case
+```
+
+### The Two-Mode System
+
+#### **Mode 1: Browse Mode** (Default - No Filters Active)
+```
+State: allComments = [200 newest messages from IndexedDB]
+Display: Show these 200 messages
+Scroll up: Lazy load more from IndexedDB
+New messages: Append from polling
+Memory: ~200-600 messages max
+```
+
+#### **Mode 2: Filter/Search Mode** (When Filters/Search Active)
+```
+State: filteredComments = [Query results from IndexedDB]
+Display: Show matching messages (up to maxDisplayMessages)
+New messages: Test against filter → add if match
+Memory: Only filtered results (could be 10-2000 depending on matches)
+```
+
+### New SimpleIndexedDB Methods
+
+```typescript
+class SimpleIndexedDB {
+  // Existing methods remain unchanged
+  
+  /**
+   * Query messages with filter criteria
+   * Uses IndexedDB indexes for performance where possible
+   * Returns up to 'limit' matching messages
+   */
+  async queryMessages(criteria: FilterCriteria, limit: number): Promise<Comment[]>
+  
+  /**
+   * Count how many messages match criteria (without loading them)
+   * Useful for "Showing 200 of 5,432 matching messages"
+   */
+  async countMatches(criteria: FilterCriteria): Promise<number>
+}
+
+interface FilterCriteria {
+  // Username filters (can use index)
+  usernames?: Array<{username: string, color: string}>;
+  
+  // Word filters (requires full scan)
+  includeWords?: string[];    // Message must contain these
+  excludeWords?: string[];    // Message must NOT contain these
+  
+  // Search (requires full scan)
+  searchTerm?: string;        // Text search
+  
+  // Date range (can use timestamp index)
+  afterTimestamp?: number;
+  beforeTimestamp?: number;
+  
+  // Message type (cannot use index - hyphenated key)
+  messageTypes?: string[];    // ['human', 'AI']
+  
+  // Domain (cannot use index - not indexed)
+  domain?: string;
+}
+```
+
+### Query Strategy (Optimization Logic)
+
+The key to performance is **querying the narrowest criteria first**:
+
+**1. If username filter exists** → Use username index (fastest):
+```javascript
+// Query username index first
+const userMessages = await queryByUsername('alice');
+// Then filter in-memory for color, words, search term
+return userMessages.filter(/* JS filters */).slice(0, limit);
+```
+
+**2. If date range exists** → Use timestamp index:
+```javascript
+// Query timestamp index for range
+const rangeMessages = await queryByTimestampRange(from, to);
+// Then filter in-memory for other criteria
+return rangeMessages.filter(/* JS filters */).slice(0, limit);
+```
+
+**3. If only search/words** → Full scan with early termination:
+```javascript
+// Open cursor, iterate, collect matches
+const matches = [];
+await iterateWithCursor((message) => {
+  if (matchesCriteria(message)) {
+    matches.push(message);
+    if (matches.length >= limit) return 'STOP'; // Early exit!
+  }
+});
+return matches;
+```
+
+### Integration with Existing Code
+
+**Changes to CommentsStream.tsx**:
+
+1. **Detect Mode**:
+```typescript
+const isFilterMode = isFilterEnabled || searchTerm.length > 0;
+```
+
+2. **Load Messages**:
+```typescript
+if (isFilterMode) {
+  // Query IndexedDB with filters
+  const filtered = await simpleIndexedDB.queryMessages({
+    usernames: filterUsernames,
+    includeWords: filterWords,
+    excludeWords: negativeFilterWords,
+    searchTerm: searchTerm,
+    // ... other criteria
+  }, MESSAGE_SYSTEM_CONFIG.maxDisplayMessages);
+  
+  setAllComments(filtered);
+} else {
+  // Load newest N messages (existing behavior)
+  const recent = await simpleIndexedDB.getMessages(
+    MESSAGE_SYSTEM_CONFIG.maxDisplayMessages
+  );
+  setAllComments(recent);
+}
+```
+
+3. **New Message Handling**:
+```typescript
+if (isFilterMode) {
+  // Test new message against current filter
+  if (matchesCurrentFilter(newMessage)) {
+    setAllComments(prev => [...prev, newMessage].slice(-maxDisplayMessages));
+  }
+  // Still save to IndexedDB even if doesn't match
+  await simpleIndexedDB.saveMessage(newMessage);
+} else {
+  // Normal mode - just append
+  setAllComments(prev => [...prev, newMessage]);
+}
+```
+
+### Memory Management
+
+**Guard Rails** (ALL from config):
+```typescript
+// In-memory limits (from MESSAGE_SYSTEM_CONFIG)
+maxDisplayMessages: 500  // Max in React state (any mode)
+lazyLoadChunkSize: 200   // Incremental loading
+
+// IndexedDB limits (from MESSAGE_SYSTEM_CONFIG)  
+maxIndexedDBMessages: 100000      // Max stored
+indexedDBCleanupThreshold: 120000 // Trigger cleanup
+```
+
+**Why This Scales**:
+- Browse mode: 500 messages max in memory
+- Filter mode: 500 messages max in memory (filtered results)
+- IndexedDB: 100k messages on disk (queryable, not loaded)
+- New messages: Always tested/filtered before adding to memory
+
+### Edge Cases & Robustness
+
+**1. Filter returns 10,000+ matches**:
+- Only load first 500 into memory
+- Show UI: "Showing 500 of 10,234 matches"
+- Lazy load more on scroll up
+- Use `countMatches()` to know total without loading
+
+**2. Search term not found in 100k messages**:
+- Cursor iterates through all 100k
+- Returns empty array
+- Show: "No matches found"
+- Takes 1-2 seconds worst case (acceptable for no results)
+
+**3. Multiple filters compound** (username + word + search):
+- Query narrowest first (username index)
+- Filter remaining in JS
+- Example: 100k total → 500 alice messages → 20 with "quantum" → instant
+
+**4. User changes filter while query running**:
+- Cancel previous query (cursor close)
+- Start new query with new criteria
+- Show loading state during query
+
+**5. Filter mode → Browse mode transition**:
+- Clear filtered results
+- Load newest N messages from IndexedDB
+- Resume normal polling
+
+### Implementation Phases
+
+**Phase 4A: Core Query Methods** (2-3 hours)
+- Add `queryMessages()` to SimpleIndexedDB
+- Add `countMatches()` to SimpleIndexedDB
+- Implement cursor-based iteration
+- Use indexes where available
+
+**Phase 4B: Component Integration** (1-2 hours)
+- Detect browse vs filter mode in CommentsStream
+- Switch data source based on mode
+- Handle loading states
+- Test with filters
+
+**Phase 4C: Real-Time Updates** (1 hour)
+- Test new messages against active filters
+- Add if match, save regardless
+- Update match count
+
+**Phase 4D: Lazy Load Filtered Results** (1 hour)
+- Implement pagination for large filter results
+- "Load More" for >500 matches
+- Match count display
+
+### Configuration Verification
+
+**All values sourced from MESSAGE_SYSTEM_CONFIG** (NO hardcoding):
+
+| Constant | Source | Current Value |
+|----------|--------|---------------|
+| `MAX_DISPLAY_MESSAGES` | `MESSAGE_SYSTEM_CONFIG.maxDisplayMessages` | 500 |
+| `POLL_BATCH_LIMIT` | `MESSAGE_SYSTEM_CONFIG.cloudPollBatch` | 200 |
+| `INDEXEDDB_INITIAL_LOAD` | `MESSAGE_SYSTEM_CONFIG.maxDisplayMessages` | 500 |
+| `INDEXEDDB_LAZY_LOAD_CHUNK` | `MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize` | 200 |
+| `INITIAL_LOAD_COUNT` | `MESSAGE_SYSTEM_CONFIG.cloudInitialLoad` | 0 |
+| `POLLING_INTERVAL` | `MESSAGE_SYSTEM_CONFIG.cloudPollingInterval` | 5000 |
+
+**I will add NO new hardcoded numbers.** Any limits will be:
+1. Sourced from `MESSAGE_SYSTEM_CONFIG`
+2. Or configurable parameters to methods
+3. Documented clearly
+
+### Testing Strategy
+
+**Test Scenarios**:
+1. ✅ Browse 500 messages (no filters)
+2. ✅ Filter for 1 user → 200 results
+3. ✅ Filter for 1 user → 5000 results (lazy load)
+4. ✅ Search rare word → 10 results
+5. ✅ Search common word → 1000+ results  
+6. ✅ Compound filter (user + word) → 50 results
+7. ✅ New message arrives while filtered → updates if match
+8. ✅ Clear filter → return to browse mode
+
+### Success Criteria
+
+- ✅ Filter/search works on ALL IndexedDB messages
+- ✅ No browser freeze with 100k messages
+- ✅ Memory stays under 100 MB
+- ✅ Query response < 100ms for indexed queries
+- ✅ Query response < 500ms for full scans
+- ✅ All limits from MESSAGE_SYSTEM_CONFIG
+- ✅ No hardcoded numbers
+- ✅ Graceful degradation if slow
+
+---
+
+## Summary for Approval
+
+**What I'll build**:
+- Cursor-based IndexedDB queries (efficient for large datasets)
+- Two-mode system (browse vs filter)
+- All config from MESSAGE_SYSTEM_CONFIG
+- No hardcoded limits
+- Memory-safe at 100k+ messages
+
+**What I won't do**:
+- ❌ Load all messages into memory
+- ❌ Hardcode any numbers
+- ❌ Change existing config values
+- ❌ Break current functionality
+
+**Expected outcome**:
+- Filters/search work on full IndexedDB
+- Fast enough for good UX
+- Scales to 100k+ messages
+- Memory-efficient
+
+Ready for your approval to proceed!
