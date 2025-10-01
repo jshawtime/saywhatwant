@@ -9,6 +9,20 @@
 import { Comment } from '@/types';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
+/**
+ * Filter criteria for querying messages
+ */
+export interface FilterCriteria {
+  usernames?: Array<{username: string, color: string}>;
+  includeWords?: string[];
+  excludeWords?: string[];
+  searchTerm?: string;
+  afterTimestamp?: number;
+  beforeTimestamp?: number;
+  messageTypes?: string[];
+  domain?: string;
+}
+
 const DB_NAME = 'SayWhatWant';
 const DB_VERSION = 4; // Bumped to fix index creation error with 'message-type'
 const STORE_NAME = 'messages';
@@ -284,6 +298,181 @@ class SimpleIndexedDB {
     } catch (error) {
       console.error('[SimpleIndexedDB] Cleanup error:', error);
     }
+  }
+
+  /**
+   * Query messages with filter criteria
+   * Uses IndexedDB indexes for performance where possible
+   * Returns up to 'limit' matching messages, newest first
+   */
+  async queryMessages(criteria: FilterCriteria, limit: number): Promise<Comment[]> {
+    if (!this.isInit()) {
+      console.warn('[SimpleIndexedDB] Cannot query - database not initialized');
+      return [];
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      
+      let cursorSource: IDBIndex | IDBObjectStore;
+      let range: IDBKeyRange | null = null;
+      
+      // Optimize: Use indexes when possible
+      if (criteria.usernames && criteria.usernames.length === 1) {
+        // Single username - use username index
+        cursorSource = store.index('username');
+        range = IDBKeyRange.only(criteria.usernames[0].username);
+        console.log('[SimpleIndexedDB] Using username index for query');
+      } else if (criteria.afterTimestamp || criteria.beforeTimestamp) {
+        // Date range - use timestamp index
+        cursorSource = store.index('timestamp');
+        if (criteria.afterTimestamp && criteria.beforeTimestamp) {
+          range = IDBKeyRange.bound(criteria.afterTimestamp, criteria.beforeTimestamp);
+        } else if (criteria.afterTimestamp) {
+          range = IDBKeyRange.lowerBound(criteria.afterTimestamp);
+        } else if (criteria.beforeTimestamp) {
+          range = IDBKeyRange.upperBound(criteria.beforeTimestamp);
+        }
+        console.log('[SimpleIndexedDB] Using timestamp index for query');
+      } else {
+        // Full scan - use timestamp index in reverse (newest first)
+        cursorSource = store.index('timestamp');
+        console.log('[SimpleIndexedDB] Full scan query');
+      }
+      
+      const matches: Comment[] = [];
+      const request = cursorSource.openCursor(range, 'prev'); // Newest first
+      
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        
+        if (cursor && matches.length < limit) {
+          const message = cursor.value as Comment;
+          
+          // Apply all filter criteria
+          if (this.messageMatchesCriteria(message, criteria)) {
+            matches.push(message);
+          }
+          
+          cursor.continue();
+        } else {
+          console.log(`[SimpleIndexedDB] Query found ${matches.length} matches`);
+          resolve(matches);
+        }
+      };
+      
+      request.onerror = () => {
+        console.error('[SimpleIndexedDB] Query failed:', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  /**
+   * Count how many messages match criteria (without loading them)
+   */
+  async countMatches(criteria: FilterCriteria): Promise<number> {
+    if (!this.isInit()) {
+      console.warn('[SimpleIndexedDB] Cannot count - database not initialized');
+      return 0;
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('timestamp');
+      
+      let count = 0;
+      const request = index.openCursor(null, 'prev');
+      
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        
+        if (cursor) {
+          const message = cursor.value as Comment;
+          
+          if (this.messageMatchesCriteria(message, criteria)) {
+            count++;
+          }
+          
+          cursor.continue();
+        } else {
+          console.log(`[SimpleIndexedDB] Count found ${count} matches`);
+          resolve(count);
+        }
+      };
+      
+      request.onerror = () => {
+        console.error('[SimpleIndexedDB] Count failed:', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  /**
+   * Check if a message matches all filter criteria
+   * Private helper for filtering logic
+   */
+  private messageMatchesCriteria(message: Comment, criteria: FilterCriteria): boolean {
+    // Username filter (with color)
+    if (criteria.usernames && criteria.usernames.length > 0) {
+      const usernameMatch = criteria.usernames.some(
+        filter => message.username === filter.username && message.color === filter.color
+      );
+      if (!usernameMatch) return false;
+    }
+    
+    // Include words (message must contain ALL of these)
+    if (criteria.includeWords && criteria.includeWords.length > 0) {
+      const textLower = message.text.toLowerCase();
+      const hasAllWords = criteria.includeWords.every(word => 
+        textLower.includes(word.toLowerCase())
+      );
+      if (!hasAllWords) return false;
+    }
+    
+    // Exclude words (message must NOT contain ANY of these)
+    if (criteria.excludeWords && criteria.excludeWords.length > 0) {
+      const textLower = message.text.toLowerCase();
+      const hasExcludedWord = criteria.excludeWords.some(word => 
+        textLower.includes(word.toLowerCase())
+      );
+      if (hasExcludedWord) return false;
+    }
+    
+    // Search term
+    if (criteria.searchTerm) {
+      const searchLower = criteria.searchTerm.toLowerCase();
+      const textLower = message.text.toLowerCase();
+      const usernameLower = message.username?.toLowerCase() || '';
+      
+      if (!textLower.includes(searchLower) && !usernameLower.includes(searchLower)) {
+        return false;
+      }
+    }
+    
+    // Timestamp range
+    if (criteria.afterTimestamp && message.timestamp < criteria.afterTimestamp) {
+      return false;
+    }
+    if (criteria.beforeTimestamp && message.timestamp > criteria.beforeTimestamp) {
+      return false;
+    }
+    
+    // Message type
+    if (criteria.messageTypes && criteria.messageTypes.length > 0) {
+      if (!criteria.messageTypes.includes(message['message-type'])) {
+        return false;
+      }
+    }
+    
+    // Domain
+    if (criteria.domain && message.domain !== criteria.domain) {
+      return false;
+    }
+    
+    return true;
   }
 
   /**

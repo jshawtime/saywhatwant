@@ -12,7 +12,7 @@ import {
   markFilterAsUnread,
   NotificationSound 
 } from '@/modules/notificationSystem';
-import { simpleIndexedDB } from '@/modules/simpleIndexedDB';
+import { simpleIndexedDB, FilterCriteria } from '@/modules/simpleIndexedDB';
 import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { parseCommentText } from '@/utils/textParsing';
@@ -273,6 +273,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           }
         } catch (err) {
           console.warn('[SimpleIndexedDB] Failed to save user message:', err);
+        }
+        
+        // In filter mode: only add if matches current filter
+        if (isFilterMode && !matchesCurrentFilter(comment)) {
+          console.log('[FilterMode] User message does not match filter, saved but not displayed');
+          return; // Save but don't display
         }
         
         setAllComments(prev => {
@@ -642,6 +648,144 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Track if we've done initial scroll
   const hasScrolledRef = useRef(false);
   
+  // Detect if we're in filter mode
+  const isFilterMode = isFilterEnabled || searchTerm.length > 0;
+  
+  // Helper to test if message matches current filter criteria
+  const matchesCurrentFilter = useCallback((message: Comment): boolean => {
+    if (!isFilterMode) return true; // No filters = all messages match
+    
+    // Username filter
+    if (filterUsernames.length > 0) {
+      const usernameMatch = filterUsernames.some(
+        filter => message.username === filter.username && message.color === filter.color
+      );
+      if (!usernameMatch) return false;
+    }
+    
+    // Include words
+    if (filterWords.length > 0) {
+      const textLower = message.text.toLowerCase();
+      const hasAllWords = filterWords.every(word => textLower.includes(word.toLowerCase()));
+      if (!hasAllWords) return false;
+    }
+    
+    // Exclude words
+    if (negativeFilterWords.length > 0) {
+      const textLower = message.text.toLowerCase();
+      const hasExcludedWord = negativeFilterWords.some(word => textLower.includes(word.toLowerCase()));
+      if (hasExcludedWord) return false;
+    }
+    
+    // Search term
+    if (searchTerm.length > 0) {
+      const searchLower = searchTerm.toLowerCase();
+      const textLower = message.text.toLowerCase();
+      const usernameLower = message.username?.toLowerCase() || '';
+      if (!textLower.includes(searchLower) && !usernameLower.includes(searchLower)) {
+        return false;
+      }
+    }
+    
+    // Domain filter
+    if (domainFilterEnabled && message.domain !== currentDomain) {
+      return false;
+    }
+    
+    // Message type filters
+    if (!showHumans && message['message-type'] === 'human') return false;
+    if (!showEntities && message['message-type'] === 'AI') return false;
+    
+    return true;
+  }, [isFilterMode, filterUsernames, filterWords, negativeFilterWords, searchTerm, 
+      domainFilterEnabled, currentDomain, showHumans, showEntities]);
+  
+  // Re-query IndexedDB when filters change
+  useEffect(() => {
+    const reloadWithFilters = async () => {
+      if (!isFilterMode) {
+        // Browse mode - load newest messages
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      try {
+        await simpleIndexedDB.init();
+        
+        if (!simpleIndexedDB.isInit()) {
+          console.warn('[FilterMode] IndexedDB not initialized');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Build filter criteria
+        const criteria: any = {};
+        
+        if (filterUsernames.length > 0) {
+          criteria.usernames = filterUsernames;
+        }
+        
+        if (filterWords.length > 0) {
+          criteria.includeWords = filterWords;
+        }
+        
+        if (negativeFilterWords.length > 0) {
+          criteria.excludeWords = negativeFilterWords;
+        }
+        
+        if (searchTerm.length > 0) {
+          criteria.searchTerm = searchTerm;
+        }
+        
+        if (dateTimeFilter && typeof dateTimeFilter === 'object') {
+          const dtFilter = dateTimeFilter as any;
+          if (dtFilter.from) {
+            criteria.afterTimestamp = new Date(dtFilter.from).getTime();
+          }
+          if (dtFilter.to) {
+            criteria.beforeTimestamp = new Date(dtFilter.to).getTime();
+          }
+        }
+        
+        if (domainFilterEnabled) {
+          criteria.domain = currentDomain;
+        }
+        
+        // Message type filters
+        const messageTypes: string[] = [];
+        if (showHumans) messageTypes.push('human');
+        if (showEntities) messageTypes.push('AI');
+        if (messageTypes.length > 0 && messageTypes.length < 2) {
+          criteria.messageTypes = messageTypes;
+        }
+        
+        console.log('[FilterMode] Querying IndexedDB with criteria:', criteria);
+        
+        // Query IndexedDB with filter criteria
+        const filtered = await simpleIndexedDB.queryMessages(
+          criteria,
+          MESSAGE_SYSTEM_CONFIG.maxDisplayMessages
+        );
+        
+        console.log(`[FilterMode] Found ${filtered.length} matching messages`);
+        
+        // Optionally get total count for UI feedback
+        // const totalMatches = await simpleIndexedDB.countMatches(criteria);
+        // console.log(`[FilterMode] Showing ${filtered.length} of ${totalMatches} matches`);
+        
+        setAllComments(filtered);
+      } catch (err) {
+        console.error('[FilterMode] Error querying IndexedDB:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    reloadWithFilters();
+  }, [isFilterEnabled, filterUsernames, filterWords, negativeFilterWords, searchTerm, 
+      dateTimeFilter, domainFilterEnabled, currentDomain, showHumans, showEntities]);
+  
   // Helper to trim messages to dynamic display limit
   const trimToMaxMessages = useCallback((messages: Comment[]): Comment[] => {
     if (messages.length <= dynamicMaxMessages) {
@@ -826,11 +970,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           }
           
           // Append new messages but avoid duplicates and respect max display limit
+          // In filter mode: only add messages that match current filter
           setAllComments(prev => {
             // Create a Set of existing IDs for fast lookup
             const existingIds = new Set(prev.map(c => c.id));
             // Only add messages we don't already have
-            const uniqueNewMessages = newComments.filter(msg => !existingIds.has(msg.id));
+            let uniqueNewMessages = newComments.filter(msg => !existingIds.has(msg.id));
+            
+            // In filter mode: test each message against active filters
+            if (isFilterMode) {
+              uniqueNewMessages = uniqueNewMessages.filter(msg => matchesCurrentFilter(msg));
+              console.log(`[FilterMode Polling] ${uniqueNewMessages.length} of ${newComments.length} new messages match filter`);
+            }
             
             if (uniqueNewMessages.length > 0) {
               console.log(`[Presence Polling] Adding ${uniqueNewMessages.length} unique messages (${newComments.length - uniqueNewMessages.length} duplicates filtered)`);
@@ -882,7 +1033,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         console.error('[Comments] Polling error:', err);
       }
   }, [loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages, 
-      isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches]);
+      isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches, isFilterMode, matchesCurrentFilter]);
   
   // Use the modular polling system
   useCommentsPolling({
