@@ -3,9 +3,13 @@
  * 
  * Manages scroll position saving and restoration for filters and search
  * Ensures user doesn't lose their place when toggling filters or searching
+ * 
+ * **Smart Behavior**: If user was "anchored to bottom" (viewing newest messages),
+ * keeps them at bottom after filter toggle. Otherwise restores pixel position.
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { saveScrollState, restoreScrollState, ScrollState } from '@/utils/scrollBehaviors';
 
 interface UseScrollRestorationParams {
   streamRef: React.RefObject<HTMLDivElement>;
@@ -37,38 +41,42 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
   // Search scroll position memory
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
   
-  // Filter toggle scroll restoration
+  // Filter toggle scroll restoration (with smart "anchored to bottom" tracking)
   const prevFilterEnabled = useRef(isFilterEnabled);
-  const scrollBeforeFilterToggle = useRef<number | null>(null);
+  const scrollBeforeFilterToggle = useRef<ScrollState | null>(null);
   
-  // Save scroll position BEFORE filter state changes
+  // Save scroll STATE (position + anchor status) BEFORE filter state changes
   useEffect(() => {
     if (streamRef.current && prevFilterEnabled.current !== isFilterEnabled) {
-      scrollBeforeFilterToggle.current = streamRef.current.scrollTop;
-      console.log('[Scroll] Pre-save scroll position:', scrollBeforeFilterToggle.current);
+      scrollBeforeFilterToggle.current = saveScrollState(streamRef.current, 100);
+      console.log('[Scroll] Pre-save scroll state:', scrollBeforeFilterToggle.current);
     }
   }, [isFilterEnabled, streamRef]);
   
-  // Restore scroll position AFTER filter state changes and content updates
+  // Restore scroll STATE (smart: keeps at bottom if was anchored) AFTER filter state changes
   useEffect(() => {
     if (!streamRef.current) return;
     
     if (prevFilterEnabled.current !== isFilterEnabled) {
-      const savedPos = scrollBeforeFilterToggle.current;
+      const savedState = scrollBeforeFilterToggle.current;
       
-      if (!isFilterEnabled && savedPos !== null) {
-        // Filters just turned OFF - restore position
+      if (savedState) {
         const restoreScroll = () => {
           if (streamRef.current && streamRef.current.scrollHeight > 0) {
-            const targetScroll = Math.min(savedPos, streamRef.current.scrollHeight - streamRef.current.clientHeight);
-            streamRef.current.scrollTop = targetScroll;
-            console.log('[Scroll] Restored scroll after filter OFF:', targetScroll, 'from saved:', savedPos);
+            // Smart restoration: if was at bottom, stay at bottom
+            restoreScrollState(streamRef.current, savedState);
             
             // Double-check it worked
             setTimeout(() => {
-              if (streamRef.current && Math.abs(streamRef.current.scrollTop - targetScroll) > 10) {
-                console.log('[Scroll] Re-applying scroll restoration, current:', streamRef.current.scrollTop, 'target:', targetScroll);
-                streamRef.current.scrollTop = targetScroll;
+              if (streamRef.current && savedState.wasAtBottom) {
+                // Ensure still at bottom after content settles
+                const { scrollHeight, scrollTop, clientHeight } = streamRef.current;
+                const atBottom = (scrollHeight - (scrollTop + clientHeight)) < 100;
+                
+                if (!atBottom) {
+                  console.log('[Scroll] Re-anchoring to bottom after filter toggle');
+                  streamRef.current.scrollTop = streamRef.current.scrollHeight;
+                }
               }
             }, 50);
           }
@@ -76,17 +84,6 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
         
         requestAnimationFrame(() => {
           requestAnimationFrame(restoreScroll);
-        });
-      } else if (isFilterEnabled && savedPos !== null) {
-        // Filters just turned ON - also restore to maintain position
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (streamRef.current && streamRef.current.scrollHeight > 0) {
-              const targetScroll = Math.min(savedPos, streamRef.current.scrollHeight - streamRef.current.clientHeight);
-              streamRef.current.scrollTop = targetScroll;
-              console.log('[Scroll] Restored scroll after filter ON:', targetScroll);
-            }
-          });
         });
       }
       

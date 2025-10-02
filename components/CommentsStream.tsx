@@ -80,6 +80,7 @@ import { formatTimestamp } from '@/modules/timestampSystem';
 import { parseCommentText } from '@/utils/textParsing';
 import { formatNumber } from '@/utils/formatNumber';
 import { URLFilterManager } from '@/lib/url-filter-manager';
+import { sortMessagesOldestFirst, mergeAndSortMessages } from '@/utils/messageUtils';
 
 /**
  * CommentsStream Component Props
@@ -536,9 +537,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           if (newMessages.length > 0) {
             console.log(`[Comments] Adding ${newMessages.length} new messages from server`);
             
-            // Merge and sort by timestamp (oldest first for chat display)
-            const mergedComments = [...allComments, ...newMessages]
-              .sort((a, b) => a.timestamp - b.timestamp);
+            // Merge and sort using global utility (ensures oldest→newest)
+            const mergedComments = mergeAndSortMessages(allComments, newMessages);
               
               // Apply max display limit
               const trimmedComments = trimToMaxMessages(mergedComments);
@@ -617,8 +617,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       
       const allStoredComments = loadCommentsFromStorage();
       
-      // Sort by timestamp (newest last for chat-style display)
-      allStoredComments.sort((a, b) => a.timestamp - b.timestamp);
+      // Sort using global utility (ensures oldest→newest for chat display)
+      sortMessagesOldestFirst(allStoredComments);
       
       const total = allStoredComments.length;
       const start = Math.max(0, total - offset - limit);
@@ -709,9 +709,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           messageMap.set(msg.id, msg);
         });
         
-        // Convert back to array and sort by timestamp
-        const mergedMessages = Array.from(messageMap.values())
-          .sort((a, b) => a.timestamp - b.timestamp);
+        // Convert back to array and sort using global utility
+        const mergedMessages = sortMessagesOldestFirst(Array.from(messageMap.values()));
         
         console.log(`[Comments] Merged ${indexedDbMessages.length} IndexedDB + ${cloudMessages.length} cloud = ${mergedMessages.length} total messages`);
         
@@ -778,9 +777,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Add existing messages
         prev.forEach(msg => messageMap.set(msg.id, msg));
         
-        // Convert back to array and sort
-        const merged = Array.from(messageMap.values())
-          .sort((a, b) => a.timestamp - b.timestamp);
+        // Convert back to array and sort using global utility
+        const merged = sortMessagesOldestFirst(Array.from(messageMap.values()));
         
         console.log(`[IndexedDB] Added ${loadCount} older messages (${newOffset} remaining in storage)`);
         return merged; // Don't trim! Let them all show
