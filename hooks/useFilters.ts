@@ -82,7 +82,9 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     // For backward compatibility (not used in new implementation)
     filterByColorToo: true,
     setFilterByColorToo: () => {},
-    filterUsernames: mergedUserFilters,
+    // filterUsernames should be in 9-digit format for IndexedDB querying
+    // Use filterState.users (9-digit) not mergedUserFilters (RGB format)
+    filterUsernames: filterState.users,
     filterWords: mergedFilterWords,
     negativeFilterWords: mergedNegativeWords,
     clearDateTimeFilter: () => {},

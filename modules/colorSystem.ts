@@ -111,15 +111,29 @@ export const adjustColorBrightness = (color: string, factor: number = 1): string
  */
 export const getDarkerColor = adjustColorBrightness;
 
+// ==========================================
+// FORMAT CONVERSION FUNCTIONS
+// ==========================================
+
 /**
  * Convert 9-digit format (RRRGGGBBB) to rgb(r, g, b) string for CSS
+ * 
+ * This is the PRIMARY conversion function for displaying colors in the UI.
+ * 
+ * @param digits - 9-digit color string (e.g., "255165000")
+ * @returns RGB color string for CSS (e.g., "rgb(255, 165, 0)")
+ * 
+ * @example
+ * nineDigitToRgb("255165000") // Returns: "rgb(255, 165, 0)"
+ * nineDigitToRgb("096165250") // Returns: "rgb(96, 165, 250)"
  */
 export const nineDigitToRgb = (digits: string): string => {
   if (!/^\d{9}$/.test(digits)) {
     // If already RGB format, return as-is (backwards compatibility)
     if (digits.startsWith('rgb(')) return digits;
-    // Default fallback
-    return 'rgb(255, 255, 255)';
+    console.warn('[ColorSystem] Invalid 9-digit format, using default:', digits);
+    // Default fallback - blue-400
+    return 'rgb(96, 165, 250)';
   }
   
   const r = parseInt(digits.slice(0, 3), 10);
@@ -127,6 +141,39 @@ export const nineDigitToRgb = (digits: string): string => {
   const b = parseInt(digits.slice(6, 9), 10);
   
   return `rgb(${r}, ${g}, ${b})`;
+};
+
+/**
+ * Convert RGB format to 9-digit format (RRRGGGBBB) for storage/URLs
+ * 
+ * This is the PRIMARY conversion function for storing colors in databases and URLs.
+ * 
+ * @param color - RGB color string (e.g., "rgb(255, 165, 0)") or 9-digit string
+ * @returns 9-digit color string (e.g., "255165000")
+ * 
+ * @example
+ * rgbToNineDigit("rgb(255, 165, 0)") // Returns: "255165000"
+ * rgbToNineDigit("255165000")        // Returns: "255165000" (already 9-digit)
+ */
+export const rgbToNineDigit = (color: string): string => {
+  // Already in 9-digit format - return as-is
+  if (/^\d{9}$/.test(color)) {
+    return color;
+  }
+  
+  // Parse rgb(r, g, b) format
+  const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!match) {
+    console.warn('[ColorSystem] Invalid RGB format, using default:', color);
+    return '096165250'; // Default blue-400
+  }
+  
+  const [, r, g, b] = match;
+  const rStr = r.padStart(3, '0');
+  const gStr = g.padStart(3, '0');
+  const bStr = b.padStart(3, '0');
+  
+  return `${rStr}${gStr}${bStr}`;
 };
 
 /**
@@ -192,6 +239,129 @@ export const getRandomColor = (): string => {
  */
 export const getRandomColorFromPalette = (): string => {
   return COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+};
+
+// ==========================================
+// TYPE GUARDS & VALIDATORS
+// ==========================================
+
+/**
+ * Check if a string is in 9-digit format (RRRGGGBBB)
+ * 
+ * @param color - Color string to check
+ * @returns true if the color is in 9-digit format
+ * 
+ * @example
+ * isNineDigitFormat("255165000")          // true
+ * isNineDigitFormat("rgb(255, 165, 0)")   // false
+ * isNineDigitFormat("25516500")           // false (only 8 digits)
+ */
+export const isNineDigitFormat = (color: string): boolean => {
+  return /^\d{9}$/.test(color);
+};
+
+/**
+ * Check if a string is in RGB format (rgb(r, g, b))
+ * 
+ * @param color - Color string to check
+ * @returns true if the color is in RGB format
+ * 
+ * @example
+ * isRgbFormat("rgb(255, 165, 0)")   // true
+ * isRgbFormat("255165000")          // false
+ * isRgbFormat("rgb(255,165,0)")     // true (spaces optional)
+ */
+export const isRgbFormat = (color: string): boolean => {
+  return /^rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)$/.test(color);
+};
+
+// ==========================================
+// SAFE CONVERTERS
+// ==========================================
+
+/**
+ * Ensure a color string is in 9-digit format, converting if necessary
+ * 
+ * This function ALWAYS returns a valid 9-digit color, even if input is invalid.
+ * Use this when you need guaranteed 9-digit format (storage, URLs, filtering).
+ * 
+ * @param color - Color string in any format
+ * @returns Color in 9-digit format, guaranteed
+ * 
+ * @example
+ * ensureNineDigit("255165000")          // "255165000" (already 9-digit)
+ * ensureNineDigit("rgb(255, 165, 0)")   // "255165000" (converted)
+ * ensureNineDigit("invalid")            // "096165250" (default blue)
+ */
+export const ensureNineDigit = (color: string): string => {
+  if (isNineDigitFormat(color)) {
+    return color;
+  }
+  
+  if (isRgbFormat(color)) {
+    return rgbToNineDigit(color);
+  }
+  
+  console.warn('[ColorSystem] Unknown color format, using default blue:', color);
+  return DEFAULT_COLOR; // Default blue-400 in 9-digit format
+};
+
+/**
+ * Ensure a color string is in RGB format, converting if necessary
+ * 
+ * This function ALWAYS returns a valid RGB color, even if input is invalid.
+ * Use this when you need guaranteed RGB format (CSS, styling, display).
+ * 
+ * @param color - Color string in any format
+ * @returns Color in RGB format, guaranteed
+ * 
+ * @example
+ * ensureRgb("rgb(255, 165, 0)")   // "rgb(255, 165, 0)" (already RGB)
+ * ensureRgb("255165000")          // "rgb(255, 165, 0)" (converted)
+ * ensureRgb("invalid")            // "rgb(96, 165, 250)" (default blue)
+ */
+export const ensureRgb = (color: string): string => {
+  if (isRgbFormat(color)) {
+    return color;
+  }
+  
+  if (isNineDigitFormat(color)) {
+    return nineDigitToRgb(color);
+  }
+  
+  console.warn('[ColorSystem] Unknown color format, using default blue:', color);
+  return nineDigitToRgb(DEFAULT_COLOR); // Default blue-400 in RGB format
+};
+
+// ==========================================
+// COMMENT COLOR HANDLING
+// ==========================================
+
+/**
+ * Get the display color for a comment (converts 9-digit → RGB for CSS)
+ * 
+ * This is the MAIN function for getting comment colors for rendering.
+ * It handles the conversion from stored format (9-digit) to display format (RGB).
+ * 
+ * REPLACES: usernameColorGenerator.ts getCommentColor()
+ * 
+ * @param comment - Comment object with optional color field
+ * @returns RGB color string for CSS styling
+ * 
+ * @example
+ * getCommentColor({ color: "255165000" })     // "rgb(255, 165, 0)"
+ * getCommentColor({ color: "rgb(96,165,250)"}) // "rgb(96, 165, 250)"
+ * getCommentColor({})                          // "rgb(156, 163, 175)" (gray fallback)
+ */
+export const getCommentColor = (comment: { color?: string; username?: string }): string => {
+  // If no color exists, return gray fallback
+  if (!comment.color) {
+    console.warn('[ColorSystem] Comment has no color, using gray fallback:', comment.username || 'Anonymous');
+    return 'rgb(156, 163, 175)'; // Gray fallback for messages without colors
+  }
+  
+  // Convert to RGB for CSS display
+  return ensureRgb(comment.color);
 };
 
 /**
@@ -406,22 +576,45 @@ export default {
   STORAGE_KEYS,
   RGB_RANGES,
   
-  // Functions
+  // Core Conversion Functions (PRIMARY)
+  nineDigitToRgb,
+  rgbToNineDigit,
+  
+  // Type Guards & Validators (NEW)
+  isNineDigitFormat,
+  isRgbFormat,
+  
+  // Safe Converters (NEW)
+  ensureNineDigit,
+  ensureRgb,
+  
+  // Comment Color Handling (NEW)
+  getCommentColor,
+  
+  // Color Manipulation
   hexToRgb,
   rgbToHex,
   adjustColorBrightness,
   getDarkerColor,
+  
+  // Color Generation
   getRandomColor,
   getRandomColorFromPalette,
+  
+  // Legacy Validators
   isValidHexColor,
   isValidRgbColor,
   parseRgbString,
   rgbStringToHex,
+  
+  // Theme System
   generateColorTheme,
+  applyCSSColorTheme,
+  
+  // Storage Functions
   saveUserColor,
   loadUserColor,
   getColorHistory,
-  applyCSSColorTheme,
   
   // Logic for hooks
   useColorSystemLogic,

@@ -31,9 +31,14 @@ const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages; // From c
 const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages; // Load same amount initially
 const INDEXEDDB_LAZY_LOAD_CHUNK = MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize; // From config
 
-// Import color functions from the color system
-import { getRandomColor, getDarkerColor, COLOR_PALETTE, nineDigitToRgb } from '@/modules/colorSystem';
-import { getCommentColor } from '@/modules/usernameColorGenerator';
+// Import color functions from the unified color system
+import { 
+  getRandomColor, 
+  getDarkerColor, 
+  COLOR_PALETTE, 
+  nineDigitToRgb,
+  getCommentColor  // Now imported from colorSystem (moved from usernameColorGenerator)
+} from '@/modules/colorSystem';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { ContextMenu } from '@/components/ContextMenu';
 import { TitleContextMenu } from '@/components/TitleContextMenu';
@@ -187,7 +192,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   
   // Use the filters hook with initial messages
   const {
-    filterUsernames,
+    filterUsernames, // 9-digit colors for IndexedDB querying
+    mergedUserFilters, // RGB colors for FilterBar display
     filterWords,
     negativeFilterWords,
     isFilterEnabled,
@@ -1102,7 +1108,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
           {/* Filter Bar */}
           <FilterBar 
-            filterUsernames={filterUsernames}
+            filterUsernames={mergedUserFilters}
             filterWords={filterWords}
             negativeFilterWords={negativeFilterWords}
             isFilterEnabled={isFilterEnabled}

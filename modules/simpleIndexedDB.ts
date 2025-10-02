@@ -426,21 +426,7 @@ class SimpleIndexedDB {
     // Username filter (with color) - EXACT case match
     if (criteria.usernames && criteria.usernames.length > 0) {
       const usernameMatch = criteria.usernames.some(
-        filter => {
-          const match = message.username === filter.username && message.color === filter.color;
-          // DEBUG: Log first mismatch to see what's wrong
-          if (!match && message.username === filter.username) {
-            console.log('[SimpleIndexedDB] Username match but color mismatch!', {
-              msgUsername: message.username,
-              msgColor: message.color,
-              msgColorType: typeof message.color,
-              filterUsername: filter.username,
-              filterColor: filter.color,
-              filterColorType: typeof filter.color,
-            });
-          }
-          return match;
-        }
+        filter => message.username === filter.username && message.color === filter.color
       );
       if (!usernameMatch) return false;
     }
