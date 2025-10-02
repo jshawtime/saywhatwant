@@ -536,9 +536,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           if (newMessages.length > 0) {
             console.log(`[Comments] Adding ${newMessages.length} new messages from server`);
             
-            // Merge and sort by timestamp (newest first) 
+            // Merge and sort by timestamp (oldest first for chat display)
             const mergedComments = [...allComments, ...newMessages]
-              .sort((a, b) => b.timestamp - a.timestamp);
+              .sort((a, b) => a.timestamp - b.timestamp);
               
               // Apply max display limit
               const trimmedComments = trimToMaxMessages(mergedComments);
