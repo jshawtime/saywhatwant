@@ -689,18 +689,28 @@ export function useUsernameEditor(
 
 ---
 
-**Step 5: Extract AppHeader** 🔄 **NEXT** (Most complex, highest value)
-1. Create `components/Header/MessageTypeToggles.tsx` (simplest first)
-2. Create `components/Header/UserControls.tsx` (medium complexity)
-3. Create `components/Header/AppHeader.tsx` (orchestrates sub-components)
-4. Extract title and domain filter
-5. Integrate message type toggles
-6. Integrate user controls
-7. Test all header interactions
-8. Test responsive behavior
-9. Commit: "Extract AppHeader component with sub-components"
+**Step 5: Extract AppHeader** ✅ **COMPLETE** (Commit: `38344d6`)
+1. ✅ Create `components/Header/MessageTypeToggles.tsx` (108 lines)
+2. ✅ Create `components/Header/UserControls.tsx` (259 lines)
+3. ✅ Create `components/Header/AppHeader.tsx` (268 lines) - orchestrates everything
+4. ✅ Extract title and domain filter - click toggle working
+5. ✅ Integrate message type toggles - Humans/Entities functional
+6. ✅ Integrate user controls - username, color picker, counters all work
+7. ✅ Test all header interactions - all preserved
+8. ✅ Test responsive behavior - layout adapts correctly
+9. ✅ Fixed syntax error (duplicate closing div)
+10. ✅ Commit: "Phase 3 Step 5: Extract AppHeader component with sub-components"
+11. ✅ Deployed to production - Version: `fe58d7b2`
 
-**Result After Step 5**: CommentsStream reduced to ~700 lines
+**Result**: Reduced CommentsStream by ~200 lines, created 3 header components (total 635 lines)
+
+**Notes**: Most complex extraction. Sub-component pattern successful - MessageTypeToggles and UserControls independently reusable. AppHeader cleanly integrates FilterBar and SearchBar from previous steps.
+
+---
+
+🎉 **PHASE 3A COMPLETE!** All UI components extracted successfully.
+
+**CommentsStream Reduction**: 1,380 → ~980 lines (29% reduction achieved)
 
 ---
 
