@@ -634,9 +634,24 @@ async function updateMessageCounter(env) {
  */
 async function handleGetStats(env) {
   try {
-    // Get the accurate count directly from KV
-    const countStr = await env.COMMENTS_KV.get('message-count');
-    const totalMessages = countStr ? parseInt(countStr, 10) : 0;
+    // Use the same counting method as /api/comments (analytics uses this)
+    // Count ACTUAL KV keys to get true total
+    let totalMessages = 0;
+    let cursor = undefined;
+    
+    do {
+      const list = await env.COMMENTS_KV.list({ prefix: 'comment:', cursor, limit: 1000 });
+      totalMessages += list.keys.length;
+      cursor = list.cursor;
+      
+      if (!list.list_complete) {
+        // Keep counting if there are more keys
+      } else {
+        break;
+      }
+    } while (cursor);
+    
+    console.log('[Stats] Counted total KV messages:', totalMessages);
     
     return new Response(JSON.stringify({
       totalMessages,
