@@ -81,6 +81,8 @@ import { useContextMenus } from '@/hooks/useContextMenus';
 import { useMobileKeyboard } from '@/hooks/useMobileKeyboard';
 // Import message loading state hook
 import { useMessageLoadingState } from '@/hooks/useMessageLoadingState';
+// Import username editor hook
+import { useUsernameEditor } from '@/hooks/useUsernameEditor';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -100,12 +102,21 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [initialMessages, setInitialMessages] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
   const [inputText, setInputText] = useState('');
-  const [username, setUsername] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [hasClickedUsername, setHasClickedUsername] = useState(false);
   const [mounted, setMounted] = useState(false); // For hydration safety
+  
+  // Username editing (consolidated into hook)
+  const {
+    username,
+    isEditing: isEditingUsername,
+    hasInteracted: hasClickedUsername,
+    setUsername,
+    startEditing: startEditingUsername,
+    stopEditing: stopEditingUsername,
+    clearUsername,
+    markAsInteracted: markUsernameAsInteracted
+  } = useUsernameEditor(MAX_USERNAME_LENGTH);
   
   // Color picker management (extracted to hook)
   const {
@@ -390,13 +401,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     pageLoadTimestamp.current = Date.now();
     lastFetchTimeRef.current = Date.now();
     
-    const savedUsername = localStorage.getItem('sww-username');
-    const savedColor = localStorage.getItem('sww-color');
-    if (savedUsername) {
-      setUsername(savedUsername);
-      setHasClickedUsername(true); // If there's a saved username, treat it as if they've clicked
+    // Username is now loaded automatically by useUsernameEditor hook
+    // If username was loaded from localStorage, mark as interacted
+    if (username) {
+      markUsernameAsInteracted();
     }
     
+    const savedColor = localStorage.getItem('sww-color');
     if (savedColor) {
       // Convert to 9-digit format if needed (for backwards compatibility)
       const manager = URLFilterManager.getInstance();
@@ -951,22 +962,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onToggleEntities={toggleShowEntities}
         username={username}
         hasClickedUsername={hasClickedUsername}
-        usernameFlash={usernameFlash}
+                usernameFlash={usernameFlash}
         showColorPicker={showColorPicker}
         randomizedColors={randomizedColors}
         maxUsernameLength={MAX_USERNAME_LENGTH}
         usernameRef={usernameRef}
         colorPickerRef={colorPickerRef}
-        onUsernameChange={(newUsername) => {
-                  setUsername(newUsername);
-                  localStorage.setItem('sww-username', newUsername);
-                }}
-        onUsernameFocus={() => setHasClickedUsername(true)}
+        onUsernameChange={setUsername}
+        onUsernameFocus={markUsernameAsInteracted}
         onUsernameTab={() => inputRef.current?.focus()}
-        onClearUsername={() => {
-                    setUsername('');
-                    localStorage.removeItem('sww-username');
-                  }}
+        onClearUsername={clearUsername}
         onToggleColorPicker={toggleColorPicker}
         onSelectColor={selectColor}
         showVideo={showVideo}
