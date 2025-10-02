@@ -158,8 +158,9 @@ export function nineDigitToRgb(digits: string): string {
 }
 
 /**
- * Normalize username for comparison
+ * Normalize username for URL encoding (preserve case)
+ * Only removes special characters, keeps original case from DB
  */
 export function normalizeUsername(username: string): string {
-  return username.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return username.replace(/[^a-zA-Z0-9]/g, '');
 }

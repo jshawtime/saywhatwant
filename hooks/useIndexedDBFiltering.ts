@@ -145,11 +145,11 @@ export function useIndexedDBFiltering(
   const matchesCurrentFilter = useCallback((message: Comment): boolean => {
     if (!isFilterMode) return true; // No filters = all messages match
     
-    // Username filter (case-insensitive username, exact color match)
+    // Username filter - EXACT case match for both username and color
     if (params.filterUsernames.length > 0) {
       const usernameMatch = params.filterUsernames.some(
         filter => 
-          message.username?.toLowerCase() === filter.username?.toLowerCase() && 
+          message.username === filter.username && 
           message.color === filter.color
       );
       if (!usernameMatch) return false;

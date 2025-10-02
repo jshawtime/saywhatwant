@@ -423,11 +423,11 @@ class SimpleIndexedDB {
    * Private helper for filtering logic
    */
   private messageMatchesCriteria(message: Comment, criteria: FilterCriteria): boolean {
-    // Username filter (with color)
+    // Username filter (with color) - EXACT case match
     if (criteria.usernames && criteria.usernames.length > 0) {
       const usernameMatch = criteria.usernames.some(
         filter => 
-          message.username?.toLowerCase() === filter.username?.toLowerCase() && 
+          message.username === filter.username && 
           message.color === filter.color
       );
       if (!usernameMatch) return false;
