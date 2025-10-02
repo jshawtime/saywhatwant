@@ -50,6 +50,7 @@ import { SearchBar } from '@/components/Search/SearchBar';
 import { NotificationBanner } from '@/components/Notifications/NotificationBanner';
 import { MessageInput } from '@/components/MessageInput/MessageInput';
 import { MessageStream } from '@/components/MessageStream/MessageStream';
+import { AppHeader } from '@/components/Header/AppHeader';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -934,210 +935,62 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   return (
     <div className="flex flex-col h-full bg-black text-white overflow-hidden relative">
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-black/50 backdrop-blur-sm">
-        <div className="p-3 space-y-2">
-          {/* Title and Domain Filter */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <h2 
-                onClick={() => {
-                  const newState = toggleDomainFilter();
-                  setDomainFilterEnabled(newState);
-                }}
-                onContextMenu={handleTitleContextMenu}
-                className="sww-title transition-opacity cursor-pointer select-none" 
-                title={domainFilterEnabled ? "Show messages across all domains | Right click more options" : "Show messages from this domain only | Right click more options"}
-                style={{ 
-                  color: userColorRgb,
-                  opacity: domainFilterEnabled ? 0.4 : 0.25, // Simple opacity change
-                  textShadow: 'none' // Explicitly remove any text shadow
-                }}
-              >
-                {modelDomain || domainConfig.title}
-              </h2>
-              {mounted && (
-                <DomainFilter
-                  isEnabled={domainFilterEnabled}
-                  domain={currentDomain}
-                  color={userColorRgb}
-                  onClick={() => {
-                    const newState = toggleDomainFilter();
-                    setDomainFilterEnabled(newState);
-                  }}
-                />
-              )}
-            </div>
-            
-            {/* Message Type Filters - Between LED and Counter */}
-            <div className="flex gap-1.5">
-              {/* Humans Button */}
-              <button
-                onClick={toggleShowHumans}
-                className={`px-2.5 py-1.5 rounded-full transition-all ${
-                  showHumans ? 'bg-black/40' : 'hover:bg-black/20'
-                }`}
-                title={showHumans ? "Hide human messages" : "Show human messages"}
-              >
-                <Users 
-                  className="w-3.5 h-3.5"
-                  style={{ 
-                    color: getDarkerColor(userColorRgb, showHumans 
-                      ? OPACITY_LEVELS.LIGHT  // Active: 60% opacity
-                      : OPACITY_LEVELS.DARK   // Inactive: 40% opacity
-                    )
-                  }}
-                />
-              </button>
-              
-              {/* Entities Button */}
-              <button
-                onClick={toggleShowEntities}
-                className={`px-2.5 py-1.5 rounded-full transition-all ${
-                  showEntities ? 'bg-black/40' : 'hover:bg-black/20'
-                }`}
-                title={showEntities ? "Hide entity messages" : "Show entity messages"}
-              >
-                <Sparkles 
-                  className="w-3.5 h-3.5"
-                  style={{ 
-                    color: getDarkerColor(userColorRgb, showEntities 
-                      ? OPACITY_LEVELS.LIGHT  // Active: 60% opacity
-                      : OPACITY_LEVELS.DARK   // Inactive: 40% opacity
-                    )
-                  }}
-                />
-              </button>
-            </div>
-            
-            {/* Username Input and TV Toggle - Always Visible */}
-            <div className="flex items-center gap-2">
-              {/* Messages window count */}
-              {displayedComments.length > 0 && (
-                <span 
-                  className="text-xs mr-2 opacity-60" 
-                  style={{ color: userColorRgb }}
-                  title="Messages in current window"
-                >
-                  {formatNumber(displayedComments.length)}
-                </span>
-              )}
-              
-              {/* Global message counter - small and subtle, inheriting user color */}
-              {messageCount > 0 && (
-                <span 
-                  className="text-xs mr-2 opacity-60" 
-                  style={{ color: userColorRgb }}
-                  title="Total global messages"
-                >
-                  {formatNumber(messageCount)}
-                </span>
-              )}
-              <div className="relative flex items-center gap-2" style={{ width: 'calc(15ch + 65px)' }} ref={colorPickerRef}>
-              <button
-                onClick={toggleColorPicker}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
-                aria-label="Choose color"
-                title="Click to pick color or press 'R' for random"
-                tabIndex={-1}
-              >
-                <StyledUserIcon userColor={userColorRgb} />
-              </button>
-              
-              {/* Color Picker Dropdown */}
-              <ColorPickerDropdown
-                colors={randomizedColors}
-                onSelectColor={selectColor}
-                isVisible={showColorPicker}
-              />
-              <StyledUsernameInput
-                inputRef={usernameRef}
-                value={username}
-                onChange={(e) => {
-                  // Remove spaces and limit length
-                  const newUsername = e.target.value.replace(/\s/g, '').substring(0, MAX_USERNAME_LENGTH);
-                  setUsername(newUsername);
-                  localStorage.setItem('sww-username', newUsername);
-                }}
-                onFocus={() => {
-                  if (!hasClickedUsername) {
-                    setHasClickedUsername(true);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Tab to message field
-                  if (e.key === 'Tab' && !e.shiftKey) {
-                    e.preventDefault();
-                    inputRef.current?.focus();
-                  }
-                }}
-                userColor={userColorRgb}
-                placeholder={hasClickedUsername && username ? "" : "..."}
-                maxLength={MAX_USERNAME_LENGTH}
-                usernameFlash={usernameFlash}
-              />
-              {username && (
-                <button
-                  onClick={() => {
-                    setUsername('');
-                    localStorage.removeItem('sww-username');
-                  }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
-                  aria-label="Clear username"
-                  tabIndex={-1}
-                >
-                  <StyledClearIcon userColor={userColorRgb} />
-                </button>
-              )}
-            </div>
-            
-            {/* TV Toggle */}
-            {toggleVideo && (
-              <button
-                onClick={toggleVideo}
-                className="p-2 hover:opacity-80 transition-opacity"
-                style={{ 
-                  color: showVideo 
-                    ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT)  // 60% opacity when active
-                    : userColor,  // Full color when off
-                  opacity: showVideo ? 1 : OPACITY_LEVELS.MEDIUM  // 50% opacity when off
-                }}
-                title={showVideo ? 'Hide video' : 'Show video'}
-                tabIndex={-1}
-              >
-                <Tv className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-          </div>
-
-          {/* Filter Bar */}
-          <FilterBar 
-            filterUsernames={mergedUserFilters}
-            filterWords={filterWords}
-            negativeFilterWords={negativeFilterWords}
-            isFilterEnabled={isFilterEnabled}
-            hasActiveFilters={hasActiveFilters}
-            userColor={userColorRgb}
-            dateTimeFilter={dateTimeFilter}
-            onToggleFilter={toggleFilter}
-            onRemoveUsernameFilter={removeFromFilter}
-            onRemoveWordFilter={removeWordFromFilter}
-            onRemoveNegativeFilter={removeNegativeWordFilter}
-            onClearDateTimeFilter={clearDateTimeFilter}
-            getDarkerColor={getDarkerColor}
-          />
-
-          {/* Search Bar - Instant Search */}
-          <SearchBar
-            searchTerm={searchTerm}
-            userColor={userColor}
-            userColorRgb={userColorRgb}
-            onSearchChange={(value) => setSearchTerm(value)}
-            onClearSearch={() => setSearchTerm('')}
-            placeholder="Search..."
-          />
-        </div>
-      </div>
+      <AppHeader
+        title={domainConfig.title}
+        domainFilterEnabled={domainFilterEnabled}
+        currentDomain={currentDomain}
+        mounted={mounted}
+        modelDomain={modelDomain}
+        userColor={userColor}
+        userColorRgb={userColorRgb}
+        showHumans={showHumans}
+        showEntities={showEntities}
+        onToggleHumans={toggleShowHumans}
+        onToggleEntities={toggleShowEntities}
+        username={username}
+        hasClickedUsername={hasClickedUsername}
+        usernameFlash={usernameFlash}
+        showColorPicker={showColorPicker}
+        randomizedColors={randomizedColors}
+        maxUsernameLength={MAX_USERNAME_LENGTH}
+        usernameRef={usernameRef}
+        colorPickerRef={colorPickerRef}
+        onUsernameChange={(newUsername) => {
+          setUsername(newUsername);
+          localStorage.setItem('sww-username', newUsername);
+        }}
+        onUsernameFocus={() => setHasClickedUsername(true)}
+        onUsernameTab={() => inputRef.current?.focus()}
+        onClearUsername={() => {
+          setUsername('');
+          localStorage.removeItem('sww-username');
+        }}
+        onToggleColorPicker={toggleColorPicker}
+        onSelectColor={selectColor}
+        showVideo={showVideo}
+        onToggleVideo={toggleVideo}
+        displayedCount={displayedComments.length}
+        globalCount={messageCount}
+        filterUsernames={mergedUserFilters}
+        filterWords={filterWords}
+        negativeFilterWords={negativeFilterWords}
+        isFilterEnabled={isFilterEnabled}
+        hasActiveFilters={hasActiveFilters}
+        dateTimeFilter={dateTimeFilter}
+        onToggleFilter={toggleFilter}
+        onRemoveUsernameFilter={removeFromFilter}
+        onRemoveWordFilter={removeWordFromFilter}
+        onRemoveNegativeFilter={removeNegativeWordFilter}
+        onClearDateTimeFilter={clearDateTimeFilter}
+        searchTerm={searchTerm}
+        onSearchChange={(value) => setSearchTerm(value)}
+        onClearSearch={() => setSearchTerm('')}
+        onTitleClick={() => {
+          const newState = toggleDomainFilter();
+          setDomainFilterEnabled(newState);
+        }}
+        onTitleContextMenu={handleTitleContextMenu}
+      />
 
       {/* Comments Stream */}
       <MessageStream
