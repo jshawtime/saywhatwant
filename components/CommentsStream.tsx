@@ -48,6 +48,7 @@ import { EmptyState } from '@/components/MessageList/EmptyState';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 import { SearchBar } from '@/components/Search/SearchBar';
 import { NotificationBanner } from '@/components/Notifications/NotificationBanner';
+import { MessageInput } from '@/components/MessageInput/MessageInput';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -1210,123 +1211,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
 
       {/* Input Form - Always visible on mobile */}
       <div className="mobile-input-form flex-shrink-0 border-t border-white/10 bg-black/90 backdrop-blur-sm p-3 sticky bottom-0 z-20 safe-area-inset-bottom w-full max-w-full overflow-hidden">
-        {error && (
-          <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="w-full">
-          <div className="relative w-full max-w-full">
-            {/* New Messages indicator - positioned left of chevron */}
-            <NotificationBanner
-              show={hasNewComments}
-              userColorRgb={userColorRgb}
-              message="New Messages"
-              onClick={() => {
-                smoothScrollToBottom(false);
-                setHasNewComments(false);
-              }}
-              position={{
-                background: 'none',
-                border: 'none',
-                padding: '0 12px 0 0' // Increased right padding for better spacing from chevron
-              }}
-              ariaLabel="Jump to latest messages"
-            />
-            
-            {/* Scroll to bottom button - positioned left of character counter */}
-            <button
-              type="button"
-              onClick={() => {
-                smoothScrollToBottom(false);
-                setHasNewComments(false);
-              }}
-              className="absolute top-2 right-12 p-0 rounded transition-all hover:opacity-80 cursor-pointer z-10"
-              style={{ 
-                color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM)
-              }}
-              tabIndex={-1}
-              aria-label="Scroll to bottom"
-              title="Jump to latest messages"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            
-            {/* Character counter - keeps its absolute positioning */}
-            <StyledCharCounter 
-              current={inputText.length}
-              max={MAX_COMMENT_LENGTH}
-              userColor={userColorRgb}
-            />
-            
-            {/* Send button - vertically centered between char count and input bottom */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !inputText.trim()}
-              className={`absolute bottom-2 right-2 p-1 rounded transition-all z-10 ${
-                isSubmitting || !inputText.trim()
-                  ? 'cursor-not-allowed'
-                  : 'hover:opacity-80 cursor-pointer'
-              }`}
-              style={{ 
-                color: userColorRgb, // Message text color
-                opacity: (isSubmitting || !inputText.trim()) ? OPACITY_LEVELS.DARK : OPACITY_LEVELS.LIGHT // 40% when disabled, 60% when enabled - one level lighter
-              }}
-              tabIndex={-1}
-              aria-label="Send message"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-            
-            <textarea
-              ref={inputRef}
-              value={inputText}
-              onChange={(e) => {
-                const newText = e.target.value.substring(0, MAX_COMMENT_LENGTH);
-                setInputText(newText);
-                // Handle video placeholder removal
-                handleVideoInputChange(newText);
-              }}
-              onClick={() => {
-                // Handle clicking on video link in input
-                if (inputText.includes('<-- video')) {
-                  handleVideoLinkClick(showVideo || false, toggleVideo);
-                }
-              }}
-              onFocus={() => {
-                // Prevent zoom on iPhone
-                window.scrollTo(0, 0);
-              }}
-              placeholder="Say what you want..."
-              className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
-              style={{
-                ['--placeholder-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKER), // 30% opacity - one level lighter
-                ['--scrollbar-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT), // 60% opacity
-                ['--scrollbar-bg' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST), // 10% opacity
-                color: userColorRgb, // Always use user's color
-                backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity - even darker than darkest
-                ...getInputCursorStyle(inputText), // Video link cursor styling
-              } as React.CSSProperties}
-              maxLength={MAX_COMMENT_LENGTH}
-              // No disabled state - allow immediate typing for rapid messaging
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                } else if (e.key === 'Tab' && e.shiftKey) {
-                  // Shift+Tab to username field
-                  e.preventDefault();
-                  usernameRef.current?.focus();
-                } else if (e.key === 'Tab' && !e.shiftKey) {
-                  // Tab cycles back to username
-                  e.preventDefault();
-                  usernameRef.current?.focus();
-                }
-              }}
-            />
-          </div>
-        </form>
+        {/* Message Input Form */}
+        <MessageInput
+          inputText={inputText}
+          userColor={userColor}
+          userColorRgb={userColorRgb}
+          isSubmitting={isSubmitting}
+          error={error}
+          pendingVideoKey={pendingVideoKey}
+          showVideo={showVideo}
+          maxLength={MAX_COMMENT_LENGTH}
+          onInputChange={(text) => {
+            setInputText(text);
+            handleVideoInputChange(text);
+          }}
+          onSubmit={handleSubmit}
+          onVideoLinkClick={() => handleVideoLinkClick(showVideo || false, toggleVideo)}
+          getInputCursorStyle={getInputCursorStyle}
+          scrollToBottom={smoothScrollToBottom}
+          hasNewMessages={hasNewComments}
+          clearNewMessages={() => setHasNewComments(false)}
+          inputRef={inputRef}
+          usernameRef={usernameRef}
+        />
       </div>
       
       {/* Context Menu */}
