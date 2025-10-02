@@ -63,6 +63,8 @@ import { useMessageCounts } from '@/hooks/useMessageCounts';
 import { useColorPicker } from '@/hooks/useColorPicker';
 // Import message type filters hook
 import { useMessageTypeFilters } from '@/hooks/useMessageTypeFilters';
+// Import scroll restoration hook
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -111,8 +113,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [dynamicMaxMessages, setDynamicMaxMessages] = useState(MAX_DISPLAY_MESSAGES);
   const [lazyLoadedCount, setLazyLoadedCount] = useState(0);
   
-  // Scroll position memory for search (message type scroll positions now in useMessageTypeFilters hook)
-  const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
+  // Scroll restoration now handled by useScrollRestoration hook
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ 
@@ -150,6 +151,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
+  
+  // Scroll restoration for filters and search (extracted to hook)
+  useScrollRestoration({
+    streamRef,
+    isFilterEnabled,
+    searchTerm,
+    savedHumansScrollPosition,
+    savedEntitiesScrollPosition,
+    setSavedHumansScrollPosition,
+    setSavedEntitiesScrollPosition,
+    showHumans,
+    showEntities,
+    filteredCommentsLength: filteredComments.length,
+  });
   
   // Clear "New Messages" indicator when user scrolls to bottom
   useEffect(() => {
@@ -562,8 +577,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             const totalCount = await simpleIndexedDB.getMessageCount();
             setHasMoreInIndexedDb(totalCount > INDEXEDDB_INITIAL_LOAD);
             console.log(`[SimpleIndexedDB] Total messages in storage: ${totalCount}, has more: ${totalCount > INDEXEDDB_INITIAL_LOAD}`);
-          }
-        } catch (err) {
+            }
+          } catch (err) {
           console.warn('[SimpleIndexedDB] Error loading messages:', err);
         }
         
@@ -580,8 +595,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               // Cloud messages are already Comments - no transformation needed!
               await simpleIndexedDB.saveMessages(cloudMessages);
               console.log(`[SimpleIndexedDB] Saved ${cloudMessages.length} initial cloud messages to storage`);
-            }
-          } catch (err) {
+          }
+      } catch (err) {
             console.warn('[SimpleIndexedDB] Failed to save initial cloud messages:', err);
           }
         }
@@ -1090,120 +1105,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   }, [filteredComments, domainConfig.title]);
 
 
-  // Remember and restore scroll position when toggling filters
-  const prevFilterEnabled = useRef(isFilterEnabled);
-  const scrollBeforeFilterToggle = useRef<number | null>(null);
-  
-  // Save scroll position BEFORE filter state changes
-  useEffect(() => {
-    // Save current scroll position whenever filter is about to change
-    if (streamRef.current && prevFilterEnabled.current !== isFilterEnabled) {
-      scrollBeforeFilterToggle.current = streamRef.current.scrollTop;
-      console.log('[Scroll] Pre-save scroll position:', scrollBeforeFilterToggle.current);
-    }
-  }, [isFilterEnabled]);
-  
-  // Restore scroll position AFTER filter state changes and content updates
-  useEffect(() => {
-    if (!streamRef.current) return;
-    
-    // Check if filter state actually changed
-    if (prevFilterEnabled.current !== isFilterEnabled) {
-      const savedPos = scrollBeforeFilterToggle.current;
-      
-      if (!isFilterEnabled && savedPos !== null) {
-        // Filters just turned OFF - need to restore position
-        // Use multiple frames to ensure content has rendered
-        const restoreScroll = () => {
-          if (streamRef.current && streamRef.current.scrollHeight > 0) {
-            const targetScroll = Math.min(savedPos, streamRef.current.scrollHeight - streamRef.current.clientHeight);
-            streamRef.current.scrollTop = targetScroll;
-            console.log('[Scroll] Restored scroll after filter OFF:', targetScroll, 'from saved:', savedPos);
-            
-            // Double-check it worked, try again if not
-      setTimeout(() => {
-              if (streamRef.current && Math.abs(streamRef.current.scrollTop - targetScroll) > 10) {
-                console.log('[Scroll] Re-applying scroll restoration, current:', streamRef.current.scrollTop, 'target:', targetScroll);
-                streamRef.current.scrollTop = targetScroll;
-        }
-      }, 50);
-    }
-        };
-        
-        // Try multiple times to ensure it sticks
-        requestAnimationFrame(() => {
-          requestAnimationFrame(restoreScroll);
-        });
-      } else if (isFilterEnabled && savedPos !== null) {
-        // Filters just turned ON - also restore to maintain position
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (streamRef.current && streamRef.current.scrollHeight > 0) {
-              const targetScroll = Math.min(savedPos, streamRef.current.scrollHeight - streamRef.current.clientHeight);
-              streamRef.current.scrollTop = targetScroll;
-              console.log('[Scroll] Restored scroll after filter ON:', targetScroll);
-            }
-          });
-        });
-      }
-      
-      prevFilterEnabled.current = isFilterEnabled;
-      scrollBeforeFilterToggle.current = null;
-    }
-  }, [isFilterEnabled, filteredComments.length]); // Also depend on filtered comments length to run after content changes
-
-  // Remember and restore scroll position when using search
-  useEffect(() => {
-    if (!streamRef.current) return;
-    
-    if (searchTerm && !savedSearchScrollPosition) {
-      // Search just started - save current scroll position
-      setSavedSearchScrollPosition(streamRef.current.scrollTop);
-      console.log('[Scroll] Saved scroll position before search:', streamRef.current.scrollTop);
-    } else if (!searchTerm && savedSearchScrollPosition !== null) {
-      // Search just cleared - restore saved scroll position
-      requestAnimationFrame(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = savedSearchScrollPosition;
-          console.log('[Scroll] Restored scroll position after search cleared:', savedSearchScrollPosition);
-          setSavedSearchScrollPosition(null); // Clear saved position
-        }
-      });
-    }
-  }, [searchTerm, savedSearchScrollPosition]);
-
-  // Remember and restore scroll position when toggling Humans filter
-  useEffect(() => {
-    if (!streamRef.current) return;
-    
-    // If humans just turned back ON and we have a saved position
-    if (showHumans && savedHumansScrollPosition !== null) {
-      requestAnimationFrame(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = savedHumansScrollPosition;
-          console.log('[Scroll] Restored scroll position after showing humans:', savedHumansScrollPosition);
-          setSavedHumansScrollPosition(null); // Clear saved position
-        }
-      });
-    }
-  }, [showHumans, savedHumansScrollPosition]);
-
-  // Remember and restore scroll position when toggling Entities filter
-  useEffect(() => {
-    if (!streamRef.current) return;
-    
-    // If entities just turned back ON and we have a saved position
-    if (showEntities && savedEntitiesScrollPosition !== null) {
-      requestAnimationFrame(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = savedEntitiesScrollPosition;
-          console.log('[Scroll] Restored scroll position after showing entities:', savedEntitiesScrollPosition);
-          setSavedEntitiesScrollPosition(null); // Clear saved position
-        }
-      });
-    }
-  }, [showEntities, savedEntitiesScrollPosition]);
-
+  // Scroll restoration now handled by useScrollRestoration hook (removed ~110 lines)
 
   // Handle mobile keyboard visibility - works for both iOS and Android
   useEffect(() => {
@@ -1594,12 +1496,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         ) : (
           filteredComments.map((comment) => (
             <MessageItem
-              key={comment.id}
+              key={comment.id} 
               comment={comment}
               onUsernameClick={addToFilter}
               onContextMenu={handleContextMenu}
               onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
+                  onTouchEnd={handleTouchEnd}
               parseText={parseCommentTextWithHandlers}
               formatTimestamp={formatTimestamp}
               getCommentColor={getCommentColor}
