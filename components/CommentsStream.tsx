@@ -323,12 +323,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   );
   
-  // NO MORE DOUBLE FILTERING - useIndexedDBFiltering already handles ALL filtering
+  // USE INDEXEDDB FILTERING RESULTS - NOT LEGACY FILTERS
   const filteredComments = useMemo(() => {
-    // userFilteredComments is already fully filtered by useIndexedDBFiltering
-    // Just return it directly - no additional filtering needed!
-    return userFilteredComments;
-  }, [userFilteredComments]);
+    // allComments comes from useIndexedDBFiltering which queries the full DB
+    // userFilteredComments is from legacy useFilters which only operates on initialMessages (3 messages)
+    // WE WANT THE DB RESULTS, NOT THE LEGACY FILTER RESULTS!
+    return allComments;
+  }, [allComments]);
   
   // Sync search bar with URL search terms
   useEffect(() => {
