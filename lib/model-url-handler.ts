@@ -109,42 +109,37 @@ export class ModelURLHandler {
   
   /**
    * Apply state from URL parameters
-   * DEFER all event emissions to avoid React #418 error (updating component during render)
    */
   private async applyState(state: EnhancedFilterState): Promise<void> {
-    // Defer all emissions until after current render completes
-    // This prevents "Cannot update a component while rendering a different component" error
-    queueMicrotask(() => {
-      // Handle filter active state
-      if (state.filterActive !== null && state.filterActive !== undefined) {
-        console.log('[ModelURLHandler] Emitting filter-active-changed:', state.filterActive);
-        this.emit({
-          type: 'filter-active-changed',
-          isActive: state.filterActive
-        });
-      }
+    // Handle filter active state
+    if (state.filterActive !== null && state.filterActive !== undefined) {
+      console.log('[ModelURLHandler] Emitting filter-active-changed:', state.filterActive);
+      this.emit({
+        type: 'filter-active-changed',
+        isActive: state.filterActive
+      });
+    }
+    
+    // Handle user initial state
+    if (state.userInitialState) {
+      this.emit({
+        type: 'user-state-changed',
+        username: state.userInitialState.username,
+        color: state.userInitialState.color
+      });
       
-      // Handle user initial state
-      if (state.userInitialState) {
-        this.emit({
-          type: 'user-state-changed',
-          username: state.userInitialState.username,
-          color: state.userInitialState.color
-        });
-        
-        // Update localStorage for current tab
-        this.updateUserLocalStorage(state.userInitialState.username, state.userInitialState.color);
-      }
-      
-      // Handle AI initial state
-      if (state.aiInitialState) {
-        this.emit({
-          type: 'ai-state-changed',
-          username: state.aiInitialState.username,
-          color: state.aiInitialState.color
-        });
-      }
-    });
+      // Update localStorage for current tab
+      this.updateUserLocalStorage(state.userInitialState.username, state.userInitialState.color);
+    }
+    
+    // Handle AI initial state
+    if (state.aiInitialState) {
+      this.emit({
+        type: 'ai-state-changed',
+        username: state.aiInitialState.username,
+        color: state.aiInitialState.color
+      });
+    }
     
     // Handle model configurations
     if (state.modelConfigs && state.modelConfigs.length > 0) {

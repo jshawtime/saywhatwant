@@ -78,16 +78,6 @@ export function useModelURL(): UseModelURLReturn {
   // Get initial state from URL
   const initialState = getInitialState();
   
-  // Apply initial username/color to localStorage if present
-  if (typeof window !== 'undefined') {
-    if (initialState.humanUsername) {
-      localStorage.setItem('sww-username', initialState.humanUsername);
-    }
-    if (initialState.humanColor) {
-      localStorage.setItem('sww-usercolor', initialState.humanColor);
-    }
-  }
-  
   // State - Initialize with URL values if present
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [modelMessages, setModelMessages] = useState<ModelMessage[]>([]);
@@ -98,9 +88,28 @@ export function useModelURL(): UseModelURLReturn {
   const [aiColor, setAiColor] = useState<string | null>(initialState.aiColor);
   const [initialModelNames] = useState<string[]>(initialState.modelNames);
   
+  // Apply initial username/color to localStorage AFTER mount (not during render!)
+  useEffect(() => {
+    if (initialState.humanUsername) {
+      localStorage.setItem('sww-username', initialState.humanUsername);
+    }
+    if (initialState.humanColor) {
+      localStorage.setItem('sww-usercolor', initialState.humanColor);
+    }
+  }, []); // Run once on mount
+  
   const handlerRef = useRef<ModelURLHandler | null>(null);
   const initializedRef = useRef(false);
   const hasProcessedInitialModels = useRef(false);
+  const isMountedRef = useRef(false);
+  
+  // Mark as mounted to allow state updates
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   // Process initial models if present
   useEffect(() => {
@@ -160,6 +169,13 @@ export function useModelURL(): UseModelURLReturn {
     
     // Subscribe to events
     const unsubscribe = handler.subscribe((event: ModelHandlerEvent) => {
+      // GUARD: Only process events after component is fully mounted
+      // This prevents React #418 error (state updates during render)
+      if (!isMountedRef.current) {
+        console.log('[useModelURL] Deferring event (not mounted):', event.type);
+        return;
+      }
+      
       console.log('[useModelURL] Received event:', event.type, event);
       switch (event.type) {
         case 'user-state-changed':
