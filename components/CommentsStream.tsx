@@ -49,6 +49,7 @@ import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdow
 import { SearchBar } from '@/components/Search/SearchBar';
 import { NotificationBanner } from '@/components/Notifications/NotificationBanner';
 import { MessageInput } from '@/components/MessageInput/MessageInput';
+import { MessageStream } from '@/components/MessageStream/MessageStream';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -1139,73 +1140,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       </div>
 
       {/* Comments Stream */}
-      <div 
-        ref={streamRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 space-y-1 min-h-0"
-        style={{
-          ['--scrollbar-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK), // 40% opacity
-          ['--scrollbar-bg' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
-        } as React.CSSProperties}
-        onScroll={(e) => {
-          const element = e.currentTarget;
-          // Check if scrolled near the top for lazy loading
-          if (element.scrollTop < 100 && hasMoreInIndexedDb && !isLoadingMoreFromIndexedDb) {
-            loadMoreFromIndexedDb();
-          }
-        }}
-      >
-        {/* Load More indicator at the top */}
-        {hasMoreInIndexedDb && (
-          <div className="flex justify-center py-2 mb-2">
-            {isLoadingMoreFromIndexedDb ? (
-              <div className="text-gray-500 text-sm">Loading more messages...</div>
-            ) : (
-              <button
-                onClick={loadMoreFromIndexedDb}
-                className="px-4 py-1 text-sm rounded-lg transition-all duration-200 hover:scale-105"
-                style={{
-                  backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST),
-                  color: userColorRgb,
-                  border: `1px solid ${getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK)}`
-                }}
-              >
-                Load {Math.min(INDEXEDDB_LAZY_LOAD_CHUNK, indexedDbOffset)} more messages
-              </button>
-            )}
-          </div>
-        )}
-        
-        {isLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        ) : filteredComments.length === 0 ? (
-          <EmptyState
-            searchTerm={searchTerm}
-            isFilterEnabled={isFilterEnabled}
-            userColor={userColorRgb}
-            onToggleFilter={toggleFilter}
-          />
-        ) : (
-          filteredComments.map((comment) => (
-            <MessageItem
-              key={comment.id} 
-              comment={comment}
-              onUsernameClick={addToFilter}
-              onContextMenu={handleContextMenu}
-              onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
-              parseText={parseCommentTextWithHandlers}
-              formatTimestamp={formatTimestamp}
-              getCommentColor={getCommentColor}
-            />
-          ))
-        )}
-      </div>
+      <MessageStream
+        messages={filteredComments}
+        isLoading={isLoading}
+        hasMore={hasMoreInIndexedDb}
+        isLoadingMore={isLoadingMoreFromIndexedDb}
+        loadMoreCount={Math.min(INDEXEDDB_LAZY_LOAD_CHUNK, indexedDbOffset)}
+        searchTerm={searchTerm}
+        isFilterEnabled={isFilterEnabled}
+        userColorRgb={userColorRgb}
+        onUsernameClick={addToFilter}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onLoadMore={loadMoreFromIndexedDb}
+        onToggleFilter={toggleFilter}
+        parseText={parseCommentTextWithHandlers}
+        formatTimestamp={formatTimestamp}
+        getCommentColor={getCommentColor}
+        streamRef={streamRef}
+        lazyLoadThreshold={100}
+      />
 
       {/* New Comments Indicator */}
 
