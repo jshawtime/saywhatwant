@@ -79,6 +79,8 @@ import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { useContextMenus } from '@/hooks/useContextMenus';
 // Import mobile keyboard hook
 import { useMobileKeyboard } from '@/hooks/useMobileKeyboard';
+// Import message loading state hook
+import { useMessageLoadingState } from '@/hooks/useMessageLoadingState';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -100,7 +102,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [inputText, setInputText] = useState('');
   const [username, setUsername] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [hasNewComments, setHasNewComments] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
@@ -118,15 +119,23 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setShowColorPicker
   } = useColorPicker(getRandomColor());
   
-  // IndexedDB lazy loading state
-  const [indexedDbOffset, setIndexedDbOffset] = useState(0);
-  const [hasMoreInIndexedDb, setHasMoreInIndexedDb] = useState(false);
-  const [isLoadingMoreFromIndexedDb, setIsLoadingMoreFromIndexedDb] = useState(false);
-  const allIndexedDbMessages = useRef<Comment[]>([]);
+  // Consolidated loading state (replaces 6 separate useState calls)
+  const {
+    isInitialLoading: isLoading,
+    isLoadingMore: isLoadingMoreFromIndexedDb,
+    hasMore: hasMoreInIndexedDb,
+    offset: indexedDbOffset,
+    maxMessages: dynamicMaxMessages,
+    loadedCount: lazyLoadedCount,
+    setInitialLoading: setIsLoading,
+    startLoadingMore,
+    finishLoadingMore,
+    setHasMore: setHasMoreInIndexedDb,
+    setOffset: setIndexedDbOffset,
+    increaseMaxMessages,
+  } = useMessageLoadingState(MAX_DISPLAY_MESSAGES, INDEXEDDB_LAZY_LOAD_CHUNK);
   
-  // Dynamic message limit (expands with lazy loading)
-  const [dynamicMaxMessages, setDynamicMaxMessages] = useState(MAX_DISPLAY_MESSAGES);
-  const [lazyLoadedCount, setLazyLoadedCount] = useState(0);
+  const allIndexedDbMessages = useRef<Comment[]>([]);
   
   // Scroll restoration now handled by useScrollRestoration hook
 
@@ -578,9 +587,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     const loadInitialComments = async () => {
       setIsLoading(true);
       
-      // Reset dynamic limits on initial load/refresh
-      setDynamicMaxMessages(MAX_DISPLAY_MESSAGES);
-      setLazyLoadedCount(0);
       console.log('[Init] Starting initial load...');
       console.log('[Init] Cloud API enabled:', isCloudAPIEnabled());
       console.log('[Init] API URL:', COMMENTS_CONFIG.apiUrl);
@@ -695,7 +701,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const loadMoreFromIndexedDb = useCallback(() => {
     if (!hasMoreInIndexedDb || isLoadingMoreFromIndexedDb) return;
     
-    setIsLoadingMoreFromIndexedDb(true);
+    startLoadingMore();
     
     // Calculate how many messages to load
     const newOffset = Math.max(0, indexedDbOffset - INDEXEDDB_LAZY_LOAD_CHUNK);
@@ -704,14 +710,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     if (loadCount > 0 && allIndexedDbMessages.current.length > 0) {
       // Get the older messages
       const olderMessages = allIndexedDbMessages.current.slice(newOffset, indexedDbOffset);
-      
-      // Update the dynamic max to accommodate new messages + headroom
-      const newLazyLoadedCount = lazyLoadedCount + loadCount;
-      const newDynamicMax = MAX_DISPLAY_MESSAGES + newLazyLoadedCount + 50; // +50 headroom
-      setLazyLoadedCount(newLazyLoadedCount);
-      setDynamicMaxMessages(newDynamicMax);
-      
-      console.log(`[Lazy Load] Expanding message limit: ${MAX_DISPLAY_MESSAGES} → ${newDynamicMax} (loaded ${newLazyLoadedCount} extra messages)`);
       
       // Prepend to existing messages (actually ADD them, don't trim!)
       setAllComments(prev => {
@@ -732,12 +730,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         return merged; // Don't trim! Let them all show
       });
       
+      // Update offset
       setIndexedDbOffset(newOffset);
-      setHasMoreInIndexedDb(newOffset > 0);
+      
+      // Finish loading more (hook manages counts and limits)
+      const stillHasMore = newOffset > 0;
+      finishLoadingMore(loadCount, stillHasMore);
+    } else {
+      finishLoadingMore(0, false);
     }
-    
-    setIsLoadingMoreFromIndexedDb(false);
-  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, lazyLoadedCount]);
+  }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, startLoadingMore, finishLoadingMore, setIndexedDbOffset]);
   
   // Scroll to bottom ONLY on initial page load when comments first arrive
   useEffect(() => {
@@ -956,15 +958,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         usernameRef={usernameRef}
         colorPickerRef={colorPickerRef}
         onUsernameChange={(newUsername) => {
-          setUsername(newUsername);
-          localStorage.setItem('sww-username', newUsername);
-        }}
+                  setUsername(newUsername);
+                  localStorage.setItem('sww-username', newUsername);
+                }}
         onUsernameFocus={() => setHasClickedUsername(true)}
         onUsernameTab={() => inputRef.current?.focus()}
         onClearUsername={() => {
-          setUsername('');
-          localStorage.removeItem('sww-username');
-        }}
+                    setUsername('');
+                    localStorage.removeItem('sww-username');
+                  }}
         onToggleColorPicker={toggleColorPicker}
         onSelectColor={selectColor}
         showVideo={showVideo}
@@ -972,16 +974,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         displayedCount={displayedComments.length}
         globalCount={messageCount}
         filterUsernames={mergedUserFilters}
-        filterWords={filterWords}
-        negativeFilterWords={negativeFilterWords}
-        isFilterEnabled={isFilterEnabled}
-        hasActiveFilters={hasActiveFilters}
-        dateTimeFilter={dateTimeFilter}
-        onToggleFilter={toggleFilter}
-        onRemoveUsernameFilter={removeFromFilter}
-        onRemoveWordFilter={removeWordFromFilter}
-        onRemoveNegativeFilter={removeNegativeWordFilter}
-        onClearDateTimeFilter={clearDateTimeFilter}
+            filterWords={filterWords}
+            negativeFilterWords={negativeFilterWords}
+            isFilterEnabled={isFilterEnabled}
+            hasActiveFilters={hasActiveFilters}
+            dateTimeFilter={dateTimeFilter}
+            onToggleFilter={toggleFilter}
+            onRemoveUsernameFilter={removeFromFilter}
+            onRemoveWordFilter={removeWordFromFilter}
+            onRemoveNegativeFilter={removeNegativeWordFilter}
+            onClearDateTimeFilter={clearDateTimeFilter}
         searchTerm={searchTerm}
         onSearchChange={(value) => setSearchTerm(value)}
         onClearSearch={() => setSearchTerm('')}
@@ -999,21 +1001,21 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         hasMore={hasMoreInIndexedDb}
         isLoadingMore={isLoadingMoreFromIndexedDb}
         loadMoreCount={Math.min(INDEXEDDB_LAZY_LOAD_CHUNK, indexedDbOffset)}
-        searchTerm={searchTerm}
-        isFilterEnabled={isFilterEnabled}
+            searchTerm={searchTerm}
+            isFilterEnabled={isFilterEnabled}
         userColorRgb={userColorRgb}
-        onUsernameClick={addToFilter}
-        onContextMenu={handleContextMenu}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+              onUsernameClick={addToFilter}
+              onContextMenu={handleContextMenu}
+              onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
         onLoadMore={loadMoreFromIndexedDb}
         onToggleFilter={toggleFilter}
-        parseText={parseCommentTextWithHandlers}
-        formatTimestamp={formatTimestamp}
-        getCommentColor={getCommentColor}
+              parseText={parseCommentTextWithHandlers}
+              formatTimestamp={formatTimestamp}
+              getCommentColor={getCommentColor}
         streamRef={streamRef}
         lazyLoadThreshold={100}
-      />
+            />
 
       {/* New Comments Indicator */}
 
@@ -1028,7 +1030,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           error={error}
           pendingVideoKey={pendingVideoKey}
           showVideo={showVideo}
-          maxLength={MAX_COMMENT_LENGTH}
+              maxLength={MAX_COMMENT_LENGTH}
           onInputChange={(text) => {
             setInputText(text);
             handleVideoInputChange(text);
