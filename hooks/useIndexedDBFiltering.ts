@@ -233,6 +233,9 @@ export function useIndexedDBFiltering(
         
         const criteria = buildCriteria();
         console.log('[FilterHook] Querying IndexedDB with criteria:', criteria);
+        if (criteria.usernames && criteria.usernames.length > 0) {
+          console.log('[FilterHook] EXACT username filters:', JSON.stringify(criteria.usernames));
+        }
         
         // Query IndexedDB
         const filtered = await simpleIndexedDB.queryMessages(
