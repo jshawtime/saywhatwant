@@ -362,9 +362,10 @@ class SimpleIndexedDB {
           cursor.continue();
         } else {
           // Finished scanning ENTIRE database
-          // Now return the newest 'limit' matches
-          const result = allMatches.slice(0, limit);
-          console.log(`[SimpleIndexedDB] Scanned ENTIRE database: ${scannedCount} messages, found ${allMatches.length} total matches, returning newest ${result.length}`);
+          // Get newest 'limit' matches, then REVERSE for chat display (oldest at top, newest at bottom)
+          const newestMatches = allMatches.slice(0, limit);
+          const result = newestMatches.reverse(); // Reverse to oldest-first for chat display
+          console.log(`[SimpleIndexedDB] Scanned ENTIRE database: ${scannedCount} messages, found ${allMatches.length} total matches, returning ${result.length} (oldest→newest)`);
           resolve(result);
         }
       };

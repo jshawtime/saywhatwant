@@ -31,7 +31,7 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   cloudPollBatch: 200,           // Max n per poll
   
   // Display Settings
-  maxDisplayMessages: 50,     // Show max n in DOM
+  maxDisplayMessages: 1000,     // Show max n in DOM
   
   // Storage Settings
   maxIndexedDBMessages: 100000,  // Store max nk messages

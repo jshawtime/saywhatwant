@@ -1,5 +1,46 @@
 # Say What Want - Release Notes
 
+## v2.1 - Search & Filter Perfected (Pre-Component-Refactor Snapshot)
+**Released**: October 2, 2025
+**Status**: STABLE - Pre-Refactor Baseline
+
+### 🎯 Critical Bug Fixes
+- **Full Database Search**: Search/filter now scans ENTIRE IndexedDB (6k+ messages), not just displayed messages
+- **Message Order Fixed**: Filter/search results display oldest→newest (top→bottom), matching unfiltered view
+- **Display Bug Fixed**: Corrected using wrong filter results variable (was showing 1-3 messages instead of 50)
+- **Infinite Loop Fixed**: Stabilized useEffect dependencies to prevent 10k+ re-renders
+- **Domain Filter Auto-Apply Removed**: Search no longer auto-filtered by domain
+
+### 🔍 IndexedDB Query System
+- Cursor-based querying for efficient large dataset filtering
+- Scans up to entire database to find matches
+- Returns newest n matches in correct display order
+- Search debouncing (150ms) reduces redundant queries
+- Query generation tracking prevents stale results
+
+### 📊 Analytics Dashboard
+- Real-time KV and IndexedDB metrics
+- Search database feature (count exact matches)
+- Raw JSON message display for debugging
+- User-definable message limits (1-1000)
+- Fixed KV count to show actual total (not cache size)
+
+### 🛠️ Technical Improvements
+- Removed legacy IndexedDB stores (messages_temp, messages_perm, etc.)
+- Simplified to single `messages` store with exact KV structure
+- Fixed message type indexing (removed hyphenated index)
+- React hydration errors addressed (localStorage moved to useEffect)
+- Global count now shows true KV total (~12.5k) not local IndexedDB count
+
+### 📝 Documentation
+- `35-INDEXEDDB-REFACTOR-PLAN.md`: Complete refactor documentation
+- `36-COMMENTSSTREAM-REFACTOR.md`: Upcoming component extraction plan
+- Documented all critical bugs and fixes
+
+**This version marks the last stable state before major component refactoring begins.**
+
+---
+
 ## v2.0 - Elegant Architecture
 **Released**: September 29, 2025
 **Status**: STABLE
