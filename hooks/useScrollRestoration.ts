@@ -112,35 +112,52 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
   
   // Channel switch scroll restoration (when switching human ⟷ AI)
   const prevChannel = useRef(activeChannel);
+  const scrollBeforeChannelSwitch = useRef<ScrollState | null>(null);
   
+  // SAVE scroll state BEFORE channel changes
+  useEffect(() => {
+    if (streamRef.current && prevChannel.current !== activeChannel) {
+      scrollBeforeChannelSwitch.current = saveScrollState(streamRef.current, 100);
+      console.log(`[Scroll] Saved scroll state before switching from ${prevChannel.current} to ${activeChannel}:`, scrollBeforeChannelSwitch.current);
+    }
+  }, [activeChannel, streamRef]);
+  
+  // RESTORE scroll state AFTER channel switch completes
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // Detect channel switch
     if (prevChannel.current !== activeChannel) {
-      // Channel switched - use appropriate saved position
-      const savedPosition = activeChannel === 'human' 
-        ? savedHumansScrollPosition 
-        : savedEntitiesScrollPosition;
+      const savedState = scrollBeforeChannelSwitch.current;
       
-      if (savedPosition !== null) {
-        requestAnimationFrame(() => {
-          if (streamRef.current) {
-            streamRef.current.scrollTop = savedPosition;
-            console.log(`[Scroll] Restored scroll position after switching to ${activeChannel}:`, savedPosition);
+      if (savedState) {
+        const restoreScroll = () => {
+          if (streamRef.current && streamRef.current.scrollHeight > 0) {
+            // Smart restoration: if was at bottom, stay at bottom
+            restoreScrollState(streamRef.current, savedState);
             
-            // Clear the saved position
-            if (activeChannel === 'human') {
-              setSavedHumansScrollPosition(null);
-            } else {
-              setSavedEntitiesScrollPosition(null);
-            }
+            // Double-check it worked for anchored users
+            setTimeout(() => {
+              if (streamRef.current && savedState.wasAtBottom) {
+                const { scrollHeight, scrollTop, clientHeight } = streamRef.current;
+                const atBottom = (scrollHeight - (scrollTop + clientHeight)) < 100;
+                
+                if (!atBottom) {
+                  console.log(`[Scroll] Re-anchoring to bottom after channel switch to ${activeChannel}`);
+                  streamRef.current.scrollTop = streamRef.current.scrollHeight;
+                }
+              }
+            }, 50);
           }
+        };
+        
+        requestAnimationFrame(() => {
+          requestAnimationFrame(restoreScroll);
         });
       }
       
       prevChannel.current = activeChannel;
+      scrollBeforeChannelSwitch.current = null;
     }
-  }, [activeChannel, savedHumansScrollPosition, savedEntitiesScrollPosition, setSavedHumansScrollPosition, setSavedEntitiesScrollPosition, streamRef]);
+  }, [activeChannel, filteredCommentsLength, streamRef]);
 }
 
