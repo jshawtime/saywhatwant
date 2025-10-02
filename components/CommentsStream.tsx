@@ -57,6 +57,12 @@ import { useVideoSharing } from '@/modules/videoSharingSystem';
 import { useCommentSubmission, useUsernameValidation } from '@/modules/commentSubmission';
 // Import model URL integration
 import { useCommentsWithModels } from '@/hooks/useCommentsWithModels';
+// Import message counts hook
+import { useMessageCounts } from '@/hooks/useMessageCounts';
+// Import color picker hook
+import { useColorPicker } from '@/hooks/useColorPicker';
+// Import message type filters hook
+import { useMessageTypeFilters } from '@/hooks/useMessageTypeFilters';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -82,27 +88,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [hasNewComments, setHasNewComments] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [hasClickedUsername, setHasClickedUsername] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [userColor, setUserColor] = useState(() => getRandomColor()); // Stored as 9-digit format
-  const userColorRgb = useMemo(() => nineDigitToRgb(userColor), [userColor]); // Convert to RGB for CSS
-  const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false); // For hydration safety
   
-  // Message type filtering (Humans/Entities)
-  const [showHumans, setShowHumans] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sww-show-humans');
-      return saved !== null ? saved === 'true' : true; // Default to true
-    }
-    return true;
-  });
-  const [showEntities, setShowEntities] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sww-show-entities');
-      return saved !== null ? saved === 'true' : true; // Default to true
-    }
-    return true;
-  });
+  // Color picker management (extracted to hook)
+  const {
+    userColor,
+    userColorRgb,
+    showColorPicker,
+    randomizedColors,
+    toggleColorPicker,
+    selectColor,
+    setUserColor
+  } = useColorPicker(getRandomColor());
   
   // IndexedDB lazy loading state
   const [indexedDbOffset, setIndexedDbOffset] = useState(0);
@@ -114,10 +111,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [dynamicMaxMessages, setDynamicMaxMessages] = useState(MAX_DISPLAY_MESSAGES);
   const [lazyLoadedCount, setLazyLoadedCount] = useState(0);
   
-  // Scroll position memory for search and message type filters
+  // Scroll position memory for search (message type scroll positions now in useMessageTypeFilters hook)
   const [savedSearchScrollPosition, setSavedSearchScrollPosition] = useState<number | null>(null);
-  const [savedHumansScrollPosition, setSavedHumansScrollPosition] = useState<number | null>(null);
-  const [savedEntitiesScrollPosition, setSavedEntitiesScrollPosition] = useState<number | null>(null);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ 
@@ -129,33 +124,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   } | null>(null);
   const [titleContextMenu, setTitleContextMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const [messageCount, setMessageCount] = useState<number>(0);
 
-  // Sync comments to IndexedDB (stores every message you see locally)
-  
-  // Fetch message count every 5 minutes
-  useEffect(() => {
-    const fetchMessageCount = async () => {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_COMMENTS_API_URL || 'https://sww-comments.bootloaders.workers.dev';
-        const response = await fetch(`${baseUrl}/api/stats`);
-        if (response.ok) {
-          const data = await response.json();
-          setMessageCount(data.totalMessages || 0);
-        }
-      } catch (error) {
-        console.error('[MessageCounter] Failed to fetch count:', error);
-      }
-    };
-    
-    // Fetch immediately
-    fetchMessageCount();
-    
-    // Then every 5 minutes
-    const interval = setInterval(fetchMessageCount, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  // Message counts (global KV + local IndexedDB)
+  const { globalCount: messageCount, localCount } = useMessageCounts();
 
   // Refs
   const streamRef = useRef<HTMLDivElement>(null);
@@ -164,6 +135,18 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const lastFetchTimeRef = useRef<number>(0); // Initialize to 0, set after mount
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
+  
+  // Message type filtering (Humans/Entities) - extracted to hook
+  const {
+    showHumans,
+    showEntities,
+    toggleShowHumans,
+    toggleShowEntities,
+    savedHumansScrollPosition,
+    savedEntitiesScrollPosition,
+    setSavedHumansScrollPosition,
+    setSavedEntitiesScrollPosition,
+  } = useMessageTypeFilters(streamRef);
   
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
@@ -896,66 +879,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   };
 
   // Username is now auto-saved on change, no need for save function
-  
-  // Handle color selection
-  const selectColor = (color: string) => {
-    setUserColor(color);
-    localStorage.setItem('sww-color', color);
-    window.dispatchEvent(new Event('colorChanged'));
-    setShowColorPicker(false);
-  };
-
-
-  // Shuffle colors array
-  const shuffleColors = () => {
-    // Generate 12 unique random colors for the color picker
-    const colors: string[] = [];
-    const usedColors = new Set<string>();
-    
-    while (colors.length < 12) {
-      const color = getRandomColor();
-      // Ensure we don't have duplicates
-      if (!usedColors.has(color)) {
-        colors.push(color);
-        usedColors.add(color);
-      }
-    }
-    
-    setRandomizedColors(colors);
-  };
-
-  // Toggle color picker with randomization
-  const toggleColorPicker = () => {
-    if (!showColorPicker) {
-      shuffleColors();
-    }
-    setShowColorPicker(!showColorPicker);
-  };
-
-  // Toggle message type filters
-  const toggleShowHumans = () => {
-    // Save scroll position before toggling
-    if (streamRef.current && showHumans) {
-      setSavedHumansScrollPosition(streamRef.current.scrollTop);
-      console.log('[Scroll] Saved scroll position before hiding humans:', streamRef.current.scrollTop);
-    }
-    
-    const newState = !showHumans;
-    setShowHumans(newState);
-    localStorage.setItem('sww-show-humans', String(newState));
-  };
-  
-  const toggleShowEntities = () => {
-    // Save scroll position before toggling
-    if (streamRef.current && showEntities) {
-      setSavedEntitiesScrollPosition(streamRef.current.scrollTop);
-      console.log('[Scroll] Saved scroll position before hiding entities:', streamRef.current.scrollTop);
-    }
-    
-    const newState = !showEntities;
-    setShowEntities(newState);
-    localStorage.setItem('sww-show-entities', String(newState));
-  };
+  // Color picker functions now handled by useColorPicker hook
+  // Message type filter toggles now handled by useMessageTypeFilters hook
 
   // Context menu handlers
   const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment, isUsername: boolean = false) => {
