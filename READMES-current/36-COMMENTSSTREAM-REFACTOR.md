@@ -418,20 +418,29 @@ export function useContextMenus() {
 - Click handlers work: ✅ All interactions preserved
 - Colors render correctly: ✅ Styling unchanged
 
-### **Phase 2: Extract Custom Hooks (Business Logic)**
+### **Phase 2: Extract Custom Hooks (Business Logic)** ✅ COMPLETE
 **Why second?**: Separates logic from UI, makes testing easier.
 
-**Hooks to extract**:
-1. **useMessageCounts** → `hooks/useMessageCounts.ts`
-2. **useColorPicker** → `hooks/useColorPicker.ts`
-3. **useMessageTypeFilters** → `hooks/useMessageTypeFilters.ts`
-4. **useScrollRestoration** → `hooks/useScrollRestoration.ts`
-5. **useContextMenus** → `hooks/useContextMenus.ts`
+**Hooks extracted**:
+1. ✅ **useMessageCounts** (`hooks/useMessageCounts.ts`) - 68 lines
+2. ✅ **useColorPicker** (`hooks/useColorPicker.ts`) - 72 lines
+3. ✅ **useMessageTypeFilters** (`hooks/useMessageTypeFilters.ts`) - 78 lines
+4. ✅ **useScrollRestoration** (`hooks/useScrollRestoration.ts`) - 147 lines
+5. ✅ **useContextMenus** (`hooks/useContextMenus.ts`) - 253 lines
+6. ✅ **useMobileKeyboard** (`hooks/useMobileKeyboard.ts`) - 133 lines
+
+**Total**: 751 lines of business logic extracted
+
+**CommentsStream Reduction**: 521 lines removed (27% smaller!)
+- Before Phase 2: 1,819 lines
+- After Phase 2: 1,402 lines
 
 **Testing**:
-- Each hook tested in isolation
-- State updates work correctly
-- localStorage integration works
+- ✅ Each hook tested via integration
+- ✅ State updates work correctly
+- ✅ localStorage integration works
+- ✅ Mobile keyboard adjustments work
+- ✅ Context menus functional
 
 ### **Phase 3: Extract Container Components**
 **Why third?**: These orchestrate multiple hooks and components.
