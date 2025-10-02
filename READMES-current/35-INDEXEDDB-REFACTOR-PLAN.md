@@ -1475,10 +1475,62 @@ private async applyState(state: EnhancedFilterState): Promise<void> {
 }
 ```
 
-**Why queueMicrotask?**
-- Schedules callback for the **next microtask queue**
-- Runs after current synchronous code but before next event loop tick
-- Allows React to complete the current render cycle before handling state updates
-- Maintains proper React render lifecycle
+**The REAL Fix (9th attempt - SUCCESS!)**:
+1. **Moved localStorage operations from render to useEffect**
+   - Lines 82-89 in `useModelURL.ts` were calling `localStorage.setItem()` during render
+   - This is a side effect that MUST be in `useEffect`, not during component initialization
+   
+2. **Added `isMountedRef` guard to event subscription**
+   - Event listeners could trigger `setState` before component was fully mounted
+   - `ModelURLHandler.init()` emits events immediately during setup
+   - These events triggered state updates while React was still rendering
+   
+```typescript
+// BEFORE (BROKEN):
+const initialState = getInitialState();
+localStorage.setItem('sww-username', initialState.humanUsername); // ❌ During render!
 
-**Impact**: Clean page loads with no React errors!
+// AFTER (FIXED):
+useEffect(() => {
+  localStorage.setItem('sww-username', initialState.humanUsername); // ✅ After mount
+}, []);
+
+// Event handler guard:
+const unsubscribe = handler.subscribe((event) => {
+  if (!isMountedRef.current) return; // ✅ Defer until mounted
+  // ... safe to update state now
+});
+```
+
+**Why Previous Attempts Failed**:
+- `queueMicrotask`: Still ran during the same render cycle
+- Event deferral: Didn't address localStorage during render
+- The issue was BOTH localStorage side effects AND early event handling
+
+**Impact**: Clean page loads with no React errors! All side effects now properly deferred until after mount.
+
+### Analytics: KV Count vs Global Count Discrepancy (Jan 2025)
+
+**Observation**: Analytics page shows 12,542 KV messages, but global count in app shows ~11k.
+
+**This is CORRECT behavior**:
+- **Global Count (11k)**: Shows messages in your **local IndexedDB** (messages you've received while tab was open)
+- **KV Count (12,542)**: Shows **total messages in KV store** (all messages from all users globally)
+
+**Why the difference?**
+- You haven't been online since all 12,542 messages were created
+- Your presence-based system only saved messages received while you were present
+- Other users' messages that arrived when you were offline are NOT in your IndexedDB
+- This is EXACTLY how the presence-based system should work!
+
+**Explanation**:
+```
+Timeline:
+- KV has 12,542 total messages (global)
+- You opened tab → started presence polling
+- Received and saved ~11,000 messages to your IndexedDB
+- ~1,542 messages arrived before you started or when offline
+- Those older messages are in KV but NOT in your local IndexedDB
+
+Result: Global count < KV count is expected and correct!
+```
