@@ -93,7 +93,10 @@ export function useIndexedDBFiltering(
       }
     }
     
-    if (params.domainFilterEnabled) {
+    // Only add domain filter if explicitly enabled by user
+    // Don't auto-filter by domain for searches - it might exclude valid results
+    if (params.domainFilterEnabled && params.filterUsernames.length > 0) {
+      // Only apply domain filter when filtering by users, not for plain search
       criteria.domain = params.currentDomain;
     }
     
@@ -222,18 +225,19 @@ export function useIndexedDBFiltering(
     queryWithFilters();
   }, [
     isFilterMode,
-    params.filterUsernames,
-    params.filterWords,
-    params.negativeFilterWords,
+    // Use JSON.stringify for array/object comparisons to avoid reference changes
+    JSON.stringify(params.filterUsernames),
+    JSON.stringify(params.filterWords),
+    JSON.stringify(params.negativeFilterWords),
     params.searchTerm,
-    params.dateTimeFilter,
+    JSON.stringify(params.dateTimeFilter),
     params.domainFilterEnabled,
     params.currentDomain,
     params.showHumans,
     params.showEntities,
-    params.initialMessages,
-    params.maxDisplayMessages,
-    buildCriteria
+    JSON.stringify(params.initialMessages),
+    params.maxDisplayMessages
+    // Removed buildCriteria - it's a function that changes every render
   ]);
   
   // Add new messages (from polling or submission)
