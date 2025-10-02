@@ -323,45 +323,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   );
   
-  // Apply ALL filters in the correct order
+  // NO MORE DOUBLE FILTERING - useIndexedDBFiltering already handles ALL filtering
   const filteredComments = useMemo(() => {
-    let result = userFilteredComments;
-    
-    // Apply domain filter
-    if (domainFilterEnabled) {
-      result = result.filter(comment => 
-      comment.domain === currentDomain || 
-      !comment.domain // Show old comments without domain field
-    );
-    }
-    
-    // Apply message type filter
-    if (!showHumans || !showEntities) {
-      if (!showHumans && !showEntities) {
-        return []; // Both off = show nothing
-      }
-      
-      result = result.filter(comment => {
-        const messageType = comment['message-type'];
-        
-        // If no message-type field, assume it's human (for backward compatibility)
-        if (!messageType) {
-          return showHumans;
-        }
-        
-        // Check message type
-        if (messageType === 'AI' && showEntities) return true;
-        if (messageType === 'human' && showHumans) return true;
-        
-        // For any other future message types, treat as human by default
-        if (messageType !== 'AI' && showHumans) return true;
-        
-        return false;
-      });
-    }
-    
-    return result;
-  }, [userFilteredComments, domainFilterEnabled, currentDomain, showHumans, showEntities]);
+    // userFilteredComments is already fully filtered by useIndexedDBFiltering
+    // Just return it directly - no additional filtering needed!
+    return userFilteredComments;
+  }, [userFilteredComments]);
   
   // Sync search bar with URL search terms
   useEffect(() => {
@@ -374,6 +341,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Load username, color, and filters from localStorage
   useEffect(() => {
     setMounted(true); // Mark as mounted for hydration safety
+    
+    // Set timestamps after mount to avoid hydration mismatch
+    pageLoadTimestamp.current = Date.now();
+    lastFetchTimeRef.current = Date.now();
     
     const savedUsername = localStorage.getItem('sww-username');
     const savedColor = localStorage.getItem('sww-color');

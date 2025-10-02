@@ -378,6 +378,31 @@
             </div>
         </div>
         
+        <!-- Search Section -->
+        <div style="background: rgba(30, 41, 59, 0.5); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1); margin-bottom: 20px;">
+            <h3 style="color: #e2e8f0; margin-bottom: 15px; font-size: 1rem;">Search Database</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input 
+                    type="text" 
+                    id="search-term" 
+                    placeholder="Enter search term..." 
+                    style="flex: 1; padding: 10px 15px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #e2e8f0; font-size: 14px;"
+                >
+                <button 
+                    onclick="searchDatabase()" 
+                    style="padding: 10px 20px; background: linear-gradient(135deg, #60a5fa, #3b82f6); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; transition: transform 0.2s;"
+                    onmouseover="this.style.transform='scale(1.05)'" 
+                    onmouseout="this.style.transform='scale(1)'"
+                >
+                    Search
+                </button>
+            </div>
+            <div id="search-results" style="margin-top: 15px; padding: 15px; background: rgba(15, 23, 42, 0.5); border-radius: 8px; display: none;">
+                <div style="color: #60a5fa; font-size: 14px; margin-bottom: 10px;">Search Results:</div>
+                <div id="search-stats" style="color: #e2e8f0; font-family: monospace;"></div>
+            </div>
+        </div>
+        
         <div class="charts-section">
             <div class="chart-card">
                 <h3>Message Timeline (Last Hour)</h3>
@@ -440,6 +465,78 @@
         let lastUserCount = 0;
         let autoRefreshInterval = null;
         let currentMessageLimit = 20;
+        
+        // Search database function
+        async function searchDatabase() {
+            const searchTerm = document.getElementById('search-term').value.trim();
+            if (!searchTerm) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('search-results');
+            const statsDiv = document.getElementById('search-stats');
+            
+            resultsDiv.style.display = 'block';
+            statsDiv.innerHTML = 'Searching...';
+            
+            try {
+                // Search in IndexedDB
+                const db = await openDatabase();
+                const transaction = db.transaction(['messages'], 'readonly');
+                const store = transaction.objectStore('messages');
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const allMessages = request.result || [];
+                    const searchLower = searchTerm.toLowerCase();
+                    
+                    // Find all matches
+                    const matches = allMessages.filter(msg => {
+                        const textLower = (msg.text || '').toLowerCase();
+                        const usernameLower = (msg.username || '').toLowerCase();
+                        return textLower.includes(searchLower) || usernameLower.includes(searchLower);
+                    });
+                    
+                    // Group by message type
+                    const humanMatches = matches.filter(m => m['message-type'] === 'human');
+                    const aiMatches = matches.filter(m => m['message-type'] === 'AI');
+                    
+                    // Find oldest and newest match
+                    const sortedMatches = matches.sort((a, b) => b.timestamp - a.timestamp);
+                    const newest = sortedMatches[0];
+                    const oldest = sortedMatches[sortedMatches.length - 1];
+                    
+                    // Format results
+                    let stats = `Found: ${matches.length} total matches in ${allMessages.length} messages\n`;
+                    stats += `Human: ${humanMatches.length} matches\n`;
+                    stats += `AI: ${aiMatches.length} matches\n`;
+                    
+                    if (matches.length > 0) {
+                        const newestTime = new Date(newest.timestamp);
+                        const oldestTime = new Date(oldest.timestamp);
+                        const nowTime = Date.now();
+                        
+                        const newestAgo = Math.round((nowTime - newest.timestamp) / 60000);
+                        const oldestAgo = Math.round((nowTime - oldest.timestamp) / 60000);
+                        
+                        stats += `\nNewest match: ${newestAgo} mins ago\n`;
+                        stats += `Oldest match: ${oldestAgo} mins ago\n`;
+                        stats += `\nSample matches:\n`;
+                        
+                        // Show first 3 matches
+                        sortedMatches.slice(0, 3).forEach(msg => {
+                            const preview = msg.text.substring(0, 100);
+                            stats += `- ${msg.username}: "${preview}${msg.text.length > 100 ? '...' : ''}"\n`;
+                        });
+                    }
+                    
+                    statsDiv.innerText = stats;
+                };
+            } catch (error) {
+                statsDiv.innerText = 'Error searching database: ' + error.message;
+            }
+        }
         
         // Initialize
         async function init() {
