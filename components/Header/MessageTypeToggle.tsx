@@ -51,6 +51,11 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
 }) => {
   const isHumanActive = activeChannel === 'human';
   
+  // Debug: Log the active channel on mount and changes
+  React.useEffect(() => {
+    console.log('[MessageTypeToggle] Active channel:', activeChannel, 'isHumanActive:', isHumanActive);
+  }, [activeChannel, isHumanActive]);
+  
   return (
     <div className="flex items-center gap-1.5">
       {/* Human Icon Button */}
