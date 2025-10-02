@@ -104,7 +104,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     randomizedColors,
     toggleColorPicker,
     selectColor,
-    setUserColor
+    setUserColor,
+    setShowColorPicker
   } = useColorPicker(getRandomColor());
   
   // IndexedDB lazy loading state

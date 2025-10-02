@@ -16,6 +16,7 @@ interface UseColorPickerReturn {
   toggleColorPicker: () => void;
   selectColor: (color: string) => void;
   setUserColor: (color: string) => void;
+  setShowColorPicker: (show: boolean) => void; // For external close (click outside)
 }
 
 export function useColorPicker(initialColor: string): UseColorPickerReturn {
@@ -68,6 +69,7 @@ export function useColorPicker(initialColor: string): UseColorPickerReturn {
     toggleColorPicker,
     selectColor,
     setUserColor,
+    setShowColorPicker,
   };
 }
 
