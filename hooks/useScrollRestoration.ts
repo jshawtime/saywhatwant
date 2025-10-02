@@ -19,8 +19,7 @@ interface UseScrollRestorationParams {
   savedEntitiesScrollPosition: number | null;
   setSavedHumansScrollPosition: (pos: number | null) => void;
   setSavedEntitiesScrollPosition: (pos: number | null) => void;
-  showHumans: boolean;
-  showEntities: boolean;
+  activeChannel: 'human' | 'AI';  // NEW: Use exclusive channel
   filteredCommentsLength: number;
 }
 
@@ -33,8 +32,7 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
     savedEntitiesScrollPosition,
     setSavedHumansScrollPosition,
     setSavedEntitiesScrollPosition,
-    showHumans,
-    showEntities,
+    activeChannel,
     filteredCommentsLength,
   } = params;
   
@@ -112,34 +110,37 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
     }
   }, [searchTerm, savedSearchScrollPosition, streamRef]);
   
-  // Humans filter scroll restoration
-  useEffect(() => {
-    if (!streamRef.current) return;
-    
-    if (showHumans && savedHumansScrollPosition !== null) {
-      requestAnimationFrame(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = savedHumansScrollPosition;
-          console.log('[Scroll] Restored scroll position after showing humans:', savedHumansScrollPosition);
-          setSavedHumansScrollPosition(null);
-        }
-      });
-    }
-  }, [showHumans, savedHumansScrollPosition, setSavedHumansScrollPosition, streamRef]);
+  // Channel switch scroll restoration (when switching human ⟷ AI)
+  const prevChannel = useRef(activeChannel);
   
-  // Entities filter scroll restoration
   useEffect(() => {
     if (!streamRef.current) return;
     
-    if (showEntities && savedEntitiesScrollPosition !== null) {
-      requestAnimationFrame(() => {
-        if (streamRef.current) {
-          streamRef.current.scrollTop = savedEntitiesScrollPosition;
-          console.log('[Scroll] Restored scroll position after showing entities:', savedEntitiesScrollPosition);
-          setSavedEntitiesScrollPosition(null);
-        }
-      });
+    // Detect channel switch
+    if (prevChannel.current !== activeChannel) {
+      // Channel switched - use appropriate saved position
+      const savedPosition = activeChannel === 'human' 
+        ? savedHumansScrollPosition 
+        : savedEntitiesScrollPosition;
+      
+      if (savedPosition !== null) {
+        requestAnimationFrame(() => {
+          if (streamRef.current) {
+            streamRef.current.scrollTop = savedPosition;
+            console.log(`[Scroll] Restored scroll position after switching to ${activeChannel}:`, savedPosition);
+            
+            // Clear the saved position
+            if (activeChannel === 'human') {
+              setSavedHumansScrollPosition(null);
+            } else {
+              setSavedEntitiesScrollPosition(null);
+            }
+          }
+        });
+      }
+      
+      prevChannel.current = activeChannel;
     }
-  }, [showEntities, savedEntitiesScrollPosition, setSavedEntitiesScrollPosition, streamRef]);
+  }, [activeChannel, savedHumansScrollPosition, savedEntitiesScrollPosition, setSavedHumansScrollPosition, setSavedEntitiesScrollPosition, streamRef]);
 }
 

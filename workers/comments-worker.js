@@ -120,6 +120,7 @@ async function handleGetComments(env, url) {
   // Handle cursor-based polling (efficient!)
   if (after) {
     const afterTimestamp = parseInt(after);
+    const messageType = params.get('type'); // 'human' or 'AI' - for channel-exclusive polling
     
     try {
       // Get from cache first
@@ -133,6 +134,7 @@ async function handleGetComments(env, url) {
         // Filter only messages after the timestamp
         newMessages = allComments
           .filter(c => c.timestamp > afterTimestamp)
+          .filter(c => !messageType || c['message-type'] === messageType) // Filter by type if specified
           .sort((a, b) => b.timestamp - a.timestamp) // Newest first
           .slice(0, limit);
         
@@ -195,6 +197,12 @@ async function handleGetComments(env, url) {
         c.text.toLowerCase().includes(search) ||
         (c.username && c.username.toLowerCase().includes(search))
       );
+    }
+    
+    // Apply message type filter if provided (for channel-exclusive viewing)
+    const messageType = params.get('type');
+    if (messageType) {
+      comments = comments.filter(c => c['message-type'] === messageType);
     }
 
     // Get ACTUAL total count from KV (not just cache size)

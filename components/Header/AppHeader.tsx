@@ -9,7 +9,7 @@ import React from 'react';
 import DomainFilter from '@/components/DomainFilter';
 import FilterBar from '@/components/FilterBar';
 import { SearchBar } from '@/components/Search/SearchBar';
-import { MessageTypeToggles } from './MessageTypeToggles';
+import { MessageTypeToggle } from './MessageTypeToggle';
 import { UserControls } from './UserControls';
 import { getDarkerColor } from '@/modules/colorSystem';
 import { UsernameFilter } from '@/hooks/useFilters';
@@ -24,11 +24,9 @@ interface AppHeaderProps {
   userColor: string;
   userColorRgb: string;
   
-  // Message Type Filters
-  showHumans: boolean;
-  showEntities: boolean;
-  onToggleHumans: () => void;
-  onToggleEntities: () => void;
+  // Message Type Channel (exclusive: human OR AI)
+  activeChannel: 'human' | 'AI';
+  onChannelChange: (channel: 'human' | 'AI') => void;
   
   // Username & Color  
   username: string;
@@ -117,11 +115,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onTitleClick,
   onTitleContextMenu,
   
-  // Message Type Filters
-  showHumans,
-  showEntities,
-  onToggleHumans,
-  onToggleEntities,
+  // Message Type Channel
+  activeChannel,
+  onChannelChange,
   
   // Username & Color
   username,
@@ -199,13 +195,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             )}
           </div>
           
-          {/* Message Type Toggles */}
-          <MessageTypeToggles
-            showHumans={showHumans}
-            showEntities={showEntities}
+          {/* Message Type Toggle (Exclusive Channel) */}
+          <MessageTypeToggle
+            activeChannel={activeChannel}
             userColorRgb={userColorRgb}
-            onToggleHumans={onToggleHumans}
-            onToggleEntities={onToggleEntities}
+            onChannelChange={onChannelChange}
           />
           
           {/* User Controls */}

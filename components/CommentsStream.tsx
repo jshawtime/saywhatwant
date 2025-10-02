@@ -207,12 +207,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
   
-  // Message type filtering (Humans/Entities) - extracted to hook
+  // Message type scroll restoration (still needed for Humans/Entities toggle)
+  // NOTE: This hook will be deprecated once we fully remove the old toggle system
   const {
-    showHumans,
-    showEntities,
-    toggleShowHumans,
-    toggleShowEntities,
     savedHumansScrollPosition,
     savedEntitiesScrollPosition,
     setSavedHumansScrollPosition,
@@ -268,6 +265,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     filterWords,
     negativeFilterWords,
     isFilterEnabled,
+    messageType,  // NEW: Active channel ('human' or 'AI')
     filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
     addToFilter,
     removeFromFilter,
@@ -276,6 +274,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     addNegativeWordFilter,
     removeNegativeWordFilter,
     toggleFilter,
+    setMessageType,  // NEW: Set active channel
     hasActiveFilters,
     urlSearchTerms,
     addSearchTermToURL,
@@ -305,8 +304,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     dateTimeFilter,
     domainFilterEnabled,
     currentDomain,
-    showHumans,
-    showEntities,
+    activeChannel: messageType,  // NEW: Pass exclusive channel instead of 2 booleans
     maxDisplayMessages: MAX_DISPLAY_MESSAGES,
     initialMessages
   });
@@ -419,8 +417,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     savedEntitiesScrollPosition,
     setSavedHumansScrollPosition,
     setSavedEntitiesScrollPosition,
-    showHumans,
-    showEntities,
+    activeChannel: messageType,  // NEW: Use exclusive channel
     filteredCommentsLength: filteredComments.length,
   });
   
@@ -881,8 +878,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       if (isCloudAPIEnabled()) {
         // PRESENCE-BASED: Get all messages created since we loaded the page
         // This ensures we see everything that happens while we're present
-        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}`;
-        console.log(`[Presence Polling] Polling for messages after ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
+        // CHANNEL-EXCLUSIVE: Only poll for active channel (human OR AI)
+        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}&type=${messageType}`;
+        console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
         console.log(`[Presence Polling] URL: ${pollUrl}`);
         
         const response = await fetch(pollUrl);
@@ -999,10 +997,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         modelDomain={modelDomain}
         userColor={userColor}
         userColorRgb={userColorRgb}
-        showHumans={showHumans}
-        showEntities={showEntities}
-        onToggleHumans={toggleShowHumans}
-        onToggleEntities={toggleShowEntities}
+        activeChannel={messageType}
+        onChannelChange={setMessageType}
         username={username}
         hasClickedUsername={hasClickedUsername}
                 usernameFlash={usernameFlash}

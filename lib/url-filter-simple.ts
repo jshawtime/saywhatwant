@@ -13,6 +13,7 @@ export interface FilterState {
   words: string[];
   negativeWords: string[];
   filterActive: boolean;
+  messageType: 'human' | 'AI';  // Channel-exclusive message type
 }
 
 /**
@@ -20,19 +21,20 @@ export interface FilterState {
  */
 export function parseURL(): FilterState {
   if (typeof window === 'undefined') {
-    return { users: [], words: [], negativeWords: [], filterActive: false };
+    return { users: [], words: [], negativeWords: [], filterActive: false, messageType: 'human' };
   }
 
   const hash = window.location.hash.slice(1);
   if (!hash) {
-    return { users: [], words: [], negativeWords: [], filterActive: false };
+    return { users: [], words: [], negativeWords: [], filterActive: false, messageType: 'human' };
   }
 
   const state: FilterState = {
     users: [],
     words: [],
     negativeWords: [],
-    filterActive: false
+    filterActive: false,
+    messageType: 'human'  // Default to human channel
   };
 
   // Parse each parameter
@@ -43,6 +45,13 @@ export function parseURL(): FilterState {
     switch (key) {
       case 'filteractive':
         state.filterActive = value === 'true';
+        break;
+        
+      case 'mt':
+        // Message type: 'human' or 'AI'
+        if (value === 'human' || value === 'AI') {
+          state.messageType = value;
+        }
         break;
         
       case 'u':
@@ -78,8 +87,9 @@ export function parseURL(): FilterState {
 export function buildURL(state: FilterState): string {
   const params: string[] = [];
 
-  // Always include filterActive
+  // Always include filterActive and messageType
   params.push(`filteractive=${state.filterActive}`);
+  params.push(`mt=${state.messageType}`);
 
   // Add users
   if (state.users.length > 0) {
@@ -99,7 +109,7 @@ export function buildURL(state: FilterState): string {
     params.push(`-word=${state.negativeWords.join('+')}`);
   }
 
-  return params.length > 0 ? `#${params.join('&')}` : '#filteractive=false';
+  return params.length > 0 ? `#${params.join('&')}` : '#filteractive=false&mt=human';
 }
 
 /**
@@ -125,9 +135,22 @@ export function ensureFilterActive(): void {
   if (typeof window === 'undefined') return;
   
   const hash = window.location.hash;
-  if (!hash || !hash.includes('filteractive')) {
-    // Add filteractive=false without creating history entry
-    const newHash = hash ? `${hash}&filteractive=false` : '#filteractive=false';
+  let needsUpdate = false;
+  let newHash = hash || '#';
+  
+  // Ensure filteractive parameter exists
+  if (!hash.includes('filteractive')) {
+    newHash += (newHash === '#' ? '' : '&') + 'filteractive=false';
+    needsUpdate = true;
+  }
+  
+  // Ensure messageType parameter exists (default to human)
+  if (!hash.includes('mt=')) {
+    newHash += '&mt=human';
+    needsUpdate = true;
+  }
+  
+  if (needsUpdate) {
     window.history.replaceState(null, '', newHash);
   }
 }

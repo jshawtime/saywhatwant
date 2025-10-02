@@ -128,10 +128,22 @@ export function useSimpleFilters({
       users: [],
       words: [],
       negativeWords: [],
-      filterActive: false
+      filterActive: false,
+      messageType: filterState.messageType  // Preserve channel when clearing filters
     };
     updateURL(newState);
-  }, []);
+  }, [filterState.messageType]);
+  
+  const setMessageType = useCallback((type: 'human' | 'AI') => {
+    const newState: FilterState = {
+      ...filterState,
+      messageType: type
+    };
+    updateURL(newState);
+    
+    // Also save to localStorage as fallback
+    localStorage.setItem('sww-message-channel', type);
+  }, [filterState]);
 
   // Apply filters to comments
   const filteredComments = useMemo(() => {
@@ -186,6 +198,7 @@ export function useSimpleFilters({
     hasFilters: filterState.users.length > 0 || 
                 filterState.words.length > 0 || 
                 filterState.negativeWords.length > 0,
+    messageType: filterState.messageType,  // NEW: Expose message type
     
     // Filtered results
     filteredComments,
@@ -199,6 +212,7 @@ export function useSimpleFilters({
     removeNegativeWord,
     toggleFilter,
     clearAllFilters,
+    setMessageType,  // NEW: Set message type
     
     // For compatibility during transition
     // Convert colors to RGB for display in FilterBar

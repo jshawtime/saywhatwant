@@ -25,8 +25,7 @@ interface UseIndexedDBFilteringParams {
   dateTimeFilter?: any;
   domainFilterEnabled: boolean;
   currentDomain: string;
-  showHumans: boolean;
-  showEntities: boolean;
+  activeChannel: 'human' | 'AI';  // NEW: Exclusive channel instead of 2 booleans
   
   // Configuration
   maxDisplayMessages: number;
@@ -121,13 +120,9 @@ export function useIndexedDBFiltering(
       criteria.domain = params.currentDomain;
     }
     
-    // Message type filters
-    const messageTypes: string[] = [];
-    if (params.showHumans) messageTypes.push('human');
-    if (params.showEntities) messageTypes.push('AI');
-    if (messageTypes.length > 0 && messageTypes.length < 2) {
-      criteria.messageTypes = messageTypes;
-    }
+    // Message type filter (exclusive channel)
+    // Always filter by active channel
+    criteria.messageTypes = [params.activeChannel];
     
     return criteria;
   }, [
@@ -138,8 +133,7 @@ export function useIndexedDBFiltering(
     params.dateTimeFilter,
     params.domainFilterEnabled,
     params.currentDomain,
-    params.showHumans,
-    params.showEntities
+    params.activeChannel  // NEW: Use exclusive channel
   ]);
   
   // Test if a message matches current filter criteria
@@ -185,9 +179,8 @@ export function useIndexedDBFiltering(
       return false;
     }
     
-    // Message type filters
-    if (!params.showHumans && message['message-type'] === 'human') return false;
-    if (!params.showEntities && message['message-type'] === 'AI') return false;
+    // Message type filter (exclusive channel)
+    if (message['message-type'] !== params.activeChannel) return false;
     
     return true;
   }, [
@@ -198,8 +191,7 @@ export function useIndexedDBFiltering(
     debouncedSearchTerm, // Use debounced version
     params.domainFilterEnabled,
     params.currentDomain,
-    params.showHumans,
-    params.showEntities
+    params.activeChannel  // NEW: Use exclusive channel
   ]);
   
   // Re-query IndexedDB when filters change
@@ -270,8 +262,7 @@ export function useIndexedDBFiltering(
     JSON.stringify(params.dateTimeFilter),
     params.domainFilterEnabled,
     params.currentDomain,
-    params.showHumans,
-    params.showEntities,
+    params.activeChannel,  // NEW: Use exclusive channel
     // REMOVED: JSON.stringify(params.initialMessages) - causes re-queries when new messages arrive!
     params.maxDisplayMessages
     // Removed buildCriteria - it's a function that changes every render

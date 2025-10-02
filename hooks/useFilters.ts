@@ -24,6 +24,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     filterState,
     isFilterEnabled,
     hasFilters,
+    messageType,
     filteredComments: baseFiltered,
     addUser,
     removeUser,
@@ -33,6 +34,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     removeNegativeWord,
     toggleFilter,
     clearAllFilters,
+    setMessageType,
     mergedUserFilters,
     mergedFilterWords,
     mergedNegativeWords,
@@ -64,6 +66,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     mergedNegativeWords,
     isFilterEnabled,
     hasFilters,
+    messageType,  // NEW: Expose message type
     
     // User operations
     addToFilter,
@@ -78,6 +81,7 @@ export const useFilters = ({ displayedComments, searchTerm }: UseFiltersProps) =
     // General operations
     toggleFilter,
     clearFilters: clearAllFilters,
+    setMessageType,  // NEW: Set message type
     
     // For backward compatibility (not used in new implementation)
     filterByColorToo: true,
