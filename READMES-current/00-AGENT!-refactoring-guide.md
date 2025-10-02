@@ -1064,6 +1064,164 @@ git tag -a vX.Y -m "[Tag message]"
 
 ---
 
+## Progress Tracking - Living Documentation
+
+### Why Track Progress
+
+Refactor READMEs should be **living documents** that evolve as work progresses. This allows:
+- Humans to see what's been completed without asking
+- Future agents to know where to continue
+- Team members to track status at a glance
+- Documentation to reflect reality, not just plans
+
+### How to Mark Progress
+
+Use visual indicators to show status:
+
+**Symbols**:
+- ✅ **COMPLETE** - Step finished, tested, deployed
+- 🔄 **NEXT** - Currently working on this
+- 📝 **PLANNED** - Not started yet
+- ⚠️ **BLOCKED** - Can't proceed (explain why)
+- ❌ **CANCELLED** - No longer needed (explain why)
+
+### Progress Template
+
+**Template for Step Updates**:
+```markdown
+**Step 1: [Action]** ✅ **COMPLETE** (Commit: `abc1234`)
+1. ✅ [Substep 1] - [Optional note about outcome]
+2. ✅ [Substep 2] - [Optional note]
+3. ✅ [Substep 3]
+...
+N. ✅ Deployed to production - Version: `xyz5678`
+
+**Result**: [What was achieved, metrics]
+
+**Notes**: [Any learnings, issues encountered, deviations from plan]
+
+---
+
+**Step 2: [Action]** 🔄 **IN PROGRESS** (Started: [Date])
+1. ✅ [Completed substep]
+2. 🔄 [Current substep being worked on]
+3. 📝 [Not started yet]
+
+**Current Status**: [What's working, what's being debugged]
+
+---
+
+**Step 3: [Action]** 📝 **PLANNED**
+[Original plan remains unchanged until started]
+```
+
+### Example: Tracked Progress
+
+```markdown
+### Phase 3A: UI Components
+
+**Step 1: Extract SearchBar** ✅ **COMPLETE** (Commit: `3192dfc`)
+1. ✅ Create components/Search/SearchBar.tsx (95 lines)
+2. ✅ Define props interface with full TypeScript
+3. ✅ Replace inline search with <SearchBar />
+4. ✅ Verify build succeeds - no errors
+5. ✅ Test search functionality - working perfectly
+6. ✅ Deployed to production - Version: fe8064a4
+
+**Result**: Reduced CommentsStream by 22 lines, search working correctly
+
+**Notes**: Extraction was straightforward. Props interface made component immediately reusable. Icon opacity change preserved correctly.
+
+---
+
+**Step 2: Extract MessageInput** 🔄 **IN PROGRESS** (Started: Oct 2)
+1. ✅ Create MessageInput.tsx (150 lines)
+2. ✅ Create CharacterCounter.tsx (40 lines)
+3. ✅ Create ErrorMessage.tsx (30 lines)
+4. ✅ Extract form section from parent
+5. 🔄 Testing submission flow - found Enter key issue
+6. 📝 Test error states
+7. 📝 Deploy to production
+
+**Current Status**: Build succeeds, working on Enter key handling bug. Form renders correctly but Enter key not triggering submission. Investigating event handler setup.
+
+---
+
+**Step 3: Extract MessageStream** 📝 **PLANNED**
+[Plan unchanged - will start after Step 2 complete]
+```
+
+### When to Update Progress
+
+**Update immediately after**:
+1. Completing a substep
+2. Finding an issue or bug
+3. Deploying to production
+4. Changing approach from plan
+5. Finishing a complete step
+
+**Add notes when**:
+- Something takes longer than expected (explain why)
+- You deviate from the plan (explain deviation)
+- You discover an issue (document solution)
+- You learn something valuable (share knowledge)
+
+### Metrics to Track
+
+Include these in progress updates:
+
+**Per Step**:
+- Lines added to new components
+- Lines removed from parent
+- Files created
+- Build success/failure
+- Deployment version ID
+- Test results
+
+**Cumulative (after each phase)**:
+```markdown
+**Progress After Step N**:
+- ✅ Parent file reduced: X → Y lines (Z% reduction)
+- ✅ New components created: N files
+- ✅ Total lines extracted: X lines
+- ✅ All features working: [list critical ones]
+- ✅ Build status: succeeds
+- ✅ Deployment: live on production
+```
+
+### Summary Section (Top of Document)
+
+Add a progress summary at the top:
+
+```markdown
+## 📊 Refactor Progress
+
+**Status**: IN PROGRESS (Step 5 of 12)  
+**Started**: October 1, 2025  
+**Last Updated**: October 2, 2025  
+**Target Completion**: October 22, 2025
+
+### Completed (Steps 1-4)
+- ✅ SearchBar component extracted
+- ✅ NotificationBanner component extracted  
+- ✅ MessageInput component with 2 sub-components extracted
+- ✅ MessageStream component extracted
+
+### In Progress (Step 5)
+- 🔄 AppHeader component (60% complete)
+
+### Remaining (Steps 6-12)
+- 📝 Hook consolidation (3 hooks)
+- 📝 Final cleanup and documentation
+
+### Metrics
+- **Current**: CommentsStream.tsx at 950 lines (from 1,380)
+- **Target**: 500 lines
+- **Progress**: 31% reduction (69% to go)
+```
+
+---
+
 ## Quality Checklist - Before Publishing
 
 Before you publish your refactor plan, verify:
