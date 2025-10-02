@@ -145,27 +145,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
   
-  // Scroll restoration for filters and search (extracted to hook)
-  useScrollRestoration({
-    streamRef,
-    isFilterEnabled,
-    searchTerm,
-    savedHumansScrollPosition,
-    savedEntitiesScrollPosition,
-    setSavedHumansScrollPosition,
-    setSavedEntitiesScrollPosition,
-    showHumans,
-    showEntities,
-    filteredCommentsLength: filteredComments.length,
-  });
-  
-  // Mobile keyboard handling (extracted to hook)
-  useMobileKeyboard({
-    streamRef,
-    isNearBottom,
-    smoothScrollToBottom,
-  });
-  
   // Clear "New Messages" indicator when user scrolls to bottom
   useEffect(() => {
     if (isNearBottom && hasNewComments) {
@@ -351,6 +330,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     addNegativeWordFilter,
     filteredComments,
     domainConfigTitle: domainConfig.title,
+  });
+  
+  // Scroll restoration for filters and search (extracted to hook)
+  useScrollRestoration({
+    streamRef,
+    isFilterEnabled,
+    searchTerm,
+    savedHumansScrollPosition,
+    savedEntitiesScrollPosition,
+    setSavedHumansScrollPosition,
+    setSavedEntitiesScrollPosition,
+    showHumans,
+    showEntities,
+    filteredCommentsLength: filteredComments.length,
+  });
+  
+  // Mobile keyboard handling (extracted to hook)
+  useMobileKeyboard({
+    streamRef,
+    isNearBottom,
+    smoothScrollToBottom,
   });
   
   // Sync search bar with URL search terms
