@@ -1452,3 +1452,33 @@ useEffect(() => {
 ```
 
 **Impact**: Filters now correctly show all 50 found messages, even as new messages stream in.
+
+### React Errors #418 and #423 Fixed (Jan 2025)
+
+**Problem**: App threw multiple React errors on initial load:
+- Error #418: "Cannot update a component while rendering a different component"  
+- Error #423: "Maximum update depth exceeded"
+
+**Root Cause**: `ModelURLHandler.applyState()` was emitting events **synchronously** during initialization. When these events triggered component updates, React was still in the middle of rendering other components, violating React's rules.
+
+**The Fix**: Wrapped all event emissions in `queueMicrotask()`:
+
+```typescript
+private async applyState(state: EnhancedFilterState): Promise<void> {
+  // DEFER all emissions until after current render completes
+  queueMicrotask(() => {
+    if (state.filterActive !== null) {
+      this.emit({ type: 'filter-active-changed', isActive: state.filterActive });
+    }
+    // ... other emissions
+  });
+}
+```
+
+**Why queueMicrotask?**
+- Schedules callback for the **next microtask queue**
+- Runs after current synchronous code but before next event loop tick
+- Allows React to complete the current render cycle before handling state updates
+- Maintains proper React render lifecycle
+
+**Impact**: Clean page loads with no React errors!
