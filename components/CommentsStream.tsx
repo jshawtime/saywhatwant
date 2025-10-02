@@ -38,6 +38,7 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { ContextMenu } from '@/components/ContextMenu';
 import { TitleContextMenu } from '@/components/TitleContextMenu';
 import { URLFilterManager } from '@/lib/url-filter-manager';
+import { MessageItem } from '@/components/MessageList/MessageItem';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -1704,59 +1705,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           </div>
         ) : (
           filteredComments.map((comment) => (
-            <div 
-              key={comment.id} 
-              className="comment-enter bg-white/5 rounded-lg px-3 py-2 hover:bg-white/[0.07] transition-colors"
-            >
-              <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
-                {/* Username - vertically centered with first line of message */}
-                <button 
-                  onClick={() => comment.username && addToFilter(comment.username, getCommentColor(comment))}
-                  onContextMenu={(e) => handleContextMenu(e, comment, true)} // true = username clicked
-                  onTouchStart={(e) => handleTouchStart(e, comment, true)}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchMove={handleTouchEnd}
-                  className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer select-none" 
-                  title={`Click to filter by ${comment.username || 'Anonymous'} | Right click more options`}
-                  style={{ 
-                    lineHeight: '20px',
-                    color: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.LIGHT)  // Use generated color for consistency
-                  }}
-                  tabIndex={-1}
-                >
-                  {comment.username || 'Anonymous'}:
-                </button>
-                
-                {/* Message with right margin for timestamp */}
-                <div className="flex-1 pr-12">
-                  <div 
-                    onContextMenu={(e) => handleContextMenu(e, comment, false)} // false = message clicked
-                    onTouchStart={(e) => handleTouchStart(e, comment, false)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchEnd}
-                    className="text-sm leading-snug break-all overflow-wrap-anywhere" 
-                    style={{ 
-                    lineHeight: '20px',
-                    color: getCommentColor(comment) // Use actual or generated color
-                    }}
-                  >
-                    {parseCommentTextWithHandlers(comment.text)}
-                  </div>
-                </div>
-                
-                {/* Timestamp - positioned absolute on right */}
-                <span 
-                  className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
-                  style={{ 
-                    color: getDarkerColor(getCommentColor(comment), 0.7),  // Use actual or generated color
-                    borderColor: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.DARK),  // Use actual or generated color
-                    backgroundColor: getDarkerColor(getCommentColor(comment), OPACITY_LEVELS.DARKEST)  // Use actual or generated color
-                  }}
-                >
-                  {formatTimestamp(comment.timestamp)}
-                </span>
-              </div>
-            </div>
+            <MessageItem
+              key={comment.id}
+              comment={comment}
+              onUsernameClick={addToFilter}
+              onContextMenu={handleContextMenu}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              parseText={parseCommentTextWithHandlers}
+              formatTimestamp={formatTimestamp}
+              getCommentColor={getCommentColor}
+            />
           ))
         )}
       </div>
