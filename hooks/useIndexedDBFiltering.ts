@@ -205,12 +205,9 @@ export function useIndexedDBFiltering(
     const currentGeneration = ++queryGeneration.current;
     
     const queryWithFilters = async () => {
+      // Only run this effect when IN filter mode
       if (!isFilterMode) {
-        // Browse mode - use initialMessages from parent
-        if (params.initialMessages) {
-          console.log('[FilterHook] Browse mode - using initial messages');
-          setMessages(params.initialMessages);
-        }
+        // Browse mode is handled by separate useEffect
         return;
       }
       
@@ -272,10 +269,18 @@ export function useIndexedDBFiltering(
     params.currentDomain,
     params.showHumans,
     params.showEntities,
-    JSON.stringify(params.initialMessages),
+    // REMOVED: JSON.stringify(params.initialMessages) - causes re-queries when new messages arrive!
     params.maxDisplayMessages
     // Removed buildCriteria - it's a function that changes every render
   ]);
+  
+  // Separate effect to handle initialMessages when NOT in filter mode
+  useEffect(() => {
+    if (!isFilterMode && params.initialMessages && params.initialMessages.length > 0) {
+      console.log('[FilterHook] Setting initial messages for browse mode:', params.initialMessages.length);
+      setMessages(params.initialMessages);
+    }
+  }, [JSON.stringify(params.initialMessages), isFilterMode]);
   
   // Add new messages (from polling or submission)
   const addMessages = useCallback((newMessages: Comment[]) => {
