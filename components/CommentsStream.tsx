@@ -47,6 +47,7 @@ import { MessageItem } from '@/components/MessageList/MessageItem';
 import { EmptyState } from '@/components/MessageList/EmptyState';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 import { SearchBar } from '@/components/Search/SearchBar';
+import { NotificationBanner } from '@/components/Notifications/NotificationBanner';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -1217,28 +1218,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         <form onSubmit={handleSubmit} className="w-full">
           <div className="relative w-full max-w-full">
-            {/* New Messages text indicator - positioned left of chevron, clickable */}
-            {hasNewComments && (
-              <button
-                type="button"
-                onClick={() => {
-                  smoothScrollToBottom(false);
-                  setHasNewComments(false);
-                }}
-                className="absolute top-2 text-xs z-20 font-medium pr-2 hover:opacity-80 cursor-pointer"
-                style={{ 
-                  color: userColorRgb,
-                  right: '4rem', // Position further left of chevron for better spacing
-                  background: 'none',
-                  border: 'none',
-                  padding: '0 12px 0 0' // Increased right padding for better spacing from chevron
-                }}
-                tabIndex={-1}
-                aria-label="Jump to latest messages"
-              >
-                New Messages
-              </button>
-            )}
+            {/* New Messages indicator - positioned left of chevron */}
+            <NotificationBanner
+              show={hasNewComments}
+              userColorRgb={userColorRgb}
+              message="New Messages"
+              onClick={() => {
+                smoothScrollToBottom(false);
+                setHasNewComments(false);
+              }}
+              position={{
+                background: 'none',
+                border: 'none',
+                padding: '0 12px 0 0' // Increased right padding for better spacing from chevron
+              }}
+              ariaLabel="Jump to latest messages"
+            />
             
             {/* Scroll to bottom button - positioned left of character counter */}
             <button
