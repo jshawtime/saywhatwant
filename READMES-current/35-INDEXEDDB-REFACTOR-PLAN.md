@@ -1414,3 +1414,41 @@ if (cursor && matches.length < limit) {  // No scan limit!
 - Searches now find ALL matching messages in the entire database
 - Typing "exploration" quickly doesn't cause 11 separate queries
 - Results are always from the most recent search, never stale
+
+### CRITICAL BUG FIX: Filter Displaying Only 3 Messages (Jan 2025)
+
+**Problem**: Filter would find 50 matches in IndexedDB but only display 3 messages.
+
+**Root Cause**: `initialMessages` was in the `useEffect` dependency array for the filter query.
+- When new messages arrived via polling, `initialMessages` would update
+- This triggered the filter effect to re-run
+- The effect would detect "no filter change" and fall into browse mode
+- Browse mode would overwrite the 50 IndexedDB results with only 3 `initialMessages`
+
+**The Fix**:
+1. Removed `initialMessages` from filter query dependencies
+2. Created separate `useEffect` for browse mode (when NO filters active)
+3. Filter query effect now only runs when actual filter criteria change
+4. Browse mode effect only runs when `isFilterMode = false`
+
+```typescript
+// FILTER MODE EFFECT - only for querying when filters active
+useEffect(() => {
+  if (!isFilterMode) return; // Don't interfere with browse mode
+  // ... query IndexedDB with criteria
+}, [
+  isFilterMode,
+  filterUsernames, // Filter changes
+  filterWords,
+  // REMOVED: initialMessages ❌
+]);
+
+// BROWSE MODE EFFECT - separate, only when NO filters
+useEffect(() => {
+  if (!isFilterMode && params.initialMessages?.length > 0) {
+    setMessages(params.initialMessages);
+  }
+}, [JSON.stringify(params.initialMessages), isFilterMode]);
+```
+
+**Impact**: Filters now correctly show all 50 found messages, even as new messages stream in.
