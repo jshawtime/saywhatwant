@@ -65,6 +65,8 @@ import { useColorPicker } from '@/hooks/useColorPicker';
 import { useMessageTypeFilters } from '@/hooks/useMessageTypeFilters';
 // Import scroll restoration hook
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+// Import context menus hook
+import { useContextMenus } from '@/hooks/useContextMenus';
 
 interface CommentsStreamProps {
   showVideo?: boolean;
@@ -114,17 +116,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [lazyLoadedCount, setLazyLoadedCount] = useState(0);
   
   // Scroll restoration now handled by useScrollRestoration hook
-  
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{ 
-    x: number; 
-    y: number; 
-    comment: Comment;
-    clickedWord?: string;
-    isUsername?: boolean;
-  } | null>(null);
-  const [titleContextMenu, setTitleContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Message counts (global KV + local IndexedDB)
   const { globalCount: messageCount, localCount } = useMessageCounts();
@@ -331,6 +322,27 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // WE WANT THE DB RESULTS, NOT THE LEGACY FILTER RESULTS!
     return allComments;
   }, [allComments]);
+  
+  // Context menus (extracted to hook)
+  const {
+    contextMenu,
+    titleContextMenu,
+    setContextMenu,
+    setTitleContextMenu,
+    handleContextMenu,
+    handleTouchStart,
+    handleTouchEnd,
+    handleCopy,
+    handleSave,
+    handleBlock,
+    handleTitleContextMenu,
+    handleCopyAll,
+    handleSaveAll,
+  } = useContextMenus({
+    addNegativeWordFilter,
+    filteredComments,
+    domainConfigTitle: domainConfig.title,
+  });
   
   // Sync search bar with URL search terms
   useEffect(() => {
@@ -896,216 +908,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Username is now auto-saved on change, no need for save function
   // Color picker functions now handled by useColorPicker hook
   // Message type filter toggles now handled by useMessageTypeFilters hook
-
-  // Context menu handlers
-  const handleContextMenu = useCallback((e: React.MouseEvent, comment: Comment, isUsername: boolean = false) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    let clickedWord: string | undefined;
-    
-    if (!isUsername) {
-      // Use selection API to get the word at click position
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const selectedText = selection.toString().trim();
-        if (selectedText && selectedText.split(/\s+/).length === 1) {
-          // Single word selected
-          clickedWord = selectedText.replace(/[^a-zA-Z0-9]/g, '');
-        }
-      }
-      
-      // If no selection, try to extract from the whole text
-      if (!clickedWord) {
-        const target = e.target as HTMLElement;
-        const text = target.textContent || '';
-        // Simple approach: just get the first word if it's a short message
-        const words = text.trim().split(/\s+/);
-        if (words.length <= 5) {
-          // For short messages, block the whole message makes sense
-          clickedWord = undefined; // Will block username instead
-        }
-      }
-    }
-    
-    setContextMenu({ 
-      x: e.clientX, 
-      y: e.clientY, 
-      comment,
-      clickedWord,
-      isUsername 
-    });
-  }, []);
-  
-  const handleTouchStart = useCallback((e: React.TouchEvent, comment: Comment, isUsername: boolean = false) => {
-    const touch = e.touches[0];
-    
-    // Clear any existing timer
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-    }
-    
-    // Set a new timer for long press (500ms)
-    longPressTimer.current = setTimeout(() => {
-      e.preventDefault();
-      
-      let clickedWord: string | undefined;
-      
-      if (!isUsername) {
-        // For touch, we can't easily determine the exact word
-        // So we'll just block the username unless text is selected
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const selectedText = selection.toString().trim();
-          if (selectedText && selectedText.split(/\s+/).length === 1) {
-            clickedWord = selectedText.replace(/[^a-zA-Z0-9]/g, '');
-          }
-        }
-      }
-      
-      setContextMenu({ 
-        x: touch.clientX, 
-        y: touch.clientY, 
-        comment,
-        clickedWord,
-        isUsername
-      });
-      // Haptic feedback for mobile if available
-      if ('vibrate' in navigator) {
-        navigator.vibrate(10);
-      }
-    }, 500);
-  }, []);
-  
-  const handleTouchEnd = useCallback(() => {
-    // Clear the timer if touch ends before long press
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-  
-  const handleCopy = useCallback(() => {
-    if (!contextMenu) return;
-    const { comment } = contextMenu;
-    const timestamp = new Date(comment.timestamp).toLocaleString();
-    const text = `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
-    
-    // Modern clipboard API with fallback
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-    } else {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
-    
-    console.log('[Context Menu] Copied message to clipboard');
-  }, [contextMenu]);
-  
-  const handleSave = useCallback(() => {
-    if (!contextMenu) return;
-    const { comment } = contextMenu;
-    const timestamp = new Date(comment.timestamp).toLocaleString();
-    const filename = `message_${comment.username}_${Date.now()}.txt`;
-    const content = `Username: ${comment.username || 'anonymous'}\nDate/Time: ${timestamp}\n\nMessage:\n${comment.text}`;
-    
-    // Create and download file
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    console.log('[Context Menu] Saved message as:', filename);
-  }, [contextMenu]);
-  
-  const handleBlock = useCallback(() => {
-    if (!contextMenu) return;
-    const { comment, clickedWord, isUsername } = contextMenu;
-    
-    if (clickedWord && !isUsername) {
-      // Block the specific word
-      addNegativeWordFilter(clickedWord);
-      console.log('[Context Menu] Blocked word:', clickedWord);
-    } else {
-      // Block the username
-      const username = comment.username || 'anonymous';
-      addNegativeWordFilter(username);
-      console.log('[Context Menu] Blocked user:', username);
-    }
-  }, [contextMenu, addNegativeWordFilter]);
-  
-  // Title context menu handlers
-  const handleTitleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setTitleContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
-  
-  const handleCopyAll = useCallback(() => {
-    // Get all visible messages
-    const messages = filteredComments.map(comment => {
-      const timestamp = new Date(comment.timestamp).toLocaleString();
-      return `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
-    }).join('\n\n');
-    
-    const header = `Say What Want - ${domainConfig.title}\nExported: ${new Date().toLocaleString()}\nTotal Messages: ${filteredComments.length}\n${'='.repeat(50)}\n\n`;
-    const fullText = header + messages;
-    
-    // Modern clipboard API with fallback
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(fullText);
-    } else {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = fullText;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
-    
-    console.log(`[Title Context Menu] Copied ${filteredComments.length} messages to clipboard`);
-  }, [filteredComments, domainConfig.title]);
-  
-  const handleSaveAll = useCallback(() => {
-    // Get all visible messages
-    const messages = filteredComments.map(comment => {
-      const timestamp = new Date(comment.timestamp).toLocaleString();
-      return `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
-    }).join('\n\n');
-    
-    const header = `Say What Want - ${domainConfig.title}\nExported: ${new Date().toLocaleString()}\nTotal Messages: ${filteredComments.length}\n${'='.repeat(50)}\n\n`;
-    const fullText = header + messages;
-    
-    // Create filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const filename = `saywhatwant_${domainConfig.title.toLowerCase().replace(/\s+/g, '_')}_${timestamp}.txt`;
-    
-    // Create and download file
-    const blob = new Blob([fullText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    console.log(`[Title Context Menu] Saved ${filteredComments.length} messages as: ${filename}`);
-  }, [filteredComments, domainConfig.title]);
-
-
-  // Scroll restoration now handled by useScrollRestoration hook (removed ~110 lines)
+  // Context menu handlers now handled by useContextMenus hook
 
   // Handle mobile keyboard visibility - works for both iOS and Android
   useEffect(() => {
