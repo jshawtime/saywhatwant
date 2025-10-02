@@ -39,6 +39,8 @@ import { ContextMenu } from '@/components/ContextMenu';
 import { TitleContextMenu } from '@/components/TitleContextMenu';
 import { URLFilterManager } from '@/lib/url-filter-manager';
 import { MessageItem } from '@/components/MessageList/MessageItem';
+import { EmptyState } from '@/components/MessageList/EmptyState';
+import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -1503,20 +1505,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               </button>
               
               {/* Color Picker Dropdown */}
-              {showColorPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-2 grid grid-cols-6 gap-1 z-20 shadow-xl">
-                  {randomizedColors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => selectColor(color)}
-                      className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                      aria-label={`Select color ${color}`}
-                    >
-                      <StyledUserIcon userColor={nineDigitToRgb(color)} />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <ColorPickerDropdown
+                colors={randomizedColors}
+                onSelectColor={selectColor}
+                isVisible={showColorPicker}
+              />
               <StyledUsernameInput
                 inputRef={usernameRef}
                 value={username}
@@ -1667,42 +1660,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             </div>
           </div>
         ) : filteredComments.length === 0 ? (
-          <div className="text-center py-8">
-            {!searchTerm && (
-              <Ban 
-                className="w-12 h-12 mx-auto mb-4" 
-                style={{ color: userColorRgb }}
-              />
-            )}
-            <div style={{ color: userColorRgb }}>
-              {searchTerm ? 'No matching comments' : (
-                <>
-                  Apparently there's nothing to see here.
-                  <br /><br />
-                  Try turning filters off{' '}
-                  <button
-                    onClick={toggleFilter}
-                    style={{
-                      display: 'inline-flex',
-                      verticalAlign: 'middle',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      margin: '0 4px'
-                    }}
-                    title={isFilterEnabled ? 'Disable filter' : 'Enable filter'}
-                  >
-                    <StyledFilterIcon 
-                      userColor={userColorRgb}
-                      opacity={isFilterEnabled ? 1.0 : 0.4}
-                    />
-                  </button>
-                  , changing filters, search term<br />or check what link got you here.<br />Maybe someone fucked something up.<br /><br />99.9% chance it's not a server issue.
-                </>
-              )}
-            </div>
-          </div>
+          <EmptyState
+            searchTerm={searchTerm}
+            isFilterEnabled={isFilterEnabled}
+            userColor={userColorRgb}
+            onToggleFilter={toggleFilter}
+          />
         ) : (
           filteredComments.map((comment) => (
             <MessageItem

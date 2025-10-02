@@ -384,7 +384,7 @@ export function useContextMenus() {
 
 ## Refactor Phases
 
-### **Phase 0: Preparation and Audit** ✅
+### **Phase 0: Preparation and Audit** ✅ COMPLETE
 - [x] Read entire CommentsStream.tsx
 - [x] Map all state variables
 - [x] Map all hooks
@@ -392,27 +392,31 @@ export function useContextMenus() {
 - [x] Identify existing extracted components
 - [x] Identify candidates for extraction
 
-### **Phase 1: Extract Simple Display Components**
+### **Phase 1: Extract Simple Display Components** ✅ COMPLETE
 **Why first?**: These are pure presentational components with no complex logic.
 
 **Components**:
-1. **MessageItem** 
-   - Single message display
+1. ✅ **MessageItem** (`components/MessageList/MessageItem.tsx`)
+   - Single message display (92 lines)
    - No state, just props
-   - Easy to test
+   - Reduced CommentsStream by 54 lines
    
-2. **ColorPickerDropdown**
-   - Pure UI component
+2. ✅ **ColorPickerDropdown** (`components/ColorPicker/ColorPickerDropdown.tsx`)
+   - Pure UI component (41 lines)
    - No side effects
+   - Reduced CommentsStream by 14 lines
    
-**Files to create**:
-- `saywhatwant/components/MessageItem.tsx`
-- `saywhatwant/components/ColorPickerDropdown.tsx`
+3. ✅ **EmptyState** (`components/MessageList/EmptyState.tsx`)
+   - "Nothing to see here" display (62 lines)
+   - Pure presentational
+   - Reduced CommentsStream by 36 lines
+
+**Total Reduction**: 104 lines removed from CommentsStream (1,923 → 1,819)
 
 **Testing**:
-- Visual regression
-- Click handlers work
-- Colors render correctly
+- Visual regression: ✅ Identical appearance
+- Click handlers work: ✅ All interactions preserved
+- Colors render correctly: ✅ Styling unchanged
 
 ### **Phase 2: Extract Custom Hooks (Business Logic)**
 **Why second?**: Separates logic from UI, makes testing easier.
