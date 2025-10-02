@@ -482,7 +482,7 @@
             
             try {
                 // Search in IndexedDB
-                const db = await openDatabase();
+                const db = await openIndexedDB();
                 const transaction = db.transaction(['messages'], 'readonly');
                 const store = transaction.objectStore('messages');
                 const request = store.getAll();

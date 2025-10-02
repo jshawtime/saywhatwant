@@ -197,6 +197,27 @@ async function handleGetComments(env, url) {
       );
     }
 
+    // Get ACTUAL total count from KV (not just cache size)
+    let actualTotal = comments.length;
+    try {
+      let kvCount = 0;
+      let cursor = undefined;
+      do {
+        const list = await env.COMMENTS_KV.list({ prefix: 'comment:', cursor, limit: 1000 });
+        kvCount += list.keys.length;
+        cursor = list.cursor;
+        if (!list.list_complete) {
+          // Keep counting if there are more keys
+        } else {
+          break;
+        }
+      } while (cursor);
+      actualTotal = kvCount;
+    } catch (countError) {
+      console.error('[Comments] Failed to count KV keys:', countError);
+      // Fallback to cache size
+    }
+
     // Apply pagination
     const start = Math.max(0, comments.length - offset - limit);
     const end = comments.length - offset;
@@ -204,7 +225,7 @@ async function handleGetComments(env, url) {
 
     const response = {
       comments: paginatedComments,
-      total: comments.length,
+      total: actualTotal, // Use actual KV count, not cache size
       hasMore: start > 0,
     };
 
