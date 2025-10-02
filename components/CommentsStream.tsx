@@ -1,94 +1,139 @@
 'use client';
 
+// ==========================================
+// REACT & EXTERNAL LIBRARIES
+// ==========================================
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, ChevronDown, Tv, Ban, Users, Sparkles } from 'lucide-react';
-import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
+
+// ==========================================
+// TYPES
+// ==========================================
 import { Comment, CommentsResponse } from '@/types';
-import { useFilters } from '@/hooks/useFilters';
-import { 
-  getNotificationSystem, 
-  getFilterKey, 
-  getFilterNotificationSetting,
-  markFilterAsUnread,
-  NotificationSound 
-} from '@/modules/notificationSystem';
-import { simpleIndexedDB, FilterCriteria } from '@/modules/simpleIndexedDB';
-import { useIndexedDBFiltering } from '@/hooks/useIndexedDBFiltering';
-import FilterBar from '@/components/FilterBar';
-import DomainFilter from '@/components/DomainFilter';
-import { parseCommentText } from '@/utils/textParsing';
+
+// ==========================================
+// CONFIGURATION
+// ==========================================
 import { COMMENTS_CONFIG, getCommentsConfig } from '@/config/comments-source';
 import { getCurrentDomain, getCurrentDomainConfig, isDomainFilterEnabled, toggleDomainFilter } from '@/config/domain-config';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
-// Configuration - Now using config files
+// Configuration constants
 const INITIAL_LOAD_COUNT = MESSAGE_SYSTEM_CONFIG.cloudInitialLoad; // ALWAYS 0 - presence-based
 const POLLING_INTERVAL = MESSAGE_SYSTEM_CONFIG.cloudPollingInterval; // 5000ms
 const MAX_COMMENT_LENGTH = 201;
-const POLL_BATCH_LIMIT = MESSAGE_SYSTEM_CONFIG.cloudPollBatch; // From config
+const POLL_BATCH_LIMIT = MESSAGE_SYSTEM_CONFIG.cloudPollBatch;
 const MAX_USERNAME_LENGTH = 16;
-const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages; // From config
-const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages; // Load same amount initially
-const INDEXEDDB_LAZY_LOAD_CHUNK = MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize; // From config
+const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
+const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
+const INDEXEDDB_LAZY_LOAD_CHUNK = MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize;
 
-// Import color functions from the unified color system
-import { 
-  getRandomColor, 
-  getDarkerColor, 
-  COLOR_PALETTE, 
-  nineDigitToRgb,
-  getCommentColor  // Now imported from colorSystem (moved from usernameColorGenerator)
-} from '@/modules/colorSystem';
-import { OPACITY_LEVELS } from '@/modules/colorOpacity';
-import { ContextMenu } from '@/components/ContextMenu';
-import { TitleContextMenu } from '@/components/TitleContextMenu';
-import { URLFilterManager } from '@/lib/url-filter-manager';
+// ==========================================
+// COMPONENTS (Extracted in Phase 3)
+// ==========================================
+import { AppHeader } from '@/components/Header/AppHeader';
+import { SearchBar } from '@/components/Search/SearchBar';
+import { MessageStream } from '@/components/MessageStream/MessageStream';
+import { MessageInput } from '@/components/MessageInput/MessageInput';
+import { NotificationBanner } from '@/components/Notifications/NotificationBanner';
 import { MessageItem } from '@/components/MessageList/MessageItem';
 import { EmptyState } from '@/components/MessageList/EmptyState';
+import { ContextMenu } from '@/components/ContextMenu';
+import { TitleContextMenu } from '@/components/TitleContextMenu';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
-import { SearchBar } from '@/components/Search/SearchBar';
-import { NotificationBanner } from '@/components/Notifications/NotificationBanner';
-import { MessageInput } from '@/components/MessageInput/MessageInput';
-import { MessageStream } from '@/components/MessageStream/MessageStream';
-import { AppHeader } from '@/components/Header/AppHeader';
-// Import cloud API functions
-import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
-// Import timestamp system
-import { formatTimestamp } from '@/modules/timestampSystem';
-// Import keyboard shortcuts
-import { useCommonShortcuts, useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
-// Import number formatter
-import { formatNumber } from '@/utils/formatNumber';
-// Import polling system
-import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
-// Import video sharing system
-import { useVideoSharing } from '@/modules/videoSharingSystem';
-// Import comment submission system
-import { useCommentSubmission, useUsernameValidation } from '@/modules/commentSubmission';
-// Import model URL integration
+import FilterBar from '@/components/FilterBar';
+import DomainFilter from '@/components/DomainFilter';
+import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
+
+// ==========================================
+// CUSTOM HOOKS (Feature-specific)
+// ==========================================
+import { useFilters } from '@/hooks/useFilters';
+import { useIndexedDBFiltering } from '@/hooks/useIndexedDBFiltering';
 import { useCommentsWithModels } from '@/hooks/useCommentsWithModels';
-// Import message counts hook
 import { useMessageCounts } from '@/hooks/useMessageCounts';
-// Import color picker hook
 import { useColorPicker } from '@/hooks/useColorPicker';
-// Import message type filters hook
 import { useMessageTypeFilters } from '@/hooks/useMessageTypeFilters';
-// Import scroll restoration hook
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
-// Import context menus hook
 import { useContextMenus } from '@/hooks/useContextMenus';
-// Import mobile keyboard hook
 import { useMobileKeyboard } from '@/hooks/useMobileKeyboard';
-// Import message loading state hook
 import { useMessageLoadingState } from '@/hooks/useMessageLoadingState';
-// Import username editor hook
 import { useUsernameEditor } from '@/hooks/useUsernameEditor';
 
+// ==========================================
+// MODULES (Business Logic)
+// ==========================================
+import { simpleIndexedDB, FilterCriteria } from '@/modules/simpleIndexedDB';
+import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
+import { useCommentsPolling, useAutoScrollDetection } from '@/modules/pollingSystem';
+import { useVideoSharing } from '@/modules/videoSharingSystem';
+import { useCommentSubmission, useUsernameValidation } from '@/modules/commentSubmission';
+import { useCommonShortcuts, useKeyboardShortcuts } from '@/modules/keyboardShortcuts';
+import { getNotificationSystem, getFilterKey, getFilterNotificationSetting, markFilterAsUnread, NotificationSound } from '@/modules/notificationSystem';
+import { getRandomColor, getDarkerColor, COLOR_PALETTE, nineDigitToRgb, getCommentColor } from '@/modules/colorSystem';
+import { OPACITY_LEVELS } from '@/modules/colorOpacity';
+import { formatTimestamp } from '@/modules/timestampSystem';
+
+// ==========================================
+// UTILITIES
+// ==========================================
+import { parseCommentText } from '@/utils/textParsing';
+import { formatNumber } from '@/utils/formatNumber';
+import { URLFilterManager } from '@/lib/url-filter-manager';
+
+/**
+ * CommentsStream Component Props
+ */
 interface CommentsStreamProps {
+  /**
+   * Whether video is currently shown
+   */
   showVideo?: boolean;
+  
+  /**
+   * Callback to toggle video visibility
+   */
   toggleVideo?: () => void;
 }
 
+/**
+ * CommentsStream Component
+ * 
+ * Main container component for the Say What Want messaging application.
+ * Orchestrates all sub-components and hooks to provide a complete messaging experience.
+ * 
+ * **Architecture** (Post Phase 3 Refactor):
+ * - **Container Component**: Manages state and data flow, minimal UI rendering
+ * - **Presentation Components**: AppHeader, MessageStream, MessageInput (extracted)
+ * - **Custom Hooks**: 11 feature-specific hooks for clean separation of concerns
+ * 
+ * **Responsibilities**:
+ * 1. State Management: Domain config, initial messages, search term
+ * 2. Hook Orchestration: Integrates 11+ custom hooks for features
+ * 3. Data Loading: Initial IndexedDB load, cloud polling integration
+ * 4. Event Handling: Submit, notification matching, domain toggle
+ * 5. Component Composition: Assembles AppHeader, MessageStream, MessageInput, Context Menus
+ * 
+ * **Key Features**:
+ * - Presence-based messaging (messages received while tab is open)
+ * - Real-time polling every 5 seconds for new messages
+ * - IndexedDB storage with lazy loading
+ * - Username + color filtering
+ * - Search across all messages
+ * - Domain filtering
+ * - Message type filtering (Humans vs AI Entities)
+ * - Scroll restoration for filters/search
+ * - Mobile keyboard optimization
+ * - Video sharing integration
+ * - Context menus for messages
+ * - Sound notifications for filter matches
+ * 
+ * @example
+ * <CommentsStream
+ *   showVideo={false}
+ *   toggleVideo={() => setShowVideo(!showVideo)}
+ * />
+ */
 const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, toggleVideo }) => {
   // Constants
   const COMMENTS_STORAGE_KEY = 'sww-comments-local';
