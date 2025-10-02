@@ -63,8 +63,9 @@ export function useIndexedDBFiltering(
   const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(params.searchTerm);
   
-  // Detect filter mode
-  const isFilterMode = params.isFilterEnabled || params.searchTerm.length > 0;
+  // User is ALWAYS filtering (at minimum by channel)
+  // Channel is mandatory, username/word filters are optional additions
+  const isFilterMode = true; // Always query IndexedDB with at least channel criteria
   
   // Debounce search term to reduce queries while typing
   useEffect(() => {
@@ -203,13 +204,8 @@ export function useIndexedDBFiltering(
     const currentGeneration = ++queryGeneration.current;
     
     const queryWithFilters = async () => {
-      // Only run this effect when IN filter mode
-      if (!isFilterMode) {
-        // Browse mode is handled by separate useEffect
-        return;
-      }
-      
-      // Filter mode - query IndexedDB
+      // ALWAYS query IndexedDB (at minimum by channel)
+      // Channel filtering is mandatory - there is no "browse all" mode
       setIsLoading(true);
       
       try {
@@ -271,13 +267,9 @@ export function useIndexedDBFiltering(
     // Removed buildCriteria - it's a function that changes every render
   ]);
   
-  // Separate effect to handle initialMessages when NOT in filter mode
-  useEffect(() => {
-    if (!isFilterMode && params.initialMessages && params.initialMessages.length > 0) {
-      console.log('[FilterHook] Setting initial messages for browse mode:', params.initialMessages.length);
-      setMessages(params.initialMessages);
-    }
-  }, [JSON.stringify(params.initialMessages), isFilterMode]);
+  // NOTE: Browse mode removed - ALWAYS query IndexedDB
+  // Channel filtering is mandatory, so there's no "browse all" mode
+  // Even with no username/word filters, we filter by channel
   
   // Add new messages (from polling or submission)
   const addMessages = useCallback((newMessages: Comment[]) => {
