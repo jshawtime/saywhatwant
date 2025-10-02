@@ -573,13 +573,14 @@
                 
                 // API returns { comments: [...], total: n }
                 const messages = data.comments || data || [];
+                const totalKvCount = data.total || messages.length; // Use total from API
                 
                 if (!Array.isArray(messages)) {
                     throw new Error('Invalid response format - expected array of messages');
                 }
                 
-                // Update KV count
-                const kvCount = messages.length;
+                // Update KV count (use total from API, not fetched array length)
+                const kvCount = totalKvCount;
                 document.getElementById('kv-count').textContent = kvCount.toLocaleString();
                 
                 // Calculate change
@@ -606,10 +607,18 @@
                 ).size;
                 document.getElementById('active-users').textContent = activeUsers.toLocaleString();
                 
-                // Calculate message rate (messages in last hour)
+                // Calculate message rate (messages in last hour from fetched data)
+                // Note: This is approximate since we're working with limited fetched messages
                 const oneHourAgo = Date.now() - (60 * 60 * 1000);
                 const recentMessages = messages.filter(m => m.timestamp > oneHourAgo);
-                document.getElementById('message-rate').textContent = recentMessages.length.toLocaleString();
+                const messageRate = recentMessages.length;
+                
+                // If we fetched all recent messages, show exact count
+                // Otherwise show as "n+" to indicate there may be more
+                const rateDisplay = messageRate >= Math.max(currentMessageLimit, 100) 
+                    ? `${messageRate}+` 
+                    : messageRate.toLocaleString();
+                document.getElementById('message-rate').textContent = rateDisplay;
                 
                 // Update active users change
                 const userChange = activeUsers - lastUserCount;
@@ -711,9 +720,18 @@
             
             messages.forEach(msg => {
                 if (msg.timestamp > hourAgo) {
-                    const bucket = Math.floor(msg.timestamp / interval) * interval;
-                    if (buckets[bucket] !== undefined) {
-                        buckets[bucket]++;
+                    // Find the right bucket for this message
+                    const bucketTime = Math.floor((msg.timestamp - hourAgo) / interval) * interval + hourAgo;
+                    if (buckets[bucketTime] !== undefined) {
+                        buckets[bucketTime]++;
+                    } else {
+                        // If exact bucket not found, find nearest bucket
+                        const nearestBucket = Object.keys(buckets).reduce((prev, curr) => {
+                            const prevDiff = Math.abs(parseInt(prev) - msg.timestamp);
+                            const currDiff = Math.abs(parseInt(curr) - msg.timestamp);
+                            return currDiff < prevDiff ? curr : prev;
+                        });
+                        buckets[nearestBucket]++;
                     }
                 }
             });

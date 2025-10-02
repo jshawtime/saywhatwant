@@ -1365,8 +1365,43 @@ So my 3+ issues are:
 Let me document these properly.
 </thinking>
 
-I'll trace through the ENTIRE system very carefully and find all potential failure points:
+### CRITICAL BUG FIX: Search Depth Issue (Jan 2025)
 
-<function_calls>
-<invoke name="write">
-<parameter name="file_path">saywhatwant/READMES-current/36-SEARCH-FILTER-DEBUG.md
+**Problem**: Search was only finding messages in the first 50-100 messages scanned, not searching deeper into the 5000+ message database.
+
+**Root Cause**: `queryMessages()` in `simpleIndexedDB.ts` was incorrectly stopping iteration as soon as it collected `limit` (50) matches, rather than scanning deeper to find the NEWEST 50 matches.
+
+**The Bug**:
+```typescript
+// OLD BROKEN CODE - stopped too early!
+if (cursor && matches.length < limit) {  // WRONG: stops at 50 matches
+  const message = cursor.value;
+  if (messageMatchesCriteria(message, criteria)) {
+    matches.push(message);
+  }
+  cursor.continue();
+} else {
+  resolve(matches); // Returns first 50 found, not best 50
+}
+```
+
+**The Fix**: 
+- Scan up to 10,000 messages (configurable) 
+- Collect matches until we hit display limit OR scan limit
+- Returns the NEWEST n matches (since cursor iterates newest-first with 'prev')
+
+```typescript
+// FIXED CODE - scans deep, collects up to limit
+const MAX_SCAN = 10000; // Scan deep into database
+if (cursor && matches.length < limit && scannedCount < MAX_SCAN) {
+  scannedCount++;
+  if (messageMatchesCriteria(message, criteria)) {
+    matches.push(message);
+  }
+  cursor.continue();
+} else {
+  resolve(matches); // Returns newest n matches from deep scan
+}
+```
+
+**Impact**: Now searches find ALL matching messages (up to 10k deep), returning the newest 50 that match.
