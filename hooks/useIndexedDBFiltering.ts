@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Comment } from '@/types';
 import { simpleIndexedDB, FilterCriteria } from '@/modules/simpleIndexedDB';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
+import { mergeAndSortMessages } from '@/utils/messageUtils';
 
 interface UseIndexedDBFilteringParams {
   // Filter criteria (from useFilters)
@@ -301,8 +302,8 @@ export function useIndexedDBFiltering(
       
       if (uniqueNew.length === 0) return prev;
       
-      // Add and trim to max
-      const combined = [...prev, ...uniqueNew];
+      // Merge and sort (ensures oldest→newest order is maintained)
+      const combined = mergeAndSortMessages(prev, uniqueNew);
       const trimmed = combined.slice(-params.maxDisplayMessages);
       
       return trimmed;
