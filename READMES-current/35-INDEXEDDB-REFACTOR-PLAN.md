@@ -1386,22 +1386,31 @@ if (cursor && matches.length < limit) {  // WRONG: stops at 50 matches
 ```
 
 **The Fix**: 
-- Scan up to 10,000 messages (configurable) 
-- Collect matches until we hit display limit OR scan limit
+- Scan the ENTIRE database (no artificial limit)
+- Stop ONLY when we find enough matches (maxDisplayMessages) or reach the end
 - Returns the NEWEST n matches (since cursor iterates newest-first with 'prev')
+- Added search debouncing (150ms) to reduce queries while typing
+- Added query generation tracking to cancel stale queries (prevent race conditions)
 
 ```typescript
-// FIXED CODE - scans deep, collects up to limit
-const MAX_SCAN = 10000; // Scan deep into database
-if (cursor && matches.length < limit && scannedCount < MAX_SCAN) {
+// FIXED CODE - scans entire DB, stops at limit
+if (cursor && matches.length < limit) {  // No scan limit!
   scannedCount++;
   if (messageMatchesCriteria(message, criteria)) {
     matches.push(message);
   }
   cursor.continue();
 } else {
-  resolve(matches); // Returns newest n matches from deep scan
+  resolve(matches); // Returns newest n matches from full DB scan
 }
 ```
 
-**Impact**: Now searches find ALL matching messages (up to 10k deep), returning the newest 50 that match.
+**Additional Improvements**:
+1. **Search Debouncing**: Waits 150ms after typing stops before querying (reduces queries from "e", "ex", "exp"...)
+2. **Query Cancellation**: Each new query cancels previous ones, preventing old results from overwriting new ones
+3. **Full DB Search**: Removed artificial 10k limit - searches entire database but stops at first n matches
+
+**Impact**: 
+- Searches now find ALL matching messages in the entire database
+- Typing "exploration" quickly doesn't cause 11 separate queries
+- Results are always from the most recent search, never stale

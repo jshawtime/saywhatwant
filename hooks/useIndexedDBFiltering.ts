@@ -9,7 +9,7 @@
  * - Filter Mode: Query IndexedDB with filter criteria
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Comment } from '@/types';
 import { simpleIndexedDB, FilterCriteria } from '@/modules/simpleIndexedDB';
 import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
@@ -59,9 +59,29 @@ export function useIndexedDBFiltering(
 ): UseIndexedDBFilteringReturn {
   const [messages, setMessages] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const queryGeneration = useRef(0); // Track query generation to cancel stale queries
+  const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(params.searchTerm);
   
   // Detect filter mode
   const isFilterMode = params.isFilterEnabled || params.searchTerm.length > 0;
+  
+  // Debounce search term to reduce queries while typing
+  useEffect(() => {
+    if (searchDebounceTimer.current) {
+      clearTimeout(searchDebounceTimer.current);
+    }
+    
+    searchDebounceTimer.current = setTimeout(() => {
+      setDebouncedSearchTerm(params.searchTerm);
+    }, 150); // 150ms debounce - fast enough to feel instant but reduces queries
+    
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, [params.searchTerm]);
   
   // Build filter criteria from all active filters
   const buildCriteria = useCallback((): FilterCriteria => {
@@ -79,8 +99,8 @@ export function useIndexedDBFiltering(
       criteria.excludeWords = params.negativeFilterWords;
     }
     
-    if (params.searchTerm.length > 0) {
-      criteria.searchTerm = params.searchTerm;
+    if (debouncedSearchTerm.length > 0) {
+      criteria.searchTerm = debouncedSearchTerm;
     }
     
     if (params.dateTimeFilter && typeof params.dateTimeFilter === 'object') {
@@ -113,7 +133,7 @@ export function useIndexedDBFiltering(
     params.filterUsernames,
     params.filterWords,
     params.negativeFilterWords,
-    params.searchTerm,
+    debouncedSearchTerm, // Use debounced version
     params.dateTimeFilter,
     params.domainFilterEnabled,
     params.currentDomain,
@@ -147,9 +167,9 @@ export function useIndexedDBFiltering(
       if (hasExcludedWord) return false;
     }
     
-    // Search term
-    if (params.searchTerm.length > 0) {
-      const searchLower = params.searchTerm.toLowerCase();
+    // Search term (use debounced for consistency)
+    if (debouncedSearchTerm.length > 0) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
       const textLower = message.text.toLowerCase();
       const usernameLower = message.username?.toLowerCase() || '';
       if (!textLower.includes(searchLower) && !usernameLower.includes(searchLower)) {
@@ -172,7 +192,7 @@ export function useIndexedDBFiltering(
     params.filterUsernames,
     params.filterWords,
     params.negativeFilterWords,
-    params.searchTerm,
+    debouncedSearchTerm, // Use debounced version
     params.domainFilterEnabled,
     params.currentDomain,
     params.showHumans,
@@ -181,6 +201,9 @@ export function useIndexedDBFiltering(
   
   // Re-query IndexedDB when filters change
   useEffect(() => {
+    // Increment generation to cancel stale queries
+    const currentGeneration = ++queryGeneration.current;
+    
     const queryWithFilters = async () => {
       if (!isFilterMode) {
         // Browse mode - use initialMessages from parent
@@ -203,6 +226,12 @@ export function useIndexedDBFiltering(
           return;
         }
         
+        // Check if this query is still current
+        if (queryGeneration.current !== currentGeneration) {
+          console.log('[FilterHook] Query cancelled - newer query started');
+          return;
+        }
+        
         const criteria = buildCriteria();
         console.log('[FilterHook] Querying IndexedDB with criteria:', criteria);
         
@@ -212,13 +241,21 @@ export function useIndexedDBFiltering(
           params.maxDisplayMessages
         );
         
-        console.log(`[FilterHook] Found ${filtered.length} matching messages`);
+        // Check again if this query is still current before setting results
+        if (queryGeneration.current !== currentGeneration) {
+          console.log('[FilterHook] Query results discarded - newer query completed');
+          return;
+        }
         
+        console.log(`[FilterHook] Found ${filtered.length} matching messages`);
         setMessages(filtered);
       } catch (err) {
         console.error('[FilterHook] Error querying IndexedDB:', err);
       } finally {
-        setIsLoading(false);
+        // Only clear loading if this is the current query
+        if (queryGeneration.current === currentGeneration) {
+          setIsLoading(false);
+        }
       }
     };
     
@@ -229,7 +266,7 @@ export function useIndexedDBFiltering(
     JSON.stringify(params.filterUsernames),
     JSON.stringify(params.filterWords),
     JSON.stringify(params.negativeFilterWords),
-    params.searchTerm,
+    debouncedSearchTerm, // Use debounced version instead of raw searchTerm
     JSON.stringify(params.dateTimeFilter),
     params.domainFilterEnabled,
     params.currentDomain,

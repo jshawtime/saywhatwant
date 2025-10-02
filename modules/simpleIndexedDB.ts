@@ -343,15 +343,14 @@ class SimpleIndexedDB {
       
       const matches: Comment[] = [];
       let scannedCount = 0;
-      const MAX_SCAN = 10000; // Scan deep into the database to find matches
       
       const request = cursorSource.openCursor(range, 'prev'); // Newest first
       
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest).result;
         
-        // Continue scanning until we have enough matches OR we've scanned enough messages
-        if (cursor && matches.length < limit && scannedCount < MAX_SCAN) {
+        // Continue scanning until we have enough matches OR we've reached the end
+        if (cursor && matches.length < limit) {
           const message = cursor.value as Comment;
           scannedCount++;
           
