@@ -158,9 +158,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const streamRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
-  const lastFetchTimeRef = useRef<number>(Date.now());
+  const lastFetchTimeRef = useRef<number>(0); // Initialize to 0, set after mount
   const colorPickerRef = useRef<HTMLDivElement>(null);
-  const pageLoadTimestamp = useRef<number>(Date.now()); // Track when page loaded for presence-based polling
+  const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
   
   // Auto-scroll detection using the new modular system
   const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);

@@ -341,7 +341,7 @@ class SimpleIndexedDB {
         console.log('[SimpleIndexedDB] Full scan query');
       }
       
-      const matches: Comment[] = [];
+      const allMatches: Comment[] = [];
       let scannedCount = 0;
       
       const request = cursorSource.openCursor(range, 'prev'); // Newest first
@@ -349,20 +349,23 @@ class SimpleIndexedDB {
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest).result;
         
-        // Continue scanning until we have enough matches OR we've reached the end
-        if (cursor && matches.length < limit) {
+        // ALWAYS scan entire database - no early stopping!
+        if (cursor) {
           const message = cursor.value as Comment;
           scannedCount++;
           
-          // Apply all filter criteria
+          // Collect ALL matches, don't stop at limit
           if (this.messageMatchesCriteria(message, criteria)) {
-            matches.push(message);
+            allMatches.push(message);
           }
           
           cursor.continue();
         } else {
-          console.log(`[SimpleIndexedDB] Scanned ${scannedCount} messages, found ${matches.length} matches`);
-          resolve(matches);
+          // Finished scanning ENTIRE database
+          // Now return the newest 'limit' matches
+          const result = allMatches.slice(0, limit);
+          console.log(`[SimpleIndexedDB] Scanned ENTIRE database: ${scannedCount} messages, found ${allMatches.length} total matches, returning newest ${result.length}`);
+          resolve(result);
         }
       };
       
