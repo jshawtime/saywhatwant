@@ -46,6 +46,7 @@ import { URLFilterManager } from '@/lib/url-filter-manager';
 import { MessageItem } from '@/components/MessageList/MessageItem';
 import { EmptyState } from '@/components/MessageList/EmptyState';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
+import { SearchBar } from '@/components/Search/SearchBar';
 // Import cloud API functions
 import { fetchCommentsFromCloud, postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 // Import timestamp system
@@ -1124,28 +1125,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           />
 
           {/* Search Bar - Instant Search */}
-          <div className="relative">
-            <StyledSearchIcon 
-              userColor={userColorRgb} 
-              opacity={searchTerm ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.LIGHT} 
-            />
-              <StyledSearchInput 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              userColor={userColorRgb}
-              placeholder="Search..."
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-colors"
-                aria-label="Clear search"
-                tabIndex={-1}
-              >
-                <StyledClearIcon userColor={userColorRgb} />
-              </button>
-            )}
-          </div>
+          <SearchBar
+            searchTerm={searchTerm}
+            userColor={userColor}
+            userColorRgb={userColorRgb}
+            onSearchChange={(value) => setSearchTerm(value)}
+            onClearSearch={() => setSearchTerm('')}
+            placeholder="Search..."
+          />
         </div>
       </div>
 
