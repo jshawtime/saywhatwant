@@ -40,7 +40,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
         {/* Username - vertically centered with first line of message */}
         <button 
-          onClick={() => comment.username && onUsernameClick(comment.username, commentColor)}
+          onClick={() => comment.username && onUsernameClick(comment.username, comment.color)}
           onContextMenu={(e) => onContextMenu(e, comment, true)}
           onTouchStart={(e) => onTouchStart(e, comment, true)}
           onTouchEnd={onTouchEnd}
