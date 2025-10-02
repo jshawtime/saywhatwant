@@ -140,6 +140,12 @@ export function useIndexedDBFiltering(
   const matchesCurrentFilter = useCallback((message: Comment): boolean => {
     if (!isFilterMode) return true; // No filters = all messages match
     
+    // CHANNEL CHECK FIRST (Top-level: Human or AI)
+    // This is NOT a filter - it's the channel selection that filters operate WITHIN
+    if (message['message-type'] !== params.activeChannel) return false;
+    
+    // Now apply filters WITHIN the active channel:
+    
     // Username filter - EXACT case match for both username and color
     if (params.filterUsernames.length > 0) {
       const usernameMatch = params.filterUsernames.some(
@@ -178,9 +184,6 @@ export function useIndexedDBFiltering(
     if (params.domainFilterEnabled && message.domain !== params.currentDomain) {
       return false;
     }
-    
-    // Message type filter (exclusive channel)
-    if (message['message-type'] !== params.activeChannel) return false;
     
     return true;
   }, [
