@@ -89,22 +89,44 @@ export class KVClient {
         body: JSON.stringify(comment),
       });
       
+      console.log('=== API RESPONSE ===');
+      console.log('Status:', response.status, response.statusText);
+      
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('❌ Error Response:', errorText);
+        console.log('====================');
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
-      const result = await response.json() as any;
+      const responseText = await response.text();
+      console.log('Response Text:', responseText);
       
-      if (!result.success) {
-        throw new Error(result.error || 'Unknown error from API');
+      let result: any;
+      try {
+        result = JSON.parse(responseText);
+        console.log('Parsed JSON:', result);
+      } catch (e) {
+        console.log('❌ JSON Parse Error:', e);
+        console.log('====================');
+        throw new Error(`Invalid JSON from API: ${responseText.substring(0, 200)}`);
       }
       
-      logger.success(`Posted: "${comment.text}" as ${comment.username}`);
+      console.log('====================');
+      
+      if (!result.success) {
+        console.error('❌ API returned success:false');
+        console.error('API Error:', result.error);
+        console.error('Full Response:', result);
+        throw new Error(`API Error: ${result.error || 'No error message provided'}`);
+      }
+      
+      logger.success(`Posted: "${comment.text.substring(0, 50)}..." as ${comment.username}`);
       return { success: true };
       
     } catch (error: any) {
       logger.error(`Failed to post comment: ${error.message}`);
+      console.error('💥 Full Error Object:', error);
       return { 
         success: false, 
         error: error.message 

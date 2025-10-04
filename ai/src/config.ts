@@ -43,7 +43,7 @@ export const CONFIG = {
   // Bot Behavior Configuration
   BOT: {
     // Polling settings
-    pollingInterval: 5000,  // 5 seconds (matching app's polling rate)
+    pollingInterval: 30000,  // 30 seconds - Let queue drain between polls
     
     // Response settings
     minTimeBetweenMessages: 30000,   // 30 seconds minimum between bot messages (avoid rate limits)
