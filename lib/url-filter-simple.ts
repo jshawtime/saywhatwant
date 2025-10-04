@@ -130,9 +130,18 @@ export function updateURL(state: FilterState): void {
 
 /**
  * Initialize URL with filterActive if not present
+ * Only runs on main app page (not admin pages)
  */
 export function ensureFilterActive(): void {
   if (typeof window === 'undefined') return;
+  
+  // Skip on admin/monitoring pages
+  const pathname = window.location.pathname;
+  if (pathname.includes('/queue-monitor') || 
+      pathname.includes('/ai-console') ||
+      pathname.includes('/api/')) {
+    return;  // Don't add hash to admin pages
+  }
   
   const hash = window.location.hash;
   let needsUpdate = false;
