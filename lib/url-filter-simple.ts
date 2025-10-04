@@ -86,6 +86,11 @@ export function parseURL(): FilterState {
  */
 export function buildURL(state: FilterState): string {
   const params: string[] = [];
+  
+  // Check if we have any content filters
+  const hasFilters = state.users.length > 0 || 
+                     state.words.length > 0 || 
+                     state.negativeWords.length > 0;
 
   // Add users
   if (state.users.length > 0) {
@@ -105,12 +110,12 @@ export function buildURL(state: FilterState): string {
     params.push(`-word=${state.negativeWords.join('+')}`);
   }
 
-  // Only add filterActive if it's true or if there are filters
-  if (state.filterActive || params.length > 0) {
+  // Add filterActive if we have filters OR if it's explicitly set to true
+  if (hasFilters || state.filterActive) {
     params.push(`filteractive=${state.filterActive}`);
   }
 
-  // Only add messageType if it's not the default (human)
+  // Add messageType if it's not the default
   if (state.messageType !== 'human') {
     params.push(`mt=${state.messageType}`);
   }
