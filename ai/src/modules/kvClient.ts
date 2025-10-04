@@ -114,15 +114,25 @@ export class KVClient {
       
       console.log('====================');
       
-      if (!result.success) {
-        console.error('❌ API returned success:false');
+      // Check if it's an error response
+      if (result.error) {
+        console.error('❌ API returned error');
         console.error('API Error:', result.error);
-        console.error('Full Response:', result);
-        throw new Error(`API Error: ${result.error || 'No error message provided'}`);
+        throw new Error(`API Error: ${result.error}`);
       }
       
-      logger.success(`Posted: "${comment.text.substring(0, 50)}..." as ${comment.username}`);
-      return { success: true };
+      // API returns comment object directly (not wrapped in {success:true})
+      // If we got here with 200 OK and have an id, it succeeded
+      if (result.id || result.success === true) {
+        logger.success(`Posted: "${comment.text.substring(0, 50)}..." as ${comment.username}`);
+        return { success: true };
+      }
+      
+      // Unexpected format
+      console.error('⚠️ Unexpected API response format');
+      console.error('Expected: {id: ...} or {success: true}');
+      console.error('Got:', result);
+      throw new Error('Unexpected API response format');
       
     } catch (error: any) {
       logger.error(`Failed to post comment: ${error.message}`);
