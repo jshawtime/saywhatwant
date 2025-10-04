@@ -12,7 +12,7 @@ import { SearchBar } from '@/components/Search/SearchBar';
 import { MessageTypeToggle } from './MessageTypeToggle';
 import { UserControls } from './UserControls';
 import { getDarkerColor } from '@/modules/colorSystem';
-import { UsernameFilter } from '@/hooks/useFilters';
+import { UsernameFilter } from '@/modules/filterSystem';
 
 interface AppHeaderProps {
   // Title & Domain

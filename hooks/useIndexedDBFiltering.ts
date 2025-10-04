@@ -88,6 +88,17 @@ export function useIndexedDBFiltering(
   const buildCriteria = useCallback((): FilterCriteria => {
     const criteria: FilterCriteria = {};
     
+    // ✅ CHECK IF FILTERS ARE ENABLED FIRST
+    if (!params.isFilterEnabled) {
+      // Filters are OFF - only apply channel filter (always required)
+      criteria.messageTypes = [params.activeChannel];
+      console.log('[FilterHook] Filters INACTIVE - skipping user/word filters');
+      return criteria;
+    }
+    
+    // Filters are ON - apply all filter criteria
+    console.log('[FilterHook] Filters ACTIVE - applying all criteria');
+    
     if (params.filterUsernames.length > 0) {
       criteria.usernames = params.filterUsernames;
     }
@@ -127,6 +138,7 @@ export function useIndexedDBFiltering(
     
     return criteria;
   }, [
+    params.isFilterEnabled,  // ✅ CRITICAL: Re-query when filter state changes
     params.filterUsernames,
     params.filterWords,
     params.negativeFilterWords,

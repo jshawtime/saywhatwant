@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { StyledFilterIcon } from '@/components/UIElements';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
-import { UsernameFilter } from '@/hooks/useFilters';
+import { UsernameFilter } from '@/modules/filterSystem';
 import { describeDateRange } from '@/utils/dateTimeParser';
 import { FilterNotificationMenu, getSoundIcon } from '@/components/FilterNotificationMenu';
 import { 
