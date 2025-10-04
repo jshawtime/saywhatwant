@@ -14,11 +14,22 @@ import { LMStudioCluster } from './modules/lmStudioCluster-closed.js';
 import { getEntityManager } from './modules/entityManager.js';
 import { getConversationAnalyzer } from './modules/conversationAnalyzer.js';
 import { getKVClient } from './modules/kvClient.js';
+import { QueueService } from './modules/queueService.js';
 
 // Initialize modules
 const entityManager = getEntityManager();
 const analyzer = getConversationAnalyzer();
 const kvClient = getKVClient();
+
+// Initialize queue service (new!)
+const USE_QUEUE = process.env.USE_QUEUE !== 'false';  // Default: enabled
+const queueService = USE_QUEUE ? new QueueService() : null;
+
+if (USE_QUEUE) {
+  console.log(chalk.green('[QUEUE]'), 'Priority queue system enabled');
+} else {
+  console.log(chalk.yellow('[QUEUE]'), 'Queue disabled - using direct processing');
+}
 
 // Load configuration
 import { readFileSync } from 'fs';
@@ -207,12 +218,28 @@ async function runBot() {
         if (decision.shouldRespond) {
           logger.debug(`[${botId}] Decided to respond: ${decision.reason}`);
           
-          // Generate response
-          const response = await generateResponse(context);
-          
-          if (response) {
-            // Post the response
-            await postComment(response);
+          if (USE_QUEUE && queueService) {
+            // QUEUE MODE: Add to priority queue
+            await queueService.enqueue({
+              id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              priority: 50,  // Default medium priority (router will be added later)
+              timestamp: Date.now(),
+              message: messages[messages.length - 1],  // Latest message
+              context: context.recentMessages.split('\n'),
+              entity,
+              model: entity.model,
+              routerReason: decision.reason,
+              maxRetries: 3
+            });
+            
+            console.log(chalk.cyan('[QUEUE]'), `Queued response for ${entity.username}`);
+          } else {
+            // DIRECT MODE: Process immediately (existing behavior)
+            const response = await generateResponse(context);
+            
+            if (response) {
+              await postComment(response);
+            }
           }
         } else {
           state.consecutiveSilence++;
@@ -227,6 +254,17 @@ async function runBot() {
             await postComment(response);
           }
         }
+      }
+      
+      // Log queue stats periodically (every 10 cycles)
+      if (USE_QUEUE && queueService && Math.random() < 0.1) {
+        const stats = queueService.getStats();
+        console.log(chalk.cyan('[QUEUE STATS]'), 
+          `Total: ${stats.totalItems}, ` +
+          `Unclaimed: ${stats.unclaimedItems}, ` +
+          `Processing: ${stats.claimedItems}, ` +
+          `Throughput: ${stats.throughput}/min`
+        );
       }
       
       // Calculate sleep time
@@ -246,9 +284,88 @@ async function runBot() {
   }
 }
 
+/**
+ * Worker loop - processes items from queue
+ * Runs in parallel with main polling loop
+ */
+async function runWorker() {
+  if (!USE_QUEUE || !queueService) {
+    console.log(chalk.gray('[WORKER]'), 'Worker disabled - queue not in use');
+    return;
+  }
+  
+  console.log(chalk.green('[WORKER]'), 'Worker started - processing queue');
+  const serverId = '10.0.0.102';  // TODO: Get from config/env
+  
+  while (true) {
+    try {
+      // Claim next item from queue (atomic operation)
+      const item = await queueService.claim(serverId);
+      
+      if (!item) {
+        // Queue empty - wait before checking again
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      
+      console.log(chalk.blue('[WORKER]'), `Processing: ${item.id} (priority ${item.priority})`);
+      
+      try {
+        // Build context object
+        const context = {
+          recentMessages: item.context.join('\n'),
+          activeUsers: [],
+          topics: [],
+          hasQuestion: item.context.some(msg => msg.includes('?')),
+          mentionsBot: false
+        };
+        
+        // Generate response using existing function
+        const response = await generateResponse(context);
+        
+        if (response) {
+          // Post using existing function
+          await postComment(response);
+          
+          // Mark as complete
+          await queueService.complete(item.id, true);
+          console.log(chalk.green('[WORKER]'), `Completed: ${item.id}`);
+        } else {
+          // No response generated - mark as complete anyway
+          await queueService.complete(item.id, true);
+        }
+        
+      } catch (error) {
+        console.error(chalk.red('[WORKER]'), `Failed to process ${item.id}:`, error);
+        
+        // Check retry limit
+        if (item.attempts < item.maxRetries) {
+          // Requeue (complete with false = requeue)
+          await queueService.complete(item.id, false);
+          console.log(chalk.yellow('[WORKER]'), `Requeued: ${item.id} (attempt ${item.attempts}/${item.maxRetries})`);
+        } else {
+          // Max retries - give up
+          await queueService.complete(item.id, true);
+          console.log(chalk.red('[WORKER]'), `Max retries reached: ${item.id} - discarding`);
+        }
+      }
+      
+    } catch (error) {
+      console.error(chalk.red('[WORKER]'), 'Worker error:', error);
+      await new Promise(resolve => setTimeout(resolve, 5000));  // Back off on error
+    }
+  }
+}
+
 // Handle shutdown
 process.on('SIGINT', async () => {
   console.log(chalk.yellow('\n[SHUTDOWN]'), 'Shutting down gracefully...');
+  
+  if (USE_QUEUE && queueService) {
+    const stats = queueService.getStats();
+    console.log(chalk.blue('[QUEUE]'), `Final stats: ${stats.totalItems} items, ${stats.unclaimedItems} unclaimed`);
+  }
+  
   await lmStudioCluster.shutdown();
   logger.info('Bot shutdown complete');
   process.exit(0);
@@ -259,9 +376,16 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Start the bot
-runBot().catch(error => {
-  console.error(chalk.red('[FATAL]'), 'Failed to start bot:', error);
-  logger.error('Fatal error:', error);
-  process.exit(1);
-});
+// Start the bot (both loops in parallel)
+Promise.all([
+  runBot().catch(error => {
+    console.error(chalk.red('[FATAL]'), 'Bot loop failed:', error);
+    logger.error('Fatal error:', error);
+    process.exit(1);
+  }),
+  runWorker().catch(error => {
+    console.error(chalk.red('[FATAL]'), 'Worker loop failed:', error);
+    logger.error('Fatal error:', error);
+    process.exit(1);
+  })
+]);
