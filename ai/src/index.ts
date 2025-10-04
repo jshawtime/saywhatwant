@@ -23,12 +23,19 @@ const kvClient = getKVClient();
 
 // Initialize queue service (new!)
 const USE_QUEUE = process.env.USE_QUEUE !== 'false';  // Default: enabled
+const USE_ROUTER = process.env.USE_ROUTER === 'true';  // Default: disabled (future phase)
 const queueService = USE_QUEUE ? new QueueService() : null;
 
 if (USE_QUEUE) {
   console.log(chalk.green('[QUEUE]'), 'Priority queue system enabled');
 } else {
   console.log(chalk.yellow('[QUEUE]'), 'Queue disabled - using direct processing');
+}
+
+if (USE_ROUTER) {
+  console.log(chalk.green('[ROUTER]'), 'Router LLM enabled');
+} else {
+  console.log(chalk.gray('[ROUTER]'), 'Router disabled - using default priority (future phase)');
 }
 
 // Load configuration

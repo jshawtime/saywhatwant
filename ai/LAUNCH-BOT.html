@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🤖 Launch AI Bot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'SF Mono', Monaco, monospace;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+    
+    .card {
+      background: #16213e;
+      border: 2px solid #4fc3f7;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 10px 40px rgba(79, 195, 247, 0.2);
+    }
+    
+    h1 {
+      color: #4fc3f7;
+      font-size: 32px;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(79, 195, 247, 0.5);
+    }
+    
+    .subtitle {
+      color: #888;
+      margin-bottom: 30px;
+    }
+    
+    .status {
+      background: #0f0f0f;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      border-left: 4px solid #4fc3f7;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    
+    .label {
+      color: #888;
+    }
+    
+    .value {
+      color: #4fc3f7;
+      font-weight: bold;
+    }
+    
+    .command-box {
+      background: #0f0f0f;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 1px solid #333;
+      font-family: monospace;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .command-box:hover {
+      border-color: #4fc3f7;
+      background: #1a1a1a;
+    }
+    
+    .command {
+      color: #4caf50;
+      user-select: all;
+    }
+    
+    .button {
+      background: #4fc3f7;
+      color: #000;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 10px 10px 10px 0;
+      font-family: inherit;
+    }
+    
+    .button:hover {
+      background: #6dd5ff;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(79, 195, 247, 0.4);
+    }
+    
+    .button.secondary {
+      background: #2a2a2a;
+      color: #4fc3f7;
+      border: 2px solid #4fc3f7;
+    }
+    
+    .button.secondary:hover {
+      background: #3a3a3a;
+    }
+    
+    .note {
+      background: rgba(255, 152, 0, 0.1);
+      border-left: 4px solid #ff9800;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .success {
+      background: rgba(76, 175, 80, 0.1);
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    
+    .copied {
+      display: inline-block;
+      color: #4caf50;
+      margin-left: 10px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .copied.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>🤖 AI Bot Launcher</h1>
+      <div class="subtitle">Say What Want LM Studio Integration</div>
+      
+      <div class="status">
+        <div class="status-item">
+          <span class="label">Bot Location:</span>
+          <span class="value">saywhatwant/ai</span>
+        </div>
+        <div class="status-item">
+          <span class="label">LM Studio Server:</span>
+          <span class="value">http://10.0.0.102:1234</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Say What Want API:</span>
+          <span class="value">https://saywhatwant.app/api</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Queue System:</span>
+          <span class="value">✅ ENABLED</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Router LLM:</span>
+          <span class="value">⏸️ DISABLED (Future Phase)</span>
+        </div>
+      </div>
+      
+      <h2 style="color: #4fc3f7; margin: 30px 0 15px 0;">Quick Launch</h2>
+      
+      <div class="note">
+        <strong>📋 Step 1:</strong> Click the command below to copy it
+      </div>
+      
+      <div class="command-box" id="command-box" onclick="copyCommand()">
+        <div class="command" id="command">cd ~/devrepo/SAYWHATWANTv1/saywhatwant/ai && npm run dev</div>
+      </div>
+      
+      <div class="note">
+        <strong>⌨️ Step 2:</strong> Open Terminal and paste (Cmd+V), then press Enter
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <button class="button" onclick="copyCommand()">
+          📋 Copy Command
+          <span class="copied" id="copied-indicator">✓ Copied!</span>
+        </button>
+        <button class="button secondary" onclick="openTerminal()">
+          🖥️ Open Terminal
+        </button>
+      </div>
+      
+      <div class="success" style="margin-top: 30px;">
+        <strong>✅ What Happens When Bot Starts:</strong>
+        <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+          <li>Connects to LM Studio cluster (2 servers)</li>
+          <li>Initializes priority queue system</li>
+          <li>Starts dual-loop architecture (polling + worker)</li>
+          <li>Reads messages from Say What Want</li>
+          <li>Queues responses with priority 50</li>
+          <li>Worker processes queue and posts responses</li>
+        </ul>
+      </div>
+      
+      <h2 style="color: #4fc3f7; margin: 30px 0 15px 0;">Monitoring</h2>
+      
+      <div style="margin-top: 20px;">
+        <button class="button" onclick="openAIConsole()">
+          🖥️ Open AI Console
+        </button>
+        <button class="button" onclick="openQueueMonitor()">
+          📊 Open Queue Monitor
+        </button>
+        <button class="button" onclick="openMainApp()">
+          💬 Open Say What Want
+        </button>
+      </div>
+      
+      <div class="note" style="margin-top: 30px;">
+        <strong>Password for consoles:</strong> saywhatwant
+      </div>
+      
+      <h2 style="color: #4fc3f7; margin: 30px 0 15px 0;">Configuration</h2>
+      
+      <div class="status">
+        <div class="status-item">
+          <span class="label">Polling Interval:</span>
+          <span class="value">5 seconds</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Max Messages/Minute:</span>
+          <span class="value">3</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Response Probability:</span>
+          <span class="value">10%</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Default Priority:</span>
+          <span class="value">50 (Medium)</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Stale Claim Timeout:</span>
+          <span class="value">60 seconds</span>
+        </div>
+      </div>
+      
+      <div class="note" style="margin-top: 30px; font-size: 12px;">
+        <strong>💡 Tip:</strong> Watch the terminal for queue statistics:<br>
+        <code style="color: #4fc3f7;">[QUEUE STATS] Total: 3, Unclaimed: 1, Processing: 2, Throughput: 5/min</code>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function copyCommand() {
+      const command = document.getElementById('command').textContent;
+      navigator.clipboard.writeText(command).then(() => {
+        const indicator = document.getElementById('copied-indicator');
+        indicator.classList.add('show');
+        setTimeout(() => {
+          indicator.classList.remove('show');
+        }, 2000);
+      });
+    }
+    
+    function openTerminal() {
+      // macOS: Open Terminal app
+      window.location.href = 'file:///Applications/Utilities/Terminal.app';
+    }
+    
+    function openAIConsole() {
+      window.open('https://saywhatwant.app/ai-console', '_blank');
+    }
+    
+    function openQueueMonitor() {
+      window.open('https://saywhatwant.app/queue-monitor', '_blank');
+    }
+    
+    function openMainApp() {
+      window.open('https://saywhatwant.app/', '_blank');
+    }
+  </script>
+</body>
+</html>
