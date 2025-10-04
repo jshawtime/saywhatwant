@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🤖 Launch AI Bot</title>
+  <title>🚀 Queue Dashboard - AI Bot Control & Monitoring</title>
   <style>
     * {
       margin: 0;
@@ -159,8 +159,8 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>🤖 AI Bot Launcher</h1>
-      <div class="subtitle">Say What Want LM Studio Integration</div>
+      <h1>🚀 Queue Dashboard</h1>
+      <div class="subtitle">AI Bot Control & Real-Time Monitoring</div>
       
       <div class="status">
         <div class="status-item">
@@ -267,6 +267,84 @@
       <div class="note" style="margin-top: 30px; font-size: 12px;">
         <strong>💡 Tip:</strong> Watch the terminal for queue statistics:<br>
         <code style="color: #4fc3f7;">[QUEUE STATS] Total: 3, Unclaimed: 1, Processing: 2, Throughput: 5/min</code>
+      </div>
+      
+      <hr style="border: none; border-top: 1px solid #333; margin: 40px 0;">
+      
+      <h2 style="color: #4fc3f7; margin-bottom: 15px;">📊 Live Queue Monitoring</h2>
+      
+      <div class="note">
+        <strong>🔄 Auto-Refresh:</strong> Data updates every 3 seconds when bot is running
+      </div>
+      
+      <div id="monitoring-section">
+        <div class="status" style="margin-top: 20px;">
+          <div class="status-item">
+            <span class="label">Queue Status:</span>
+            <span class="value" id="queue-status">⏸️ Waiting for data...</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Total Items:</span>
+            <span class="value" id="total-items">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Unclaimed:</span>
+            <span class="value" id="unclaimed-items">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Processing:</span>
+            <span class="value" id="claimed-items">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Throughput:</span>
+            <span class="value" id="throughput">0 req/min</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Avg Wait:</span>
+            <span class="value" id="avg-wait">0 ms</span>
+          </div>
+        </div>
+        
+        <h3 style="color: #4fc3f7; margin: 30px 0 15px 0;">Priority Distribution</h3>
+        <div class="status">
+          <div class="status-item">
+            <span class="label">🔴 Critical (0-10):</span>
+            <span class="value" id="critical-count">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">🟠 High (11-30):</span>
+            <span class="value" id="high-count">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">🟡 Medium (31-60):</span>
+            <span class="value" id="medium-count">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">🔵 Low (61-90):</span>
+            <span class="value" id="low-count">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">⚪ Background (91-99):</span>
+            <span class="value" id="background-count">0</span>
+          </div>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+          <div id="last-update">Monitor queue in terminal logs</div>
+          <div style="margin-top: 10px;">
+            <em>💡 For live web-based monitoring, use buttons below</em>
+          </div>
+        </div>
+        
+        <div class="success" style="margin-top: 30px;">
+          <strong>📺 Terminal Log Examples:</strong>
+          <div style="margin-top: 10px; font-family: monospace; font-size: 12px; line-height: 1.8;">
+            <div style="color: #4fc3f7;">[QUEUE] Queued: req-abc123 (priority 50, entity: philosopher)</div>
+            <div style="color: #4caf50;">[WORKER] Claimed: req-abc123 by 10.0.0.102</div>
+            <div style="color: #4caf50;">[WORKER] Completed: req-abc123</div>
+            <div style="color: #00bcd4;">[QUEUE STATS] Total: 2, Unclaimed: 1, Processing: 1, Throughput: 5/min</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
