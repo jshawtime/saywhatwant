@@ -287,3 +287,45 @@ const filteredComments = useMemo(() => {
 **The Diagnosis**: Visual state is correct (managed by useSimpleFilters). Data state is wrong (useIndexedDBFiltering ignores filter state and queries based on array presence only).
 
 **The Fix**: Make useIndexedDBFiltering respect the `isFilterEnabled` parameter it receives.
+
+---
+
+## ✅ FIXED - October 4, 2025
+
+### Implementation: Option A (Fix at Source)
+
+**Changes Made**:
+
+1. **useIndexedDBFiltering.ts** - Modified `buildCriteria()` function:
+   ```typescript
+   if (!params.isFilterEnabled) {
+     // Filters OFF - only channel filter
+     criteria.messageTypes = [params.activeChannel];
+     return criteria;  // Early return!
+   }
+   // Filters ON - apply all criteria
+   ```
+
+2. **Added to dependencies**: `params.isFilterEnabled` now triggers re-query
+
+3. **Fixed imports**: FilterBar.tsx and AppHeader.tsx now import UsernameFilter from `@/modules/filterSystem`
+
+4. **Added logging**: Shows when filters are active/inactive in console
+
+**Result**:
+- ✅ `filteractive=false` - Shows ALL messages
+- ✅ Filter bar shows filters but dimmed
+- ✅ IndexedDB queries without user/word filters
+- ✅ Toggle filter ON - Re-queries with full criteria
+- ✅ Visual and data states synchronized
+
+**Deployed**: October 4, 2025 - Live on Cloudflare
+
+**Test It**:
+```
+https://saywhatwant.app/#filteractive=false&u=lorac:216040218
+→ ALL messages shown, lorac in filter bar (dimmed)
+
+Click filter icon to toggle ON:
+→ Only lorac messages shown, icon lights up
+```
