@@ -166,7 +166,7 @@ async function postComment(text: string): Promise<boolean> {
     username: entity.username,
     color: colorForStorage,
     timestamp: Date.now(),
-    domain: 'saywhatwant.app',
+    domain: 'ai.saywhatwant.app',  // Exempt domain - no rate limits
     'message-type': 'AI',
   };
   

@@ -22,10 +22,13 @@ const EXEMPT_IPS = [
   'localhost',      // Localhost
   '::1',            // IPv6 localhost
   '98.97.140.211',  // Testing IP (your current IP)
+  '10.0.0.102',     // Mac Studio 1 (bot host + LM Studio)
+  '10.0.0.100',     // Mac Studio 2 (LM Studio worker)
+  // Add more LM Studio server IPs here as you scale
 ];
 
 const EXEMPT_DOMAINS = [
-  'ai.saywhatwant.app',  // AI bot domain
+  'ai.saywhatwant.app',  // AI bot domain (unlimited posting)
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
