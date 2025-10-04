@@ -52,8 +52,12 @@ export class URLFilterManager {
     if (this.currentState.filterActive === null) {
       this.currentState.filterActive = false;
       const hash = this.buildHash(this.currentState);
-      // Use replaceState for initial setup to avoid polluting history
-      window.history.replaceState(null, '', hash || '#filteractive=false');
+      // REMOVED: No longer auto-adding default hash
+      // OLD: window.history.replaceState(null, '', hash || '#filteractive=false');
+      // NEW: Only update if there's actual content
+      if (hash && hash !== '#') {
+        window.history.replaceState(null, '', hash);
+      }
       // Notify subscribers of the updated state
       this.notifySubscribers();
     }
@@ -424,7 +428,7 @@ export class URLFilterManager {
     
     // Update URL without triggering hashchange if it's the same
     if (window.location.hash !== hash) {
-      window.history.pushState(null, '', hash || '#');
+      window.history.pushState(null, '', hash || '');  // Empty string, not '#'
       this.currentState = newState;
       this.notifySubscribers();
     }
@@ -509,7 +513,7 @@ export class URLFilterManager {
     const hash = this.buildHash(newState);
     
     if (window.location.hash !== hash) {
-      window.history.pushState(null, '', hash || '#');
+      window.history.pushState(null, '', hash || '');  // Empty string, not '#'
       this.currentState = newState;
       this.notifySubscribers();
     }
@@ -575,7 +579,7 @@ export class URLFilterManager {
     }
     
     const hash = this.buildHash(newState);
-    window.history.pushState(null, '', hash || '#');
+    window.history.pushState(null, '', hash || '');  // Empty string, not '#'
     this.currentState = newState;
     this.notifySubscribers();
   }

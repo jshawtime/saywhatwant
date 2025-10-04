@@ -206,60 +206,95 @@ async function runBot() {
         state.messageHistory = messages;
         state.lastMessageTimestamp = Math.max(...messages.map(m => m.timestamp));
         
-        // Select a new entity for this cycle
-        const entity = entityManager.selectRandomEntity();
-        updateStateFromEntity();
-        
-        // Log entity selection
-        console.log(chalk.blue(`[${entity.username}]`), `Selected for this cycle`);
-        
-        // Analyze conversation context
-        const context = analyzer.analyzeContext(messages, entity);
-        
-        // Check rate limits
-        const rateLimitCheck = entityManager.checkRateLimits(entity.id);
-        
-        // Decide whether to respond
-        const decision = analyzer.shouldRespond(context, entity, rateLimitCheck);
-        
-        if (decision.shouldRespond) {
-          logger.debug(`[${botId}] Decided to respond: ${decision.reason}`);
+        if (USE_QUEUE && queueService) {
+          // QUEUE MODE: Queue ALL messages with simple priority assignment
+          console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages for queueing`);
           
-          if (USE_QUEUE && queueService) {
-            // QUEUE MODE: Add to priority queue
+          for (const message of messages) {
+            // Select entity for this message
+            const entity = entityManager.selectRandomEntity();
+            
+            // Assign simple priority based on content
+            let priority = 50;  // Default medium
+            const text = message.text?.toLowerCase() || '';
+            const username = message.username?.toLowerCase() || '';
+            const entityNameLower = entity.username.toLowerCase();
+            
+            // HIGHEST: Direct mention (username + color match)
+            if (username === entityNameLower && message.color === entity.color) {
+              priority = 5;  // Very high priority
+            }
+            // HIGH: Direct address (name mentioned in text)
+            else if (text.includes(entityNameLower)) {
+              priority = 10;  // High priority
+            }
+            // MEDIUM-HIGH: Has question
+            else if (text.includes('?')) {
+              priority = 25;  // Medium-high priority
+            }
+            // MEDIUM: Entity's response chance (0.0-1.0 → 30-70 priority)
+            else {
+              // Convert responseChance to priority (inverse)
+              // responseChance 1.0 → priority 30 (high)
+              // responseChance 0.1 → priority 70 (low)
+              priority = Math.round(70 - (entity.responseChance * 40));
+            }
+            
+            // Check rate limits before queuing
+            const rateLimitCheck = entityManager.checkRateLimits(entity.id);
+            if (!rateLimitCheck.allowed) {
+              logger.debug(`[${botId}] Skipping queue: ${rateLimitCheck.reason}`);
+              continue;  // Skip this message
+            }
+            
+            // Queue the message
             await queueService.enqueue({
               id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              priority: 50,  // Default medium priority (router will be added later)
+              priority,
               timestamp: Date.now(),
-              message: messages[messages.length - 1],  // Latest message
-              context: context.recentMessages.split('\n'),
+              message,
+              context: messages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`),
               entity,
               model: entity.model,
-              routerReason: decision.reason,
+              routerReason: `Priority ${priority} based on content analysis`,
               maxRetries: 3
             });
             
-            console.log(chalk.cyan('[QUEUE]'), `Queued response for ${entity.username}`);
-          } else {
-            // DIRECT MODE: Process immediately (existing behavior)
+            console.log(chalk.cyan('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
+          }
+        } else {
+          // DIRECT MODE: Old behavior (one response per cycle)
+          const entity = entityManager.selectRandomEntity();
+          updateStateFromEntity();
+          
+          const context = analyzer.analyzeContext(messages, entity);
+          const rateLimitCheck = entityManager.checkRateLimits(entity.id);
+          const decision = analyzer.shouldRespond(context, entity, rateLimitCheck);
+          
+          if (decision.shouldRespond) {
             const response = await generateResponse(context);
-            
             if (response) {
               await postComment(response);
             }
           }
-        } else {
-          state.consecutiveSilence++;
-          logger.debug(`[${botId}] Not responding: ${decision.reason}`);
         }
         
-        // Check for ping trigger
-        if (analyzer.hasPingTrigger(messages)) {
-          console.log(chalk.yellow('[PING]'), 'Detected ping trigger - responding immediately');
-          const response = await generateResponse(context);
-          if (response) {
-            await postComment(response);
-          }
+        // Check for ping trigger (queue with highest priority)
+        if (USE_QUEUE && queueService && analyzer.hasPingTrigger(messages)) {
+          console.log(chalk.yellow('[PING]'), 'Detected ping trigger - queuing with priority 0');
+          const entity = entityManager.selectRandomEntity();
+          
+          await queueService.enqueue({
+            id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            priority: 0,  // HIGHEST priority for pings
+            timestamp: Date.now(),
+            message: messages[messages.length - 1],
+            context: messages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`),
+            entity,
+            model: entity.model,
+            routerReason: 'Ping trigger detected',
+            maxRetries: 3
+          });
         }
       }
       

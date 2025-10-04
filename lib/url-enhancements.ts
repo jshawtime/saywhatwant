@@ -346,7 +346,7 @@ export class URLEnhancementsManager {
     
     // Update URL without triggering hashchange if it's the same
     if (window.location.hash !== hash) {
-      window.history.replaceState(null, '', hash || '#');
+      window.history.replaceState(null, '', hash || '');  // Empty string, not '#'
     }
   }
   
