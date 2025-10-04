@@ -15,6 +15,7 @@ import { getEntityManager } from './modules/entityManager.js';
 import { getConversationAnalyzer } from './modules/conversationAnalyzer.js';
 import { getKVClient } from './modules/kvClient.js';
 import { QueueService } from './modules/queueService.js';
+import { QueueHTTPServer } from './modules/queueHTTPServer.js';
 
 // Initialize modules
 const entityManager = getEntityManager();
@@ -25,6 +26,7 @@ const kvClient = getKVClient();
 const USE_QUEUE = process.env.USE_QUEUE !== 'false';  // Default: enabled
 const USE_ROUTER = process.env.USE_ROUTER === 'true';  // Default: disabled (future phase)
 const queueService = USE_QUEUE ? new QueueService() : null;
+const queueHTTP = USE_QUEUE && queueService ? new QueueHTTPServer(queueService) : null;
 
 if (USE_QUEUE) {
   console.log(chalk.green('[QUEUE]'), 'Priority queue system enabled');
@@ -188,6 +190,11 @@ async function postComment(text: string): Promise<boolean> {
  * Main bot loop
  */
 async function runBot() {
+  // Start HTTP server for dashboard
+  if (queueHTTP) {
+    await queueHTTP.start();
+  }
+  
   logger.info('AI Bot started with clean architecture');
   console.log(chalk.green('[READY]'), 'Bot is running with modular components');
   
@@ -371,6 +378,12 @@ async function runWorker() {
           
           // Mark as complete
           await queueService.complete(item.id, true);
+          
+          // Record success for dashboard
+          if (queueHTTP) {
+            queueHTTP.recordSuccess();
+          }
+          
           console.log(chalk.green('[WORKER]'), `Completed: ${item.id}`);
         } else {
           // No response generated - mark as complete anyway
@@ -408,12 +421,19 @@ process.on('SIGINT', async () => {
     console.log(chalk.blue('[QUEUE]'), `Final stats: ${stats.totalItems} items, ${stats.unclaimedItems} unclaimed`);
   }
   
+  if (queueHTTP) {
+    await queueHTTP.stop();
+  }
+  
   await lmStudioCluster.shutdown();
   logger.info('Bot shutdown complete');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  if (queueHTTP) {
+    await queueHTTP.stop();
+  }
   await lmStudioCluster.shutdown();
   process.exit(0);
 });

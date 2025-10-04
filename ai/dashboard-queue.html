@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚀 Queue Dashboard - AI Bot Control & Monitoring</title>
+  <title>AI QUEUE MONITOR v1.0</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+    
     * {
       margin: 0;
       padding: 0;
@@ -12,377 +14,395 @@
     }
     
     body {
-      font-family: 'SF Mono', Monaco, monospace;
-      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-      color: #e0e0e0;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    
-    .card {
-      background: #16213e;
-      border: 2px solid #4fc3f7;
-      border-radius: 12px;
-      padding: 30px;
-      box-shadow: 0 10px 40px rgba(79, 195, 247, 0.2);
-      margin-bottom: 20px;
-    }
-    
-    h1 {
-      color: #4fc3f7;
-      font-size: 28px;
-      margin-bottom: 5px;
-      text-shadow: 0 0 20px rgba(79, 195, 247, 0.5);
-    }
-    
-    h2 {
-      color: #4fc3f7;
+      font-family: 'VT323', monospace;
+      background: #000000;
+      color: #00ff00;
+      height: 100vh;
+      overflow: hidden;
       font-size: 20px;
-      margin: 20px 0 15px 0;
+      line-height: 1.2;
+      padding: 20px;
+      text-shadow: 0 0 5px #00ff00;
     }
     
-    .subtitle {
-      color: #888;
-      margin-bottom: 20px;
-      font-size: 14px;
-    }
-    
-    .stats-grid {
+    .terminal {
+      border: 3px solid #00ff00;
+      height: 100%;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin: 20px 0;
+      grid-template-columns: 400px 1fr 500px;
+      grid-template-rows: auto 1fr auto;
+      gap: 2px;
+      background: #001100;
     }
     
-    .stat-card {
-      background: #0f0f0f;
+    .panel {
+      background: #000000;
+      border: 1px solid #00ff00;
       padding: 15px;
-      border-radius: 8px;
-      border-left: 4px solid #4fc3f7;
-    }
-    
-    .stat-label {
-      color: #888;
-      font-size: 12px;
-      margin-bottom: 5px;
-    }
-    
-    .stat-value {
-      color: #4fc3f7;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    
-    .queue-list {
-      background: #0f0f0f;
-      border-radius: 8px;
-      max-height: 500px;
       overflow-y: auto;
-      padding: 10px;
     }
     
-    .queue-item {
-      background: #1a1a1a;
-      padding: 12px;
-      margin-bottom: 8px;
-      border-radius: 6px;
-      border-left: 4px solid #4fc3f7;
+    .header {
+      grid-column: 1 / -1;
+      background: #003300;
+      border: 1px solid #00ff00;
+      padding: 10px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.2s;
+    }
+    
+    .title {
+      font-size: 32px;
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00;
+      animation: flicker 3s infinite;
+    }
+    
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.95; }
+      51% { opacity: 1; }
+    }
+    
+    .clock {
+      font-size: 24px;
+      color: #00cc00;
+    }
+    
+    .left-panel {
+      grid-row: 2;
+    }
+    
+    .center-panel {
+      grid-row: 2;
+    }
+    
+    .right-panel {
+      grid-row: 2;
+    }
+    
+    .footer {
+      grid-column: 1 / -1;
+      background: #000000;
+      border: 1px solid #00ff00;
+      padding: 8px 20px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+    }
+    
+    .section-title {
+      color: #00ff00;
+      font-size: 24px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #00ff00;
+      padding-bottom: 5px;
+      text-decoration: none;
+    }
+    
+    .stat-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px dotted #003300;
+    }
+    
+    .stat-label {
+      color: #00cc00;
+    }
+    
+    .stat-value {
+      color: #00ff00;
+      font-weight: bold;
+    }
+    
+    .queue-item {
+      background: #001100;
+      border: 1px solid #00ff00;
+      padding: 8px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-between;
+      align-items: center;
+      font-size: 16px;
     }
     
     .queue-item:hover {
-      background: #252525;
+      background: #002200;
     }
     
-    .queue-item.priority-5 { border-color: #f44336; }
-    .queue-item.priority-10 { border-color: #ff9800; }
-    .queue-item.priority-25 { border-color: #ffeb3b; }
-    .queue-item.priority-50 { border-color: #4fc3f7; }
-    .queue-item.priority-high { border-color: #9c27b0; }
-    
-    .queue-item-left {
-      flex: 1;
-    }
-    
-    .queue-item-meta {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 5px;
-      font-size: 12px;
-    }
-    
-    .queue-position {
-      color: #888;
-      font-weight: bold;
-    }
-    
-    .queue-priority {
-      color: #ff9800;
-      font-weight: bold;
-    }
-    
-    .queue-entity {
-      color: #4fc3f7;
-    }
-    
-    .queue-message {
-      color: #ccc;
-      font-size: 13px;
-      font-style: italic;
-    }
-    
-    .delete-btn {
-      background: #f44336;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
-      transition: all 0.2s;
-    }
-    
-    .delete-btn:hover {
-      background: #d32f2f;
-      transform: scale(1.05);
-    }
+    .priority-critical { border-color: #ff0000; color: #ff0000; }
+    .priority-high { border-color: #ffff00; color: #ffff00; }
+    .priority-medium { border-color: #00ffff; color: #00ffff; }
+    .priority-low { border-color: #00ff00; color: #00ff00; }
     
     .button {
-      background: #4fc3f7;
-      color: #000;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: bold;
+      background: #003300;
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      padding: 8px 16px;
       cursor: pointer;
-      transition: all 0.2s;
-      margin: 5px;
       font-family: inherit;
+      font-size: 16px;
+      text-transform: uppercase;
+      transition: all 0.1s;
     }
     
     .button:hover {
-      background: #6dd5ff;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(79, 195, 247, 0.4);
+      background: #00ff00;
+      color: #000000;
     }
     
     .button.danger {
-      background: #f44336;
-      color: white;
+      border-color: #ff0000;
+      color: #ff0000;
     }
     
     .button.danger:hover {
-      background: #d32f2f;
+      background: #ff0000;
+      color: #000000;
     }
     
-    .button.secondary {
-      background: #2a2a2a;
-      color: #4fc3f7;
-      border: 2px solid #4fc3f7;
-    }
-    
-    .note {
-      background: rgba(255, 152, 0, 0.1);
-      border-left: 4px solid #ff9800;
-      padding: 12px;
-      margin: 15px 0;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    
-    .success {
-      background: rgba(76, 175, 80, 0.1);
-      border-left: 4px solid #4caf50;
-      padding: 12px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    
-    .empty-state {
+    .empty {
       text-align: center;
-      color: #666;
-      padding: 40px;
-      font-style: italic;
+      color: #006600;
+      padding: 20px;
+    }
+    
+    .blink {
+      animation: blink 1s step-end infinite;
+    }
+    
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    
+    .command-box {
+      background: #001100;
+      border: 1px solid #00ff00;
+      padding: 10px;
+      margin: 10px 0;
+      cursor: pointer;
+      user-select: all;
+    }
+    
+    .command-box:hover {
+      background: #002200;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #000000;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #00ff00;
+      border: 1px solid #000000;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- MONITORING CARD (TOP - Most Important) -->
-    <div class="card">
-      <h1>📊 Live Queue Monitoring</h1>
-      <div class="subtitle">Real-time priority queue statistics</div>
+  <div class="terminal">
+    <!-- HEADER -->
+    <div class="header">
+      <div class="title">┌─ AI QUEUE MONITOR v1.0 ─┐</div>
+      <div class="clock" id="clock">00:00:00</div>
+    </div>
+    
+    <!-- LEFT PANEL: System Info -->
+    <div class="panel left-panel">
+      <div class="section-title">SYSTEM STATUS</div>
       
-      <!-- Key Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total Items</div>
-          <div class="stat-value" id="total-items">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Unclaimed</div>
-          <div class="stat-value" id="unclaimed-items">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Processing</div>
-          <div class="stat-value" id="claimed-items">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Throughput (Hour Avg)</div>
-          <div class="stat-value" id="throughput-hour">0/min</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Last Success</div>
-          <div class="stat-value" id="last-success" style="font-size: 16px;">Never</div>
-        </div>
+      <div class="stat-line">
+        <span class="stat-label">BOT_LOC:</span>
+        <span class="stat-value">~/ai</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">LM_SRV_1:</span>
+        <span class="stat-value">10.0.0.102:1234</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">LM_SRV_2:</span>
+        <span class="stat-value">10.0.0.100:1234</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">API_HOST:</span>
+        <span class="stat-value">bootloaders.workers.dev</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">POLL_INT:</span>
+        <span class="stat-value">30s</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">QUEUE_SYS:</span>
+        <span class="stat-value">ENABLED</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">ROUTER:</span>
+        <span class="stat-value">DISABLED</span>
       </div>
       
-      <!-- Priority Distribution -->
-      <h2>Priority Distribution</h2>
-      <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
-        <div class="stat-card" style="border-color: #f44336;">
-          <div class="stat-label">🔴 Critical (0-10)</div>
-          <div class="stat-value" id="critical-count" style="color: #f44336;">0</div>
-        </div>
-        <div class="stat-card" style="border-color: #ff9800;">
-          <div class="stat-label">🟠 High (11-30)</div>
-          <div class="stat-value" id="high-count" style="color: #ff9800;">0</div>
-        </div>
-        <div class="stat-card" style="border-color: #ffeb3b;">
-          <div class="stat-label">🟡 Medium (31-60)</div>
-          <div class="stat-value" id="medium-count" style="color: #ffeb3b;">0</div>
-        </div>
-        <div class="stat-card" style="border-color: #2196f3;">
-          <div class="stat-label">🔵 Low (61-90)</div>
-          <div class="stat-value" id="low-count" style="color: #2196f3;">0</div>
-        </div>
-        <div class="stat-card" style="border-color: #9e9e9e;">
-          <div class="stat-label">⚪ Background (91-99)</div>
-          <div class="stat-value" id="background-count" style="color: #9e9e9e;">0</div>
-        </div>
+      <div class="section-title" style="margin-top: 30px;">PRIORITY BANDS</div>
+      <div class="stat-line">
+        <span style="color: #ff0000;">█ CRITICAL (0-10):</span>
+        <span class="stat-value" id="critical-count">0</span>
+      </div>
+      <div class="stat-line">
+        <span style="color: #ffff00;">█ HIGH (11-30):</span>
+        <span class="stat-value" id="high-count">0</span>
+      </div>
+      <div class="stat-line">
+        <span style="color: #00ffff;">█ MEDIUM (31-60):</span>
+        <span class="stat-value" id="medium-count">0</span>
+      </div>
+      <div class="stat-line">
+        <span style="color: #00ff00;">█ LOW (61-90):</span>
+        <span class="stat-value" id="low-count">0</span>
+      </div>
+      <div class="stat-line">
+        <span style="color: #666666;">█ BG (91-99):</span>
+        <span class="stat-value" id="background-count">0</span>
       </div>
       
-      <!-- Queue Items List -->
-      <div style="display: flex; justify-between; align-items: center; margin-top: 30px;">
-        <h2 style="margin: 0;">Queue Items (Processing Order)</h2>
+      <div class="section-title" style="margin-top: 30px;">LAUNCH COMMAND</div>
+      <div class="command-box" onclick="copyCommand()">
+        <span id="command">cd ~/devrepo/SAYWHATWANTv1/saywhatwant/ai && npm run dev</span>
+      </div>
+      <button class="button" onclick="copyCommand()" style="width: 100%; margin-top: 10px;">
+        [ COPY COMMAND ]
+      </button>
+    </div>
+    
+    <!-- CENTER PANEL: Queue List -->
+    <div class="panel center-panel">
+      <div style="display: flex; justify-between; align-items: center; margin-bottom: 10px;">
+        <div class="section-title" style="margin: 0;">QUEUE ITEMS (PRIORITY ORDER)</div>
         <button class="button danger" onclick="clearQueue()">
-          🗑️ DANGER: Clear Entire Queue
+          [ CLEAR ALL ]
         </button>
       </div>
       
-      <div class="queue-list" id="queue-list">
-        <div class="empty-state">
-          ⏸️ Queue is empty or waiting for data...<br>
-          <span style="font-size: 12px; color: #888;">Start the bot to see live queue items</span>
+      <div id="queue-list">
+        <div class="empty">
+          ╔════════════════════════════════════╗<br>
+          ║  QUEUE EMPTY - AWAITING DATA...    ║<br>
+          ║  START BOT TO SEE LIVE QUEUE       ║<br>
+          ╚════════════════════════════════════╝
         </div>
-      </div>
-      
-      <div style="text-align: center; margin-top: 15px; color: #666; font-size: 12px;">
-        <span id="last-update">Last update: Never</span>
       </div>
     </div>
     
-    <!-- CONTROL CARD -->
-    <div class="card">
-      <h1>🚀 Bot Control</h1>
-      <div class="subtitle">Launch and manage AI bot</div>
+    <!-- RIGHT PANEL: Live Stats -->
+    <div class="panel right-panel">
+      <div class="section-title">LIVE STATISTICS</div>
       
-      <div class="note">
-        <strong>📋 Copy command and paste in Terminal</strong>
+      <div class="stat-line">
+        <span class="stat-label">TOTAL_ITEMS:</span>
+        <span class="stat-value" id="total-items">0</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">UNCLAIMED:</span>
+        <span class="stat-value" id="unclaimed-items">0</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">PROCESSING:</span>
+        <span class="stat-value" id="claimed-items">0</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">THROUGHPUT:</span>
+        <span class="stat-value" id="throughput-hour">0/min</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">LAST_POST:</span>
+        <span class="stat-value" id="last-success">NEVER</span>
+      </div>
+      <div class="stat-line">
+        <span class="stat-label">AVG_WAIT:</span>
+        <span class="stat-value" id="avg-wait">0ms</span>
       </div>
       
-      <div style="background: #0f0f0f; padding: 15px; border-radius: 8px; margin: 15px 0; cursor: pointer; border: 1px solid #333;" onclick="copyCommand()">
-        <code style="color: #4caf50; user-select: all;" id="command">cd ~/devrepo/SAYWHATWANTv1/saywhatwant/ai && npm run dev</code>
+      <div class="section-title" style="margin-top: 30px;">QUICK LINKS</div>
+      <button class="button" onclick="openAIConsole()" style="width: 100%; margin: 5px 0;">
+        [ AI CONSOLE ]
+      </button>
+      <button class="button" onclick="openQueueMonitor()" style="width: 100%; margin: 5px 0;">
+        [ QUEUE MONITOR ]
+      </button>
+      <button class="button" onclick="openMainApp()" style="width: 100%; margin: 5px 0;">
+        [ SAY WHAT WANT ]
+      </button>
+      
+      <div style="margin-top: 30px; padding: 15px; background: #001100; border: 1px solid #00ff00;">
+        <div style="color: #00cc00; margin-bottom: 10px;">CONSOLE ACCE</div>
+        <div style="color: #00ff00;">PASSWORD: saywhatwant</div>
       </div>
       
-      <div style="margin-top: 20px;">
-        <button class="button" onclick="copyCommand()">
-          📋 Copy Command
-        </button>
-        <button class="button secondary" onclick="openTerminal()">
-          🖥️ Open Terminal
-        </button>
-      </div>
-      
-      <h2>Monitoring Links</h2>
-      <div style="margin-top: 15px;">
-        <button class="button" onclick="openAIConsole()">
-          🖥️ AI Console
-        </button>
-        <button class="button" onclick="openQueueMonitor()">
-          📊 Queue Monitor
-        </button>
-        <button class="button" onclick="openMainApp()">
-          💬 Say What Want
-        </button>
-      </div>
-      
-      <div class="note" style="margin-top: 20px;">
-        <strong>Password for web consoles:</strong> saywhatwant
+      <div style="margin-top: 30px; padding: 15px; background: #001100; border: 1px dashed #00ff00;">
+        <div style="color: #00cc00; font-size: 14px;">DATA REFRESH:</div>
+        <div style="color: #00ff00; font-size: 16px;">LIVE <span class="blink">█</span></div>
+        <div style="color: #006600; font-size: 14px; margin-top: 5px;">AUTO-UPDATE: 3s</div>
       </div>
     </div>
     
-    <!-- INFO CARD -->
-    <div class="card">
-      <h1>ℹ️ System Information</h1>
-      
-      <div style="background: #0f0f0f; padding: 20px; border-radius: 8px; margin-top: 15px;">
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; font-size: 13px;">
-          <div>
-            <span style="color: #888;">Bot Location:</span>
-            <div style="color: #4fc3f7; margin-top: 5px;">saywhatwant/ai</div>
-          </div>
-          <div>
-            <span style="color: #888;">LM Studio Servers:</span>
-            <div style="color: #4fc3f7; margin-top: 5px;">10.0.0.102, 10.0.0.100</div>
-          </div>
-          <div>
-            <span style="color: #888;">API Endpoint:</span>
-            <div style="color: #4fc3f7; margin-top: 5px; font-size: 11px;">sww-comments.bootloaders.workers.dev</div>
-          </div>
-          <div>
-            <span style="color: #888;">Polling Interval:</span>
-            <div style="color: #4fc3f7; margin-top: 5px;">30 seconds</div>
-          </div>
-          <div>
-            <span style="color: #888;">Queue System:</span>
-            <div style="color: #4caf50; margin-top: 5px;">✅ ENABLED</div>
-          </div>
-          <div>
-            <span style="color: #888;">Router LLM:</span>
-            <div style="color: #888; margin-top: 5px;">⏸️ Disabled (Future)</div>
-          </div>
-        </div>
+    <!-- FOOTER -->
+    <div class="footer">
+      <div>
+        <span style="color: #006600;">STATUS:</span>
+        <span id="connection-status">CONNECTING<span class="blink">...</span></span>
+      </div>
+      <div>
+        <span style="color: #006600;">LAST_UPDATE:</span>
+        <span id="last-update">--:--:--</span>
+      </div>
+      <div>
+        <span style="color: #006600;">SYSTEM:</span>
+        <span>OPERATIONAL</span>
       </div>
     </div>
   </div>
   
   <script>
-    // Mock data for testing - will be replaced with real queue connection
     let queueItems = [];
     let stats = {
       total: 0,
       unclaimed: 0,
       claimed: 0,
       throughputHour: 0,
+      avgWait: 0,
       lastSuccess: null,
-      priorityBands: {
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
-        background: 0
-      }
+      priorityBands: { critical: 0, high: 0, medium: 0, low: 0, background: 0 }
     };
+    
+    // Update clock
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour12: false });
+      document.getElementById('clock').textContent = time;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    
+    // Fetch real queue data from bot
+    async function fetchQueueData() {
+      try {
+        const response = await fetch('http://localhost:4001/queue-stats');
+        if (response.ok) {
+          const data = await response.json();
+          queueItems = data.items || [];
+          stats = data.stats || stats;
+          document.getElementById('connection-status').innerHTML = 'CONNECTED <span style="color: #00ff00;">█</span>';
+          updateDisplay();
+        }
+      } catch (error) {
+        document.getElementById('connection-status').innerHTML = 'OFFLINE <span class="blink" style="color: #ff0000;">█</span>';
+        console.error('Queue connection failed:', error);
+      }
+    }
     
     function updateDisplay() {
       // Update stats
@@ -390,89 +410,90 @@
       document.getElementById('unclaimed-items').textContent = stats.unclaimed;
       document.getElementById('claimed-items').textContent = stats.claimed;
       document.getElementById('throughput-hour').textContent = stats.throughputHour + '/min';
+      document.getElementById('avg-wait').textContent = Math.round(stats.avgWait) + 'ms';
       
-      // Update last success
-      if (stats.lastSuccess) {
-        const ago = Math.floor((Date.now() - stats.lastSuccess) / 1000);
-        if (ago < 60) {
-          document.getElementById('last-success').textContent = ago + 's ago';
-        } else if (ago < 3600) {
-          document.getElementById('last-success').textContent = Math.floor(ago / 60) + 'm ago';
-        } else {
-          document.getElementById('last-success').textContent = Math.floor(ago / 3600) + 'h ago';
-        }
-      }
-      
-      // Update priority distribution
+      // Update priority bands
       document.getElementById('critical-count').textContent = stats.priorityBands.critical;
       document.getElementById('high-count').textContent = stats.priorityBands.high;
       document.getElementById('medium-count').textContent = stats.priorityBands.medium;
       document.getElementById('low-count').textContent = stats.priorityBands.low;
       document.getElementById('background-count').textContent = stats.priorityBands.background;
       
+      // Update last success
+      if (stats.lastSuccess) {
+        const ago = Math.floor((Date.now() - stats.lastSuccess) / 1000);
+        if (ago < 60) {
+          document.getElementById('last-success').textContent = ago + 's';
+        } else if (ago < 3600) {
+          document.getElementById('last-success').textContent = Math.floor(ago / 60) + 'm';
+        } else {
+          document.getElementById('last-success').textContent = Math.floor(ago / 3600) + 'h';
+        }
+      }
+      
       // Update queue list
       const queueList = document.getElementById('queue-list');
       
       if (queueItems.length === 0) {
         queueList.innerHTML = `
-          <div class="empty-state">
-            ⏸️ Queue is empty<br>
-            <span style="font-size: 12px; color: #888;">Waiting for new messages to process</span>
+          <div class="empty">
+            ╔════════════════════════════════════╗<br>
+            ║  QUEUE EMPTY                       ║<br>
+            ║  AWAITING MESSAGES...              ║<br>
+            ╚════════════════════════════════════╝
           </div>
         `;
       } else {
-        queueList.innerHTML = queueItems.map((item, index) => `
-          <div class="queue-item priority-${item.priority}">
-            <div class="queue-item-left">
-              <div class="queue-item-meta">
-                <span class="queue-position">#${index + 1}</span>
-                <span class="queue-priority">P${item.priority}</span>
-                <span class="queue-entity">${item.entity}</span>
-                <span style="color: #666;">${item.claimed ? '⚡ Processing' : '⏳ Waiting'}</span>
+        queueList.innerHTML = queueItems.map((item, index) => {
+          const priorityClass = item.priority <= 10 ? 'priority-critical' :
+                               item.priority <= 30 ? 'priority-high' :
+                               item.priority <= 60 ? 'priority-medium' : 'priority-low';
+          
+          const status = item.claimedBy ? '[PROC]' : '[WAIT]';
+          const preview = (item.message?.text || 'No message').substring(0, 60);
+          
+          return `
+            <div class="queue-item ${priorityClass}">
+              <div style="flex: 1;">
+                <span style="color: #006600;">#${index + 1}</span>
+                <span style="margin: 0 10px;">P${item.priority}</span>
+                <span style="color: #00ccff;">${item.entity?.id || 'unknown'}</span>
+                <span style="margin: 0 10px;">${status}</span>
+                <div style="color: #00cc00; font-size: 14px; margin-top: 3px;">"${preview}..."</div>
               </div>
-              <div class="queue-message">"${item.messagePreview}"</div>
+              <button class="button danger" onclick="deleteItem('${item.id}')" style="padding: 4px 12px; font-size: 14px;">
+                [ X ]
+              </button>
             </div>
-            <button class="delete-btn" onclick="deleteItem('${item.id}')">
-              ✕ Delete
-            </button>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
       
-      // Update last update time
-      document.getElementById('last-update').textContent = 'Last update: ' + new Date().toLocaleTimeString();
+      // Update footer
+      document.getElementById('last-update').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
     }
     
     function deleteItem(itemId) {
-      if (confirm('Delete this queue item?')) {
-        // TODO: Send delete request to bot
-        console.log('Delete item:', itemId);
-        alert('Delete functionality will be connected to bot queue service');
+      if (confirm('DELETE QUEUE ITEM?')) {
+        fetch(`http://localhost:4001/queue-delete/${itemId}`, { method: 'POST' })
+          .then(() => fetchQueueData())
+          .catch(err => alert('DELETE FAILED: ' + err.message));
       }
     }
     
     function clearQueue() {
-      if (confirm('⚠️ DANGER: Clear the entire queue? This cannot be undone!')) {
-        // TODO: Send clear request to bot
-        console.log('Clear entire queue');
-        queueItems = [];
-        stats.total = 0;
-        stats.unclaimed = 0;
-        stats.claimed = 0;
-        updateDisplay();
-        alert('Clear queue functionality will be connected to bot queue service');
+      if (confirm('⚠️ DANGER: CLEAR ENTIRE QUEUE?\n\nTHIS CANNOT BE UNDONE!')) {
+        fetch('http://localhost:4001/queue-clear', { method: 'POST' })
+          .then(() => fetchQueueData())
+          .catch(err => alert('CLEAR FAILED: ' + err.message));
       }
     }
     
     function copyCommand() {
       const command = document.getElementById('command').textContent;
       navigator.clipboard.writeText(command).then(() => {
-        alert('✓ Command copied to clipboard!');
+        alert('✓ COMMAND COPIED TO CLIPBOARD');
       });
-    }
-    
-    function openTerminal() {
-      window.location.href = 'file:///Applications/Utilities/Terminal.app';
     }
     
     function openAIConsole() {
@@ -487,77 +508,15 @@
       window.open('https://saywhatwant.app/', '_blank');
     }
     
-    // Simulate data updates (will be replaced with real connection)
-    function simulateData() {
-      // Mock queue items
-      queueItems = [
-        {
-          id: 'req-1',
-          priority: 5,
-          entity: 'curious',
-          messagePreview: 'FearAndLoathing: What do you think about...',
-          claimed: false
-        },
-        {
-          id: 'req-2',
-          priority: 10,
-          entity: 'philosopher',
-          messagePreview: 'TheEternal: I wonder if...',
-          claimed: false
-        },
-        {
-          id: 'req-3',
-          priority: 25,
-          entity: 'tech',
-          messagePreview: 'Alice: How does this work?',
-          claimed: false
-        },
-        {
-          id: 'req-4',
-          priority: 50,
-          entity: 'sage',
-          messagePreview: 'Bob: Interesting conversation...',
-          claimed: true
-        }
-      ];
-      
-      stats = {
-        total: 4,
-        unclaimed: 3,
-        claimed: 1,
-        throughputHour: 5,
-        lastSuccess: Date.now() - 45000,  // 45 seconds ago
-        priorityBands: {
-          critical: 1,
-          high: 2,
-          medium: 1,
-          low: 0,
-          background: 0
-        }
-      };
-      
-      updateDisplay();
-    }
+    // Fetch data every 3 seconds
+    setInterval(fetchQueueData, 3000);
+    fetchQueueData();
     
-    // Initialize
-    updateDisplay();
-    
-    // Auto-refresh every 3 seconds
-    setInterval(() => {
-      // TODO: Fetch real data from bot
-      // For now, simulate
-      if (Math.random() < 0.3) {
-        simulateData();
-      }
-      updateDisplay();
-    }, 3000);
-    
-    // Note about real integration
-    console.log('📊 Queue Dashboard loaded');
-    console.log('💡 To connect to real queue:');
-    console.log('   - Bot needs to expose HTTP endpoint or WebSocket');
-    console.log('   - Or write stats to JSON file periodically');
-    console.log('   - Dashboard will poll that data source');
+    // Initial connection message
+    console.log('═══════════════════════════════════════');
+    console.log('  AI QUEUE MONITOR v1.0');
+    console.log('  Connecting to http://localhost:4001');
+    console.log('═══════════════════════════════════════');
   </script>
 </body>
 </html>
