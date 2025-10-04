@@ -48,7 +48,7 @@ import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, S
 // ==========================================
 // CUSTOM HOOKS (Feature-specific)
 // ==========================================
-import { useFilters } from '@/hooks/useFilters';
+import { useSimpleFilters } from '@/hooks/useSimpleFilters';
 import { useIndexedDBFiltering } from '@/hooks/useIndexedDBFiltering';
 import { useCommentsWithModels } from '@/hooks/useCommentsWithModels';
 import { useMessageCounts } from '@/hooks/useMessageCounts';
@@ -258,15 +258,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Username validation
   const { isFlashing: usernameFlash, flashUsername } = useUsernameValidation(username);
   
-  // Use the filters hook with initial messages
+  // Use the NEW simple filters hook (with filteractive support!)
   const {
-    filterUsernames, // 9-digit colors for IndexedDB querying
-    mergedUserFilters, // RGB colors for FilterBar display
-    filterWords,
-    negativeFilterWords,
+    mergedUserFilters,  // RGB colors for FilterBar display
+    mergedFilterWords: filterWords,
+    mergedNegativeWords: negativeFilterWords,
     isFilterEnabled,
-    messageType,  // NEW: Active channel ('human' or 'AI')
-    filteredComments: userFilteredComments, // Rename to be clear this is user/word filtered
+    filteredComments: userFilteredComments,
     addToFilter,
     removeFromFilter,
     addWordToFilter,
@@ -274,18 +272,25 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     addNegativeWordFilter,
     removeNegativeWordFilter,
     toggleFilter,
-    setMessageType,  // NEW: Set active channel
-    hasActiveFilters,
-    urlSearchTerms,
-    addSearchTermToURL,
-    removeSearchTermFromURL,
-    serverSideUsers,  // Server-side user search from #uss= parameter
-    dateTimeFilter,
-    clearDateTimeFilter
-  } = useFilters({ 
-    displayedComments: initialMessages, 
-    searchTerm
+    hasFilters: hasActiveFilters,
+    filterState,  // Get the full state
+  } = useSimpleFilters({ 
+    comments: initialMessages,
+    filterByColorToo: true
   });
+  
+  // Derive filterUsernames from filterState (9-digit colors for IndexedDB)
+  const filterUsernames = filterState.users;  // Already in 9-digit format
+  
+  // Stub implementations for features not yet in useSimpleFilters
+  const messageType = 'human';
+  const setMessageType = () => {};
+  const urlSearchTerms: string[] = [];
+  const addSearchTermToURL = () => {};
+  const removeSearchTermFromURL = () => {};
+  const serverSideUsers: any[] = [];
+  const dateTimeFilter = null;
+  const clearDateTimeFilter = () => {};
   
   // Use IndexedDB filtering hook for efficient querying
   const {
