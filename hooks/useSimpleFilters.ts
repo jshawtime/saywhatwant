@@ -7,7 +7,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   parseURL, 
   updateURL, 
-  ensureFilterActive,
   normalizeUsername,
   rgbToNineDigit,
   nineDigitToRgb,
@@ -28,9 +27,8 @@ export function useSimpleFilters({
   // Single state derived from URL
   const [filterState, setFilterState] = useState<FilterState>(() => parseURL());
 
-  // Ensure filterActive is always in URL on mount
+  // Parse URL state on mount (no auto-adding defaults)
   useEffect(() => {
-    ensureFilterActive();
     setFilterState(parseURL());
   }, []);
 

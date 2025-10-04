@@ -87,10 +87,6 @@ export function parseURL(): FilterState {
 export function buildURL(state: FilterState): string {
   const params: string[] = [];
 
-  // Always include filterActive and messageType
-  params.push(`filteractive=${state.filterActive}`);
-  params.push(`mt=${state.messageType}`);
-
   // Add users
   if (state.users.length > 0) {
     const userString = state.users
@@ -109,7 +105,17 @@ export function buildURL(state: FilterState): string {
     params.push(`-word=${state.negativeWords.join('+')}`);
   }
 
-  return params.length > 0 ? `#${params.join('&')}` : '#filteractive=false&mt=human';
+  // Only add filterActive if it's true or if there are filters
+  if (state.filterActive || params.length > 0) {
+    params.push(`filteractive=${state.filterActive}`);
+  }
+
+  // Only add messageType if it's not the default (human)
+  if (state.messageType !== 'human') {
+    params.push(`mt=${state.messageType}`);
+  }
+
+  return params.length > 0 ? `#${params.join('&')}` : '';
 }
 
 /**
@@ -125,42 +131,6 @@ export function updateURL(state: FilterState): void {
     window.history.pushState(null, '', hash);
     // Dispatch a custom event for React to listen to
     window.dispatchEvent(new HashChangeEvent('hashchange'));
-  }
-}
-
-/**
- * Initialize URL with filterActive if not present
- * Only runs on main app page (not admin pages)
- */
-export function ensureFilterActive(): void {
-  if (typeof window === 'undefined') return;
-  
-  // Skip on admin/monitoring pages
-  const pathname = window.location.pathname;
-  if (pathname.includes('/queue-monitor') || 
-      pathname.includes('/ai-console') ||
-      pathname.includes('/api/')) {
-    return;  // Don't add hash to admin pages
-  }
-  
-  const hash = window.location.hash;
-  let needsUpdate = false;
-  let newHash = hash || '#';
-  
-  // Ensure filteractive parameter exists
-  if (!hash.includes('filteractive')) {
-    newHash += (newHash === '#' ? '' : '&') + 'filteractive=false';
-    needsUpdate = true;
-  }
-  
-  // Ensure messageType parameter exists (default to human)
-  if (!hash.includes('mt=')) {
-    newHash += '&mt=human';
-    needsUpdate = true;
-  }
-  
-  if (needsUpdate) {
-    window.history.replaceState(null, '', newHash);
   }
 }
 
