@@ -324,8 +324,86 @@ const filteredComments = useMemo(() => {
 **Test It**:
 ```
 https://saywhatwant.app/#filteractive=false&u=lorac:216040218
-→ ALL messages shown, lorac in filter bar (dimmed)
+→ ALL messages shown, lorac in filter bar (dimmed) ✅
 
 Click filter icon to toggle ON:
-→ Only lorac messages shown, icon lights up
+→ Only lorac messages shown, icon lights up ✅
 ```
+
+---
+
+## 🐛 SECOND BUG DISCOVERED - October 4, 2025
+
+### The Reverse Problem
+
+After fixing the first bug, we discovered the **opposite issue**:
+
+**Screenshot 1**: `filteractive=false` → Shows ALL messages ✅ (First fix worked!)  
+**Screenshot 2**: `filteractive=true` → **Still shows ALL messages** ❌ (New problem!)
+
+### Root Cause: Missing Dependency
+
+The `useEffect` that triggers IndexedDB queries was **missing `params.isFilterEnabled` from its dependency array**.
+
+**What Happened**:
+1. Toggle filter icon ON
+2. URL updates: `filteractive=true`
+3. `isFilterEnabled` changes from `false` to `true`
+4. `buildCriteria()` NOW checks filters properly
+5. **BUT useEffect doesn't re-run** because `isFilterEnabled` not in deps ❌
+6. Old query results stay displayed
+7. Messages don't filter
+
+### The Complete Fix
+
+**File**: `hooks/useIndexedDBFiltering.ts`
+
+**Issue 1** - buildCriteria (line 88-150):
+```typescript
+// ✅ ADDED: Check at start
+if (!params.isFilterEnabled) {
+  criteria.messageTypes = [params.activeChannel];
+  return criteria;  // Skip all user/word filters
+}
+```
+
+**Issue 2** - useEffect dependencies (line 266-281):
+```typescript
+useEffect(() => {
+  queryWithFilters();
+}, [
+  params.isFilterEnabled,  // ✅ ADDED: Re-query on toggle
+  // ... other deps
+]);
+```
+
+### Why Both Were Needed
+
+1. **buildCriteria check** - Ensures correct criteria based on state
+2. **useEffect dependency** - Ensures query re-runs when state changes
+
+Without #1: Criteria would be wrong  
+Without #2: Query wouldn't re-run  
+
+**Both fixes required for complete solution.**
+
+### Code Locations Fixed
+
+| File | Line | What Changed |
+|------|------|-------------|
+| `useIndexedDBFiltering.ts` | 92-96 | Added isFilterEnabled check in buildCriteria() |
+| `useIndexedDBFiltering.ts` | 141 | Added isFilterEnabled to buildCriteria deps |
+| `useIndexedDBFiltering.ts` | 267 | Added params.isFilterEnabled to useEffect deps |
+| `FilterBar.tsx` | 5 | Fixed import path for UsernameFilter |
+| `AppHeader.tsx` | 15 | Fixed import path for UsernameFilter |
+
+### Complete Fix Checklist
+
+- [x] buildCriteria respects isFilterEnabled
+- [x] isFilterEnabled in buildCriteria dependencies
+- [x] isFilterEnabled in useEffect dependencies  
+- [x] Import errors fixed
+- [x] Build succeeds
+- [x] Deployed to Cloudflare
+
+**Status**: Complete and deployed

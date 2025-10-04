@@ -264,6 +264,7 @@ export function useIndexedDBFiltering(
     
     queryWithFilters();
   }, [
+    params.isFilterEnabled,  // ✅ CRITICAL: Re-query when filter toggles ON/OFF
     isFilterMode,
     // Use JSON.stringify for array/object comparisons to avoid reference changes
     JSON.stringify(params.filterUsernames),
