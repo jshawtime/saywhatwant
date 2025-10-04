@@ -91,8 +91,13 @@ export function useIndexedDBFiltering(
     // ✅ CHECK IF FILTERS ARE ENABLED FIRST
     if (!params.isFilterEnabled) {
       // Filters are OFF - only apply channel filter (always required)
-      criteria.messageTypes = [params.activeChannel];
-      console.log('[FilterHook] Filters INACTIVE - skipping user/word filters');
+      // Handle 'ALL' to show both human and AI messages
+      if (params.activeChannel === 'ALL') {
+        criteria.messageTypes = ['human', 'AI'];
+      } else {
+        criteria.messageTypes = [params.activeChannel];
+      }
+      console.log('[FilterHook] Filters INACTIVE - skipping user/word filters, messageTypes:', criteria.messageTypes);
       return criteria;
     }
     
