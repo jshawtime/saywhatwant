@@ -385,8 +385,11 @@ async function handlePostComment(request, env) {
                request.headers.get('X-Forwarded-For') || 
                'unknown';
 
-    // Check rate limit (pass request for domain checking)
-    const canPost = await checkRateLimit(env, ip, request);
+    // Parse request body first (need domain for exemption check)
+    const body = await request.json();
+
+    // Check rate limit (pass body for domain checking)
+    const canPost = await checkRateLimit(env, ip, request, body);
     if (!canPost) {
       return new Response(JSON.stringify({ 
         error: 'Rate limit exceeded. Please wait a moment before posting again.' 
@@ -399,9 +402,6 @@ async function handlePostComment(request, env) {
         }
       });
     }
-
-    // Parse request body
-    const body = await request.json();
     const text = sanitizeText(body.text);
     const username = sanitizeUsername(body.username);
     const color = body.color || generateRandomRGB(); // Generate random color if not provided
@@ -485,19 +485,27 @@ async function handlePostComment(request, env) {
 /**
  * Check rate limit for an IP
  */
-async function checkRateLimit(env, ip, request) {
+async function checkRateLimit(env, ip, request, commentData = null) {
   // Check if IP is in exemption list
   if (EXEMPT_IPS.includes(ip)) {
     console.log(`[Comments] Skipping rate limit for exempt IP: ${ip}`);
     return true;
   }
   
-  // Check if request is from an exempt domain
+  // Check if request is from an exempt domain (Origin header for browser requests)
   const origin = request?.headers.get('Origin');
   if (origin) {
     const domain = origin.replace(/^https?:\/\//, '').replace(/:[0-9]+$/, '');
     if (EXEMPT_DOMAINS.includes(domain)) {
-      console.log(`[Comments] Skipping rate limit for exempt domain: ${domain}`);
+      console.log(`[Comments] Skipping rate limit for exempt domain (Origin): ${domain}`);
+      return true;
+    }
+  }
+  
+  // Check if comment domain field is exempt (for bot requests)
+  if (commentData?.domain) {
+    if (EXEMPT_DOMAINS.includes(commentData.domain)) {
+      console.log(`[Comments] Skipping rate limit for exempt domain (payload): ${commentData.domain}`);
       return true;
     }
   }
