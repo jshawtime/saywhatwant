@@ -24,9 +24,9 @@ interface AppHeaderProps {
   userColor: string;
   userColorRgb: string;
   
-  // Message Type Channel (exclusive: human OR AI)
-  activeChannel: 'human' | 'AI';
-  onChannelChange: (channel: 'human' | 'AI') => void;
+  // Message Type Channel (human, AI, or ALL)
+  activeChannel: 'human' | 'AI' | 'ALL';
+  onChannelChange: (channel: 'human' | 'AI' | 'ALL') => void;
   
   // Username & Color  
   username: string;

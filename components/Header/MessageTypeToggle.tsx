@@ -12,9 +12,9 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface MessageTypeToggleProps {
   /**
-   * Currently active channel ('human' or 'AI')
+   * Currently active channel ('human', 'AI', or 'ALL')
    */
-  activeChannel: 'human' | 'AI';
+  activeChannel: 'human' | 'AI' | 'ALL';
   
   /**
    * User's color in RGB format for styling
@@ -49,7 +49,10 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
   userColorRgb,
   onChannelChange
 }) => {
+  // When activeChannel is 'ALL', show as neither fully active
   const isHumanActive = activeChannel === 'human';
+  const isAIActive = activeChannel === 'AI';
+  const isALLActive = activeChannel === 'ALL';
   
   // Debug: Log the active channel on mount and changes
   React.useEffect(() => {
@@ -69,9 +72,10 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
         <Users 
           className="w-3.5 h-3.5"
           style={{ 
-            color: getDarkerColor(userColorRgb, isHumanActive 
-              ? OPACITY_LEVELS.FULL    // Active: 100% opacity
-              : OPACITY_LEVELS.DARK    // Inactive: 40% opacity
+            color: getDarkerColor(userColorRgb, 
+              isHumanActive ? OPACITY_LEVELS.FULL :    // Active: 100% opacity
+              isALLActive ? OPACITY_LEVELS.MEDIUM :    // ALL mode: 50% opacity (both shown)
+              OPACITY_LEVELS.DARK                      // Inactive: 40% opacity
             )
           }}
         />
@@ -101,16 +105,17 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
       <button
         onClick={() => onChannelChange('AI')}
         className={`p-2 rounded-full transition-all ${
-          !isHumanActive ? 'bg-black/40' : 'hover:bg-black/20'
+          isAIActive ? 'bg-black/40' : 'hover:bg-black/20'
         }`}
-        title={!isHumanActive ? "Viewing AI channel" : "Switch to AI channel"}
+        title={isAIActive ? "Viewing AI channel" : "Switch to AI channel"}
       >
         <Sparkles 
           className="w-3.5 h-3.5"
           style={{ 
-            color: getDarkerColor(userColorRgb, !isHumanActive 
-              ? OPACITY_LEVELS.FULL    // Active: 100% opacity
-              : OPACITY_LEVELS.DARK    // Inactive: 40% opacity
+            color: getDarkerColor(userColorRgb, 
+              isAIActive ? OPACITY_LEVELS.FULL :       // Active: 100% opacity
+              isALLActive ? OPACITY_LEVELS.MEDIUM :    // ALL mode: 50% opacity (both shown)
+              OPACITY_LEVELS.DARK                      // Inactive: 40% opacity
             )
           }}
         />

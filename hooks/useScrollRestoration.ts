@@ -19,7 +19,7 @@ interface UseScrollRestorationParams {
   savedEntitiesScrollPosition: number | null;
   setSavedHumansScrollPosition: (pos: number | null) => void;
   setSavedEntitiesScrollPosition: (pos: number | null) => void;
-  activeChannel: 'human' | 'AI';  // NEW: Use exclusive channel
+  activeChannel: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
   filteredCommentsLength: number;
 }
 

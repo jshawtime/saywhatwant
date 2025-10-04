@@ -13,7 +13,7 @@ export interface FilterState {
   words: string[];
   negativeWords: string[];
   filterActive: boolean;
-  messageType: 'human' | 'AI';  // Channel-exclusive message type
+  messageType: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
 }
 
 /**
@@ -48,8 +48,8 @@ export function parseURL(): FilterState {
         break;
         
       case 'mt':
-        // Message type: 'human' or 'AI'
-        if (value === 'human' || value === 'AI') {
+        // Message type: 'human', 'AI', or 'ALL'
+        if (value === 'human' || value === 'AI' || value === 'ALL') {
           state.messageType = value;
         }
         break;

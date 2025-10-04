@@ -25,7 +25,7 @@ interface UseIndexedDBFilteringParams {
   dateTimeFilter?: any;
   domainFilterEnabled: boolean;
   currentDomain: string;
-  activeChannel: 'human' | 'AI';  // NEW: Exclusive channel instead of 2 booleans
+  activeChannel: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
   
   // Configuration
   maxDisplayMessages: number;
@@ -132,9 +132,13 @@ export function useIndexedDBFiltering(
       criteria.domain = params.currentDomain;
     }
     
-    // Message type filter (exclusive channel)
-    // Always filter by active channel
-    criteria.messageTypes = [params.activeChannel];
+    // Message type filter (channel selection)
+    // Handle 'ALL' to show both human and AI messages
+    if (params.activeChannel === 'ALL') {
+      criteria.messageTypes = ['human', 'AI'];  // Show both channels
+    } else {
+      criteria.messageTypes = [params.activeChannel];  // Show single channel
+    }
     
     return criteria;
   }, [
@@ -153,9 +157,13 @@ export function useIndexedDBFiltering(
   const matchesCurrentFilter = useCallback((message: Comment): boolean => {
     if (!isFilterMode) return true; // No filters = all messages match
     
-    // CHANNEL CHECK FIRST (Top-level: Human or AI)
-    // This is NOT a filter - it's the channel selection that filters operate WITHIN
-    if (message['message-type'] !== params.activeChannel) return false;
+    // CHANNEL CHECK FIRST (Top-level: Human, AI, or ALL)
+    // Handle 'ALL' to allow both human and AI messages
+    if (params.activeChannel !== 'ALL') {
+      // Specific channel - must match
+      if (message['message-type'] !== params.activeChannel) return false;
+    }
+    // If activeChannel === 'ALL', skip this check (allow both types)
     
     // Now apply filters WITHIN the active channel:
     

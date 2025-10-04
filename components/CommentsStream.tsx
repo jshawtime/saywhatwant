@@ -274,6 +274,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     toggleFilter,
     hasFilters: hasActiveFilters,
     filterState,  // Get the full state
+    messageType,  // ✅ Get real value from URL
+    setMessageType,  // ✅ Get real function
   } = useSimpleFilters({ 
     comments: initialMessages,
     filterByColorToo: true
@@ -282,9 +284,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Derive filterUsernames from filterState (9-digit colors for IndexedDB)
   const filterUsernames = filterState.users;  // Already in 9-digit format
   
-  // Stub implementations for features not yet in useSimpleFilters
-  const messageType = 'human';
-  const setMessageType = () => {};
+  // Stub implementations for features not yet in useSimpleFilters (kept for now)
   const urlSearchTerms: string[] = [];
   const addSearchTermToURL = () => {};
   const removeSearchTermFromURL = () => {};

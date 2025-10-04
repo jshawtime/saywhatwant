@@ -134,7 +134,7 @@ export function useSimpleFilters({
     updateURL(newState);
   }, [filterState.messageType]);
   
-  const setMessageType = useCallback((type: 'human' | 'AI') => {
+  const setMessageType = useCallback((type: 'human' | 'AI' | 'ALL') => {
     const newState: FilterState = {
       ...filterState,
       messageType: type
