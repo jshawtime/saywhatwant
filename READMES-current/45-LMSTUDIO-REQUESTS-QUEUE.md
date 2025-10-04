@@ -484,88 +484,580 @@ Return ONLY valid JSON:
 - **Specialized**: Fine-tuned for routing decisions (ideal)
 - **Format**: MUST return parseable JSON
 
-### Router Bypass for Routers
+### Router Bypass Rules
 
 ```typescript
-// Routers skip the queue - immediate processing
+// RULE 1: Routers skip the queue - immediate processing
 if (entity.role === 'router') {
   return await this.directProcess(request);
 }
-```
 
-## 🌐 URL Priority System
-
-### URL Parameter Parsing
-
-```typescript
-// In lib/url-filter-simple.ts or new url-priority-parser.ts
-
-interface URLPriorityOverride {
-  priority?: number;      // 0-99
-  model?: string;         // Force specific model
-  entity?: string;        // Force specific entity
-  skipRouter?: boolean;   // Bypass router completely
+// RULE 2: Priority 0-9 bypasses router (direct conversations)
+// Use case: Private AI conversations from external websites
+if (urlPriority !== null && urlPriority >= 0 && urlPriority <= 9) {
+  console.log('[Router] Priority 0-9 detected - bypassing router');
+  return await this.directQueue(request, urlPriority);
 }
 
-function parseURLPriority(): URLPriorityOverride | null {
-  const params = new URLSearchParams(window.location.hash.slice(1));
+// RULE 3: All other requests go through router
+return await this.routeAndQueue(request);
+```
+
+### Direct Conversation Flow (Priority 0-9)
+
+```
+External Website Link
+    ↓
+URL: #priority=0&model=eternal-main&nom=50&uis=Alice
+    ↓
+BYPASSES ROUTER ← Direct to queue
+    ↓
+Queue with priority 0 (immediate processing)
+    ↓
+Server claims and processes
+    ↓
+Response posted to filtered conversation
+```
+
+## 🌐 URL Parameter System - Source of Truth
+
+### Core Philosophy: URL > Config > Nothing
+
+**CRITICAL RULE**: URL is the ABSOLUTE source of truth. If a parameter exists in the URL, it overrides everything. If not in URL, use config. NO global fallbacks ever.
+
+```typescript
+interface URLParameters {
+  // Priority & Routing
+  priority?: number;          // 0-99 (bypasses router if 0-9)
+  entity?: string;            // Force specific entity ID
+  model?: string;             // Force specific model
   
-  const priority = params.get('priority');
-  if (priority === null) return null;
+  // Context Control
+  nom?: number | 'ALL';       // Number of messages to send to LLM
   
-  const priorityNum = parseInt(priority);
-  if (isNaN(priorityNum) || priorityNum < 0 || priorityNum > 99) {
-    console.warn('[URL] Invalid priority:', priority);
-    return null;
-  }
+  // User State
+  uis?: string;               // User initial state (username:color)
   
+  // Filter State
+  filteractive?: boolean;     // Filter toggle
+  u?: string[];               // User filters
+  w?: string[];               // Word filters
+  mt?: 'human' | 'AI';        // Message type channel
+}
+```
+
+### URL Parameter Priority Order
+
+```typescript
+function buildRequestConfig(urlParams: URLParameters, entity: AIEntity): RequestConfig {
   return {
-    priority: priorityNum,
-    model: params.get('model') || undefined,
-    entity: params.get('entity') || undefined,
-    skipRouter: params.get('skiprouter') === 'true'
+    // URL FIRST, then entity config, NEVER a global default
+    priority: urlParams.priority ?? null,  // No default - router assigns if missing
+    model: urlParams.model ?? entity.model,  // URL → entity config
+    messagesToRead: urlParams.nom ?? entity.messagesToRead,  // URL → entity config
+    temperature: entity.temperature,  // Always from entity (no URL override for this)
+    maxTokens: entity.maxTokens,  // Always from entity
+    
+    // NO FALLBACKS like this:
+    // ❌ priority: urlParams.priority ?? entity.priority ?? 50  // WRONG!
+    // ✅ priority: urlParams.priority ?? null  // Correct - router will assign
   };
 }
 ```
 
-### Integration with Queue
+### Number of Messages Parameter (nom)
+
+```
+URL Parameter: nom=N or nom=ALL
+Purpose: Control how many messages are sent as context to the LLM
+```
+
+**Examples**:
+```bash
+# Send last 50 messages
+https://saywhatwant.app/#priority=0&model=eternal-main&nom=50
+
+# Send ALL messages in conversation
+https://saywhatwant.app/#priority=0&model=eternal-main&nom=ALL
+
+# Use entity's default (from config)
+https://saywhatwant.app/#priority=0&model=eternal-main
+→ Uses entity.messagesToRead from config
+```
+
+**Implementation**:
+```typescript
+interface NOMParameter {
+  value: number | 'ALL';
+  source: 'url' | 'entity' | 'default';
+}
+
+function parseNOM(urlParams: URLSearchParams, entity: AIEntity): NOMParameter {
+  const nomParam = urlParams.get('nom');
+  
+  if (nomParam === 'ALL') {
+    return { value: 'ALL', source: 'url' };
+  }
+  
+  if (nomParam !== null) {
+    const num = parseInt(nomParam);
+    if (!isNaN(num) && num > 0) {
+      return { value: num, source: 'url' };
+    }
+  }
+  
+  // No URL parameter - use entity config
+  if (entity.messagesToRead) {
+    return { value: entity.messagesToRead, source: 'entity' };
+  }
+  
+  // Entity doesn't specify - no default! Return null or error
+  throw new Error(`Entity ${entity.id} has no messagesToRead and URL has no nom parameter`);
+}
+
+// Usage in context building
+function buildConversationContext(messages: Comment[], nomConfig: NOMParameter): string {
+  if (nomConfig.value === 'ALL') {
+    return messages.map(m => `${m.username}: ${m.text}`).join('\n');
+  }
+  
+  // Take last N messages
+  return messages
+    .slice(-nomConfig.value)
+    .map(m => `${m.username}: ${m.text}`)
+    .join('\n');
+}
+```
+
+### Parameter Resolution Matrix
+
+| Parameter | URL Present | Entity Has | Result | Fallback |
+|-----------|-------------|------------|--------|----------|
+| **priority** | `priority=5` | N/A | Use 5 | Router assigns |
+| **priority** | Not in URL | N/A | null | **Router MUST assign** |
+| **model** | `model=X` | `"model": "Y"` | Use X | Never happens |
+| **model** | Not in URL | `"model": "Y"` | Use Y | **Required in config** |
+| **nom** | `nom=50` | `"messagesToRead": 30` | Use 50 | Never happens |
+| **nom** | `nom=ALL` | `"messagesToRead": 30` | Use ALL | Never happens |
+| **nom** | Not in URL | `"messagesToRead": 30` | Use 30 | **Required in config** |
+| **nom** | Not in URL | Not in config | ERROR | **No fallback - must specify** |
+
+### Config as Source of Truth (When URL Doesn't Override)
+
+```typescript
+// ❌ BAD: Global defaults everywhere
+const temperature = urlParams.temp ?? entity.temperature ?? 0.7;  // WRONG!
+
+// ✅ GOOD: URL → Config → Error
+const temperature = urlParams.temp ?? entity.temperature ?? (() => {
+  throw new Error(`Entity ${entity.id} missing temperature and URL has no temp parameter`);
+})();
+
+// ✅ BETTER: Just URL → Config (let it fail if both missing)
+const temperature = urlParams.temp ?? entity.temperature;
+// If both are undefined, TypeScript will catch it!
+```
+
+## 🌍 External Website Integration - Primary Use Case
+
+### Scenario: Links from Other Websites
+
+**Your Website** → **Direct AI Conversation Links** → **Say What Want Filtered View**
+
+```html
+<!-- On your-website.com -->
+<a href="https://saywhatwant.app/#priority=0&model=eternal-main&nom=50&uis=Visitor:random&filteractive=true">
+  Chat with TheEternal AI
+</a>
+
+<a href="https://saywhatwant.app/#priority=0&entity=philosopher&nom=ALL&uis=Seeker:random&filteractive=true">
+  Philosophical Discussion
+</a>
+
+<a href="https://saywhatwant.app/#priority=0&model=fear_and_loathing&nom=30&uis=Creative:random&filteractive=true">
+  Creative Brainstorming
+</a>
+```
+
+### Complete External Link Flow
+
+```
+1. User on external website clicks link
+   ↓
+2. Link URL: 
+   https://saywhatwant.app/#priority=0&model=eternal-main&nom=50&uis=Alice:random&filteractive=true&mt=AI
+   ↓
+3. Say What Want loads with:
+   - User named "Alice" with random color
+   - Filters ACTIVE
+   - AI channel selected (mt=AI)
+   - Conversation filtered to just Alice + AI entity
+   - Ready for private conversation
+   ↓
+4. Alice types first message
+   ↓
+5. Message goes to queue with priority=0 (BYPASS ROUTER)
+   ↓
+6. Queue immediately assigns to first available server
+   ↓
+7. Server loads eternal-main model (if not already loaded)
+   ↓
+8. Server receives last 50 messages (nom=50) as context
+   ↓
+9. LLM generates response
+   ↓
+10. Response posted to Say What Want
+    ↓
+11. Alice sees response in filtered conversation
+    ↓
+12. Conversation continues... (Cloudflare → LM Studio cluster)
+```
+
+### Why Priority 0-9 Bypasses Router
+
+**Rationale**: Direct conversations are **pre-configured** via URL. The human already chose:
+- Which AI to talk to (via model/entity parameter)
+- The conversation context (via filters)
+- The priority level (always urgent for them)
+
+**No need for router** because:
+- User explicitly selected entity/model in URL
+- Router would be redundant overhead
+- Every message is highest priority to that user
+- Sub-second response time critical
+
+**Code Logic**:
+```typescript
+async function handleMessage(message: Comment, urlParams: URLParameters) {
+  const urlPriority = urlParams.priority;
+  
+  if (urlPriority !== null && urlPriority >= 0 && urlPriority <= 9) {
+    // DIRECT CONVERSATION MODE
+    console.log('[Queue] Direct conversation - bypassing router');
+    
+    // Build request from URL + config only
+    const entity = entityManager.getById(urlParams.entity) || 
+                   entityManager.getByModel(urlParams.model);
+    
+    await queue.enqueue({
+      priority: urlPriority,
+      entity,
+      model: urlParams.model ?? entity.model,
+      messagesToRead: urlParams.nom ?? entity.messagesToRead,
+      skipRouter: true,
+      source: 'external-website'
+    });
+    
+    return;  // Skip router completely
+  }
+  
+  // ROUTER MODE (priority 10-99 or null)
+  const routerDecision = await router.route(message, context);
+  await queue.enqueue(routerDecision);
+}
+```
+
+## 📦 Config Consolidation - Single Source
+
+### Removing config-highermind.json
+
+**Current State**: Two config files
+- `config-aientities.json` - Community bots
+- `config-highermind.json` - Private conversation AIs
+
+**Problem**: Duplication, confusion, maintenance burden
+
+**Solution**: **ONE config file** - `config-aientities.json`
+
+### Consolidated Structure
+
+```json
+{
+  "lmStudioServers": [ /* 30+ servers here */ ],
+  
+  "clusterSettings": { /* cluster config */ },
+  
+  "routerConfig": {
+    "primaryRouter": {
+      "entityId": "router-primary",
+      "model": "router-model-fast",
+      "temperature": 0.3,
+      "maxTokens": 100,
+      "messagesToRead": 10
+    },
+    "fallbackRouter": {
+      "entityId": "router-fallback",
+      "model": "fear_and_loathing",
+      "temperature": 0.2,
+      "maxTokens": 80,
+      "messagesToRead": 5
+    }
+  },
+  
+  "entities": [
+    // COMMUNITY BOTS (respond in public chat)
+    {
+      "id": "philosopher",
+      "category": "community",
+      "model": "fear_and_loathing",
+      "username": "FearAndLoathing",
+      "messagesToRead": 50,
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true
+      }
+      // ... full config
+    },
+    
+    // PRIVATE CONVERSATION AIs (direct links only)
+    {
+      "id": "eternal-main",
+      "category": "private",
+      "model": "highermind_the-eternal-1",
+      "username": "TheEternal",
+      "messagesToRead": 50,
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": false  // Only in private convos
+      }
+      // ... full config
+    },
+    
+    // ROUTER ENTITIES (special role)
+    {
+      "id": "router-primary",
+      "category": "router",
+      "role": "router",
+      "model": "router-model-fast",
+      "username": "__ROUTER__",
+      "messagesToRead": 10,
+      "temperature": 0.3
+      // ... router config
+    }
+  ],
+  
+  "globalSettings": {
+    "minTimeBetweenMessages": 30000,
+    "maxMessagesPerMinute": 2,
+    "requireHumanActivity": true
+  }
+}
+```
+
+### Entity Categories
+
+| Category | Purpose | Where Active | Router? |
+|----------|---------|--------------|---------|
+| **community** | Public chat bots | Main chat | Yes |
+| **private** | Direct conversations | Filtered URLs | No (priority 0-9) |
+| **router** | Routing decisions | Internal only | N/A (is the router) |
+
+### Config Loading (One File Only)
+
+```typescript
+// Load the single config
+const config = JSON.parse(readFileSync('config-aientities.json'));
+
+// Categorize entities
+const communityEntities = config.entities.filter(e => e.category === 'community');
+const privateEntities = config.entities.filter(e => e.category === 'private');
+const routers = config.entities.filter(e => e.category === 'router');
+
+// Use based on context
+if (urlPriority >= 0 && urlPriority <= 9) {
+  // Direct conversation - use private entity
+  const entity = privateEntities.find(e => e.id === urlParams.entity);
+} else {
+  // Community chat - router selects from community entities
+  const entity = await router.selectFrom(communityEntities);
+}
+```
+
+### Migration Plan (Remove config-highermind.json)
+
+```typescript
+// Step 1: Merge entities into config-aientities.json
+// Step 2: Add "category" field to each entity
+// Step 3: Update code to load single config
+// Step 4: Delete config-highermind.json
+// Step 5: Update all documentation
+
+// No user impact - transparent change
+```
+
+## 🔗 Complete URL Example (External Website Link)
+
+### Full-Featured Direct Conversation Link
+
+```
+https://saywhatwant.app/#priority=0&model=eternal-main&nom=ALL&uis=PhilosophyStudent:random&filteractive=true&mt=AI&u=TheEternal
+```
+
+**What This Does:**
+1. **priority=0**: Highest priority, bypasses router
+2. **model=eternal-main**: Uses highermind_the-eternal-1 model
+3. **nom=ALL**: Sends entire conversation history as context
+4. **uis=PhilosophyStudent:random**: User named PhilosophyStudent with random color
+5. **filteractive=true**: Filters are ON
+6. **mt=AI**: Show AI channel only
+7. **u=TheEternal**: Filter to show only TheEternal messages
+
+**Result**: Private, isolated conversation between PhilosophyStudent and TheEternal AI.
+
+### Minimal Link (Use Config Defaults)
+
+```
+https://saywhatwant.app/#priority=0&model=eternal-main&uis=Guest:random
+```
+
+**Uses from config**:
+- `nom` → entity.messagesToRead (e.g., 50)
+- `temperature` → entity.temperature (e.g., 0.7)
+- `maxTokens` → entity.maxTokens (e.g., 150)
+
+**Only URL overrides**:
+- priority=0 (direct)
+- model selection
+- User identity
+
+## 📋 Complete Parameter Resolution Logic
+
+### The Cascade (URL → Entity Config → ERROR)
+
+```typescript
+class ParameterResolver {
+  resolve(urlParams: URLParameters, entity: AIEntity): ResolvedConfig {
+    return {
+      // Priority: URL → null (router assigns) → ERROR
+      priority: urlParams.priority ?? null,
+      
+      // Model: URL → entity.model → ERROR (required)
+      model: urlParams.model ?? entity.model ?? 
+        (() => { throw new Error('No model specified'); })(),
+      
+      // Messages to read: URL nom → entity.messagesToRead → ERROR
+      messagesToRead: this.resolveNOM(urlParams.nom, entity.messagesToRead),
+      
+      // Temperature: ALWAYS from entity (no URL override)
+      temperature: entity.temperature ?? 
+        (() => { throw new Error('Entity missing temperature'); })(),
+      
+      // User identity: URL only (no entity fallback)
+      username: urlParams.uis?.split(':')[0] ?? 
+        (() => { throw new Error('No username provided'); })(),
+      
+      // Filter active: URL → entity default → ERROR
+      filterActive: urlParams.filteractive ?? entity.defaultFilterState ?? false,
+      
+      // Message type: URL → localStorage → 'human'
+      messageType: urlParams.mt ?? localStorage.getItem('sww-message-channel') ?? 'human'
+    };
+  }
+  
+  private resolveNOM(urlNom: string | null, entityMessagesToRead: number | undefined): number | 'ALL' {
+    // URL has nom parameter
+    if (urlNom === 'ALL') return 'ALL';
+    if (urlNom !== null) {
+      const num = parseInt(urlNom);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    
+    // Entity has messagesToRead
+    if (entityMessagesToRead !== undefined) {
+      return entityMessagesToRead;
+    }
+    
+    // NEITHER - error!
+    throw new Error('No nom in URL and entity has no messagesToRead');
+  }
+}
+```
+
+### Examples of Resolution
+
+```typescript
+// Example 1: Full URL override
+URL: #priority=0&model=X&nom=100
+Entity: { model: 'Y', messagesToRead: 50 }
+Result: { priority: 0, model: 'X', nom: 100 }  // All from URL
+
+// Example 2: Partial URL override
+URL: #priority=0
+Entity: { model: 'Y', messagesToRead: 50 }
+Result: { priority: 0, model: 'Y', nom: 50 }  // Priority from URL, rest from entity
+
+// Example 3: No URL parameters
+URL: (empty)
+Entity: { model: 'Y', messagesToRead: 50 }
+Result: { priority: null, model: 'Y', nom: 50 }  // Router assigns priority
+
+// Example 4: Missing required config
+URL: #priority=0
+Entity: { /* no model specified */ }
+Result: ERROR - "No model specified"  // Fails loudly, no silent defaults
+```
+
+## 🔄 Updated Integration with Queue
 
 ```typescript
 async queueMessage(message: Comment, context: ConversationContext) {
-  // Check for URL priority override
-  const urlOverride = parseURLPriority();
+  const urlParams = parseAllURLParams();  // Parse ALL URL parameters
   
-  let routingDecision: RoutingDecision;
+  // Determine entity (URL → router → error)
+  let entity: AIEntity;
+  let finalPriority: number;
   
-  if (urlOverride) {
-    // Use URL values
-    console.log('[Queue] URL priority override:', urlOverride.priority);
-    routingDecision = {
-      priority: urlOverride.priority!,
-      entityId: urlOverride.entity || await this.router.route(message, context).entityId,
-      modelName: urlOverride.model || await this.router.route(message, context).modelName,
-      reason: 'URL override'
-    };
+  if (urlParams.priority !== null && urlParams.priority >= 0 && urlParams.priority <= 9) {
+    // DIRECT CONVERSATION (priority 0-9)
+    console.log('[Queue] Direct conversation mode - bypassing router');
+    
+    // Get entity from URL or config
+    entity = urlParams.entity 
+      ? entityManager.getById(urlParams.entity)
+      : entityManager.getByModel(urlParams.model);
+    
+    if (!entity) {
+      throw new Error('Cannot find entity for direct conversation');
+    }
+    
+    finalPriority = urlParams.priority;  // Use URL priority directly
+    
   } else {
-    // Use router
-    routingDecision = await this.router.route(message, context);
+    // ROUTER MODE (priority 10-99 or null)
+    console.log('[Queue] Router mode - analyzing context');
+    
+    const routerDecision = await router.route(message, context);
+    entity = entityManager.getById(routerDecision.entityId);
+    finalPriority = urlParams.priority ?? routerDecision.priority;  // URL can override router
   }
   
-  // Queue the request
-  await this.queue.enqueue({
+  // Resolve all parameters (URL → entity config → error)
+  const config = parameterResolver.resolve(urlParams, entity);
+  
+  // Build context with correct number of messages
+  const contextMessages = config.messagesToRead === 'ALL'
+    ? context.allMessages
+    : context.allMessages.slice(-config.messagesToRead);
+  
+  // Enqueue the request
+  await queue.enqueue({
     id: generateId(),
-    priority: routingDecision.priority,
+    priority: finalPriority,
     message,
-    context,
-    entity: this.entityManager.getEntityById(routingDecision.entityId),
-    model: routingDecision.modelName,
-    routerReason: routingDecision.reason,
+    context: contextMessages,
+    entity,
+    model: config.model,
+    temperature: config.temperature,
+    maxTokens: config.maxTokens,
+    routerReason: routerDecision?.reason || 'Direct URL',
     timestamp: Date.now(),
     attempts: 0,
     claimedBy: null,
     claimedAt: null,
     maxRetries: 3
   });
+  
+  console.log(`[Queue] Queued: priority=${finalPriority}, entity=${entity.id}, nom=${config.messagesToRead}`);
 }
 ```
 
@@ -1095,8 +1587,81 @@ async function raceConditionTest() {
 - **JSON output**: Easy parsing and validation
 - **Fallback logic**: Never blocks on router failure
 
+### Priority 0-9 Bypass
+- **Direct conversations**: External website links
+- **No router overhead**: Pre-configured in URL
+- **Sub-second response**: Immediate queue assignment
+- **User choice**: Human selected entity/model already
+
+## 📊 New Requirements Summary (October 4, 2025)
+
+### 1. Number of Messages Parameter (nom)
+- **Format**: `nom=N` or `nom=ALL`
+- **Purpose**: Control context size sent to LLM
+- **Priority**: URL → entity.messagesToRead → ERROR
+- **Examples**: 
+  - `nom=50` - Last 50 messages
+  - `nom=ALL` - Entire conversation
+  - No param - Uses entity config
+
+### 2. URL as Absolute Source of Truth
+- **Philosophy**: URL > Config > Nothing
+- **No global fallbacks** ever
+- **Fails loudly** if both missing
+- **Examples**:
+  - ✅ `url.priority ?? entity.priority`
+  - ❌ `url.priority ?? entity.priority ?? 50`
+
+### 3. Config Consolidation
+- **Remove**: config-highermind.json
+- **Keep**: config-aientities.json only
+- **Add**: "category" field (community/private/router)
+- **Benefit**: Single source, no duplication
+
+### 4. External Website Integration
+- **Use case**: Links from other sites
+- **Flow**: Website → SWW URL → Filtered conversation
+- **Priority**: Always 0-9 (bypasses router)
+- **Example**:
+  ```
+  <a href="https://saywhatwant.app/#priority=0&model=eternal-main&nom=50&uis=Visitor:random&filteractive=true">
+    Chat with AI
+  </a>
+  ```
+
+### 5. Router Bypass for Priority 0-9
+- **Rule**: Priority 0-9 = direct conversation
+- **Behavior**: Skip router completely
+- **Rationale**: User pre-selected entity in URL
+- **Benefit**: Faster response, no routing overhead
+
+### 6. Complete URL Parameter Set
+
+| Param | Values | Purpose | Required |
+|-------|--------|---------|----------|
+| `priority` | 0-99 | Queue priority | Optional (router assigns) |
+| `model` | model-name | Force specific model | If no entity specified |
+| `entity` | entity-id | Force specific entity | If no model specified |
+| `nom` | N or ALL | Messages for context | Optional (uses config) |
+| `uis` | name:color | User identity | For private convos |
+| `filteractive` | true/false | Filter state | Optional (default false) |
+| `mt` | human/AI | Message channel | Optional (default human) |
+| `u` | name:color | User filters | Optional |
+
+### 7. Config Structure Requirements
+
+**Every entity MUST have**:
+- `id` - Unique identifier
+- `model` - Model name (for LM Studio)
+- `messagesToRead` - Default context size
+- `temperature` - Generation temperature
+- `maxTokens` - Response length limit
+- `category` - community/private/router
+
+**No defaults** if missing - system throws error.
+
 ---
 
 **Ready for Implementation** - This queue system will scale from 2 Macs to 200 servers without architectural changes.
 
-*"The queue is the brain, the servers are the hands. Simple division of labor, infinite scale."*
+*"The queue is the brain, the servers are the hands. URL is the truth, config is the fallback, errors are loud. Simple division of labor, infinite scale."*
