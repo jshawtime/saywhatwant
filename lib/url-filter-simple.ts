@@ -187,3 +187,52 @@ export function nineDigitToRgb(digits: string): string {
 export function normalizeUsername(username: string): string {
   return username.replace(/[^a-zA-Z0-9]/g, '');
 }
+
+/**
+ * Parse nom (number of messages) parameter from URL
+ * Controls how many messages are sent as context to LLM
+ * NOT related to UI filtering - this is for AI bot context only
+ * 
+ * @returns number | 'ALL' | null
+ */
+export function parseNOM(): number | 'ALL' | null {
+  if (typeof window === 'undefined') return null;
+  
+  const hash = window.location.hash.slice(1);
+  const params = hash.split('&');
+  
+  for (const param of params) {
+    const [key, value] = param.split('=');
+    if (key === 'nom') {
+      if (value === 'ALL') return 'ALL';
+      const num = parseInt(value);
+      if (!isNaN(num) && num > 0) return num;
+    }
+  }
+  
+  return null;  // Not specified in URL
+}
+
+/**
+ * Parse priority parameter from URL
+ * Controls queue priority (0-99, where 0 is highest)
+ * Priority 0-9 bypasses router for direct conversations
+ * 
+ * @returns number (0-99) | null
+ */
+export function parsePriority(): number | null {
+  if (typeof window === 'undefined') return null;
+  
+  const hash = window.location.hash.slice(1);
+  const params = hash.split('&');
+  
+  for (const param of params) {
+    const [key, value] = param.split('=');
+    if (key === 'priority') {
+      const num = parseInt(value);
+      if (!isNaN(num) && num >= 0 && num <= 99) return num;
+    }
+  }
+  
+  return null;  // Not specified in URL
+}
