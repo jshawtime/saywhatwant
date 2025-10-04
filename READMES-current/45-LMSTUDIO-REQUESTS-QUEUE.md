@@ -1597,12 +1597,14 @@ async function raceConditionTest() {
 
 ### 1. Number of Messages Parameter (nom)
 - **Format**: `nom=N` or `nom=ALL`
-- **Purpose**: Control context size sent to LLM
+- **Purpose**: Control context size sent to LLM (NOT display filtering)
 - **Priority**: URL → entity.messagesToRead → ERROR
+- **Important**: This controls LLM context ONLY, not UI message display
 - **Examples**: 
-  - `nom=50` - Last 50 messages
-  - `nom=ALL` - Entire conversation
-  - No param - Uses entity config
+  - `nom=50` - Last 50 messages sent to LLM as context
+  - `nom=ALL` - Entire conversation sent to LLM
+  - No param - Uses entity.messagesToRead from config
+- **NOT added to FilterState** - This is LLM parameter, not UI filter
 
 ### 2. URL as Absolute Source of Truth
 - **Philosophy**: URL > Config > Nothing
@@ -1645,7 +1647,7 @@ async function raceConditionTest() {
 | `nom` | N or ALL | Messages for context | Optional (uses config) |
 | `uis` | name:color | User identity | For private convos |
 | `filteractive` | true/false | Filter state | Optional (default false) |
-| `mt` | human/AI | Message channel | Optional (default human) |
+| `mt` | human/AI/ALL | Message channel | Optional (default human) |
 | `u` | name:color | User filters | Optional |
 
 ### 7. Config Structure Requirements
@@ -1660,8 +1662,529 @@ async function raceConditionTest() {
 
 **No defaults** if missing - system throws error.
 
+## 🔀 Message Type System (mt Parameter)
+
+### Three Channel Modes
+
+| Mode | URL | Behavior | Use Case |
+|------|-----|----------|----------|
+| **Human** | `mt=human` | Show only human messages | Default view |
+| **AI** | `mt=AI` | Show only AI bot messages | AI conversation view |
+| **ALL** | `mt=ALL` | Show both human AND AI messages | Combined view |
+
+### Priority Logic for mt Parameter
+
+```typescript
+function resolveMessageType(urlMT: string | null, filterActive: boolean, uiToggle: 'human' | 'AI'): string[] {
+  // PRIORITY 1: mt=ALL in URL (highest)
+  if (urlMT === 'ALL') {
+    return ['human', 'AI'];  // Show both channels
+  }
+  
+  // PRIORITY 2: mt=human or mt=AI in URL
+  if (urlMT === 'human' || urlMT === 'AI') {
+    return [urlMT];
+  }
+  
+  // PRIORITY 3: Use UI toggle state
+  return [uiToggle];
+}
+
+// IndexedDB query
+const messageTypes = resolveMessageType(urlParams.mt, filterActive, uiToggleState);
+criteria.messageTypes = messageTypes;  // Query for these types
+```
+
+### Interaction with Filter Toggle
+
+```
+Scenario: User viewing mt=ALL
+1. URL: #mt=ALL&filteractive=true&u=alice
+2. View: Alice's messages from BOTH human AND AI channels
+3. User clicks filter icon OFF
+4. filteractive → false
+5. View switches to: ALL messages (human + AI channels)
+6. mt=ALL stays in URL
+7. Filters stay in filter bar (inactive)
+
+Scenario: Switching from mt=ALL
+1. URL: #mt=ALL
+2. User clicks Human/AI toggle to "Human"
+3. URL becomes: #mt=human  (ALL is replaced)
+4. View: Only human channel now
+
+The toggle removes mt=ALL and sets mt=human or mt=AI explicitly.
+```
+
+### Example Use Cases
+
+**Combined View (Human + AI Conversation)**:
+```
+https://saywhatwant.app/#mt=ALL&u=alice&u=TheEternal
+→ Shows Alice (human) AND TheEternal (AI) messages
+→ Perfect for seeing full conversation between human and AI
+```
+
+**AI-only Research**:
+```
+https://saywhatwant.app/#mt=AI&filteractive=false
+→ Shows ALL AI bot messages
+→ Research what AIs are discussing
+```
+
+**Private Conversation with Combined View**:
+```
+https://saywhatwant.app/#priority=0&mt=ALL&model=eternal-main&nom=50&uis=User:random
+→ User sees their messages AND AI responses in same view
+→ Natural conversation flow
+```
+
+### Implementation in url-filter-simple.ts
+
+```typescript
+// Parse mt parameter
+case 'mt':
+  if (value === 'human' || value === 'AI' || value === 'ALL') {
+    state.messageType = value;  // Now supports 'ALL'
+  }
+  break;
+
+// Updated FilterState interface
+interface FilterState {
+  messageType: 'human' | 'AI' | 'ALL';  // Three modes now
+  // ... other fields
+}
+
+// Query logic
+function getMessageTypesForQuery(mt: 'human' | 'AI' | 'ALL'): string[] {
+  if (mt === 'ALL') return ['human', 'AI'];
+  return [mt];
+}
+```
+
+## 🏗️ Infrastructure Decisions (Deployment Architecture)
+
+### Queue Service Location
+
+**Decision**: Queue runs on **10.0.0.102** (Mac Studio 1)
+
+**Architecture**:
+```
+10.0.0.102 (Mac Studio 1)
+├── Bot Process (Node.js)
+│   ├── Receives from Cloudflare
+│   ├── Manages priority queue (in-memory)
+│   ├── Distributes to LM Studio cluster
+│   └── Posts responses to Cloudflare
+├── LM Studio Server
+│   └── Can also process requests as a worker
+└── Auto-restart on login
+    └── Single point of failure (acceptable)
+```
+
+**Rationale**:
+- ✅ Simple deployment (one machine)
+- ✅ Auto-restart on login
+- ✅ No external dependencies
+- ✅ Fast local queue access
+- ⚠️ Single point of failure (acceptable for now)
+- 💾 Queue lost on crash (acceptable - will rebuild)
+
+**Future Migration Path**:
+- Phase 1: In-memory queue on 10.0.0.102 ✅
+- Phase 2: Redis on 10.0.0.102 (persistence)
+- Phase 3: Redis on dedicated server (HA)
+- Phase 4: Cloud Redis (geographic distribution)
+
+### Router LLM Hosting
+
+**Decision**: Router model runs on **any LM Studio server that has it loaded**
+
+**Flow**:
+```
+1. Queue needs routing decision
+   ↓
+2. Finds server with router model loaded
+   ↓
+3. Sends routing request to that server
+   ↓
+4. Router responds with JSON decision
+   ↓
+5. Queue uses decision to enqueue request
+   ↓
+6. Any worker (including router server) can process queued item
+```
+
+**Fallback Strategy**:
+```typescript
+async function getRouterDecision(message: Comment): Promise<RoutingDecision> {
+  // Try to find server with router model
+  const routerServer = cluster.getServerWithModel('router-model-fast');
+  
+  if (routerServer) {
+    try {
+      return await sendRouterRequest(routerServer, message);
+    } catch (error) {
+      console.warn('[Router] Primary router failed, using fallback');
+    }
+  }
+  
+  // Fallback 1: Use different server with router model
+  const anyRouterServer = cluster.getServersWithModel('router-model-fast')[0];
+  if (anyRouterServer) {
+    return await sendRouterRequest(anyRouterServer, message);
+  }
+  
+  // Fallback 2: Simple rule-based routing (no LLM)
+  console.warn('[Router] No router model available, using rule-based fallback');
+  return simpleRuleBasedRouting(message);
+}
+```
+
+**Router Independence**:
+- Router server can **also process requests** as a worker
+- Being router doesn't prevent being worker
+- Router is just another LLM call, not special infrastructure
+
+### Entity → Model Mapping (Multiple Entities per Model)
+
+**Scenario**: `#priority=0&model=eternal-main`
+
+**Problem**: 5 entities use `highermind_the-eternal-1` model
+- eternal-main
+- eternal-tech
+- philosopher
+- sage
+- rebel
+
+**Solution**: **Category-based selection**
+
+```typescript
+function selectEntityForDirectConversation(urlParams: URLParameters): AIEntity {
+  // URL specifies entity explicitly
+  if (urlParams.entity) {
+    return entityManager.getById(urlParams.entity);
+  }
+  
+  // URL specifies model only
+  if (urlParams.model) {
+    // Get entities with this model
+    const matchingEntities = entityManager.getByModel(urlParams.model);
+    
+    // Filter by category
+    const privateEntities = matchingEntities.filter(e => e.category === 'private');
+    
+    if (privateEntities.length > 0) {
+      // For direct conversations, prefer the "main" private entity
+      return privateEntities.find(e => e.id.includes('-main')) || privateEntities[0];
+    }
+    
+    // No private entity - use first match
+    return matchingEntities[0];
+  }
+  
+  throw new Error('URL must specify either entity or model for direct conversations');
+}
+```
+
+**Best Practice**: Always specify entity ID for unambiguous selection:
+```
+✅ BEST: #priority=0&entity=eternal-main&nom=50
+✅ GOOD: #priority=0&model=highermind_the-eternal-1&nom=50  (gets -main variant)
+❌ RISKY: #priority=0  (no entity/model specified - will error)
+```
+
+## 🔐 "Private" Conversations Clarification
+
+### Not Actually Private (Yet)
+
+**Current Reality**:
+- ✅ Messages post to public KV
+- ✅ Visible in public feed
+- ✅ Filterable by anyone who knows the username
+- ✅ Called "private" for UX (feels private to user)
+
+**Why Call It "Private"**:
+- User experience feels one-on-one
+- Filtered view shows only their conversation
+- URL isolation makes it feel personal
+- Good enough for current phase
+
+**Future True Privacy** ($10 paid feature):
+- Separate KV namespace per user
+- Encrypted messages
+- Not in public feed
+- Access control
+
+**For Now**:
+- Keep calling it "private" (user perception)
+- Post to public feed (technical reality)
+- Filter isolation (UX privacy)
+- Build paid privacy later
+
+### "Private" Conversation Flow
+
+```
+External Link
+    ↓
+URL: #priority=0&model=eternal-main&uis=Alice&filteractive=true&mt=ALL&u=Alice&u=TheEternal
+    ↓
+Alice Types: "Hello!"
+    ↓
+Posted to PUBLIC KV (anyone can see if they look)
+    ↓
+Alice's Filtered View: Only shows Alice + TheEternal
+    ↓
+AI Responds: "Hello Alice!"
+    ↓
+Posted to PUBLIC KV (but Alice's filter hides other messages)
+    ↓
+Alice's Experience: Feels like private 1-on-1 conversation ✅
+```
+
+**It's "private" from UX perspective, public from technical perspective.**
+
+## 🏢 Infrastructure Deployment
+
+### Queue Service Deployment
+
+**Location**: 10.0.0.102 (Mac Studio 1)
+
+**Components on 10.0.0.102**:
+```
+Mac Studio 1 (10.0.0.102)
+├── Bot Process
+│   ├── Receives messages from Cloudflare
+│   ├── Runs Router LLM (if model loaded)
+│   ├── Manages Priority Queue (in-memory)
+│   ├── Distributes to LM Studio cluster
+│   └── Posts responses to Cloudflare KV
+├── LM Studio Server
+│   ├── Can run router model
+│   ├── Can process queued requests
+│   └── Part of worker pool
+└── Auto-start on login
+    └── PM2 or similar for auto-restart
+```
+
+**Single Point of Failure - Accepted**:
+- ✅ Simpler architecture
+- ✅ Auto-restart on login
+- ✅ Good enough for current scale
+- ✅ Can migrate to HA later
+
+**Queue Persistence**:
+- **Phase 1**: In-memory only (current)
+  - Lost on crash
+  - Rebuilds from scratch
+  - Acceptable for now
+- **Phase 2**: Periodic disk snapshots
+  - Save queue state every minute
+  - Restore on restart
+- **Phase 3**: Redis on same machine
+  - Persistent queue
+  - Survives restarts
+- **Phase 4**: Redis on separate server
+  - High availability
+  - Geographic redundancy
+
+### LM Studio Cluster Worker Model
+
+**Any Server Can Be Router**:
+```
+Server Pool:
+├── 10.0.0.102 (Mac Studio 1)
+│   ├── May have router model loaded
+│   ├── Processes both routing AND regular requests
+│   └── Also hosts the queue
+├── 10.0.0.100 (Mac Studio 2)
+│   ├── May have router model loaded
+│   ├── Processes routing AND regular requests
+│   └── Pulls from queue on 10.0.0.102
+├── 10.0.0.125 (Mac Mini)
+│   ├── Regular worker only
+│   └── Pulls from queue on 10.0.0.102
+└── ... 27 more servers ...
+    └── All pull from central queue
+```
+
+**Router Request Flow**:
+```
+Message arrives
+    ↓
+Queue looks for server with router model
+    ↓
+Found 10.0.0.100 has router-model-fast loaded
+    ↓
+Send routing request to 10.0.0.100
+    ↓
+10.0.0.100 responds with JSON decision
+    ↓
+Queue enqueues with that priority
+    ↓
+ANY worker (including 10.0.0.100) can claim it next
+```
+
+**If Router Server Dies**:
+```typescript
+// Fallback chain
+async getRoutingDecision() {
+  // 1. Try primary router server
+  const routerServer = cluster.getServerWithModel('router-model-fast');
+  if (routerServer) {
+    try {
+      return await routerServer.route(message);
+    } catch {}
+  }
+  
+  // 2. Try fallback router model (different model)
+  const fallbackServer = cluster.getServerWithModel('fear_and_loathing');  // Use as router
+  if (fallbackServer) {
+    return await fallbackServer.routeWithPrompt(message, ROUTING_PROMPT);
+  }
+  
+  // 3. Rule-based routing (no LLM)
+  return ruleBasedRouter.route(message);  // Simple if/else logic
+}
+```
+
+### Model Loading Strategy
+
+**Dynamic Loading Supported**:
+- ✅ Servers can load/unload models via CLI
+- ✅ Model files accessible to all servers (shared storage or replicated)
+- ✅ First free server claims work
+- ✅ Loads model if needed
+- ✅ Processes request
+- ✅ May keep model loaded or unload
+
+**Model Affinity Optimization**:
+```typescript
+// Smart claiming - prefer servers with model already loaded
+async claimOptimal(serverId: string): Promise<QueueItem | null> {
+  const server = serverPool.getServer(serverId);
+  
+  // Look for items matching our loaded models (INSTANT)
+  for (const loadedModel of server.loadedModels) {
+    const item = queue.findUnclaimedWithModel(loadedModel);
+    if (item) {
+      return await queue.claim(item.id, serverId);  // Claim it!
+    }
+  }
+  
+  // No match - claim highest priority regardless
+  return await queue.claimHighestPriority(serverId);
+}
+```
+
+## ⚠️ Current Limitations & Acceptance
+
+### Single Point of Failure (Accepted)
+- **Queue on 10.0.0.102**: If it dies, system stops
+- **Acceptable because**: Auto-restart on login, simple architecture
+- **Migration path**: Can add Redis later without code changes
+
+### Queue Persistence (Accepted)
+- **In-memory only**: Queue lost on restart
+- **Acceptable because**: Rare restarts, system rebuilds quickly
+- **Migration path**: Add Redis when needed
+
+### Bot Message Tagging (Working)
+- **Status**: ✅ Already working
+- **Bot sets**: `message['message-type'] = 'AI'` when posting
+- **Routing**: Automatic - AI messages go to AI channel
+- **No changes needed**: Current implementation correct
+
+## 🎯 Implementation Priority Order
+
+### Phase 1: Critical Path (Week 1)
+1. **Fix mt toggle** - Enable Human/AI/ALL switching
+2. **Add nom parsing** - Parse nom from URL
+3. **Add mt=ALL support** - Show both channels
+4. **Basic queue** - In-memory priority queue
+5. **Atomic claims** - Mutex-protected operations
+
+### Phase 2: Router Integration (Week 2)
+6. **Router entity** - Add to config
+7. **Router prompts** - Build routing templates
+8. **JSON parsing** - Extract decisions
+9. **Priority 0-9 bypass** - Skip router for direct convos
+10. **Fallback routing** - Rule-based backup
+
+### Phase 3: Multi-Server (Week 3)
+11. **Worker pull loop** - Server polling
+12. **Model affinity** - Prefer loaded models
+13. **Load balancing** - Smart distribution
+14. **Health monitoring** - Server status tracking
+15. **Failover handling** - Graceful degradation
+
+### Phase 4: External Links (Week 4)
+16. **Complete URL parsing** - All parameters
+17. **Parameter resolution** - URL → Config → Error
+18. **Filter integration** - Combined with existing filters
+19. **Test external links** - From other websites
+20. **Documentation** - User-facing docs for link creation
+
+### Phase 5: Production Hardening (Week 5+)
+21. **Redis migration** - Persistent queue
+22. **Monitoring dashboard** - Queue stats in AI console
+23. **Load testing** - 300 req/min stress test
+24. **30+ server test** - Full cluster scale
+25. **Performance tuning** - Optimize bottlenecks
+
 ---
 
 **Ready for Implementation** - This queue system will scale from 2 Macs to 200 servers without architectural changes.
 
 *"The queue is the brain, the servers are the hands. URL is the truth, config is the fallback, errors are loud. Simple division of labor, infinite scale."*
+
+---
+
+## 📋 Final Architecture Summary
+
+### What Runs Where
+
+| Component | Location | Purpose | HA |
+|-----------|----------|---------|-----|
+| **Queue** | 10.0.0.102 | Priority queue, routing coordinator | ❌ SPOF |
+| **Bot Process** | 10.0.0.102 | Message polling, posting | ❌ SPOF |
+| **Router LLM** | Any server with model | Routing decisions | ✅ Fallback |
+| **Workers** | All 30+ servers | Process requests | ✅ Distributed |
+| **LM Studio** | All 30+ servers | Model inference | ✅ Distributed |
+
+### Request Flow (End-to-End)
+
+```
+External Website Link
+    ↓
+Cloudflare Edge
+    ↓
+10.0.0.102 Bot (receives, queues)
+    ↓
+Priority Queue (sorts by 0-99)
+    ↓
+LM Studio Server Pool (30+ servers pull work)
+    ├─ 10.0.0.102 (worker + queue host)
+    ├─ 10.0.0.100 (worker)
+    ├─ 10.0.0.125 (worker)
+    └─ ... 27 more workers
+    ↓
+Response Generation
+    ↓
+10.0.0.102 Bot (receives, posts)
+    ↓
+Cloudflare KV
+    ↓
+Say What Want App
+    ↓
+User sees response
+```
+
+**Bottlenecks Identified**:
+- 10.0.0.102 (single point) - Acceptable for now
+- Router if only one instance - Multiple servers can run it
+
+**Scaling Path**:
+- 2 servers → 10 servers → 30 servers → 100 servers
+- No architectural changes needed
+- Just update config with new IPs
