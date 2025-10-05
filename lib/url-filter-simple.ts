@@ -115,10 +115,9 @@ export function buildURL(state: FilterState): string {
     params.push(`filteractive=${state.filterActive}`);
   }
 
-  // Add messageType if it's not the default
-  if (state.messageType !== 'human') {
-    params.push(`mt=${state.messageType}`);
-  }
+  // ALWAYS add messageType to prevent state conflicts
+  // (Removing it causes React to re-parse before state updates)
+  params.push(`mt=${state.messageType}`);
 
   return params.length > 0 ? `#${params.join('&')}` : '';
 }
