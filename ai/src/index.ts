@@ -215,7 +215,11 @@ async function runBot() {
           // QUEUE MODE: Queue ALL messages with simple priority assignment
           console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages for queueing`);
           
+          let messageIndex = 0;  // Counter for unique IDs
+          
           for (const message of messages) {
+            messageIndex++;  // Increment for each message
+            
             // Select entity for this message
             const entity = entityManager.selectRandomEntity();
             
@@ -252,9 +256,9 @@ async function runBot() {
               continue;  // Skip this message
             }
             
-            // Queue the message
+            // Queue the message with GUARANTEED unique ID
             const queueItem = {
-              id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              id: `req-${Date.now()}-${messageIndex}-${Math.random().toString(36).substr(2, 9)}`,
               priority,
               timestamp: Date.now(),
               message,
