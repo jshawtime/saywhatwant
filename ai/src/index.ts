@@ -201,7 +201,10 @@ async function runBot() {
       
       // Fetch recent comments - use the maximum messagesToRead from all entities
       const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.messagesToRead || 50));
+      
+      console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${CONFIG.BOT.pollingInterval/1000}s)`);
       const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
+      console.log(chalk.magenta('[POLLING]'), `Fetched ${messages.length} messages`);
       
       if (messages.length > 0) {
         // Update message history
@@ -322,6 +325,9 @@ async function runBot() {
       const elapsed = Date.now() - startTime;
       const sleepTime = Math.max(CONFIG.BOT.pollingInterval - elapsed, 1000);
       
+      console.log(chalk.gray('[POLLING]'), `Cycle took ${elapsed}ms, sleeping ${sleepTime}ms (${Math.round(sleepTime/1000)}s)`);
+      console.log(chalk.gray('[POLLING]'), `Next poll in ${Math.round(sleepTime/1000)} seconds...`);
+      
       // Wait before next poll
       await new Promise(resolve => setTimeout(resolve, sleepTime));
       
@@ -397,6 +403,12 @@ async function runWorker() {
         } else {
           // No response generated - mark as complete anyway
           await queueService.complete(item.id, true);
+          
+          // Still emit completion event even if no response
+          if (queueWS) {
+            queueWS.onCompleted(item.id, false);
+            queueWS.pushStats();
+          }
         }
         
       } catch (error) {
@@ -407,9 +419,18 @@ async function runWorker() {
           // Requeue (complete with false = requeue)
           await queueService.complete(item.id, false);
           console.log(chalk.yellow('[WORKER]'), `Requeued: ${item.id} (attempt ${item.attempts}/${item.maxRetries})`);
+          
+          // Don't emit completion - item is still in queue (with lower priority)
         } else {
-          // Max retries - give up
+          // Max retries - give up, remove from queue
           await queueService.complete(item.id, true);
+          
+          // Emit completion event
+          if (queueWS) {
+            queueWS.onCompleted(item.id, false);
+            queueWS.pushStats();
+          }
+          
           console.log(chalk.red('[WORKER]'), `Max retries reached: ${item.id} - discarding`);
         }
       }

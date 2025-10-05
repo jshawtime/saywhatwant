@@ -125,12 +125,16 @@ export class QueueWebSocketServer {
    * Broadcast event to all connected dashboards
    */
   private broadcast(message: WebSocketMessage) {
+    console.log(chalk.cyan('[WebSocket]'), `Broadcasting: ${message.type} to ${this.clients.size} clients`);
     const data = JSON.stringify(message);
+    let sent = 0;
     this.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(data);
+        sent++;
       }
     });
+    console.log(chalk.cyan('[WebSocket]'), `Sent to ${sent} clients`);
   }
 
   /**
