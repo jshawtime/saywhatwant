@@ -132,10 +132,18 @@ export function updateURL(state: FilterState): void {
   const hash = buildURL(state);
   const currentHash = window.location.hash;
   
+  console.log('[url-filter-simple] updateURL called');
+  console.log('[url-filter-simple] Built hash:', hash);
+  console.log('[url-filter-simple] Current hash:', currentHash);
+  console.log('[url-filter-simple] Will update?', hash !== currentHash);
+  
   if (hash !== currentHash) {
+    console.log('[url-filter-simple] Updating URL to:', hash);
     window.history.pushState(null, '', hash);
     // Dispatch a custom event for React to listen to
     window.dispatchEvent(new HashChangeEvent('hashchange'));
+  } else {
+    console.log('[url-filter-simple] Skipping update - hash unchanged');
   }
 }
 

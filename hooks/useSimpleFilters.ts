@@ -133,10 +133,15 @@ export function useSimpleFilters({
   }, [filterState.messageType]);
   
   const setMessageType = useCallback((type: 'human' | 'AI' | 'ALL') => {
+    console.log('[useSimpleFilters] setMessageType called with:', type);
+    console.log('[useSimpleFilters] Current filterState:', filterState);
+    
     const newState: FilterState = {
       ...filterState,
       messageType: type
     };
+    
+    console.log('[useSimpleFilters] New state:', newState);
     updateURL(newState);
     
     // Also save to localStorage as fallback
