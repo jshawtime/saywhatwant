@@ -82,7 +82,7 @@ async function testLMStudio() {
     console.log('├─ LM Studio URL:', CONFIG.LM_STUDIO.baseURL);
     console.log('├─ Model:', CONFIG.LM_STUDIO.model);
     console.log('├─ Say What Want API:', CONFIG.SWW_API.baseURL);
-    console.log('├─ Polling Interval:', CONFIG.BOT.pollingInterval, 'ms');
+    console.log('├─ Polling Interval: (now in config-aientities.json botSettings)');
     console.log('├─ Min Time Between Messages:', CONFIG.BOT.minTimeBetweenMessages, 'ms');
     console.log('└─ Dry Run Mode:', CONFIG.DEV.dryRun);
     

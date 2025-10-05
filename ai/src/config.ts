@@ -41,10 +41,8 @@ export const CONFIG = {
   },
   
   // Bot Behavior Configuration
+  // NOTE: pollingInterval now comes from config-aientities.json botSettings
   BOT: {
-    // Polling settings
-    pollingInterval: 30000,  // 30 seconds - Let queue drain between polls
-    
     // Response settings
     minTimeBetweenMessages: 30000,   // 30 seconds minimum between bot messages (avoid rate limits)
     maxMessagesPerMinute: 2,         // Rate limiting per minute (avoid 429 errors)

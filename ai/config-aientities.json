@@ -1,4 +1,21 @@
 {
+  "botSettings": {
+    "pollingInterval": 30000,
+    "websocketPort": 4002,
+    "enableConsoleLogs": true
+  },
+  
+  "queueSettings": {
+    "enabled": true,
+    "staleClaimTimeout": 60000,
+    "maxRetries": 3,
+    "defaultPriority": 50
+  },
+  
+  "routerSettings": {
+    "enabled": false
+  },
+  
   "lmStudioServers": [
     {
       "ip": "10.0.0.102",

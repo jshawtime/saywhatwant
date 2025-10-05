@@ -22,11 +22,28 @@ const entityManager = getEntityManager();
 const analyzer = getConversationAnalyzer();
 const kvClient = getKVClient();
 
-// Initialize queue service (new!)
-const USE_QUEUE = process.env.USE_QUEUE !== 'false';  // Default: enabled
-const USE_ROUTER = process.env.USE_ROUTER === 'true';  // Default: disabled (future phase)
+// Load configuration FIRST
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const configPath = join(__dirname, '..', 'config-aientities.json');
+const fullConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+
+// Read settings from config (NEW MASTER CONTROLLER)
+const POLLING_INTERVAL = fullConfig.botSettings?.pollingInterval || 30000;
+const WEBSOCKET_PORT = fullConfig.botSettings?.websocketPort || 4002;
+const USE_QUEUE = fullConfig.queueSettings?.enabled !== false;  // Default: enabled
+const USE_ROUTER = fullConfig.routerSettings?.enabled === true;  // Default: disabled
+const QUEUE_MAX_RETRIES = fullConfig.queueSettings?.maxRetries || 3;
+
+console.log(chalk.blue('[CONFIG]'), `Polling interval: ${POLLING_INTERVAL/1000}s (from config)`);
+console.log(chalk.blue('[CONFIG]'), `WebSocket port: ${WEBSOCKET_PORT} (from config)`);
+
+// Initialize queue service
 const queueService = USE_QUEUE ? new QueueService() : null;
-const queueWS = USE_QUEUE && queueService ? new QueueWebSocketServer(queueService) : null;
+const queueWS = USE_QUEUE && queueService ? new QueueWebSocketServer(queueService, WEBSOCKET_PORT) : null;
 
 if (USE_QUEUE) {
   console.log(chalk.green('[QUEUE]'), 'Priority queue system enabled');
@@ -39,15 +56,6 @@ if (USE_ROUTER) {
 } else {
   console.log(chalk.gray('[ROUTER]'), 'Router disabled - using default priority (future phase)');
 }
-
-// Load configuration
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const configPath = join(__dirname, '..', 'config-aientities.json');
-const fullConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
 
 // Initialize LM Studio Cluster
 console.log(chalk.blue('[STARTUP]'), 'Initializing AI Bot with clean architecture');
@@ -205,7 +213,7 @@ async function runBot() {
       // Fetch recent comments - use the maximum messagesToRead from all entities
       const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.messagesToRead || 50));
       
-      console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${CONFIG.BOT.pollingInterval/1000}s)`);
+      console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${POLLING_INTERVAL/1000}s)`);
       const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
       console.log(chalk.magenta('[POLLING]'), `Fetched ${messages.length} messages`);
       
@@ -286,7 +294,7 @@ async function runBot() {
               entity,
               model: entity.model,
               routerReason: `Priority ${priority} based on content analysis`,
-              maxRetries: 3
+              maxRetries: QUEUE_MAX_RETRIES
             };
             
             await queueService.enqueue(queueItem);
@@ -349,7 +357,7 @@ async function runBot() {
       
       // Calculate sleep time
       const elapsed = Date.now() - startTime;
-      const sleepTime = Math.max(CONFIG.BOT.pollingInterval - elapsed, 1000);
+      const sleepTime = Math.max(POLLING_INTERVAL - elapsed, 1000);
       
       console.log(chalk.gray('[POLLING]'), `Cycle took ${elapsed}ms, sleeping ${sleepTime}ms (${Math.round(sleepTime/1000)}s)`);
       console.log(chalk.gray('[POLLING]'), `Next poll in ${Math.round(sleepTime/1000)} seconds...`);
@@ -362,7 +370,7 @@ async function runBot() {
       console.error(chalk.red('[ERROR]'), 'Bot cycle failed:', error);
       
       // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, CONFIG.BOT.pollingInterval));
+      await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
     }
   }
 }
