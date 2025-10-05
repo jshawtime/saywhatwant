@@ -25,13 +25,19 @@ export function useWebSocket(url: string) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
-    console.log('[Dashboard] Received:', message.type, message.data);
+    console.log('[Dashboard] ===== RECEIVED MESSAGE =====');
+    console.log('[Dashboard] Type:', message.type);
+    console.log('[Dashboard] Data:', message.data);
+    console.log('[Dashboard] =============================');
     
     switch (message.type) {
       case 'snapshot':
-        console.log('[Dashboard] Setting queue to:', message.data.items?.length || 0, 'items');
-        setQueue(message.data.items || []);
-        setStats(message.data.stats || initialStats);
+        const itemsCount = message.data.items?.length || 0;
+        console.log('[Dashboard] 🔄 SNAPSHOT: Setting queue to', itemsCount, 'items');
+        console.log('[Dashboard] Items:', message.data.items);
+        setQueue([...message.data.items] || []);  // Force new array reference
+        setStats({...message.data.stats} || initialStats);  // Force new object
+        console.log('[Dashboard] ✅ State updated');
         break;
         
       case 'queued':
