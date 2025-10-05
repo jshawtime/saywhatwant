@@ -25,8 +25,11 @@ export function useWebSocket(url: string) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
+    console.log('[Dashboard] Received:', message.type, message.data);
+    
     switch (message.type) {
       case 'snapshot':
+        console.log('[Dashboard] Setting queue to:', message.data.items?.length || 0, 'items');
         setQueue(message.data.items || []);
         setStats(message.data.stats || initialStats);
         break;
@@ -52,6 +55,7 @@ export function useWebSocket(url: string) {
         break;
         
       case 'stats':
+        console.log('[Dashboard] Updating stats:', message.data);
         setStats(message.data);
         break;
     }
@@ -124,6 +128,7 @@ export function useWebSocket(url: string) {
   }, [sendCommand]);
 
   const clearQueue = useCallback(() => {
+    console.log('[Dashboard] Sending clear command');
     sendCommand('clear');
   }, [sendCommand]);
 
