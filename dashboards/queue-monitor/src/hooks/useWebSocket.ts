@@ -1,0 +1,137 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { QueueItem, QueueStats, WebSocketMessage } from '../lib/types';
+
+const initialStats: QueueStats = {
+  totalItems: 0,
+  unclaimedItems: 0,
+  claimedItems: 0,
+  throughputHour: 0,
+  avgWait: 0,
+  lastSuccess: null,
+  priorityBands: {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    background: 0
+  }
+};
+
+export function useWebSocket(url: string) {
+  const [connected, setConnected] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [stats, setStats] = useState<QueueStats>(initialStats);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const handleMessage = useCallback((message: WebSocketMessage) => {
+    switch (message.type) {
+      case 'snapshot':
+        setQueue(message.data.items || []);
+        setStats(message.data.stats || initialStats);
+        break;
+        
+      case 'queued':
+        setQueue(prev => [...prev, message.data.item].sort((a, b) => a.priority - b.priority));
+        break;
+        
+      case 'claimed':
+        setQueue(prev => prev.map(item => 
+          item.id === message.data.itemId 
+            ? { ...item, claimedBy: message.data.serverId }
+            : item
+        ));
+        break;
+        
+      case 'completed':
+        setQueue(prev => prev.filter(item => item.id !== message.data.itemId));
+        break;
+        
+      case 'deleted':
+        setQueue(prev => prev.filter(item => item.id !== message.data.itemId));
+        break;
+        
+      case 'stats':
+        setStats(message.data);
+        break;
+    }
+  }, []);
+
+  const connect = useCallback(() => {
+    try {
+      const ws = new WebSocket(url);
+      
+      ws.onopen = () => {
+        console.log('[WebSocket] Connected to bot');
+        setConnected(true);
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data) as WebSocketMessage;
+          handleMessage(message);
+        } catch (error) {
+          console.error('[WebSocket] Failed to parse message:', error);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('[WebSocket] Disconnected');
+        setConnected(false);
+        wsRef.current = null;
+        
+        // Auto-reconnect after 3 seconds
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('[WebSocket] Attempting reconnection...');
+          connect();
+        }, 3000);
+      };
+      
+      ws.onerror = (error) => {
+        console.error('[WebSocket] Error:', error);
+      };
+      
+      wsRef.current = ws;
+    } catch (error) {
+      console.error('[WebSocket] Failed to connect:', error);
+      setConnected(false);
+    }
+  }, [url, handleMessage]);
+
+  useEffect(() => {
+    connect();
+    
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [connect]);
+
+  const sendCommand = useCallback((action: string, data?: any) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action, ...data }));
+    } else {
+      console.warn('[WebSocket] Cannot send - not connected');
+    }
+  }, []);
+
+  const deleteItem = useCallback((itemId: string) => {
+    sendCommand('delete', { itemId });
+  }, [sendCommand]);
+
+  const clearQueue = useCallback(() => {
+    sendCommand('clear');
+  }, [sendCommand]);
+
+  return {
+    connected,
+    queue,
+    stats,
+    deleteItem,
+    clearQueue
+  };
+}

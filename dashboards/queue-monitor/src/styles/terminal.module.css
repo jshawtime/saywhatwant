@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* CRISP TERMINAL - NO GLOW, NO BLUR */
+
+:global(body) {
+  margin: 0;
+  padding: 0;
+  background: #000000;
+  font-family: 'VT323', monospace;
+  color: #00FF00;
+  overflow: hidden;
+}
+
+.terminal {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 400px 1fr 500px;
+  grid-template-rows: auto 1fr auto;
+  gap: 2px;
+  background: #001100;
+  padding: 20px;
+}
+
+.header {
+  grid-column: 1 / -1;
+  background: #003300;
+  border: 2px solid #00FF00;
+  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 32px;
+  color: #00FF00;
+  letter-spacing: 2px;
+}
+
+.clock {
+  font-size: 24px;
+  color: #00FF00;
+}
+
+.panel {
+  background: #000000;
+  border: 1px solid #00FF00;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.leftPanel {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.centerPanel {
+  grid-row: 2;
+  grid-column: 2;
+}
+
+.rightPanel {
+  grid-row: 2;
+  grid-column: 3;
+}
+
+.footer {
+  grid-column: 1 / -1;
+  background: #000000;
+  border: 2px solid #00FF00;
+  padding: 10px 25px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+}
+
+.sectionTitle {
+  font-size: 24px;
+  color: #00FF00;
+  border-bottom: 1px solid #00FF00;
+  padding-bottom: 8px;
+  margin-bottom: 15px;
+}
+
+.statLine {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dotted #003300;
+  font-size: 18px;
+}
+
+.statLabel {
+  color: #00CC00;
+}
+
+.statValue {
+  color: #00FF00;
+}
+
+.queueItem {
+  background: #001100;
+  border: 1px solid #00FF00;
+  padding: 10px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  transition: background 0.1s;
+}
+
+.queueItem:hover {
+  background: #002200;
+}
+
+.priorityCritical { border-color: #FF0000; }
+.priorityHigh { border-color: #FFFF00; }
+.priorityMedium { border-color: #00FFFF; }
+.priorityLow { border-color: #00FF00; }
+.priorityBg { border-color: #666666; }
+
+.button {
+  background: #003300;
+  color: #00FF00;
+  border: 2px solid #00FF00;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  text-transform: uppercase;
+  transition: all 0.1s;
+}
+
+.button:hover {
+  background: #00FF00;
+  color: #000000;
+}
+
+.buttonDanger {
+  border-color: #FF0000;
+  color: #FF0000;
+}
+
+.buttonDanger:hover {
+  background: #FF0000;
+  color: #000000;
+}
+
+.buttonSmall {
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+.empty {
+  text-align: center;
+  color: #006600;
+  padding: 40px 20px;
+  font-size: 18px;
+}
+
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.connected {
+  color: #00FF00;
+}
+
+.disconnected {
+  color: #FF0000;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00FF00;
+  border: 1px solid #000000;
+}
+
+.commandBox {
+  background: #001100;
+  border: 1px solid #00FF00;
+  padding: 10px;
+  margin: 10px 0;
+  cursor: pointer;
+  user-select: all;
+  font-size: 16px;
+}
+
+.commandBox:hover {
+  background: #002200;
+}
+
+.placeholder {
+  background: #001100;
+  border: 1px dashed #006600;
+  padding: 20px;
+  margin: 15px 0;
+  color: #006600;
+  font-size: 14px;
+  text-align: center;
+}

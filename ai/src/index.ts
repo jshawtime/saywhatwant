@@ -15,7 +15,7 @@ import { getEntityManager } from './modules/entityManager.js';
 import { getConversationAnalyzer } from './modules/conversationAnalyzer.js';
 import { getKVClient } from './modules/kvClient.js';
 import { QueueService } from './modules/queueService.js';
-import { QueueHTTPServer } from './modules/queueHTTPServer.js';
+import { QueueWebSocketServer } from './modules/websocketServer.js';
 
 // Initialize modules
 const entityManager = getEntityManager();
@@ -26,7 +26,7 @@ const kvClient = getKVClient();
 const USE_QUEUE = process.env.USE_QUEUE !== 'false';  // Default: enabled
 const USE_ROUTER = process.env.USE_ROUTER === 'true';  // Default: disabled (future phase)
 const queueService = USE_QUEUE ? new QueueService() : null;
-const queueHTTP = USE_QUEUE && queueService ? new QueueHTTPServer(queueService) : null;
+const queueWS = USE_QUEUE && queueService ? new QueueWebSocketServer(queueService) : null;
 
 if (USE_QUEUE) {
   console.log(chalk.green('[QUEUE]'), 'Priority queue system enabled');
@@ -190,11 +190,6 @@ async function postComment(text: string): Promise<boolean> {
  * Main bot loop
  */
 async function runBot() {
-  // Start HTTP server for dashboard
-  if (queueHTTP) {
-    await queueHTTP.start();
-  }
-  
   logger.info('AI Bot started with clean architecture');
   console.log(chalk.green('[READY]'), 'Bot is running with modular components');
   
@@ -255,7 +250,7 @@ async function runBot() {
             }
             
             // Queue the message
-            await queueService.enqueue({
+            const queueItem = {
               id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               priority,
               timestamp: Date.now(),
@@ -265,7 +260,14 @@ async function runBot() {
               model: entity.model,
               routerReason: `Priority ${priority} based on content analysis`,
               maxRetries: 3
-            });
+            };
+            
+            await queueService.enqueue(queueItem);
+            
+            // Emit WebSocket event
+            if (queueWS) {
+              queueWS.onQueued(queueItem);
+            }
             
             console.log(chalk.cyan('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
           }
@@ -357,6 +359,11 @@ async function runWorker() {
         continue;
       }
       
+      // Emit claim event
+      if (queueWS) {
+        queueWS.onClaimed(item.id, serverId);
+      }
+      
       console.log(chalk.blue('[WORKER]'), `Processing: ${item.id} (priority ${item.priority})`);
       
       try {
@@ -379,9 +386,11 @@ async function runWorker() {
           // Mark as complete
           await queueService.complete(item.id, true);
           
-          // Record success for dashboard
-          if (queueHTTP) {
-            queueHTTP.recordSuccess();
+          // Record success and emit event
+          if (queueWS) {
+            queueWS.recordSuccess();
+            queueWS.onCompleted(item.id, true);
+            queueWS.pushStats();  // Push updated stats
           }
           
           console.log(chalk.green('[WORKER]'), `Completed: ${item.id}`);
@@ -421,8 +430,8 @@ process.on('SIGINT', async () => {
     console.log(chalk.blue('[QUEUE]'), `Final stats: ${stats.totalItems} items, ${stats.unclaimedItems} unclaimed`);
   }
   
-  if (queueHTTP) {
-    await queueHTTP.stop();
+  if (queueWS) {
+    await queueWS.stop();
   }
   
   await lmStudioCluster.shutdown();
@@ -431,8 +440,8 @@ process.on('SIGINT', async () => {
 });
 
 process.on('SIGTERM', async () => {
-  if (queueHTTP) {
-    await queueHTTP.stop();
+  if (queueWS) {
+    await queueWS.stop();
   }
   await lmStudioCluster.shutdown();
   process.exit(0);
