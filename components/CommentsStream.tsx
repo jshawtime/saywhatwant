@@ -50,7 +50,7 @@ import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, S
 // ==========================================
 import { useSimpleFilters } from '@/hooks/useSimpleFilters';
 import { useIndexedDBFiltering } from '@/hooks/useIndexedDBFiltering';
-import { useCommentsWithModels } from '@/hooks/useCommentsWithModels';
+// REMOVED: import { useCommentsWithModels } from '@/hooks/useCommentsWithModels';
 import { useMessageCounts } from '@/hooks/useMessageCounts';
 import { useColorPicker } from '@/hooks/useColorPicker';
 import { useMessageTypeFilters } from '@/hooks/useMessageTypeFilters';
@@ -79,7 +79,8 @@ import { formatTimestamp } from '@/modules/timestampSystem';
 // ==========================================
 import { parseCommentText } from '@/utils/textParsing';
 import { formatNumber } from '@/utils/formatNumber';
-import { URLFilterManager } from '@/lib/url-filter-manager';
+// REMOVED: import { URLFilterManager } from '@/lib/url-filter-manager';
+import { rgbToNineDigit } from '@/lib/url-filter-simple';  // NEW: Direct import
 import { sortMessagesOldestFirst, mergeAndSortMessages } from '@/utils/messageUtils';
 
 /**
@@ -314,26 +315,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     initialMessages
   });
   
-  // Model URL Integration - handles model messages and user state from URL
-  const {
-    currentDomain: modelDomain,
-    isProcessingQueue,
-    addModelResponse,
-    getFilteredMessagesForModel,
-    handleModelResponseComplete,
-    aiUsername,
-    aiColor
-  } = useCommentsWithModels({ 
-    comments: allComments, 
-    setComments: setAllComments
-  });
-  
-  // Add AI to filter bar when AI username is set from URL
-  useEffect(() => {
-    if (aiUsername && aiColor && addToFilter) {
-      addToFilter(aiUsername, aiColor);
-    }
-  }, [aiUsername, aiColor, addToFilter]);
+  // REMOVED: useCommentsWithModels (old URL system)
+  // Model functionality stubbed - not currently used
+  const modelDomain: string | null = null;
+  const isProcessingQueue = false;
+  const addModelResponse = () => {};
+  const getFilteredMessagesForModel = () => [];
+  const handleModelResponseComplete = () => {};
+  const aiUsername: string | null = null;
+  const aiColor: string | null = null;
   
   // Comment Submission System (moved here so modelDomain is available)
   const {
@@ -458,12 +448,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     const savedColor = localStorage.getItem('sww-color');
     if (savedColor) {
       // Convert to 9-digit format if needed (for backwards compatibility)
-      const manager = URLFilterManager.getInstance();
+      // REPLACED: URLFilterManager with url-filter-simple (imported at top)
       let colorDigits = savedColor;
       
       if (savedColor.startsWith('#') || savedColor.startsWith('rgb')) {
         // Convert old format to 9-digit
-        colorDigits = manager.rgbToNineDigit(savedColor);
+        colorDigits = rgbToNineDigit(savedColor);
         localStorage.setItem('sww-color', colorDigits); // Update to new format
       }
       

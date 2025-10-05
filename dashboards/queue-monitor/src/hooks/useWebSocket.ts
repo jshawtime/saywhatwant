@@ -35,8 +35,8 @@ export function useWebSocket(url: string) {
         const itemsCount = message.data.items?.length || 0;
         console.log('[Dashboard] 🔄 SNAPSHOT: Setting queue to', itemsCount, 'items');
         console.log('[Dashboard] Items:', message.data.items);
-        setQueue([...message.data.items] || []);  // Force new array reference
-        setStats({...message.data.stats} || initialStats);  // Force new object
+        setQueue(message.data.items ? [...message.data.items] : []);  // Force new array reference
+        setStats(message.data.stats ? {...message.data.stats} : initialStats);  // Force new object
         console.log('[Dashboard] ✅ State updated');
         break;
         
