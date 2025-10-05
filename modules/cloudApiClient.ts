@@ -8,7 +8,8 @@
 
 import { Comment, CommentsResponse } from '@/types';
 import { COMMENTS_CONFIG } from '@/config/comments-source';
-import { URLFilterManager } from '@/lib/url-filter-manager';
+// REMOVED: import { URLFilterManager } from '@/lib/url-filter-manager';
+import { rgbToNineDigit } from '@/lib/url-filter-simple';
 
 /**
  * Fetch comments from the cloud API
@@ -35,12 +36,12 @@ export async function fetchCommentsFromCloud(
     
     // Normalize colors from RGB to 9-digit format for backwards compatibility
     // Old messages in KV are stored as RGB, new ones will be 9-digit
-    const manager = URLFilterManager.getInstance();
+    // REPLACED: URLFilterManager with url-filter-simple utility
     if (data.comments) {
       data.comments = data.comments.map(comment => {
         if (comment.color && comment.color.startsWith('rgb(')) {
           // Convert old RGB format to 9-digit
-          comment.color = manager.rgbToNineDigit(comment.color);
+          comment.color = rgbToNineDigit(comment.color);
         }
         return comment;
       });

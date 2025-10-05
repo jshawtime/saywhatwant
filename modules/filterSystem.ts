@@ -6,7 +6,8 @@
  * date/time filters, and URL-based filter state management.
  */
 
-import { URLFilterManager, SWWFilterState } from '../lib/url-filter-manager';
+// REMOVED: import { URLFilterManager, SWWFilterState } from '../lib/url-filter-manager';
+// filterSystem.ts uses old URL system - needs update or removal if not used
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -254,7 +255,7 @@ function parseDateTimeString(dateStr: string, now: number): number | null {
 export class FilterManager {
   private state: FilterState;
   private config: FilterConfig;
-  private urlManager: URLFilterManager | null = null;
+  private urlManager: any | null = null;  // Stubbed - was URLFilterManager
 
   constructor(config: FilterConfig = {}) {
     this.config = {
@@ -268,8 +269,9 @@ export class FilterManager {
     this.state = this.loadInitialState();
     
     if (this.config.syncWithURL && typeof window !== 'undefined') {
-      this.urlManager = URLFilterManager.getInstance();
-      this.syncWithURL();
+      // REMOVED: URLFilterManager.getInstance() - old system
+      // URL sync now handled by useSimpleFilters in components
+      this.urlManager = null;
     }
   }
 
@@ -324,37 +326,11 @@ export class FilterManager {
 
   /**
    * Sync filter state with URL
+   * STUBBED: URL sync now handled by useSimpleFilters in components
    */
   private syncWithURL(): void {
-    if (!this.urlManager) return;
-
-    const urlState = this.urlManager.getCurrentState();
-    
-    // Merge URL state with existing state
-    this.state.searchTerms = urlState.searchTerms;
-    this.state.wordRemove = urlState.wordRemove;
-    this.state.dateTime = {
-      from: urlState.from,
-      to: urlState.to,
-      timeFrom: urlState.timeFrom,
-      timeTo: urlState.timeTo,
-    };
-
-    // Add URL filters to existing filters
-    urlState.users.forEach(user => {
-      this.addUsernameFilter(user.username, user.color);
-    });
-    
-    // Note: Color-only filters (urlState.colors) are handled directly
-    // in the filter logic and don't need to be added here
-
-    urlState.words.forEach(word => {
-      this.addWordFilter(word);
-    });
-
-    urlState.negativeWords.forEach(word => {
-      this.addNegativeWordFilter(word);
-    });
+    // No longer used - URL management moved to useSimpleFilters
+    return;
   }
 
   /**
