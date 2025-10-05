@@ -75,6 +75,9 @@ const state: BotState = {
   consecutiveSilence: 0,
 };
 
+// Track processed message IDs to prevent re-queueing
+const processedMessageIds = new Set<string>();
+
 // Update state with current entity
 function updateStateFromEntity() {
   const entity = entityManager.getCurrentEntity();
@@ -216,9 +219,26 @@ async function runBot() {
           console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages for queueing`);
           
           let messageIndex = 0;  // Counter for unique IDs
+          let skipped = 0;  // Count duplicates
           
           for (const message of messages) {
+            // Skip if we've already queued this message
+            if (processedMessageIds.has(message.id)) {
+              skipped++;
+              continue;
+            }
+            
             messageIndex++;  // Increment for each message
+            
+            // Mark as processed
+            processedMessageIds.add(message.id);
+            
+            // Limit Set size (keep last 10000 IDs)
+            if (processedMessageIds.size > 10000) {
+              const idsArray = Array.from(processedMessageIds);
+              processedMessageIds.clear();
+              idsArray.slice(-5000).forEach(id => processedMessageIds.add(id));
+            }
             
             // Select entity for this message
             const entity = entityManager.selectRandomEntity();
@@ -278,6 +298,8 @@ async function runBot() {
             
             console.log(chalk.cyan('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
           }
+          
+          console.log(chalk.blue('[QUEUE]'), `Queued ${messageIndex} new messages, skipped ${skipped} duplicates`);
         } else {
           // DIRECT MODE: Old behavior (one response per cycle)
           const entity = entityManager.selectRandomEntity();

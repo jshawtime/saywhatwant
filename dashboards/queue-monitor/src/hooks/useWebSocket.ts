@@ -41,7 +41,18 @@ export function useWebSocket(url: string) {
         break;
         
       case 'queued':
-        setQueue(prev => [...prev, message.data.item].sort((a, b) => a.priority - b.priority));
+        console.log('[Dashboard] 📥 QUEUED event for:', message.data.item?.id);
+        setQueue(prev => {
+          // Check if item already exists
+          if (prev.some(item => item.id === message.data.item.id)) {
+            console.log('[Dashboard] ⚠️ Item already in queue, skipping');
+            return prev;
+          }
+          // Add and sort
+          const newQueue = [...prev, message.data.item].sort((a, b) => a.priority - b.priority);
+          console.log('[Dashboard] ✅ Added to queue, new length:', newQueue.length);
+          return newQueue;
+        });
         break;
         
       case 'claimed':
