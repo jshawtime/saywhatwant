@@ -1158,12 +1158,22 @@ git tag -a v1.5 -m "URL System Consolidated - Single Source of Truth"
 - ✅ Step 1: Audit complete - 7 files using old systems
 - ✅ Master config implemented (botSettings, queueSettings, routerSettings)
 - ✅ Step 4: useCommentsWithModels removed from CommentsStream (stubbed)
+- ✅ Step 5: URLFilterManager color conversion replaced with url-filter-simple
+- ✅ Step 6: Deleted useCommentsWithModels.ts hook (400 lines)
+- ✅ Step 6: Deleted useURLFilter.ts hook (200 lines)
+- ✅ Step 6: Deleted useModelURL.ts hook (159 lines)
+- ✅ Step 6: Deleted ModelURLIntegration.tsx component (101 lines)
 
-### In Progress
-- 🔄 Step 5: Removing URLFilterManager color conversion usage
+### Results So Far
+- 📊 Code removed: ~860 lines
+- 📊 Main page size: 34.7kB → 30.6kB (12% reduction)
+- ✅ Build succeeds
+- ✅ No TypeScript errors
 
-### Remaining
-- 📝 Steps 6-11
+### Remaining (Next Agent)
+- 📝 Step 7: Delete old lib files (url-filter-manager, url-enhancements, model-url-handler)
+- 📝 Step 8: Update remaining imports in other files
+- 📝 Step 9-11: Test and verify
 
 **Status**: 🔄 IN PROGRESS
 
