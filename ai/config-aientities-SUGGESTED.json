@@ -1,0 +1,96 @@
+{
+  "_comment": "MASTER CONTROLLER - All bot behavior parameters in one place",
+  
+  "botSettings": {
+    "pollingInterval": 30000,
+    "minSecondsBetweenAnyPost": 5,
+    "maxTotalMessagesPerMinute": 50,
+    "websocketPort": 4002,
+    "enableConsoleLogs": true
+  },
+  
+  "queueSettings": {
+    "enabled": true,
+    "staleClaimTimeout": 60000,
+    "maxRetries": 3,
+    "defaultPriority": 50,
+    "congestionThreshold": 100,
+    "maxQueueSize": 1000
+  },
+  
+  "routerSettings": {
+    "enabled": false,
+    "primaryModel": "router-model-fast",
+    "fallbackModel": "fear_and_loathing",
+    "temperature": 0.3,
+    "maxTokens": 100
+  },
+  
+  "lmStudioServers": [
+    {
+      "ip": "10.0.0.102",
+      "port": 1234,
+      "enabled": true,
+      "name": "Mac Studio 1",
+      "capabilities": {
+        "maxMemory": 120,
+        "supportedFormats": ["GGUF", "MLX"]
+      }
+    },
+    {
+      "ip": "10.0.0.100",
+      "port": 1234,
+      "enabled": true,
+      "name": "Mac Studio 2",
+      "capabilities": {
+        "maxMemory": 120,
+        "supportedFormats": ["GGUF", "MLX"]
+      }
+    }
+  ],
+  
+  "clusterSettings": {
+    "pollInterval": 5000,
+    "maxLoadAttempts": 60,
+    "loadBalancingStrategy": "model-affinity",
+    "keepModelsLoaded": true
+  },
+  
+  "entities": [
+    {
+      "id": "philosopher",
+      "enabled": true,
+      "username": "FearAndLoathing",
+      "model": "fear_and_loathing",
+      "systemPrompt": "You are a philosophical AI...",
+      "messagesToRead": 50,
+      "temperature": 0.6,
+      "maxTokens": 150,
+      "responseChance": 0.15,
+      "color": "128000255",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 45,
+        "maxPostsPerMinute": 1,
+        "maxPostsPerHour": 20
+      }
+    }
+  ],
+  
+  "monitoring": {
+    "enableDashboard": true,
+    "enableMetrics": true,
+    "metricsRetention": 3600000
+  },
+  
+  "cloudflareWorkerRateLimits": {
+    "perIpMaxCommentsPerMinute": 10,
+    "exemptIPs": [
+      "127.0.0.1",
+      "10.0.0.102",
+      "10.0.0.100"
+    ],
+    "exemptDomains": [
+      "ai.saywhatwant.app"
+    ]
+  }
+}
