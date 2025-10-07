@@ -149,8 +149,8 @@ export function useCommentSubmission(
     );
     
     // Log if this is a filtered/controlled conversation
-    if (contextUsers && contextUsers.length > 0) {
-      console.log('[CommentSubmission] Filtered conversation - Context users:', contextUsers);
+    if (context && context.length > 0) {
+      console.log('[CommentSubmission] Sending context:', context.length, 'messages');
     }
     if (ais) {
       console.log('[CommentSubmission] AI identity override (ais):', ais);
