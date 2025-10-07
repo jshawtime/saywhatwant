@@ -416,25 +416,18 @@ async function runBot() {
           const entity = entityManager.selectRandomEntity();
           const pingMessage = messages[messages.length - 1];
           
-          // NEW: Filter context if ping message has contextUsers
-          let pingContextMessages = messages;
-          if (pingMessage.contextUsers && Array.isArray(pingMessage.contextUsers) && pingMessage.contextUsers.length > 0) {
-            pingContextMessages = messages.filter(m => 
-              m.username && pingMessage.contextUsers!.includes(m.username)
-            );
-            console.log(chalk.magenta('[PING - FILTERED]'), 
-              `Context: ${messages.length} → ${pingContextMessages.length} (${pingMessage.contextUsers.join(', ')})`);
-          }
+          // Use context from message if present, otherwise use all messages
+          const pingContext = pingMessage.context || messages.slice(-(entity.nom || 100)).map(m => `${m.username}: ${m.text}`);
           
           await queueService.enqueue({
             id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             priority: 0,  // HIGHEST priority for pings
             timestamp: Date.now(),
             message: pingMessage,
-            context: pingContextMessages.slice(-(entity.nom || 100)).map(m => `${m.username}: ${m.text}`),
+            context: pingContext,
             entity,
             model: entity.model,
-            routerReason: pingMessage.contextUsers ? `Ping - Filtered: ${pingMessage.contextUsers.join(', ')}` : 'Ping trigger detected',
+            routerReason: 'Ping trigger detected',
             maxRetries: QUEUE_MAX_RETRIES
           });
         }
