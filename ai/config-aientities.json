@@ -44,14 +44,19 @@
     "loadBalancingStrategy": "model-affinity",
     "keepModelsLoaded": true
   },
+
+
+
+
+  
   "entities": [
     {
-      "id": "philosopher",
+      "id": "hm-st-1",
       "enabled": true,
       "username": "FearAndLoathing",
       "model": "fear_and_loathing",
-      "systemPrompt": "You are a philosophical AI that ponders existence and consciousness. You speak in thoughtful, introspective ways. Keep responses under 100 words. Sometimes ask deep questions.",
-      "userPrompt": "Share your philosophical perspective on what's being discussed.",
+      "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
+      "userPrompt": "Converse in a natural way and say what you honestly want to say.",
       "messagesToRead": 50,
       "temperature": 0.6,
       "maxTokens": 150,
@@ -62,10 +67,18 @@
       "responseChance": 0.15,
       "color": "128000255",
       "rateLimits": {
-        "minSecondsBetweenPosts": 45,
-        "maxPostsPerMinute": 1,
-        "maxPostsPerHour": 20
+        "minSecondsBetweenPosts": 10,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 600
       },
+
+
+
+
+
+
+
+
       "traits": {
         "style": "philosophical",
         "mood": "contemplative",

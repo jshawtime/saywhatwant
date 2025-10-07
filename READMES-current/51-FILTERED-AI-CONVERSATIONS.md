@@ -61,44 +61,27 @@ https://saywhatwant.app/#u=TheEternal:255069000+Me:195080200&filteractive=true&m
 
 ---
 
-## The Solution: Message Metadata + Context Filtering
+## The Solution: Send What's In The Window (Simple & Elegant)
 
-### Option A: Embed Filter in Message (Recommended)
+### The Core Principle
+
+**"The messages window IS the LLM context"**
 
 **How it works:**
-1. When user posts from filtered URL, include filter metadata in message
-2. Bot reads the metadata
-3. Bot filters the 50 messages to match user's filter
-4. Sends only filtered messages to LLM
-5. Posts response with same metadata
+1. User loads filtered URL → See only [Me, TheEternal] messages
+2. User posts message → Include simple list: `contextUsers: ["Me", "TheEternal"]`
+3. Bot receives message → Sees contextUsers field
+4. Bot filters its 50 messages to match: Only messages from Me or TheEternal
+5. Bot sends filtered messages to LLM (not all 50!)
+6. LLM responds based on filtered context
+7. Response appears in conversation (naturally visible in filtered view)
 
-**Implementation:**
+**Implementation: Dead Simple**
 
-**Step 1: Extend Comment Type**
-```typescript
-interface Comment {
-  id: string;
-  text: string;
-  username: string;
-  color: string;
-  timestamp: number;
-  domain: string;
-  'message-type': 'human' | 'AI';
-  
-  // NEW: Filter metadata for isolated conversations
-  conversationFilter?: {
-    users: string[];        // Usernames in this conversation
-    priority?: number;      // Priority from URL
-    entity?: string;        // Forced entity
-    model?: string;         // Forced model
-    nom?: number | 'ALL';   // Context size override
-  };
-}
-```
-
-**Step 2: Frontend Includes Metadata**
+**Step 1: Frontend Sends Filter Usernames**
 ```typescript
 // components/CommentsStream.tsx - in handleSubmitMessage
+
 const comment = {
   text: messageText,
   username: username,
@@ -106,69 +89,84 @@ const comment = {
   domain: currentDomain,
   'message-type': 'human',
   
-  // NEW: If filters active, include conversation metadata
-  ...(isFilterEnabled && filterUsernames.length > 0 && {
-    conversationFilter: {
-      users: filterUsernames.map(u => u.username),
-      priority: getPriorityFromURL(),  // From url-filter-simple
-      entity: getEntityFromURL(),
-      model: getModelFromURL(),
-      nom: getNomFromURL()
-    }
-  })
+  // SIMPLE: Just send who's in the filter (if active)
+  contextUsers: isFilterEnabled && filterUsernames.length > 0 
+    ? filterUsernames.map(u => u.username)
+    : undefined
 };
 ```
 
-**Step 3: Bot Respects Filter**
+**Step 2: Bot Filters Context**
 ```typescript
 // ai/src/index.ts - in message processing
-if (message.conversationFilter) {
-  // This is a filtered conversation
-  console.log('[FILTERED] Conversation between:', message.conversationFilter.users);
-  
-  // Filter context to only these users
-  const filteredContext = messages.filter(m => 
-    message.conversationFilter.users.includes(m.username)
+
+// If message has contextUsers, filter the context
+let contextMessages = messages;  // Default: all 50
+
+if (message.contextUsers && message.contextUsers.length > 0) {
+  contextMessages = messages.filter(m => 
+    message.contextUsers.includes(m.username)
   );
   
-  console.log('[FILTERED] Context: All messages', messages.length);
-  console.log('[FILTERED] Filtered context:', filteredContext.length);
-  
-  // Use filtered context for LLM
-  context = filteredContext.map(m => `${m.username}: ${m.text}`);
-  
-  // Use specified entity/model if provided
-  const entityId = message.conversationFilter.entity || selectRandomEntity();
-  const model = message.conversationFilter.model || entity.model;
-  const nom = message.conversationFilter.nom || entity.messagesToRead;
-  
-  // Queue with specified priority
-  const priority = message.conversationFilter.priority || 0;
-  
-  // Post response with same filter metadata
-  response.conversationFilter = message.conversationFilter;
+  console.log(chalk.cyan('[FILTERED]'), 
+    `Context: ${messages.length} → ${contextMessages.length} (filtered to: ${message.contextUsers.join(', ')})`
+  );
 }
+
+// Apply nom (default 250 if not specified)
+const nom = getNomFromURL(message) || 250;
+const finalContext = nom === 'ALL' 
+  ? contextMessages 
+  : contextMessages.slice(-nom);
+
+// Send to LLM
+const response = await lmStudio.generate(finalContext);
 ```
+
+**That's it!** No complex metadata, no JSON parsing, just a simple array.
 
 ---
 
 ## Your Use Case: Me + TheEternal Private Conversation
 
-### URL Breakdown
+### Your URL (Corrected)
 ```
-https://saywhatwant.app/#u=TheEternal:255069000+Me:195080200&filteractive=true&mt=ALL&uis=Me:195080200&priority=0
+https://saywhatwant.app/#u=TheEternal:255069000+Me:195080200&filteractive=true&mt=ALL&uis=Me:195080200&priority=5&entity=storyteller
 ```
 
 **What each parameter does:**
 
 | Parameter | Value | Effect |
 |-----------|-------|--------|
-| `u=TheEternal:255069000` | Filter user 1 | Show TheEternal's messages |
-| `u=Me:195080200` | Filter user 2 | Show Me's messages |
-| `filteractive=true` | Enable filters | Only show filtered users |
+| `u=TheEternal:255069000+Me:195080200` | Filter users | Show only TheEternal + Me messages |
+| `filteractive=true` | Enable filters | Apply the filter |
 | `mt=ALL` | Both channels | Show human AND AI messages |
 | `uis=Me:195080200` | Set user identity | Your username becomes "Me" |
-| `priority=0` | Highest priority | Immediate bot response, no queue delay |
+| `priority=5` | High priority | Priority 5 in queue (high, but not bypassing router) |
+| `entity=storyteller` | Force entity | Always use storyteller entity (not random) |
+
+**Note**: Should be `entity=` not `entity-id=`. Valid entity IDs from config:
+- philosopher, joker, sage, curious, poet, tech, zen, storyteller, empath, rebel
+
+### Will This URL Work? (Analysis)
+
+**✅ What Works Now (Already Implemented):**
+- `uis=Me:195080200` → Sets username to "Me" ✅
+- `filteractive=true` → Activates filters ✅
+- `u=TheEternal:255069000+Me:195080200` → Shows only those two ✅
+- `mt=ALL` → Shows both human + AI ✅
+
+**❌ What Doesn't Work Yet (Needs Implementation):**
+- `priority=5` → Not sent with message, bot doesn't see it ❌
+- `entity=storyteller` → Not sent with message, bot uses random ❌
+- Bot context → Bot sees all 50 messages, not just filtered ones ❌
+
+**After Implementation:**
+- Message includes: `contextUsers: ["TheEternal", "Me"]` ✅
+- Bot filters: 50 messages → Only [TheEternal, Me] ✅
+- Bot uses: storyteller entity (from URL) ✅
+- Bot queues: priority 5 (from URL) ✅
+- Response: Based on filtered context only ✅
 
 ### What Happens (Step-by-Step)
 
@@ -220,57 +218,13 @@ Needed: Posts with conversationFilter metadata
 
 ---
 
-## Implementation Plan
+## Implementation: The Simple Way
 
-### Phase 1: Add Metadata to Messages (Frontend)
+### Frontend (2 changes)
 
-**Step 1.1: Add URL Parameter Helpers**
-```typescript
-// lib/url-filter-simple.ts - Add these exports
-
-export function getPriorityFromURL(): number | undefined {
-  const hash = window.location.hash.slice(1);
-  const match = hash.match(/priority=(\d+)/);
-  return match ? parseInt(match[1]) : undefined;
-}
-
-export function getEntityFromURL(): string | undefined {
-  const hash = window.location.hash.slice(1);
-  const match = hash.match(/entity=([^&]+)/);
-  return match ? match[1] : undefined;
-}
-
-export function getModelFromURL(): string | undefined {
-  const hash = window.location.hash.slice(1);
-  const match = hash.match(/model=([^&]+)/);
-  return match ? match[1] : undefined;
-}
-
-export function getNomFromURL(): number | 'ALL' | undefined {
-  const hash = window.location.hash.slice(1);
-  const match = hash.match(/nom=(ALL|\d+)/);
-  if (!match) return undefined;
-  return match[1] === 'ALL' ? 'ALL' : parseInt(match[1]);
-}
-```
-
-**Step 1.2: Update Comment Submission**
+**Change 1: Add contextUsers to Message**
 ```typescript
 // components/CommentsStream.tsx - in handleSubmitMessage
-
-// Build conversation filter if filters active
-let conversationFilter = undefined;
-if (isFilterEnabled && filterUsernames.length > 0) {
-  conversationFilter = {
-    users: filterUsernames.map(u => u.username),
-    priority: getPriorityFromURL(),
-    entity: getEntityFromURL(),
-    model: getModelFromURL(),
-    nom: getNomFromURL()
-  };
-  
-  console.log('[Filtered Conversation] Posting with metadata:', conversationFilter);
-}
 
 const comment = {
   text: messageText,
@@ -278,38 +232,76 @@ const comment = {
   color: userColor,
   domain: currentDomain,
   'message-type': 'human',
-  misc: conversationFilter ? JSON.stringify(conversationFilter) : ''
+  
+  // NEW: Send filter usernames (what's visible in window)
+  contextUsers: isFilterEnabled && filterUsernames.length > 0
+    ? filterUsernames.map(u => u.username)  // ["Me", "TheEternal"]
+    : undefined  // No filter = send undefined, bot uses all messages
 };
 ```
 
-**Step 1.3: Update Comment Type**
+**Change 2: Add Cloudflare Worker Field**
 ```typescript
-// types/index.ts or similar
+// workers/comments-worker.js - Update schema to accept contextUsers
 
-export interface Comment {
-  id: string;
-  text: string;
-  username: string;
-  color: string;
-  timestamp: number;
-  domain: string;
-  language?: string;
-  'message-type': 'human' | 'AI';
-  misc?: string;  // JSON-encoded conversationFilter
-}
-
-export interface ConversationFilter {
-  users: string[];
-  priority?: number;
-  entity?: string;
-  model?: string;
-  nom?: number | 'ALL';
+// Allow contextUsers array in POST request
+if (comment.contextUsers && Array.isArray(comment.contextUsers)) {
+  storedComment.contextUsers = comment.contextUsers;
 }
 ```
 
 ---
 
-### Phase 2: Bot Respects Filter (Backend)
+### Backend (1 change)
+
+**Change: Filter Context Based on contextUsers**
+```typescript
+// ai/src/index.ts - in message processing loop
+
+// Determine context messages
+let contextMessages = messages;  // Default: all 50 from KV
+
+if (message.contextUsers && Array.isArray(message.contextUsers)) {
+  // FILTER: Use only messages from specified users
+  contextMessages = messages.filter(m => 
+    message.contextUsers.includes(m.username)
+  );
+  
+  console.log(chalk.cyan('[CONTEXT]'), 
+    `Filtered: ${messages.length} → ${contextMessages.length} messages`);
+  console.log(chalk.cyan('[CONTEXT]'), 
+    `Users: ${message.contextUsers.join(', ')}`);
+} else {
+  console.log(chalk.gray('[CONTEXT]'), 
+    `Unfiltered: Using all ${messages.length} messages`);
+}
+
+// Apply nom limit (default 250)
+const nomLimit = 250;  // Can read from URL later if needed
+const finalContext = contextMessages.slice(-nomLimit);
+
+console.log(chalk.cyan('[CONTEXT]'), 
+  `Sending ${finalContext.length} messages to LLM`);
+
+// Send finalContext to LLM (not all messages!)
+```
+
+---
+
+### That's The Entire Implementation
+
+**3 simple changes:**
+1. Frontend: Add contextUsers array to message
+2. Worker: Allow contextUsers field
+3. Bot: Filter messages if contextUsers present
+
+**No complex metadata, no JSON, just an array of usernames!**
+
+---
+
+## Implementation Steps
+
+### Step 1: Frontend (10 minutes)
 
 **Step 2.1: Parse Conversation Metadata**
 ```typescript
