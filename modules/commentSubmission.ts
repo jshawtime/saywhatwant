@@ -143,9 +143,9 @@ export function useCommentSubmission(
       username,
       userColor,
       callbacks.processVideoInComment,
-      contextUsers,  // NEW: Pass through filter context
-      ais,  // NEW: Pass through AI state override
-      botParams  // NEW: Pass through bot control parameters
+      context,  // Pre-formatted context
+      ais,  // AI state override
+      botParams  // Bot control parameters
     );
     
     // Log if this is a filtered/controlled conversation
