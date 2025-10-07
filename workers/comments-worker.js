@@ -29,6 +29,8 @@ const EXEMPT_IPS = [
 
 const EXEMPT_DOMAINS = [
   'ai.saywhatwant.app',  // AI bot domain (unlimited posting)
+  'saywhatwant.app',     // Main app domain (users posting from browser)
+  'www.saywhatwant.app', // With www subdomain
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
