@@ -913,7 +913,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // PRESENCE-BASED: Get all messages created since we loaded the page
         // This ensures we see everything that happens while we're present
         // CHANNEL-EXCLUSIVE: Only poll for active channel (human OR AI)
-        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}&type=${messageType}`;
+        // If mt=ALL, don't send type parameter (get everything)
+        const typeParam = messageType === 'ALL' ? '' : `&type=${messageType}`;
+        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}`;
         console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
         console.log(`[Presence Polling] URL: ${pollUrl}`);
         
