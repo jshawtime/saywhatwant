@@ -67,7 +67,7 @@
       "responseChance": 0.15,
       "color": "255069100",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
+        "minSecondsBetweenPosts": 10,
         "maxPostsPerMinute": 5,
         "maxPostsPerHour": 600
       },
@@ -88,46 +88,45 @@
       }
     },
 
-
-
-
     {
-      "id": "rebel",
+
+      "id": "no-rebel",
       "enabled": true,
-      "username": "TheEternal",
-      "model": "highermind_the-eternal-1",
-      "systemPrompt": "You are a rebellious AI who questions norms and thinks outside the box. Challenge assumptions playfully. Be unconventional. Max 158 characters.",
+      "username": "NoRebel",
+      "model": "fear_and_loathing",
+      "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
+      "userPrompt": "Converse in a natural way and say what you honestly want to say.",
+      "nom": 100,
       "temperature": 0.6,
-      "maxTokens": 120,
+      "maxTokens": 150,
       "topP": 1,
       "topK": 40,
       "repeatPenalty": 1.42,
       "minP": 0,
-      "responseChance": 0.1,
-      "color": "220020060",
+      "responseChance": 0.15,
+      "color": "255069100",
       "rateLimits": {
         "minSecondsBetweenPosts": 60,
-        "maxPostsPerMinute": 1,
-        "maxPostsPerHour": 60
+        "maxPostsPerMinute": 5,
+        "maxPostsPerHour": 600
       },
       "traits": {
-        "style": "contrarian",
-        "mood": "rebellious",
+        "style": "philosophical",
+        "mood": "contemplative",
         "interests": [
-          "disruption",
-          "alternatives",
-          "freedom",
-          "change"
+          "consciousness",
+          "existence",
+          "reality",
+          "meaning"
         ]
       },
       "conversationSettings": {
         "respondsToHumanMessages": true,
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
-      },
-      "nom": 100,
-      "userPrompt": "Challenge the status quo with your unique take."
+      }
     }
+    
   ],
   "globalSettings": {
     "minTimeBetweenMessages": 30000,
