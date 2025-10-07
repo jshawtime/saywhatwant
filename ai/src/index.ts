@@ -209,6 +209,16 @@ async function postComment(text: string, ais?: string): Promise<boolean> {
     'message-type': 'AI',
   };
   
+  // DEBUG: Log exactly what we're posting
+  console.log(chalk.yellow('[POST DEBUG]'), 'Comment object being sent:');
+  console.log(chalk.yellow('[POST DEBUG]'), `  username: "${comment.username}"`);
+  console.log(chalk.yellow('[POST DEBUG]'), `  color: "${comment.color}"`);
+  console.log(chalk.yellow('[POST DEBUG]'), `  usernameToUse was: "${usernameToUse}"`);
+  console.log(chalk.yellow('[POST DEBUG]'), `  colorToUse was: "${colorToUse}"`);
+  if (queueWS) {
+    queueWS.sendLog(`[POST DEBUG] Sending username: "${comment.username}", color: "${comment.color}"`);
+  }
+  
   const result = await kvClient.postComment(comment, CONFIG.DEV.dryRun);
   
   if (result.success) {
