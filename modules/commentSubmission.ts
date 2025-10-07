@@ -191,6 +191,8 @@ export function useCommentSubmission(
           language: newComment.language,
           'message-type': 'human', // Mark as human-generated message
           misc: newComment.misc,
+          contextUsers: newComment.contextUsers,  // NEW: Pass through
+          botParams: newComment.botParams,  // NEW: Pass through
         }).then(savedComment => {
           // Server acknowledged - optimistic version is canonical
           console.log('[CommentSubmission] Server acknowledged:', savedComment.id);

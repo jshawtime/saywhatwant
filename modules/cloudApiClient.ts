@@ -77,6 +77,8 @@ export async function postCommentToCloud(comment: {
   language?: string;
   'message-type'?: 'AI' | 'human' | string;
   misc?: string;
+  contextUsers?: string[];  // NEW: For filtered conversations
+  botParams?: any;  // NEW: Bot control parameters
 }): Promise<Comment> {
   try {
     const response = await fetch(COMMENTS_CONFIG.apiUrl, {
