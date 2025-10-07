@@ -332,43 +332,16 @@ async function runBot() {
                 `Model override: ${entity.model} → ${botParams.model}`);
             }
             
-            // 4. FILTER CONTEXT if contextUsers present (filtered conversations)
-            let contextMessages = messages;
-            if (message.contextUsers && Array.isArray(message.contextUsers) && message.contextUsers.length > 0) {
-              contextMessages = messages.filter(m => 
-                m.username && message.contextUsers!.includes(m.username)
-              );
-              console.log(chalk.magenta('[FILTERED CONVERSATION]'));
-              console.log(chalk.cyan('  Users:'), message.contextUsers.join(', '));
-              console.log(chalk.cyan('  Context:'), `${messages.length} → ${contextMessages.length} messages`);
-            }
+            // Use pre-formatted context from frontend (if present)
+            const contextForLLM = message.context && message.context.length > 0
+              ? message.context
+              : messages.slice(-(entity.nom || 100)).map(m => `${m.username}: ${m.text}`);
             
-            // 5. DETERMINE CONTEXT SIZE (with fallback chain)
-            let nomToUse;
-            if (botParams.nom === 'ALL') {
-              nomToUse = contextMessages.length; // Send ALL filtered messages
-              console.log(chalk.green('[BOT PARAMS]'), 
-                `Using ALL messages: ${nomToUse}`);
-            } else if (botParams.nom) {
-              nomToUse = Math.min(botParams.nom, contextMessages.length); // Respect nom limit
-              console.log(chalk.green('[BOT PARAMS]'), 
-                `Using specified nom: ${nomToUse}`);
-            } else {
-              nomToUse = Math.min(entity.nom || 100, contextMessages.length); // Entity default
-            }
-            
-            // Build context from (filtered) messages
-            const contextForLLM = contextMessages.slice(-nomToUse).map(m => `${m.username}: ${m.text}`);
-            
-            // Log final configuration
             console.log(chalk.cyan('[QUEUE]'), 'Configuration:');
             console.log(chalk.cyan('  Entity:'), entity.id);
             console.log(chalk.cyan('  Model:'), modelToUse);
             console.log(chalk.cyan('  Priority:'), priority);
-            console.log(chalk.cyan('  Context size:'), contextForLLM.length);
-            if (message.contextUsers) {
-              console.log(chalk.cyan('  Context users:'), message.contextUsers.join(', '));
-            }
+            console.log(chalk.cyan('  Context:'), contextForLLM.length, 'messages');
             
             // Queue the message with GUARANTEED unique ID
             const queueItem = {
@@ -387,7 +360,7 @@ async function runBot() {
               const reasons = [];
               if (params.entity) reasons.push(`Entity: ${params.entity}`);
               if (params.priority !== undefined) reasons.push(`Priority: ${params.priority}`);
-              if (msg.contextUsers) reasons.push(`Filtered: ${msg.contextUsers.join(', ')}`);
+              if (msg.context) reasons.push(`Context: ${msg.context.length} msgs`);
               if (params.nom) reasons.push(`nom: ${params.nom}`);
               
               return reasons.length > 0 

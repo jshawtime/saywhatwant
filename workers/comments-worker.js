@@ -411,8 +411,8 @@ async function handlePostComment(request, env) {
     const language = body.language || 'en'; // Default to English
     const messageType = body['message-type'] || 'human'; // Default to human if not specified
     const misc = body.misc || ''; // Optional misc field
-    const contextUsers = body.contextUsers; // NEW: Optional array for filtered conversations
-    const botParams = body.botParams; // NEW: Structured bot control parameters
+    const context = body.context; // Pre-formatted context messages from frontend
+    const botParams = body.botParams; // Structured bot control parameters
 
     // Validate input
     if (!text) {
@@ -446,11 +446,11 @@ async function handlePostComment(request, env) {
       language: language, // Store the language
       'message-type': messageType, // Store message type (AI, human, etc)
       misc: misc,  // Store misc data
-      // NEW: Context users for filtered AI conversations
-      ...(contextUsers && Array.isArray(contextUsers) && contextUsers.length > 0 && {
-        contextUsers: contextUsers
+      // Pre-formatted context messages from frontend
+      ...(context && Array.isArray(context) && context.length > 0 && {
+        context: context
       }),
-      // NEW: Bot control parameters (entity, priority, model, nom)
+      // Bot control parameters (entity, priority, model, nom)
       ...(botParams && typeof botParams === 'object' && {
         botParams: botParams
       })

@@ -17,8 +17,8 @@ export interface Comment {
   language: string;               // Language code, e.g., "en" (required in KV)
   'message-type': string;         // "AI" or "human" - hyphenated key! (required in KV)
   misc: string;                   // Additional data, usually empty string (required in KV)
-  contextUsers?: string[];        // NEW: Usernames for LLM context filtering (optional, for filtered conversations)
-  botParams?: BotParams;          // NEW: Bot control parameters from URL (structured, type-safe)
+  context?: string[];             // Pre-formatted context messages from frontend
+  botParams?: BotParams;          // Bot control parameters from URL (structured, type-safe)
 }
 
 export interface CommentsResponse {

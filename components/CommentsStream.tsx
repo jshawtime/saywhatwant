@@ -1003,28 +1003,32 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // NEW: Pass context users if filters are active (for filtered AI conversations)
-    const contextUsersArray = isFilterEnabled && filterUsernames.length > 0
-      ? filterUsernames.map(u => u.username)
-      : undefined;
+    // Build pre-formatted context from displayed messages
+    const contextArray = (() => {
+      const nomLimit = urlNom || 100;
+      const messages = allComments.slice(-nomLimit);
+      return messages.length > 0 
+        ? messages.map(m => `${m.username}: ${m.text}`)
+        : undefined;
+    })();
     
-    // NEW: Pass ais parameter (AI identity override)
+    // Pass ais parameter (AI identity override)
     const aiStateParam = ais || undefined;
     
-    // NEW: Build bot parameters from URL (structured, type-safe)
+    // Build bot parameters from URL (structured, type-safe)
     const botParams: BotParams | undefined = (() => {
       const params: BotParams = {};
       if (urlEntity) params.entity = urlEntity;
       if (urlPriority !== undefined) params.priority = urlPriority;
       if (urlModel) params.model = urlModel;
-      if (urlNom !== undefined) params.nom = urlNom;
+      // Note: nom is used above to slice context, don't send to bot
       
       return Object.keys(params).length > 0 ? params : undefined;
     })();
     
     // Comprehensive logging
-    if (contextUsersArray) {
-      console.log('[CommentsStream] Filtered context:', contextUsersArray);
+    if (contextArray) {
+      console.log('[CommentsStream] Sending context:', contextArray.length, 'messages');
     }
     if (aiStateParam) {
       console.log('[CommentsStream] AI identity (ais):', aiStateParam);
@@ -1033,7 +1037,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.log('[CommentsStream] Bot parameters:', botParams);
     }
     
-    await submitComment(inputText, username, userColor, flashUsername, contextUsersArray, aiStateParam, botParams);
+    await submitComment(inputText, username, userColor, flashUsername, contextArray, aiStateParam, botParams);
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)

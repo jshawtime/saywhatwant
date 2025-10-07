@@ -53,7 +53,7 @@
     {
       "id": "hm-st-1",
       "enabled": true,
-      "username": "FearAndLoathing",
+      "username": "hm-st-1",
       "model": "fear_and_loathing",
       "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
       "userPrompt": "Converse in a natural way and say what you honestly want to say.",

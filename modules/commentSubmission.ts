@@ -76,9 +76,9 @@ export function prepareCommentData(
   username: string,
   userColor: string,
   processVideo?: (text: string) => string,
-  contextUsers?: string[],  // NEW: Filter usernames for LLM context
-  ais?: string,  // NEW: AI initial state (username:color override for bot)
-  botParams?: BotParams  // NEW: Bot control parameters (entity, priority, model, nom)
+  context?: string[],  // Pre-formatted context from displayed messages
+  ais?: string,  // AI initial state (username:color override for bot)
+  botParams?: BotParams  // Bot control parameters (entity, priority, model, nom)
 ): Comment {
   const processedText = processVideo ? processVideo(text.trim()) : text.trim();
   
@@ -96,8 +96,8 @@ export function prepareCommentData(
     language: 'en', // Default for now
     'message-type': 'human', // Human-generated message
     misc: ais || '', // Store ais in misc field for bot to read
-    contextUsers,  // NEW: LLM should use only these users' messages as context
-    botParams,  // NEW: Structured bot control (entity, priority, model, nom)
+    context,  // Pre-formatted context messages ready for LLM
+    botParams,  // Structured bot control (entity, priority, model, nom)
   };
 }
 
@@ -116,9 +116,9 @@ export function useCommentSubmission(
     username: string | undefined,
     userColor: string,
     onUsernameFlash?: () => void,
-    contextUsers?: string[],  // NEW: Optional filter for LLM context
-    ais?: string,  // NEW: AI initial state override
-    botParams?: BotParams  // NEW: Bot control parameters
+    context?: string[],  // Pre-formatted context from displayed messages
+    ais?: string,  // AI initial state override
+    botParams?: BotParams  // Bot control parameters
   ): Promise<boolean> => {
     // Validate input
     if (!inputText.trim()) return false;
@@ -191,8 +191,8 @@ export function useCommentSubmission(
           language: newComment.language,
           'message-type': 'human', // Mark as human-generated message
           misc: newComment.misc,
-          contextUsers: newComment.contextUsers,  // NEW: Pass through
-          botParams: newComment.botParams,  // NEW: Pass through
+          context: newComment.context,  // Pre-formatted context
+          botParams: newComment.botParams,  // Bot control parameters
         }).then(savedComment => {
           // Server acknowledged - optimistic version is canonical
           console.log('[CommentSubmission] Server acknowledged:', savedComment.id);
