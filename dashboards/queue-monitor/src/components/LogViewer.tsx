@@ -43,23 +43,30 @@ export const LogViewer: React.FC<LogViewerProps> = ({ logs, maxLogs = 20 }) => {
       }}>
         {logs.length === 0 ? (
           <div style={{ color: '#006600' }}>
-            WAITING FOR LOGS...
+            WAITING FOR LOGS... (Last {maxLogs} messages)
           </div>
         ) : (
-          logs.map((log, index) => (
-            <div key={index} style={{ 
-              color: log.includes('[AIS]') || log.includes('[FILTERED') ? '#FF00FF' : 
-                    log.includes('[BOT PARAMS]') ? '#00FFFF' :
-                    log.includes('[WORKER]') ? '#FFFF00' :
-                    log.includes('[ERROR]') || log.includes('❌') ? '#FF0000' :
-                    '#00FF00',
-              marginBottom: '2px',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              {log}
+          <>
+            <div style={{ color: '#00FF00', marginBottom: '5px', borderBottom: '1px solid #003300', paddingBottom: '5px' }}>
+              Showing {logs.length} of last {maxLogs} log messages
             </div>
-          ))
+            {logs.map((log, index) => (
+              <div key={index} style={{ 
+                color: log.includes('[AIS]') || log.includes('[FILTERED') ? '#FF00FF' : 
+                      log.includes('[BOT PARAMS]') ? '#00FFFF' :
+                      log.includes('[WORKER]') ? '#FFFF00' :
+                      log.includes('[ERROR]') || log.includes('❌') ? '#FF0000' :
+                      '#00FF00',
+                marginBottom: '3px',
+                paddingBottom: '3px',
+                borderBottom: index < logs.length - 1 ? '1px dotted #003300' : 'none',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {log}
+              </div>
+            ))}
+          </>
         )}
       </div>
     </div>
