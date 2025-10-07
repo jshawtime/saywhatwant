@@ -67,8 +67,8 @@
       "responseChance": 0.15,
       "color": "255069100",
       "rateLimits": {
-        "minSecondsBetweenPosts": 10,
-        "maxPostsPerMinute": 10,
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 5,
         "maxPostsPerHour": 600
       },
       "traits": {
