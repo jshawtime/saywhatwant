@@ -35,7 +35,7 @@ export const LogViewer: React.FC<LogViewerProps> = ({ logs, maxLogs = 20 }) => {
       <div style={{ 
         fontFamily: 'monospace',
         fontSize: '12px',
-        maxHeight: '200px',
+        height: '300px',
         overflowY: 'auto',
         backgroundColor: '#000000',
         padding: '10px',
