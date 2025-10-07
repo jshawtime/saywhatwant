@@ -182,6 +182,7 @@ async function postComment(text: string, ais?: string): Promise<boolean> {
     if (aisUsername) {
       usernameToUse = aisUsername;
       console.log(chalk.magenta('[AIS]'), `Username override: ${entity.username} → ${aisUsername}`);
+      if (queueWS) queueWS.sendLog(`[AIS] Username: ${entity.username} → ${aisUsername}`);
     }
     
     if (aisColor) {
@@ -189,9 +190,11 @@ async function postComment(text: string, ais?: string): Promise<boolean> {
         // Generate random 9-digit color
         colorToUse = `${Math.floor(Math.random() * 256).toString().padStart(3, '0')}${Math.floor(Math.random() * 256).toString().padStart(3, '0')}${Math.floor(Math.random() * 256).toString().padStart(3, '0')}`;
         console.log(chalk.magenta('[AIS]'), `Random color generated: ${colorToUse}`);
+        if (queueWS) queueWS.sendLog(`[AIS] Random color: ${colorToUse}`);
       } else {
         colorToUse = aisColor;
         console.log(chalk.magenta('[AIS]'), `Color override: ${entity.color} → ${aisColor}`);
+        if (queueWS) queueWS.sendLog(`[AIS] Color: ${entity.color} → ${aisColor}`);
       }
     }
   }
@@ -213,8 +216,13 @@ async function postComment(text: string, ais?: string): Promise<boolean> {
     entityManager.recordPost(entity.id);
     state.lastResponseTime = Date.now();
     
-    logger.info(`[${usernameToUse}] Posted: "${text}"`);
-    console.log(chalk.cyan(`[${usernameToUse}]`), '📤', `${usernameToUse}: ${text.substring(0, 50)}...`);
+  logger.info(`[${usernameToUse}] Posted: "${text}"`);
+  console.log(chalk.cyan(`[${usernameToUse}]`), '📤', `${usernameToUse}: ${text.substring(0, 50)}...`);
+  
+  // Send final posting confirmation to dashboard
+  if (queueWS) {
+    queueWS.sendLog(`[POST] ${usernameToUse}: ${text.substring(0, 60)}...`);
+  }
   }
   
   return result.success;
@@ -551,10 +559,18 @@ async function runWorker() {
           console.log(chalk.blue('[WORKER]'), `Original message misc field: "${item.message.misc}"`);
           console.log(chalk.blue('[WORKER]'), `ais override value: "${aisOverride}"`);
           
+          // Send to dashboard
+          if (queueWS) {
+            queueWS.sendLog(`[WORKER] misc: "${item.message.misc}"`);
+            queueWS.sendLog(`[WORKER] ais: "${aisOverride}"`);
+          }
+          
           if (aisOverride) {
             console.log(chalk.magenta('[WORKER]'), `Using AI identity override: ${aisOverride}`);
+            if (queueWS) queueWS.sendLog(`[WORKER] Using ais override: ${aisOverride}`);
           } else {
             console.log(chalk.gray('[WORKER]'), `No ais override, using entity defaults`);
+            if (queueWS) queueWS.sendLog(`[WORKER] No ais, using entity defaults`);
           }
           
           // Post with ais override (if present)

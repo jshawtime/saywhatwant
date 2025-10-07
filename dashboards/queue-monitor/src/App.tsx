@@ -5,11 +5,12 @@ import { Header } from './components/Header';
 import { LeftPanel } from './components/LeftPanel';
 import { QueueList } from './components/QueueList';
 import { RightPanel } from './components/RightPanel';
+import { LogViewer } from './components/LogViewer';
 import { Footer } from './components/Footer';
 import styles from './styles/terminal.module.css';
 
 function App() {
-  const { connected, queue, stats, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
+  const { connected, queue, stats, logs, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
 
   // Update last update time
@@ -30,6 +31,7 @@ function App() {
         onClearAll={clearQueue}
       />
       <RightPanel stats={stats} />
+      <LogViewer logs={logs} maxLogs={20} />
       <Footer connected={connected} lastUpdate={lastUpdate} />
     </div>
   );

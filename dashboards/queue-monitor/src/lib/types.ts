@@ -25,7 +25,7 @@ export interface QueueStats {
 }
 
 export interface WebSocketMessage {
-  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats';
+  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log';
   data: any;
   timestamp: number;
 }

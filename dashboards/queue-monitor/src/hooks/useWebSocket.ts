@@ -21,8 +21,10 @@ export function useWebSocket(url: string) {
   const [connected, setConnected] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [stats, setStats] = useState<QueueStats>(initialStats);
+  const [logs, setLogs] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const MAX_LOGS = 20;  // Configurable: Keep last N logs
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     console.log('[Dashboard] ===== RECEIVED MESSAGE =====');
@@ -74,6 +76,14 @@ export function useWebSocket(url: string) {
       case 'stats':
         console.log('[Dashboard] Updating stats:', message.data);
         setStats(message.data);
+        break;
+        
+      case 'log':
+        // Add log message (keep last MAX_LOGS)
+        setLogs(prev => {
+          const newLogs = [...prev, message.data.message];
+          return newLogs.slice(-MAX_LOGS);
+        });
         break;
     }
   }, []);
@@ -153,6 +163,7 @@ export function useWebSocket(url: string) {
     connected,
     queue,
     stats,
+    logs,
     deleteItem,
     clearQueue
   };

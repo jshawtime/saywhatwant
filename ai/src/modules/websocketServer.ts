@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import type { QueueService } from './queueService.js';
 
 interface WebSocketMessage {
-  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats';
+  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log';
   data: any;
   timestamp: number;
 }
@@ -193,6 +193,17 @@ export class QueueWebSocketServer {
         throughputHour: Math.round(this.throughputTracker.length / 60),
         lastSuccess: this.lastSuccessTime
       },
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Send log message to dashboard
+   */
+  sendLog(message: string) {
+    this.broadcast({
+      type: 'log',
+      data: { message },
       timestamp: Date.now()
     });
   }
