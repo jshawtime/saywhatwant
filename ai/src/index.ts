@@ -284,16 +284,32 @@ async function runBot() {
               continue;  // Skip this message
             }
             
+            // NEW: Filter context if message has contextUsers (filtered conversations)
+            let contextMessages = messages;
+            if (message.contextUsers && Array.isArray(message.contextUsers) && message.contextUsers.length > 0) {
+              contextMessages = messages.filter(m => 
+                m.username && message.contextUsers!.includes(m.username)
+              );
+              console.log(chalk.magenta('[FILTERED CONVERSATION]'));
+              console.log(chalk.cyan('  Users:'), message.contextUsers.join(', '));
+              console.log(chalk.cyan('  Context:'), `${messages.length} → ${contextMessages.length} messages`);
+            }
+            
+            // Build context from (filtered) messages
+            const contextForLLM = contextMessages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`);
+            
             // Queue the message with GUARANTEED unique ID
             const queueItem = {
               id: `req-${Date.now()}-${messageIndex}-${Math.random().toString(36).substr(2, 9)}`,
               priority,
               timestamp: Date.now(),
               message,
-              context: messages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`),
+              context: contextForLLM,  // Use filtered context
               entity,
               model: entity.model,
-              routerReason: `Priority ${priority} based on content analysis`,
+              routerReason: message.contextUsers 
+                ? `Filtered conversation: ${message.contextUsers.join(', ')}` 
+                : `Priority ${priority} based on content analysis`,
               maxRetries: QUEUE_MAX_RETRIES
             };
             
@@ -329,17 +345,28 @@ async function runBot() {
         if (USE_QUEUE && queueService && analyzer.hasPingTrigger(messages)) {
           console.log(chalk.yellow('[PING]'), 'Detected ping trigger - queuing with priority 0');
           const entity = entityManager.selectRandomEntity();
+          const pingMessage = messages[messages.length - 1];
+          
+          // NEW: Filter context if ping message has contextUsers
+          let pingContextMessages = messages;
+          if (pingMessage.contextUsers && Array.isArray(pingMessage.contextUsers) && pingMessage.contextUsers.length > 0) {
+            pingContextMessages = messages.filter(m => 
+              m.username && pingMessage.contextUsers!.includes(m.username)
+            );
+            console.log(chalk.magenta('[PING - FILTERED]'), 
+              `Context: ${messages.length} → ${pingContextMessages.length} (${pingMessage.contextUsers.join(', ')})`);
+          }
           
           await queueService.enqueue({
             id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             priority: 0,  // HIGHEST priority for pings
             timestamp: Date.now(),
-            message: messages[messages.length - 1],
-            context: messages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`),
+            message: pingMessage,
+            context: pingContextMessages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`),
             entity,
             model: entity.model,
-            routerReason: 'Ping trigger detected',
-            maxRetries: 3
+            routerReason: pingMessage.contextUsers ? `Ping - Filtered: ${pingMessage.contextUsers.join(', ')}` : 'Ping trigger detected',
+            maxRetries: QUEUE_MAX_RETRIES
           });
         }
       }

@@ -409,6 +409,7 @@ async function handlePostComment(request, env) {
     const language = body.language || 'en'; // Default to English
     const messageType = body['message-type'] || 'human'; // Default to human if not specified
     const misc = body.misc || ''; // Optional misc field
+    const contextUsers = body.contextUsers; // NEW: Optional array for filtered conversations
 
     // Validate input
     if (!text) {
@@ -433,8 +434,11 @@ async function handlePostComment(request, env) {
       domain: domain,  // Store the domain
       language: language, // Store the language
       'message-type': messageType, // Store message type (AI, human, etc)
-      misc: misc  // Store misc data
-      // Removed userAgent - not needed
+      misc: misc,  // Store misc data
+      // NEW: Context users for filtered AI conversations
+      ...(contextUsers && Array.isArray(contextUsers) && contextUsers.length > 0 && {
+        contextUsers: contextUsers
+      })
     };
 
     // Store in KV

@@ -65,20 +65,12 @@
       "repeatPenalty": 1.42,
       "minP": 0,
       "responseChance": 0.15,
-      "color": "128000255",
+      "color": "255069100",
       "rateLimits": {
         "minSecondsBetweenPosts": 10,
         "maxPostsPerMinute": 10,
         "maxPostsPerHour": 600
       },
-
-
-
-
-
-
-
-
       "traits": {
         "style": "philosophical",
         "mood": "contemplative",
@@ -95,6 +87,15 @@
         "respondsToTheseAiOnly": []
       }
     },
+
+
+
+
+
+
+
+
+    
     {
       "id": "joker",
       "enabled": true,

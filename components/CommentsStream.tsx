@@ -995,7 +995,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // Handle comment submission (using the new submission system)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitComment(inputText, username, userColor, flashUsername);
+    
+    // NEW: Pass context users if filters are active (for filtered AI conversations)
+    const contextUsersArray = isFilterEnabled && filterUsernames.length > 0
+      ? filterUsernames.map(u => u.username)
+      : undefined;
+    
+    if (contextUsersArray) {
+      console.log('[CommentsStream] Posting with filtered context:', contextUsersArray);
+    }
+    
+    await submitComment(inputText, username, userColor, flashUsername, contextUsersArray);
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)

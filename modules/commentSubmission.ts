@@ -75,7 +75,8 @@ export function prepareCommentData(
   text: string,
   username: string,
   userColor: string,
-  processVideo?: (text: string) => string
+  processVideo?: (text: string) => string,
+  contextUsers?: string[]  // NEW: Filter usernames for LLM context
 ): Comment {
   const processedText = processVideo ? processVideo(text.trim()) : text.trim();
   
@@ -93,6 +94,7 @@ export function prepareCommentData(
     language: 'en', // Default for now
     'message-type': 'human', // Human-generated message
     misc: '', // Reserved for future features
+    contextUsers,  // NEW: LLM should use only these users' messages as context
   };
 }
 
@@ -110,7 +112,8 @@ export function useCommentSubmission(
     inputText: string,
     username: string | undefined,
     userColor: string,
-    onUsernameFlash?: () => void
+    onUsernameFlash?: () => void,
+    contextUsers?: string[]  // NEW: Optional filter for LLM context
   ): Promise<boolean> => {
     // Validate input
     if (!inputText.trim()) return false;
@@ -134,8 +137,14 @@ export function useCommentSubmission(
       inputText,
       username,
       userColor,
-      callbacks.processVideoInComment
+      callbacks.processVideoInComment,
+      contextUsers  // NEW: Pass through filter context
     );
+    
+    // Log if this is a filtered conversation
+    if (contextUsers && contextUsers.length > 0) {
+      console.log('[CommentSubmission] Filtered conversation - Context users:', contextUsers);
+    }
     
     // INSTANT UI FEEDBACK - Optimistic update
     callbacks.onOptimisticUpdate(newComment);

@@ -13,6 +13,7 @@ export interface Comment {
   language?: string;
   misc?: string;
   'message-type'?: 'AI' | 'human' | string;
+  contextUsers?: string[];  // NEW: For filtered AI conversations - LLM should use only these users as context
 }
 
 // Response from Say What Want API
