@@ -939,27 +939,481 @@ What happens:
 
 ---
 
-## ✅ Implementation Status
+## 📊 Implementation Status - Current Reality
 
-**COMPLETE** - All features working:
+### ✅ What Works Now (Implemented)
 
-**Frontend:**
-- ✅ ais parsed from URL
-- ✅ ais stored in message.misc
-- ✅ contextUsers sent when filters active
-- ✅ Comprehensive logging
+**Parameters Working:**
+| Parameter | Status | How It Works |
+|-----------|--------|--------------|
+| `uis` | ✅ WORKS | Parsed from URL → Applied on page load → Sets username/color |
+| `ais` | ✅ WORKS | Parsed from URL → Stored in message.misc → Bot uses for identity override |
+| `contextUsers` | ✅ WORKS | Derived from filters → Sent with message → Bot filters context |
+| `filteractive` | ✅ WORKS | Parsed from URL → Activates filters → UI shows filtered view |
+| `mt` | ✅ WORKS | Parsed from URL → Sets channel → UI shows correct messages |
+| `u` | ✅ WORKS | Parsed from URL → Sets filters → UI filters messages |
 
-**Backend:**
-- ✅ ais extracted from message.misc
-- ✅ Overrides entity username/color
-- ✅ Supports random colors
-- ✅ Filters context based on contextUsers
-- ✅ Works in queue and direct modes
+**How contextUsers Works:**
+```
+Filter active + users selected
+  ↓
+Frontend: contextUsers = filterUsernames.map(u => u.username)
+  ↓
+Message: { contextUsers: ["Me", "MyAI"], ... }
+  ↓
+Bot: Filter 50 messages to only ["Me", "MyAI"]
+  ↓
+LLM: Sees only filtered conversation ✅
+```
 
-**Privacy:**
-- ✅ Each conversation has unique AI identity
-- ✅ Filters don't overlap
-- ✅ Scales infinitely
-- ✅ True isolation
+**How ais Works:**
+```
+URL: #ais=MyAI:255069000
+  ↓
+Parsed: filterState.ais = "MyAI:255069000"
+  ↓
+Message: { misc: "MyAI:255069000", ... }
+  ↓
+Bot: Reads misc, splits by :
+  ↓
+Posts as: username="MyAI", color="255069000" ✅
+```
 
-**Your URL will work perfectly!**
+---
+
+### ❌ What DOESN'T Work Yet (Critical Gap)
+
+**Parameters Parsed But Not Sent to Bot:**
+| Parameter | Parse | Send to Bot | Bot Uses | Status |
+|-----------|-------|-------------|----------|--------|
+| `entity` | ❌ NO | ❌ NO | ❌ NO | **BROKEN** |
+| `priority` | ❌ NO | ❌ NO | ❌ NO | **BROKEN** |
+| `model` | ❌ NO | ❌ NO | ❌ NO | **BROKEN** |
+| `nom` | ❌ NO | ❌ NO | ❌ NO | **BROKEN** |
+
+**The Problem:**
+
+**What happens with this URL:**
+```
+#u=MyAI:255069000+Me:195080200&ais=MyAI:255069000&priority=5&entity=hm-st-1&nom=100
+```
+
+**Expected:**
+```
+✅ Filter to Me + MyAI (WORKS)
+✅ Bot posts as MyAI (WORKS)
+✅ Use hm-st-1 entity (EXPECTED - doesn't work!)
+✅ Priority 5 in queue (EXPECTED - doesn't work!)
+✅ Send 100 messages context (EXPECTED - doesn't work!)
+```
+
+**Actual:**
+```
+✅ Filter works
+✅ ais works
+❌ entity: RANDOM entity selected (not hm-st-1!)
+❌ priority: AUTO priority used (not 5!)
+❌ nom: Entity's default used (not 100!)
+```
+
+**Why:**
+```
+1. url-filter-simple.ts doesn't parse entity/priority/model/nom
+2. These parameters stay in URL (user sees them)
+3. But NOT sent with message to bot
+4. Bot never knows they exist
+5. Bot uses defaults/random selection
+```
+
+**The Gap:**
+- Frontend has URL parameters ✅
+- Message doesn't include them ❌
+- Bot can't use them ❌
+
+---
+
+## 🔧 What Needs To Be Implemented
+
+### The Robust Solution (Scalable to 10M+ Users)
+
+**Design Principle:**
+```
+"URL parameters flow through message to bot"
+```
+
+**Architecture:**
+```
+URL Parameters
+    ↓
+Parsed by url-filter-simple.ts
+    ↓
+Passed to useSimpleFilters
+    ↓
+Passed to CommentsStream
+    ↓
+Included in message payload
+    ↓
+Sent to Cloudflare KV
+    ↓
+Bot fetches message
+    ↓
+Bot reads parameters
+    ↓
+Bot uses correct entity/priority/model/nom
+```
+
+**Implementation Plan:**
+
+### Phase 1: Extend FilterState (url-filter-simple.ts)
+
+**Add parameters to parsing:**
+```typescript
+export interface FilterState {
+  users: FilterUser[];
+  words: string[];
+  negativeWords: string[];
+  filterActive: boolean;
+  messageType: 'human' | 'AI' | 'ALL';
+  uis?: string;
+  ais?: string;
+  
+  // NEW: Bot control parameters
+  entity?: string;    // Force specific entity (e.g., hm-st-1)
+  priority?: number;  // Queue priority 0-99
+  model?: string;     // Override model
+  nom?: number | 'ALL';  // Context size override
+}
+
+// Parse these in parseURL():
+case 'entity':
+  state.entity = value;
+  break;
+case 'priority':
+  state.priority = parseInt(value);
+  break;
+case 'model':
+  state.model = value;
+  break;
+case 'nom':
+  state.nom = value === 'ALL' ? 'ALL' : parseInt(value);
+  break;
+
+// Include in buildURL() if present
+if (state.entity) params.push(`entity=${state.entity}`);
+if (state.priority !== undefined) params.push(`priority=${state.priority}`);
+if (state.model) params.push(`model=${state.model}`);
+if (state.nom) params.push(`nom=${state.nom}`);
+```
+
+### Phase 2: Create BotParams Type (Elegant Structure)
+
+**New interface for bot parameters:**
+```typescript
+// types/index.ts
+
+export interface BotParams {
+  entity?: string;      // Force specific entity ID
+  priority?: number;    // Queue priority 0-99
+  model?: string;       // Override LLM model
+  nom?: number | 'ALL'; // Context size
+}
+
+export interface Comment {
+  // ... existing fields
+  contextUsers?: string[];  // Already implemented ✅
+  botParams?: BotParams;    // NEW: Structured bot parameters
+}
+```
+
+**Why this is elegant:**
+- Single field for all bot config
+- Structured (not loose strings)
+- Type-safe
+- Easy to extend (add new params without breaking)
+- Scales to 100+ parameters if needed
+
+### Phase 3: Frontend Builds BotParams
+
+**Build from URL and send with message:**
+```typescript
+// components/CommentsStream.tsx - in handleSubmit
+
+// Build bot parameters from URL if any present
+const buildBotParams = (): BotParams | undefined => {
+  const params: BotParams = {};
+  
+  if (filterState.entity) params.entity = filterState.entity;
+  if (filterState.priority !== undefined) params.priority = filterState.priority;
+  if (filterState.model) params.model = filterState.model;
+  if (filterState.nom) params.nom = filterState.nom;
+  
+  // Only return if at least one param exists
+  return Object.keys(params).length > 0 ? params : undefined;
+};
+
+const botParams = buildBotParams();
+
+if (botParams) {
+  console.log('[CommentsStream] Bot parameters from URL:', botParams);
+}
+
+// Pass to submission
+await submitComment(
+  inputText, 
+  username, 
+  userColor, 
+  flashUsername, 
+  contextUsersArray,
+  aiStateParam,
+  botParams  // NEW
+);
+```
+
+### Phase 4: Message Includes BotParams
+
+**Store in structured way:**
+```typescript
+// modules/commentSubmission.ts - prepareCommentData
+
+export function prepareCommentData(
+  text: string,
+  username: string,
+  userColor: string,
+  processVideo?: (text: string) => string,
+  contextUsers?: string[],
+  ais?: string,
+  botParams?: BotParams  // NEW
+): Comment {
+  return {
+    id: generateCommentId(),
+    text: processedText,
+    timestamp: Date.now(),
+    username: username,
+    color: colorForStorage,
+    domain: 'saywhatwant.app',
+    language: 'en',
+    'message-type': 'human',
+    misc: ais || '',
+    contextUsers,
+    botParams  // NEW: All bot config in one field
+  };
+}
+```
+
+### Phase 5: Bot Uses BotParams (Robust)
+
+**With comprehensive fallbacks:**
+```typescript
+// ai/src/index.ts - in message processing
+
+// Extract bot parameters from message
+const botParams = message.botParams || {};
+
+// 1. SELECT ENTITY (with fallback chain)
+let selectedEntity;
+if (botParams.entity) {
+  // URL specified entity - use it!
+  selectedEntity = fullConfig.entities.find(e => e.id === botParams.entity);
+  
+  if (!selectedEntity) {
+    console.warn(chalk.yellow('[BOT PARAMS]'), 
+      `Entity "${botParams.entity}" not found, using random`);
+    selectedEntity = entityManager.selectRandomEntity();
+  } else {
+    console.log(chalk.green('[BOT PARAMS]'), 
+      `Using specified entity: ${botParams.entity}`);
+  }
+} else {
+  // No entity specified - select random
+  selectedEntity = entityManager.selectRandomEntity();
+  console.log(chalk.gray('[BOT PARAMS]'), 
+    `No entity specified, selected: ${selectedEntity.id}`);
+}
+
+// 2. SELECT MODEL (with fallback chain)
+const modelToUse = botParams.model || selectedEntity.model;
+if (botParams.model) {
+  console.log(chalk.green('[BOT PARAMS]'), 
+    `Model override: ${selectedEntity.model} → ${botParams.model}`);
+}
+
+// 3. DETERMINE PRIORITY (with fallback chain)
+let priority;
+if (botParams.priority !== undefined) {
+  // URL specified priority - use it!
+  priority = Math.max(0, Math.min(99, botParams.priority)); // Clamp 0-99
+  console.log(chalk.green('[BOT PARAMS]'), 
+    `Using specified priority: ${priority}`);
+} else {
+  // Auto-calculate priority based on content
+  priority = calculatePriority(message, selectedEntity);
+  console.log(chalk.gray('[BOT PARAMS]'), 
+    `Auto-calculated priority: ${priority}`);
+}
+
+// 4. DETERMINE CONTEXT SIZE (with fallback chain)
+let nomToUse;
+if (botParams.nom === 'ALL') {
+  nomToUse = contextMessages.length; // Send ALL
+  console.log(chalk.green('[BOT PARAMS]'), 
+    `Using ALL messages: ${nomToUse}`);
+} else if (botParams.nom) {
+  nomToUse = botParams.nom;
+  console.log(chalk.green('[BOT PARAMS]'), 
+    `Using specified nom: ${nomToUse}`);
+} else {
+  nomToUse = selectedEntity.messagesToRead; // Entity default
+  console.log(chalk.gray('[BOT PARAMS]'), 
+    `Using entity default nom: ${nomToUse}`);
+}
+
+// Build final context
+const finalContext = contextMessages.slice(-nomToUse);
+
+console.log(chalk.cyan('[BOT PARAMS]'), 'Final configuration:');
+console.log(chalk.cyan('  Entity:'), selectedEntity.id);
+console.log(chalk.cyan('  Model:'), modelToUse);
+console.log(chalk.cyan('  Priority:'), priority);
+console.log(chalk.cyan('  Context size:'), finalContext.length);
+console.log(chalk.cyan('  Context users:'), message.contextUsers?.join(', ') || 'all');
+```
+
+---
+
+## 🎯 Why This Is Robust & Scalable
+
+### 1. Structured Data (Not String Parsing)
+```
+❌ BAD: Parse from misc string each time
+   misc: "entity=hm-st-1&priority=5&nom=100"
+   → Fragile, error-prone, slow
+
+✅ GOOD: Structured object
+   botParams: { entity: "hm-st-1", priority: 5, nom: 100 }
+   → Type-safe, fast, reliable
+```
+
+### 2. Comprehensive Fallbacks (Never Breaks)
+```
+Priority chain:
+1. URL parameter (if user specified)
+2. Auto-calculation (if not specified)
+3. Never undefined, never null
+
+Entity chain:
+1. URL parameter (if valid entity ID)
+2. Random selection (if invalid or missing)
+3. Always have valid entity
+
+Model chain:
+1. URL override (if specified)
+2. Entity default (if not)
+3. Always have valid model
+
+nom chain:
+1. URL "ALL" (send everything)
+2. URL number (send N messages)
+3. Entity default (if not specified)
+4. Always have valid number
+```
+
+### 3. Validation at Every Step
+```
+URL → Validate format
+Message → Validate structure
+Bot → Validate entity exists
+Queue → Validate priority in range
+LLM → Validate nom is reasonable
+
+= Bulletproof at 10M users
+```
+
+### 4. Single Responsibility
+```
+url-filter-simple.ts: Parse URL → FilterState
+commentSubmission.ts: FilterState → BotParams → Message
+Bot: Message.botParams → Apply with fallbacks
+
+Each layer does ONE thing
+Easy to debug
+Easy to extend
+```
+
+### 5. Logging at Scale
+```
+Development: Full verbose logs
+Production: Structured logs for monitoring
+Can track:
+- How many use entity override
+- How many use priority override
+- Distribution of nom values
+- Error rates per parameter
+
+= Observable at scale
+```
+
+---
+
+## 🔨 Implementation Steps (For Next Session)
+
+**Step 1: Extend FilterState** (5 min)
+- Add entity, priority, model, nom to interface
+- Parse from URL in parseURL()
+- Build into URL in buildURL()
+
+**Step 2: Create BotParams Type** (3 min)
+- Add BotParams interface to types/index.ts
+- Add botParams to Comment interface
+
+**Step 3: Frontend Builds BotParams** (10 min)
+- Extract from filterState in CommentsStream
+- Build BotParams object
+- Pass through submission chain
+
+**Step 4: Cloudflare Worker Accepts** (5 min)
+- Allow botParams field in POST
+- Store in KV with comment
+
+**Step 5: Bot Uses BotParams** (20 min)
+- Extract from message.botParams
+- Entity selection with fallback
+- Priority with fallback
+- Model with fallback
+- nom with fallback
+- Comprehensive logging
+
+**Step 6: Integration Testing** (10 min)
+- Test each parameter independently
+- Test all combinations
+- Verify fallbacks work
+- Check logging output
+
+**Total: ~1 hour** - Robust, elegant, scalable
+
+---
+
+## 🎯 After Implementation
+
+**This URL will work EXACTLY as expected:**
+```
+#u=MyAI:255069000+Me:195080200&filteractive=true&mt=ALL&uis=Me:195080200&ais=MyAI:255069000&priority=5&entity=hm-st-1&nom=100
+```
+
+**What will happen:**
+1. ✅ Username: "Me"
+2. ✅ Filter: Only Me + MyAI
+3. ✅ contextUsers sent: ["Me", "MyAI"]
+4. ✅ ais sent: "MyAI:255069000"
+5. ✅ **botParams sent: { entity: "hm-st-1", priority: 5, nom: 100 }**
+6. ✅ Bot uses hm-st-1 entity (not random!)
+7. ✅ Bot queues with priority 5 (not auto!)
+8. ✅ Bot sends 100 filtered messages to LLM (not default 50!)
+9. ✅ Bot posts as MyAI with your color
+10. ✅ Response appears in filtered view
+11. ✅ **Complete control from URL**
+
+**URL becomes the COMPLETE specification for the conversation.**
+
+---
+
+**Status**: Ready to implement robust, scalable solution

@@ -1,3 +1,11 @@
+// Bot parameters - Complete URL control over bot behavior
+export interface BotParams {
+  entity?: string;      // Force specific entity ID (e.g., hm-st-1, philosopher)
+  priority?: number;    // Queue priority 0-99 (0=highest)
+  model?: string;       // Override LLM model selection
+  nom?: number | 'ALL'; // Context size override (number of messages or ALL)
+}
+
 // Comment types - MUST match KV structure exactly
 export interface Comment {
   id: string;                    // e.g., "1759244943773-z4timztmx"
@@ -10,6 +18,7 @@ export interface Comment {
   'message-type': string;         // "AI" or "human" - hyphenated key! (required in KV)
   misc: string;                   // Additional data, usually empty string (required in KV)
   contextUsers?: string[];        // NEW: Usernames for LLM context filtering (optional, for filtered conversations)
+  botParams?: BotParams;          // NEW: Bot control parameters from URL (structured, type-safe)
 }
 
 export interface CommentsResponse {

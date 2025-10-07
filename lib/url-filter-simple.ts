@@ -16,6 +16,12 @@ export interface FilterState {
   messageType: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
   uis?: string;  // User initial state: username:color or username:random
   ais?: string;  // AI initial state: username:color or username:random (overrides entity default for privacy)
+  
+  // Bot control parameters (complete URL specification)
+  entity?: string;      // Force specific entity ID from config
+  priority?: number;    // Queue priority 0-99 (0=highest)
+  model?: string;       // Override LLM model selection
+  nom?: number | 'ALL'; // Context size override
 }
 
 /**
@@ -88,6 +94,36 @@ export function parseURL(): FilterState {
         // Overrides entity's default username/color for isolated conversations
         state.ais = value;
         break;
+        
+      case 'entity':
+        // Force specific entity ID (e.g., hm-st-1, philosopher)
+        state.entity = value;
+        break;
+        
+      case 'priority':
+        // Queue priority 0-99 (0=highest, 99=lowest)
+        const priorityNum = parseInt(value);
+        if (!isNaN(priorityNum) && priorityNum >= 0 && priorityNum <= 99) {
+          state.priority = priorityNum;
+        }
+        break;
+        
+      case 'model':
+        // Override LLM model
+        state.model = value;
+        break;
+        
+      case 'nom':
+        // Number of messages for LLM context
+        if (value === 'ALL') {
+          state.nom = 'ALL';
+        } else {
+          const nomNum = parseInt(value);
+          if (!isNaN(nomNum) && nomNum > 0) {
+            state.nom = nomNum;
+          }
+        }
+        break;
     }
   }
 
@@ -140,6 +176,20 @@ export function buildURL(state: FilterState): string {
   // Add ais if present (AI initial state - critical for privacy)
   if (state.ais) {
     params.push(`ais=${state.ais}`);
+  }
+  
+  // Add bot control parameters if present
+  if (state.entity) {
+    params.push(`entity=${state.entity}`);
+  }
+  if (state.priority !== undefined) {
+    params.push(`priority=${state.priority}`);
+  }
+  if (state.model) {
+    params.push(`model=${state.model}`);
+  }
+  if (state.nom !== undefined) {
+    params.push(`nom=${state.nom}`);
   }
 
   return params.length > 0 ? `#${params.join('&')}` : '';

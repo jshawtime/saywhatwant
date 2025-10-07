@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback, RefObject } from 'react';
-import { Comment } from '@/types';
+import { Comment, BotParams } from '@/types';
 import { postCommentToCloud, isCloudAPIEnabled } from '@/modules/cloudApiClient';
 
 export interface SubmissionConfig {
@@ -77,7 +77,8 @@ export function prepareCommentData(
   userColor: string,
   processVideo?: (text: string) => string,
   contextUsers?: string[],  // NEW: Filter usernames for LLM context
-  ais?: string  // NEW: AI initial state (username:color override for bot)
+  ais?: string,  // NEW: AI initial state (username:color override for bot)
+  botParams?: BotParams  // NEW: Bot control parameters (entity, priority, model, nom)
 ): Comment {
   const processedText = processVideo ? processVideo(text.trim()) : text.trim();
   
@@ -96,6 +97,7 @@ export function prepareCommentData(
     'message-type': 'human', // Human-generated message
     misc: ais || '', // Store ais in misc field for bot to read
     contextUsers,  // NEW: LLM should use only these users' messages as context
+    botParams,  // NEW: Structured bot control (entity, priority, model, nom)
   };
 }
 
@@ -115,7 +117,8 @@ export function useCommentSubmission(
     userColor: string,
     onUsernameFlash?: () => void,
     contextUsers?: string[],  // NEW: Optional filter for LLM context
-    ais?: string  // NEW: AI initial state override
+    ais?: string,  // NEW: AI initial state override
+    botParams?: BotParams  // NEW: Bot control parameters
   ): Promise<boolean> => {
     // Validate input
     if (!inputText.trim()) return false;
@@ -141,15 +144,19 @@ export function useCommentSubmission(
       userColor,
       callbacks.processVideoInComment,
       contextUsers,  // NEW: Pass through filter context
-      ais  // NEW: Pass through AI state override
+      ais,  // NEW: Pass through AI state override
+      botParams  // NEW: Pass through bot control parameters
     );
     
-    // Log if this is a filtered conversation
+    // Log if this is a filtered/controlled conversation
     if (contextUsers && contextUsers.length > 0) {
       console.log('[CommentSubmission] Filtered conversation - Context users:', contextUsers);
     }
     if (ais) {
       console.log('[CommentSubmission] AI identity override (ais):', ais);
+    }
+    if (botParams) {
+      console.log('[CommentSubmission] Bot control parameters:', botParams);
     }
     
     // INSTANT UI FEEDBACK - Optimistic update

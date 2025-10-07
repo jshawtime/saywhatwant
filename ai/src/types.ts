@@ -2,6 +2,14 @@
  * Type definitions for the AI Bot
  */
 
+// Bot control parameters from URL
+export interface BotParams {
+  entity?: string;      // Force specific entity ID
+  priority?: number;    // Queue priority 0-99
+  model?: string;       // Override LLM model
+  nom?: number | 'ALL'; // Context size override
+}
+
 // Comment type matching Say What Want's structure
 export interface Comment {
   id: string;
@@ -14,6 +22,7 @@ export interface Comment {
   misc?: string;
   'message-type'?: 'AI' | 'human' | string;
   contextUsers?: string[];  // NEW: For filtered AI conversations - LLM should use only these users as context
+  botParams?: BotParams;    // NEW: Structured bot control parameters
 }
 
 // Response from Say What Want API

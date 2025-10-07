@@ -9,7 +9,7 @@ import { Send, ChevronDown, Tv, Ban, Users, Sparkles } from 'lucide-react';
 // ==========================================
 // TYPES
 // ==========================================
-import { Comment, CommentsResponse } from '@/types';
+import { Comment, CommentsResponse, BotParams } from '@/types';
 
 // ==========================================
 // CONFIGURATION
@@ -279,6 +279,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setMessageType,  // ✅ Get real function
     uis,  // NEW: User initial state from URL
     ais,  // NEW: AI initial state from URL (for bot identity override)
+    entity: urlEntity,  // NEW: Bot entity from URL
+    priority: urlPriority,  // NEW: Bot priority from URL
+    model: urlModel,  // NEW: Bot model from URL
+    nom: urlNom,  // NEW: Bot nom from URL
   } = useSimpleFilters({ 
     comments: initialMessages,
     filterByColorToo: true
@@ -1005,14 +1009,29 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // NEW: Pass ais parameter (AI identity override)
     const aiStateParam = ais || undefined;
     
+    // NEW: Build bot parameters from URL (structured, type-safe)
+    const botParams: BotParams | undefined = (() => {
+      const params: BotParams = {};
+      if (urlEntity) params.entity = urlEntity;
+      if (urlPriority !== undefined) params.priority = urlPriority;
+      if (urlModel) params.model = urlModel;
+      if (urlNom !== undefined) params.nom = urlNom;
+      
+      return Object.keys(params).length > 0 ? params : undefined;
+    })();
+    
+    // Comprehensive logging
     if (contextUsersArray) {
-      console.log('[CommentsStream] Posting with filtered context:', contextUsersArray);
+      console.log('[CommentsStream] Filtered context:', contextUsersArray);
     }
     if (aiStateParam) {
-      console.log('[CommentsStream] AI identity override (ais):', aiStateParam);
+      console.log('[CommentsStream] AI identity (ais):', aiStateParam);
+    }
+    if (botParams) {
+      console.log('[CommentsStream] Bot parameters:', botParams);
     }
     
-    await submitComment(inputText, username, userColor, flashUsername, contextUsersArray, aiStateParam);
+    await submitComment(inputText, username, userColor, flashUsername, contextUsersArray, aiStateParam, botParams);
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)

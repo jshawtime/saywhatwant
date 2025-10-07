@@ -237,5 +237,11 @@ export function useSimpleFilters({
     
     // NEW: AI initial state from URL (overrides entity username/color)
     ais: filterState.ais,
+    
+    // NEW: Bot control parameters from URL
+    entity: filterState.entity,
+    priority: filterState.priority,
+    model: filterState.model,
+    nom: filterState.nom,
   };
 }

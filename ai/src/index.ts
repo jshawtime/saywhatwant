@@ -271,33 +271,63 @@ async function runBot() {
               idsArray.slice(-5000).forEach(id => processedMessageIds.add(id));
             }
             
-            // Select entity for this message
-            const entity = entityManager.selectRandomEntity();
+            // ====================
+            // ROBUST PARAMETER HANDLING WITH FALLBACKS
+            // ====================
             
-            // Assign simple priority based on content
-            let priority = 50;  // Default medium
-            const text = message.text?.toLowerCase() || '';
-            const username = message.username?.toLowerCase() || '';
-            const entityNameLower = entity.username.toLowerCase();
+            const botParams = message.botParams || {};
             
-            // HIGHEST: Direct mention (username + color match)
-            if (username === entityNameLower && message.color === entity.color) {
-              priority = 5;  // Very high priority
+            // 1. SELECT ENTITY (with fallback chain)
+            let entity;
+            if (botParams.entity) {
+              // URL specified entity - try to use it
+              entity = fullConfig.entities.find((e: any) => e.id === botParams.entity);
+              
+              if (!entity) {
+                console.warn(chalk.yellow('[BOT PARAMS]'), 
+                  `Entity "${botParams.entity}" not found in config, using random`);
+                entity = entityManager.selectRandomEntity();
+              } else {
+                console.log(chalk.green('[BOT PARAMS]'), 
+                  `Using specified entity: ${botParams.entity}`);
+              }
+            } else {
+              // No entity specified - select random
+              entity = entityManager.selectRandomEntity();
             }
-            // HIGH: Direct address (name mentioned in text)
-            else if (text.includes(entityNameLower)) {
-              priority = 10;  // High priority
-            }
-            // MEDIUM-HIGH: Has question
-            else if (text.includes('?')) {
-              priority = 25;  // Medium-high priority
-            }
-            // MEDIUM: Entity's response chance (0.0-1.0 → 30-70 priority)
-            else {
-              // Convert responseChance to priority (inverse)
-              // responseChance 1.0 → priority 30 (high)
-              // responseChance 0.1 → priority 70 (low)
-              priority = Math.round(70 - (entity.responseChance * 40));
+            
+            // 2. DETERMINE PRIORITY (with fallback chain)
+            let priority;
+            if (botParams.priority !== undefined) {
+              // URL specified priority - use it (clamped 0-99)
+              priority = Math.max(0, Math.min(99, botParams.priority));
+              console.log(chalk.green('[BOT PARAMS]'), 
+                `Using specified priority: ${priority}`);
+            } else {
+              // Auto-calculate priority based on content
+              const text = message.text?.toLowerCase() || '';
+              const username = message.username?.toLowerCase() || '';
+              const entityNameLower = entity.username.toLowerCase();
+              
+              // HIGHEST: Direct mention (username + color match)
+              if (username === entityNameLower && message.color === entity.color) {
+                priority = 5;  // Very high priority
+              }
+              // HIGH: Direct address (name mentioned in text)
+              else if (text.includes(entityNameLower)) {
+                priority = 10;  // High priority
+              }
+              // MEDIUM-HIGH: Has question
+              else if (text.includes('?')) {
+                priority = 25;  // Medium-high priority
+              }
+              // MEDIUM: Entity's response chance (0.0-1.0 → 30-70 priority)
+              else {
+                // Convert responseChance to priority (inverse)
+                // responseChance 1.0 → priority 30 (high)
+                // responseChance 0.1 → priority 70 (low)
+                priority = Math.round(70 - (entity.responseChance * 40));
+              }
             }
             
             // Check rate limits before queuing
@@ -307,7 +337,14 @@ async function runBot() {
               continue;  // Skip this message
             }
             
-            // NEW: Filter context if message has contextUsers (filtered conversations)
+            // 3. SELECT MODEL (with fallback chain)
+            const modelToUse = botParams.model || entity.model;
+            if (botParams.model) {
+              console.log(chalk.green('[BOT PARAMS]'), 
+                `Model override: ${entity.model} → ${botParams.model}`);
+            }
+            
+            // 4. FILTER CONTEXT if contextUsers present (filtered conversations)
             let contextMessages = messages;
             if (message.contextUsers && Array.isArray(message.contextUsers) && message.contextUsers.length > 0) {
               contextMessages = messages.filter(m => 
@@ -318,8 +355,32 @@ async function runBot() {
               console.log(chalk.cyan('  Context:'), `${messages.length} → ${contextMessages.length} messages`);
             }
             
+            // 5. DETERMINE CONTEXT SIZE (with fallback chain)
+            let nomToUse;
+            if (botParams.nom === 'ALL') {
+              nomToUse = contextMessages.length; // Send ALL filtered messages
+              console.log(chalk.green('[BOT PARAMS]'), 
+                `Using ALL messages: ${nomToUse}`);
+            } else if (botParams.nom) {
+              nomToUse = Math.min(botParams.nom, contextMessages.length); // Respect nom limit
+              console.log(chalk.green('[BOT PARAMS]'), 
+                `Using specified nom: ${nomToUse}`);
+            } else {
+              nomToUse = Math.min(entity.messagesToRead, contextMessages.length); // Entity default
+            }
+            
             // Build context from (filtered) messages
-            const contextForLLM = contextMessages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`);
+            const contextForLLM = contextMessages.slice(-nomToUse).map(m => `${m.username}: ${m.text}`);
+            
+            // Log final configuration
+            console.log(chalk.cyan('[QUEUE]'), 'Configuration:');
+            console.log(chalk.cyan('  Entity:'), entity.id);
+            console.log(chalk.cyan('  Model:'), modelToUse);
+            console.log(chalk.cyan('  Priority:'), priority);
+            console.log(chalk.cyan('  Context size:'), contextForLLM.length);
+            if (message.contextUsers) {
+              console.log(chalk.cyan('  Context users:'), message.contextUsers.join(', '));
+            }
             
             // Queue the message with GUARANTEED unique ID
             const queueItem = {
@@ -327,14 +388,24 @@ async function runBot() {
               priority,
               timestamp: Date.now(),
               message,
-              context: contextForLLM,  // Use filtered context
+              context: contextForLLM,  // Use (filtered) context with (overridden) size
               entity,
-              model: entity.model,
-              routerReason: message.contextUsers 
-                ? `Filtered conversation: ${message.contextUsers.join(', ')}` 
-                : `Priority ${priority} based on content analysis`,
+              model: modelToUse,  // Use overridden model if specified
+              routerReason: buildRouterReason(message, botParams, priority),
               maxRetries: QUEUE_MAX_RETRIES
             };
+            
+            function buildRouterReason(msg: any, params: any, pri: number): string {
+              const reasons = [];
+              if (params.entity) reasons.push(`Entity: ${params.entity}`);
+              if (params.priority !== undefined) reasons.push(`Priority: ${params.priority}`);
+              if (msg.contextUsers) reasons.push(`Filtered: ${msg.contextUsers.join(', ')}`);
+              if (params.nom) reasons.push(`nom: ${params.nom}`);
+              
+              return reasons.length > 0 
+                ? reasons.join(', ') 
+                : `Auto priority ${pri}`;
+            }
             
             await queueService.enqueue(queueItem);
             
