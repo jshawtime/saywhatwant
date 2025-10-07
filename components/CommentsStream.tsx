@@ -277,6 +277,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     filterState,  // Get the full state
     messageType,  // ✅ Get real value from URL
     setMessageType,  // ✅ Get real function
+    uis,  // NEW: User initial state from URL
   } = useSimpleFilters({ 
     comments: initialMessages,
     filterByColorToo: true
@@ -324,6 +325,39 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const handleModelResponseComplete = () => {};
   const aiUsername: string | null = null;
   const aiColor: string | null = null;
+  
+  // NEW: Apply uis parameter from URL (user initial state)
+  useEffect(() => {
+    if (uis) {
+      console.log('[CommentsStream] Applying uis from URL:', uis);
+      
+      // Format: username:color or username:random
+      const [uisUsername, uisColor] = uis.split(':');
+      
+      if (uisUsername) {
+        // Update username
+        setUsername(uisUsername);
+        localStorage.setItem('sww-username', uisUsername);
+        console.log('[CommentsStream] Set username to:', uisUsername);
+        
+        // Update color if provided
+        if (uisColor) {
+          if (uisColor.toLowerCase() === 'random') {
+            // Generate random color
+            const randomColor = `${Math.floor(Math.random() * 256).toString().padStart(3, '0')}${Math.floor(Math.random() * 256).toString().padStart(3, '0')}${Math.floor(Math.random() * 256).toString().padStart(3, '0')}`;
+            setUserColor(randomColor);
+            localStorage.setItem('sww-color', randomColor);
+            console.log('[CommentsStream] Set random color:', randomColor);
+          } else {
+            // Use provided color
+            setUserColor(uisColor);
+            localStorage.setItem('sww-color', uisColor);
+            console.log('[CommentsStream] Set color to:', uisColor);
+          }
+        }
+      }
+    }
+  }, [uis]);
   
   // Comment Submission System (moved here so modelDomain is available)
   const {

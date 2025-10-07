@@ -231,5 +231,8 @@ export function useSimpleFilters({
     removeWordFromFilter: removeWord,
     addNegativeWordFilter: addNegativeWord,
     removeNegativeWordFilter: removeNegativeWord,
+    
+    // NEW: User initial state from URL
+    uis: filterState.uis,
   };
 }

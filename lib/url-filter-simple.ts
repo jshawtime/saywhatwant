@@ -14,6 +14,7 @@ export interface FilterState {
   negativeWords: string[];
   filterActive: boolean;
   messageType: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
+  uis?: string;  // User initial state: username:color or username:random
 }
 
 /**
@@ -75,6 +76,11 @@ export function parseURL(): FilterState {
       case '-word':
         state.negativeWords = value ? value.split('+') : [];
         break;
+        
+      case 'uis':
+        // User initial state: username:color or username:random
+        state.uis = value;
+        break;
     }
   }
 
@@ -118,6 +124,11 @@ export function buildURL(state: FilterState): string {
   // ALWAYS add messageType to prevent state conflicts
   // (Removing it causes React to re-parse before state updates)
   params.push(`mt=${state.messageType}`);
+  
+  // Add uis if present (user initial state)
+  if (state.uis) {
+    params.push(`uis=${state.uis}`);
+  }
 
   return params.length > 0 ? `#${params.join('&')}` : '';
 }
