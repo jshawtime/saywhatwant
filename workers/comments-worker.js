@@ -427,6 +427,14 @@ async function handlePostComment(request, env) {
       });
     }
 
+    // DEBUG: Log what we received from bot
+    console.log('[Worker POST] === RECEIVED FROM BOT ===');
+    console.log('[Worker POST] body.username:', body.username);
+    console.log('[Worker POST] body.color:', body.color);
+    console.log('[Worker POST] body.misc:', body.misc);
+    console.log('[Worker POST] sanitized username:', username);
+    console.log('[Worker POST] final color:', color);
+
     // Create comment object - use client ID/timestamp if provided
     const comment = {
       id: body.id || generateId(),  // Use client's ID if provided
@@ -447,6 +455,12 @@ async function handlePostComment(request, env) {
         botParams: botParams
       })
     };
+    
+    // DEBUG: Log what we're about to store
+    console.log('[Worker POST] === STORING TO KV ===');
+    console.log('[Worker POST] comment.username:', comment.username);
+    console.log('[Worker POST] comment.color:', comment.color);
+    console.log('[Worker POST] comment.id:', comment.id);
 
     // Store in KV
     const key = `comment:${comment.timestamp}:${comment.id}`;
