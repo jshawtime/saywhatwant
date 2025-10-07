@@ -77,27 +77,39 @@ Gets response: "Light scatters more efficiently..." ✅
 
 **Step 5: Bot Posts Response**
 ```
-YOUR LOGS SHOW:
-[AIS] Username: NoRebel → MyAI ✅
-[AIS] Color: 255069100 → 255069000 ✅
-[POST] MyAI: I enjoy talking to you... ✅
+LOGS SHOW:
+[AIS] Username: NoRebel → MyAI ✅ LIES!
+[AIS] Color: 255069100 → 255069000 ✅ LIES!
+[POST] MyAI: I enjoy talking to you... ✅ LIES!
 
-Bot DOES post as MyAI!
+ACTUAL SCREENSHOTS SHOW:
+Messages posted as: FearAndLoathing, NoRebel, TheEternal ❌
+NOT posted as: MyAI ❌
+
+THE LOGS ARE WRONG! They show override happening but actual post uses entity defaults!
 ```
 
 ---
 
 ## 🚨 THE ACTUAL PROBLEM (Critical Discovery)
 
-### From Your Monitor Logs:
+### The Logs vs Reality Mismatch:
 
+**Monitor logs claim:**
 ```
-[POST] MyAI:  I enjoy talking to you because our conversations are unique...
+[AIS] Username: NoRebel → MyAI
+[POST] MyAI: Response...
 ```
 
-**This means the bot IS working!** It posted as MyAI!
+**Actual messages in app show:**
+```
+NoRebel: Response...
+FearAndLoathing: Response...
+```
 
-**So why don't you see it in your filtered view?**
+**The override is being LOGGED but NOT APPLIED to the actual comment object!**
+
+**Root cause**: postComment() function logs the override values but then posts using entity defaults anyway!
 
 ---
 
@@ -238,9 +250,56 @@ MyAI: Light scatters more efficiently... ✅
 
 ---
 
-## 🐛 The Fundamental Flaw (My Hypothesis)
+## 🐛 The Fundamental Flaw (CONFIRMED BY USER)
 
-### Problem A: Domain Filtering
+### THE REAL BUG: ais Override Not Actually Applied
+
+**What the code does:**
+```javascript
+// postComment(text, ais) function:
+let usernameToUse = entity.username;  // "NoRebel"
+let colorToUse = entity.color;        // "255069100"
+
+if (ais) {
+  const [aisUsername, aisColor] = ais.split(':');
+  usernameToUse = aisUsername;  // "MyAI"
+  colorToUse = aisColor;        // "255069000"
+  
+  // LOGS the override
+  console.log('Username override:', usernameToUse);
+  queueWS.sendLog(`[AIS] Username: ${entity.username} → ${aisUsername}`);
+}
+
+// Creates comment
+const comment = {
+  username: usernameToUse,  // Should be "MyAI"
+  color: colorToUse,        // Should be "255069000"
+  ...
+};
+
+// Posts it
+await kvClient.postComment(comment);
+```
+
+**What's supposed to happen:**
+- ais splits → usernameToUse = "MyAI"
+- comment created with "MyAI"
+- Posted to KV as "MyAI"
+
+**What's actually happening:**
+- Logs show "MyAI" (console.log works)
+- But actual KV message has "NoRebel" or "FearAndLoathing"
+- The variables are set correctly but not used in final post!
+
+**Possible causes:**
+1. kvClient.postComment() is overwriting username/color
+2. There's ANOTHER postComment() being called
+3. Comment object not using the variables
+4. Worker is overwriting on receive
+
+---
+
+### Problem A: Domain Filtering (LESS LIKELY NOW)
 
 **Presence polling URL:**
 ```
