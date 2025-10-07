@@ -18,6 +18,7 @@ export interface AIEntity {
   systemPrompt: string;
   userPrompt?: string;
   nom: number;  // Number of messages to send as context to LLM
+  defaultPriority: number;  // Default queue priority for this entity
   temperature: number;
   maxTokens: number;
   topP: number;

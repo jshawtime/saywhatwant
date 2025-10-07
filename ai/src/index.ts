@@ -297,35 +297,15 @@ async function runBot() {
             // 2. DETERMINE PRIORITY (with fallback chain)
             let priority;
             if (botParams.priority !== undefined) {
-              // URL specified priority - use it (clamped 0-99)
+              // URL specified priority - HIGHEST PRIORITY (clamped 0-99)
               priority = Math.max(0, Math.min(99, botParams.priority));
               console.log(chalk.green('[BOT PARAMS]'), 
-                `Using specified priority: ${priority}`);
+                `Using URL priority: ${priority}`);
             } else {
-              // Auto-calculate priority based on content
-              const text = message.text?.toLowerCase() || '';
-              const username = message.username?.toLowerCase() || '';
-              const entityNameLower = entity.username.toLowerCase();
-              
-              // HIGHEST: Direct mention (username + color match)
-              if (username === entityNameLower && message.color === entity.color) {
-                priority = 5;  // Very high priority
-              }
-              // HIGH: Direct address (name mentioned in text)
-              else if (text.includes(entityNameLower)) {
-                priority = 10;  // High priority
-              }
-              // MEDIUM-HIGH: Has question
-              else if (text.includes('?')) {
-                priority = 25;  // Medium-high priority
-              }
-              // MEDIUM: Entity's response chance (0.0-1.0 → 30-70 priority)
-              else {
-                // Convert responseChance to priority (inverse)
-                // responseChance 1.0 → priority 30 (high)
-                // responseChance 0.1 → priority 70 (low)
-                priority = Math.round(70 - (entity.responseChance * 40));
-              }
+              // Use entity's default priority from config
+              priority = entity.defaultPriority || 50;  // Fallback to 50 if not in config
+              console.log(chalk.gray('[PRIORITY]'), 
+                `Using entity default: ${priority}`);
             }
             
             // Check rate limits before queuing

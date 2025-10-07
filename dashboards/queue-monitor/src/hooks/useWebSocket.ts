@@ -80,9 +80,12 @@ export function useWebSocket(url: string) {
         
       case 'log':
         // Add log message (keep last MAX_LOGS)
+        console.log('[Dashboard] Received log:', message.data.message);
         setLogs(prev => {
           const newLogs = [...prev, message.data.message];
-          return newLogs.slice(-MAX_LOGS);
+          const trimmed = newLogs.slice(-MAX_LOGS);
+          console.log('[Dashboard] Logs in state:', trimmed.length);
+          return trimmed;
         });
         break;
     }
