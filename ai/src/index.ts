@@ -261,16 +261,6 @@ async function runBot() {
             
             messageIndex++;  // Increment for each message
             
-            // Mark as processed
-            processedMessageIds.add(message.id);
-            
-            // Limit Set size (keep last 10000 IDs)
-            if (processedMessageIds.size > 10000) {
-              const idsArray = Array.from(processedMessageIds);
-              processedMessageIds.clear();
-              idsArray.slice(-5000).forEach(id => processedMessageIds.add(id));
-            }
-            
             // ====================
             // ROBUST PARAMETER HANDLING WITH FALLBACKS
             // ====================
@@ -408,6 +398,16 @@ async function runBot() {
             }
             
             await queueService.enqueue(queueItem);
+            
+            // Mark as processed AFTER successful queue (not before!)
+            processedMessageIds.add(message.id);
+            
+            // Limit Set size (keep last 10000 IDs)
+            if (processedMessageIds.size > 10000) {
+              const idsArray = Array.from(processedMessageIds);
+              processedMessageIds.clear();
+              idsArray.slice(-5000).forEach(id => processedMessageIds.add(id));
+            }
             
             // Emit WebSocket event
             if (queueWS) {
