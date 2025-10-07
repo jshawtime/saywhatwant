@@ -31,7 +31,7 @@ function App() {
         onClearAll={clearQueue}
       />
       <RightPanel stats={stats} />
-      <LogViewer logs={logs} maxLogs={20} />
+      <LogViewer logs={logs} maxLogs={100} />
       <Footer connected={connected} lastUpdate={lastUpdate} />
     </div>
   );

@@ -24,7 +24,7 @@ export function useWebSocket(url: string) {
   const [logs, setLogs] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const MAX_LOGS = 20;  // Configurable: Keep last N logs
+  const MAX_LOGS = 100;  // Configurable: Keep last N log lines (shows ~20 message processing cycles)
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     console.log('[Dashboard] ===== RECEIVED MESSAGE =====');
