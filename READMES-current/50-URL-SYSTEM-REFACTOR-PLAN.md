@@ -1,9 +1,35 @@
 # URL System Consolidation Refactor Plan
 
 **Date**: October 4, 2025  
-**Status**: PLANNING → EXECUTION
-**Current**: 3 conflicting URL systems (3,000+ lines)  
-**Target**: 1 unified system (300 lines)
+**Status**: ✅ COMPLETE
+**Result**: 1 unified system, 3,160 lines deleted, all features working
+
+---
+
+## 📖 Complete URL Parameters Reference
+
+**All supported parameters in the unified URL system:**
+
+| Parameter | Format | What It Does |
+|-----------|--------|--------------|
+| **filteractive** | `true\|false` | Enables or disables all filters (when true, applies u/word/-word filters) |
+| **mt** | `human\|AI\|ALL` | Message type channel - selects which messages to display |
+| **u** | `username:color` | User filter - shows only messages from specified user(s), supports multiple with + separator |
+| **word** | `text` | Word filter - shows only messages containing specified word(s), supports multiple with + separator |
+| **-word** | `text` | Negative word filter - hides messages containing specified word(s), supports multiple with + separator |
+| **uis** | `username:color\|username:random` | User initial state - sets the current user's username and color on page load |
+| **nom** | `number\|ALL` | Number of messages - controls how many messages sent to LLM as context (not a UI filter) |
+| **priority** | `0-99` | Queue priority - 0 is highest priority, bypasses router if 0-9, used for direct AI conversations |
+| **entity** | `entity-id` | Force specific AI entity - overrides random selection, uses specified entity from config |
+| **model** | `model-name` | Force specific LLM model - overrides entity's default model selection |
+
+**Notes:**
+- Multiple users: `u=alice:255000000+bob:128000255`
+- Multiple words: `word=hello+world`
+- Multiple negative words: `-word=spam+ad+test`
+- Parameters can be combined in any order
+- URL is the absolute source of truth
+- Missing parameters use entity config defaults (no global fallbacks)
 
 ---
 
