@@ -278,6 +278,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     messageType,  // ✅ Get real value from URL
     setMessageType,  // ✅ Get real function
     uis,  // NEW: User initial state from URL
+    ais,  // NEW: AI initial state from URL (for bot identity override)
   } = useSimpleFilters({ 
     comments: initialMessages,
     filterByColorToo: true
@@ -1001,11 +1002,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       ? filterUsernames.map(u => u.username)
       : undefined;
     
+    // NEW: Pass ais parameter (AI identity override)
+    const aiStateParam = ais || undefined;
+    
     if (contextUsersArray) {
       console.log('[CommentsStream] Posting with filtered context:', contextUsersArray);
     }
+    if (aiStateParam) {
+      console.log('[CommentsStream] AI identity override (ais):', aiStateParam);
+    }
     
-    await submitComment(inputText, username, userColor, flashUsername, contextUsersArray);
+    await submitComment(inputText, username, userColor, flashUsername, contextUsersArray, aiStateParam);
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)

@@ -234,5 +234,8 @@ export function useSimpleFilters({
     
     // NEW: User initial state from URL
     uis: filterState.uis,
+    
+    // NEW: AI initial state from URL (overrides entity username/color)
+    ais: filterState.ais,
   };
 }

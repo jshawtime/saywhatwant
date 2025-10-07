@@ -15,6 +15,7 @@ export interface FilterState {
   filterActive: boolean;
   messageType: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
   uis?: string;  // User initial state: username:color or username:random
+  ais?: string;  // AI initial state: username:color or username:random (overrides entity default for privacy)
 }
 
 /**
@@ -81,6 +82,12 @@ export function parseURL(): FilterState {
         // User initial state: username:color or username:random
         state.uis = value;
         break;
+        
+      case 'ais':
+        // AI initial state: username:color or username:random
+        // Overrides entity's default username/color for isolated conversations
+        state.ais = value;
+        break;
     }
   }
 
@@ -128,6 +135,11 @@ export function buildURL(state: FilterState): string {
   // Add uis if present (user initial state)
   if (state.uis) {
     params.push(`uis=${state.uis}`);
+  }
+  
+  // Add ais if present (AI initial state - critical for privacy)
+  if (state.ais) {
+    params.push(`ais=${state.ais}`);
   }
 
   return params.length > 0 ? `#${params.join('&')}` : '';

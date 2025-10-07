@@ -18,9 +18,10 @@
 | **word** | `text` | Word filter - shows only messages containing specified word(s), supports multiple with + separator |
 | **-word** | `text` | Negative word filter - hides messages containing specified word(s), supports multiple with + separator |
 | **uis** | `username:color\|username:random` | User initial state - sets the current user's username and color on page load |
+| **ais** | `username:color\|username:random` | AI initial state - overrides entity's username/color for isolated conversations (prevents cross-talk) |
 | **nom** | `number\|ALL` | Number of messages - controls how many messages sent to LLM as context (not a UI filter) |
 | **priority** | `0-99` | Queue priority - 0 is highest priority, bypasses router if 0-9, used for direct AI conversations |
-| **entity** | `entity-id` | Force specific AI entity - overrides random selection, uses specified entity from config |
+| **entity** | `entity-id` | Force specific AI entity - selects model/personality from config (e.g., hm-st-1, philosopher) |
 | **model** | `model-name` | Force specific LLM model - overrides entity's default model selection |
 
 **Notes:**

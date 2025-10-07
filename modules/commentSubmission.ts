@@ -76,7 +76,8 @@ export function prepareCommentData(
   username: string,
   userColor: string,
   processVideo?: (text: string) => string,
-  contextUsers?: string[]  // NEW: Filter usernames for LLM context
+  contextUsers?: string[],  // NEW: Filter usernames for LLM context
+  ais?: string  // NEW: AI initial state (username:color override for bot)
 ): Comment {
   const processedText = processVideo ? processVideo(text.trim()) : text.trim();
   
@@ -93,7 +94,7 @@ export function prepareCommentData(
     domain: 'saywhatwant.app', // Always this domain
     language: 'en', // Default for now
     'message-type': 'human', // Human-generated message
-    misc: '', // Reserved for future features
+    misc: ais || '', // Store ais in misc field for bot to read
     contextUsers,  // NEW: LLM should use only these users' messages as context
   };
 }
@@ -113,7 +114,8 @@ export function useCommentSubmission(
     username: string | undefined,
     userColor: string,
     onUsernameFlash?: () => void,
-    contextUsers?: string[]  // NEW: Optional filter for LLM context
+    contextUsers?: string[],  // NEW: Optional filter for LLM context
+    ais?: string  // NEW: AI initial state override
   ): Promise<boolean> => {
     // Validate input
     if (!inputText.trim()) return false;
@@ -138,12 +140,16 @@ export function useCommentSubmission(
       username,
       userColor,
       callbacks.processVideoInComment,
-      contextUsers  // NEW: Pass through filter context
+      contextUsers,  // NEW: Pass through filter context
+      ais  // NEW: Pass through AI state override
     );
     
     // Log if this is a filtered conversation
     if (contextUsers && contextUsers.length > 0) {
       console.log('[CommentSubmission] Filtered conversation - Context users:', contextUsers);
+    }
+    if (ais) {
+      console.log('[CommentSubmission] AI identity override (ais):', ais);
     }
     
     // INSTANT UI FEEDBACK - Optimistic update

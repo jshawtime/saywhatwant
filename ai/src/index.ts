@@ -165,19 +165,42 @@ async function generateResponse(context: any): Promise<string | null> {
 
 /**
  * Post comment to KV store
+ * @param text - The response text to post
+ * @param ais - Optional AI identity override (username:color or username:random)
  */
-async function postComment(text: string): Promise<boolean> {
+async function postComment(text: string, ais?: string): Promise<boolean> {
   const entity = entityManager.getCurrentEntity();
   
-  // Store color as-is (9-digit format)
-  // KV should store 9-digit format, not RGB
-  let colorForStorage = entity.color;
+  // Default to entity config
+  let usernameToUse = entity.username;
+  let colorToUse = entity.color;
+  
+  // NEW: Override with ais parameter if provided (for isolated conversations)
+  if (ais) {
+    const [aisUsername, aisColor] = ais.split(':');
+    
+    if (aisUsername) {
+      usernameToUse = aisUsername;
+      console.log(chalk.magenta('[AIS]'), `Username override: ${entity.username} → ${aisUsername}`);
+    }
+    
+    if (aisColor) {
+      if (aisColor.toLowerCase() === 'random') {
+        // Generate random 9-digit color
+        colorToUse = `${Math.floor(Math.random() * 256).toString().padStart(3, '0')}${Math.floor(Math.random() * 256).toString().padStart(3, '0')}${Math.floor(Math.random() * 256).toString().padStart(3, '0')}`;
+        console.log(chalk.magenta('[AIS]'), `Random color generated: ${colorToUse}`);
+      } else {
+        colorToUse = aisColor;
+        console.log(chalk.magenta('[AIS]'), `Color override: ${entity.color} → ${aisColor}`);
+      }
+    }
+  }
   
   const comment: Comment = {
     id: kvClient.generateId(),
     text,
-    username: entity.username,
-    color: colorForStorage,
+    username: usernameToUse,  // Use overridden username
+    color: colorToUse,  // Use overridden color
     timestamp: Date.now(),
     domain: 'ai.saywhatwant.app',  // Exempt domain - no rate limits
     'message-type': 'AI',
@@ -186,12 +209,12 @@ async function postComment(text: string): Promise<boolean> {
   const result = await kvClient.postComment(comment, CONFIG.DEV.dryRun);
   
   if (result.success) {
-    // Record post for rate limiting
+    // Record post for rate limiting (under original entity ID)
     entityManager.recordPost(entity.id);
     state.lastResponseTime = Date.now();
     
-    logger.info(`[${entity.username}] Posted: "${text}"`);
-    console.log(chalk.cyan(`[${entity.username}]`), '📤', `${entity.username}: ${text.substring(0, 50)}...`);
+    logger.info(`[${usernameToUse}] Posted: "${text}"`);
+    console.log(chalk.cyan(`[${usernameToUse}]`), '📤', `${usernameToUse}: ${text.substring(0, 50)}...`);
   }
   
   return result.success;
@@ -336,7 +359,11 @@ async function runBot() {
           if (decision.shouldRespond) {
             const response = await generateResponse(context);
             if (response) {
-              await postComment(response);
+              // Extract ais from latest message (for isolated conversations)
+              const latestMessage = messages[messages.length - 1];
+              const aisOverride = latestMessage?.misc || undefined;
+              
+              await postComment(response, aisOverride);
             }
           }
         }
@@ -447,8 +474,15 @@ async function runWorker() {
         const response = await generateResponse(context);
         
         if (response) {
-          // Post using existing function
-          await postComment(response);
+          // NEW: Extract ais from original message (for isolated conversations)
+          const aisOverride = item.message.misc || undefined;
+          
+          if (aisOverride) {
+            console.log(chalk.magenta('[WORKER]'), `Using AI identity override: ${aisOverride}`);
+          }
+          
+          // Post with ais override (if present)
+          await postComment(response, aisOverride);
           
           // Mark as complete
           await queueService.complete(item.id, true);
