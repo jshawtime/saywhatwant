@@ -548,8 +548,13 @@ async function runWorker() {
           // NEW: Extract ais from original message (for isolated conversations)
           const aisOverride = item.message.misc || undefined;
           
+          console.log(chalk.blue('[WORKER]'), `Original message misc field: "${item.message.misc}"`);
+          console.log(chalk.blue('[WORKER]'), `ais override value: "${aisOverride}"`);
+          
           if (aisOverride) {
             console.log(chalk.magenta('[WORKER]'), `Using AI identity override: ${aisOverride}`);
+          } else {
+            console.log(chalk.gray('[WORKER]'), `No ais override, using entity defaults`);
           }
           
           // Post with ais override (if present)
