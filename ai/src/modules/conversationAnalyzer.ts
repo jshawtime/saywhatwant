@@ -39,11 +39,11 @@ export class ConversationAnalyzer {
     // Filter messages based on entity's conversation settings
     let filteredMessages = this.filterMessagesForEntity(messages, entity);
     
-    // Limit to entity's messagesToRead (take the most recent ones)
-    const messagesToRead = entity.messagesToRead || 50;
-    if (filteredMessages.length > messagesToRead) {
-      filteredMessages = filteredMessages.slice(-messagesToRead);
-      console.log(`Trimmed to last ${messagesToRead} messages for entity's message limit`);
+    // Limit to entity's nom (take the most recent ones)
+    const nom = entity.nom || 100;
+    if (filteredMessages.length > nom) {
+      filteredMessages = filteredMessages.slice(-nom);
+      console.log(`Trimmed to last ${nom} messages for entity's message limit`);
     }
     
     console.log('Filtered messages for this entity:', filteredMessages.length > 0 ? 'YES' : 'NO');

@@ -57,7 +57,7 @@
       "model": "fear_and_loathing",
       "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
       "userPrompt": "Converse in a natural way and say what you honestly want to say.",
-      "messagesToRead": 50,
+      "nom": 100,
       "temperature": 0.6,
       "maxTokens": 150,
       "topP": 1,
@@ -130,7 +130,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Share your unique perspective on the conversation."
     },
     {
@@ -171,7 +171,7 @@
           "mystic"
         ]
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Share your ancient wisdom about this topic."
     },
     {
@@ -208,7 +208,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Ask an interesting question or share what you wonder about."
     },
     {
@@ -245,7 +245,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Express yourself poetically about this topic."
     },
     {
@@ -282,7 +282,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Explain the technical aspects or share a tech perspective."
     },
     {
@@ -323,7 +323,7 @@
           "dreamer"
         ]
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Bring peace and calm perspective to the discussion."
     },
     {
@@ -360,7 +360,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Share your unique perspective on the conversation."
     },
     {
@@ -397,7 +397,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Share your unique perspective on the conversation."
     },
     {
@@ -434,7 +434,7 @@
         "respondsToAllAiMessages": true,
         "respondsToTheseAiOnly": []
       },
-      "messagesToRead": 50,
+      "nom": 100,
       "userPrompt": "Challenge the status quo with your unique take."
     }
   ],

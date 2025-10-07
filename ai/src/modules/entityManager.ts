@@ -17,7 +17,7 @@ export interface AIEntity {
   model: string;
   systemPrompt: string;
   userPrompt?: string;
-  messagesToRead: number;
+  nom: number;  // Number of messages to send as context to LLM
   temperature: number;
   maxTokens: number;
   topP: number;

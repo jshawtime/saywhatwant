@@ -233,8 +233,8 @@ async function runBot() {
       const startTime = Date.now();
       const botId = `bot-${startTime}`;
       
-      // Fetch recent comments - use the maximum messagesToRead from all entities
-      const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.messagesToRead || 50));
+      // Fetch recent comments - use the maximum nom from all entities
+      const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.nom || 100));
       
       console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${POLLING_INTERVAL/1000}s)`);
       const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
@@ -366,7 +366,7 @@ async function runBot() {
               console.log(chalk.green('[BOT PARAMS]'), 
                 `Using specified nom: ${nomToUse}`);
             } else {
-              nomToUse = Math.min(entity.messagesToRead, contextMessages.length); // Entity default
+              nomToUse = Math.min(entity.nom || 100, contextMessages.length); // Entity default
             }
             
             // Build context from (filtered) messages
@@ -460,7 +460,7 @@ async function runBot() {
             priority: 0,  // HIGHEST priority for pings
             timestamp: Date.now(),
             message: pingMessage,
-            context: pingContextMessages.slice(-entity.messagesToRead).map(m => `${m.username}: ${m.text}`),
+            context: pingContextMessages.slice(-(entity.nom || 100)).map(m => `${m.username}: ${m.text}`),
             entity,
             model: entity.model,
             routerReason: pingMessage.contextUsers ? `Ping - Filtered: ${pingMessage.contextUsers.join(', ')}` : 'Ping trigger detected',
