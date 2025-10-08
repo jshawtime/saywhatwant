@@ -51,6 +51,10 @@ export function scrollToBottom(
 ): void {
   if (!element) return;
   
+  console.log('[scrollToBottom DEBUG] Called with smooth:', smooth);
+  console.log('[scrollToBottom DEBUG] Before - scrollTop:', element.scrollTop);
+  console.log('[scrollToBottom DEBUG] Before - scrollHeight:', element.scrollHeight);
+  
   if (smooth) {
     element.scrollTo({
       top: element.scrollHeight,
@@ -59,6 +63,8 @@ export function scrollToBottom(
   } else {
     element.scrollTop = element.scrollHeight;
   }
+  
+  console.log('[scrollToBottom DEBUG] After - scrollTop:', element.scrollTop);
 }
 
 /**
@@ -79,6 +85,10 @@ export function scrollToPosition(
   const maxScroll = element.scrollHeight - element.clientHeight;
   const safePosition = Math.max(0, Math.min(position, maxScroll));
   
+  console.log('[scrollToPosition DEBUG] Called with position:', position, 'smooth:', smooth);
+  console.log('[scrollToPosition DEBUG] maxScroll:', maxScroll, 'safePosition:', safePosition);
+  console.log('[scrollToPosition DEBUG] Before - scrollTop:', element.scrollTop);
+  
   if (smooth) {
     element.scrollTo({
       top: safePosition,
@@ -87,6 +97,8 @@ export function scrollToPosition(
   } else {
     element.scrollTop = safePosition;
   }
+  
+  console.log('[scrollToPosition DEBUG] After - scrollTop:', element.scrollTop);
 }
 
 /**
@@ -145,12 +157,18 @@ export function restoreScrollState(
 ): void {
   if (!element || !state) return;
   
+  console.log('[restoreScrollState DEBUG] Called with state:', state);
+  console.log('[restoreScrollState DEBUG] forceBottom:', forceBottom);
+  console.log('[restoreScrollState DEBUG] Element scrollHeight:', element.scrollHeight);
+  
   // If was anchored to bottom OR forceBottom, keep at bottom
   if (state.wasAtBottom || forceBottom) {
+    console.log('[restoreScrollState DEBUG] Taking BOTTOM path');
     scrollToBottom(element, false);
     console.log('[ScrollBehaviors] Restored to bottom (was anchored or forced)');
   } else {
     // Restore pixel position
+    console.log('[restoreScrollState DEBUG] Taking POSITION path');
     scrollToPosition(element, state.position, false);
     console.log('[ScrollBehaviors] Restored to position:', state.position);
   }
