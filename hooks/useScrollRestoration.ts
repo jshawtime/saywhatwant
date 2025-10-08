@@ -51,41 +51,39 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
     }
   }, [isFilterEnabled, streamRef]);
   
-  // Restore scroll STATE (smart: keeps at bottom if was anchored) AFTER filter state changes
+  // Restore scroll STATE (smart: keeps at bottom if was anchored) AFTER filter state changes AND content renders
   useEffect(() => {
     if (!streamRef.current) return;
     
-    if (prevFilterEnabled.current !== isFilterEnabled) {
+    // Only restore if we have a saved state AND filter actually changed
+    if (prevFilterEnabled.current !== isFilterEnabled && scrollBeforeFilterToggle.current) {
       const savedState = scrollBeforeFilterToggle.current;
       
-      if (savedState) {
-        // Wait for content to render before restoring scroll
-        setTimeout(() => {
-          if (streamRef.current && streamRef.current.scrollHeight > 0) {
-            console.log(`[Scroll] Restoring scroll after filter toggle`);
-            console.log(`[Scroll] Content height: ${streamRef.current.scrollHeight}, wasAtBottom: ${savedState.wasAtBottom}`);
+      console.log(`[Scroll] Filter toggled ${prevFilterEnabled.current} → ${isFilterEnabled}`);
+      console.log(`[Scroll] filteredCommentsLength: ${filteredCommentsLength}`);
+      console.log(`[Scroll] Content rendered, restoring scroll`);
+      console.log(`[Scroll] scrollHeight: ${streamRef.current.scrollHeight}, wasAtBottom: ${savedState.wasAtBottom}`);
+      
+      // Content has rendered (this effect fires AFTER React renders)
+      // Now restore scroll position
+      if (streamRef.current.scrollHeight > 0) {
+        restoreScrollState(streamRef.current, savedState);
+        
+        // Give React one more frame to settle, then double-check
+        requestAnimationFrame(() => {
+          if (streamRef.current && savedState.wasAtBottom) {
+            const { scrollHeight, scrollTop, clientHeight } = streamRef.current;
+            const atBottom = (scrollHeight - (scrollTop + clientHeight)) < 100;
             
-            // Smart restoration: if was at bottom, stay at bottom
-            restoreScrollState(streamRef.current, savedState);
+            console.log(`[Scroll] Double-check filter: scrollHeight=${scrollHeight}, scrollTop=${scrollTop}, atBottom=${atBottom}`);
             
-            // Double-check it worked (content might still be rendering)
-            setTimeout(() => {
-              if (streamRef.current && savedState.wasAtBottom) {
-                // Ensure still at bottom after content settles
-                const { scrollHeight, scrollTop, clientHeight } = streamRef.current;
-                const atBottom = (scrollHeight - (scrollTop + clientHeight)) < 100;
-                
-                console.log(`[Scroll] Double-check filter: scrollHeight=${scrollHeight}, scrollTop=${scrollTop}, atBottom=${atBottom}`);
-                
-                if (!atBottom) {
-                  console.log('[Scroll] Re-anchoring to bottom after filter toggle');
-                  streamRef.current.scrollTop = streamRef.current.scrollHeight;
-                  console.log(`[Scroll] Final scrollTop: ${streamRef.current.scrollTop}`);
-                }
-              }
-            }, 200);  // Increased from 50ms to 200ms
+            if (!atBottom) {
+              console.log('[Scroll] Re-anchoring to bottom (content settled)');
+              streamRef.current.scrollTop = streamRef.current.scrollHeight;
+              console.log(`[Scroll] Final scrollTop: ${streamRef.current.scrollTop}`);
+            }
           }
-        }, 100);  // Wait 100ms for content to start rendering
+        });
       }
       
       prevFilterEnabled.current = isFilterEnabled;
@@ -125,41 +123,39 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
     }
   }, [activeChannel, streamRef]);
   
-  // RESTORE scroll state AFTER channel switch completes
+  // RESTORE scroll state AFTER channel switch completes AND content renders
   useEffect(() => {
     if (!streamRef.current) return;
     
-    if (prevChannel.current !== activeChannel) {
+    // Only restore if we have a saved state AND channel actually changed
+    if (prevChannel.current !== activeChannel && scrollBeforeChannelSwitch.current) {
       const savedState = scrollBeforeChannelSwitch.current;
       
-      if (savedState) {
-        // Wait for content to render before restoring scroll
-        // Content loads asynchronously when switching channels
-        setTimeout(() => {
-          if (streamRef.current && streamRef.current.scrollHeight > 0) {
-            console.log(`[Scroll] Restoring scroll after channel switch to ${activeChannel}`);
-            console.log(`[Scroll] Content height: ${streamRef.current.scrollHeight}, wasAtBottom: ${savedState.wasAtBottom}`);
+      console.log(`[Scroll] Channel changed ${prevChannel.current} → ${activeChannel}`);
+      console.log(`[Scroll] filteredCommentsLength: ${filteredCommentsLength}`);
+      console.log(`[Scroll] Content rendered, restoring scroll`);
+      console.log(`[Scroll] scrollHeight: ${streamRef.current.scrollHeight}, wasAtBottom: ${savedState.wasAtBottom}`);
+      
+      // Content has rendered (this effect fires AFTER React renders)
+      // Now restore scroll position
+      if (streamRef.current.scrollHeight > 0) {
+        restoreScrollState(streamRef.current, savedState);
+        
+        // Give React one more frame to settle, then double-check
+        requestAnimationFrame(() => {
+          if (streamRef.current && savedState.wasAtBottom) {
+            const { scrollHeight, scrollTop, clientHeight } = streamRef.current;
+            const atBottom = (scrollHeight - (scrollTop + clientHeight)) < 100;
             
-            // Smart restoration: if was at bottom, stay at bottom
-            restoreScrollState(streamRef.current, savedState);
+            console.log(`[Scroll] Double-check: scrollHeight=${scrollHeight}, scrollTop=${scrollTop}, atBottom=${atBottom}`);
             
-            // Double-check it worked for anchored users (content might still be rendering)
-            setTimeout(() => {
-              if (streamRef.current && savedState.wasAtBottom) {
-                const { scrollHeight, scrollTop, clientHeight } = streamRef.current;
-                const atBottom = (scrollHeight - (scrollTop + clientHeight)) < 100;
-                
-                console.log(`[Scroll] Double-check: scrollHeight=${scrollHeight}, scrollTop=${scrollTop}, atBottom=${atBottom}`);
-                
-                if (!atBottom) {
-                  console.log(`[Scroll] Re-anchoring to bottom after channel switch to ${activeChannel}`);
-                  streamRef.current.scrollTop = streamRef.current.scrollHeight;
-                  console.log(`[Scroll] Final scrollTop: ${streamRef.current.scrollTop}`);
-                }
-              }
-            }, 200);  // Increased from 50ms to 200ms to wait for content
+            if (!atBottom) {
+              console.log(`[Scroll] Re-anchoring to bottom (content settled)`);
+              streamRef.current.scrollTop = streamRef.current.scrollHeight;
+              console.log(`[Scroll] Final scrollTop: ${streamRef.current.scrollTop}`);
+            }
           }
-        }, 100);  // Wait 100ms for content to start rendering
+        });
       }
       
       prevChannel.current = activeChannel;

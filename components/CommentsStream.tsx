@@ -826,7 +826,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, startLoadingMore, finishLoadingMore, setIndexedDbOffset]);
   
-  // Scroll to bottom on initial page load when comments first arrive
+  // Scroll to bottom on initial page load when comments first arrive AND render
   useEffect(() => {
     console.log('[Scroll DEBUG] Initial scroll effect fired');
     console.log('[Scroll DEBUG] filteredComments.length:', filteredComments.length);
@@ -840,28 +840,26 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     if (filteredComments.length > 0 && !hasScrolledRef.current && !isLoading) {
       hasScrolledRef.current = true;
       
-      console.log('[Scroll DEBUG] Will scroll to bottom after content renders');
+      console.log('[Scroll DEBUG] Content rendered, scrolling to bottom');
       
-      // Initial scroll to bottom (only happens once per page load)
-      // Use setTimeout to ensure DOM has rendered the filtered content
-      setTimeout(() => {
-        if (streamRef.current) {
-          console.log('[Scroll DEBUG] Scrolling - scrollHeight:', streamRef.current.scrollHeight);
-          console.log('[Scroll DEBUG] Scrolling - clientHeight:', streamRef.current.clientHeight);
-          console.log('[Scroll DEBUG] Scrolling - current scrollTop:', streamRef.current.scrollTop);
-          
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-          
-          console.log('[Scroll DEBUG] After scroll - scrollTop:', streamRef.current.scrollTop);
-          console.log('[Scroll] Initial scroll to bottom completed');
-        } else {
-          console.log('[Scroll DEBUG] streamRef.current is null in setTimeout!');
-        }
-      }, 100); // Wait for DOM to render
+      // Content has rendered (this effect fires AFTER React renders filteredComments)
+      // Scroll immediately - no timers needed
+      if (streamRef.current) {
+        console.log('[Scroll DEBUG] Scrolling - scrollHeight:', streamRef.current.scrollHeight);
+        console.log('[Scroll DEBUG] Scrolling - clientHeight:', streamRef.current.clientHeight);
+        console.log('[Scroll DEBUG] Scrolling - current scrollTop:', streamRef.current.scrollTop);
+        
+        streamRef.current.scrollTop = streamRef.current.scrollHeight;
+        
+        console.log('[Scroll DEBUG] After scroll - scrollTop:', streamRef.current.scrollTop);
+        console.log('[Scroll] Initial scroll to bottom completed');
+      } else {
+        console.log('[Scroll DEBUG] streamRef.current is null!');
+      }
     } else {
       console.log('[Scroll DEBUG] Skipping scroll - conditions not met');
     }
-  }, [filteredComments.length, isLoading, isFilterMode]); // Track filtered content, not all comments
+  }, [filteredComments.length, isLoading, isFilterMode]); // Effect fires AFTER content renders
 
   // Don't auto-scroll when video area toggles - let user stay where they are
   
