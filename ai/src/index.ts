@@ -264,13 +264,15 @@ async function runBot() {
         state.lastMessageTimestamp = Math.max(...messages.map(m => m.timestamp));
         
         if (USE_QUEUE && queueService) {
-          // QUEUE MODE: Only process LATEST message (for filtered conversations)
+          // QUEUE MODE: Only process LATEST HUMAN message (not AI responses)
           const latestMessage = messages[messages.length - 1];
           
-          // Only queue if not already processed
-          if (latestMessage && !processedMessageIds.has(latestMessage.id)) {
+          // Only queue if: HUMAN message AND not already processed
+          if (latestMessage && 
+              latestMessage['message-type'] === 'human' && 
+              !processedMessageIds.has(latestMessage.id)) {
             const message = latestMessage;
-            console.log(chalk.blue('[QUEUE]'), `Processing latest message: ${message.username}`);
+            console.log(chalk.blue('[QUEUE]'), `Processing latest HUMAN message: ${message.username}`);
             
             const messageIndex = 1;  // Only one message per cycle
             
