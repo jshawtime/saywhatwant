@@ -53,7 +53,7 @@ function App() {
         onClearAll={clearQueue}
       />
       
-      {/* KV Store View (replaces Right Panel Live Stats) */}
+      {/* KV Store View (Top Right) */}
       <div className={`${styles.panel} ${styles.rightPanel}`}>
         <div className={styles.sectionTitle}>KV STORE (LAST 100) - NEWEST FIRST</div>
         <div style={{
@@ -67,32 +67,51 @@ function App() {
           padding: '10px'
         }}>
           <pre style={{ margin: 0 }}>
-            {JSON.stringify(kvMessages, null, 2)}
+            {kvMessages.length > 0 ? JSON.stringify(kvMessages, null, 2) : 'Loading KV data...'}
           </pre>
         </div>
       </div>
       
-      {/* Debug Logs (Left) and LLM Requests (Right) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', height: '400px' }}>
+      {/* Debug Logs (Left) and LLM Requests (Right) - Side by Side */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '10px', 
+        gridColumn: '1 / -1',
+        minHeight: '500px'
+      }}>
         {/* Debug Logs - Left */}
-        <div>
-          <LogViewer logs={logs} maxLogs={100} />
+        <div className={styles.logViewer} style={{ height: '500px' }}>
+          <div className={styles.sectionTitle}>DEBUG LOGS (LAST 100)</div>
+          <div style={{
+            background: '#0a0a0a',
+            color: '#00FF00',
+            padding: '10px',
+            overflow: 'auto',
+            height: 'calc(100% - 30px)',
+            fontSize: '11px',
+            fontFamily: 'monospace'
+          }}>
+            {logs.map((log, i) => (
+              <div key={i}>{log}</div>
+            ))}
+          </div>
         </div>
         
         {/* LLM Requests - Right */}
-        <div className={styles.logViewer}>
+        <div className={styles.logViewer} style={{ height: '500px' }}>
           <div className={styles.sectionTitle}>LLM SERVER REQUESTS (LAST 50) - NEWEST FIRST</div>
           <pre style={{
             background: '#0a0a0a',
             color: '#FFAA00',
-            padding: '15px',
+            padding: '10px',
             overflow: 'auto',
-            height: 'calc(100% - 40px)',
+            height: 'calc(100% - 30px)',
             fontSize: '10px',
             lineHeight: '1.4',
             margin: 0
           }}>
-            {JSON.stringify(llmRequests, null, 2)}
+            {llmRequests.length > 0 ? JSON.stringify(llmRequests, null, 2) : 'Waiting for LLM requests...'}
           </pre>
         </div>
       </div>
