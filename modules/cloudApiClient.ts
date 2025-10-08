@@ -81,6 +81,14 @@ export async function postCommentToCloud(comment: {
   botParams?: any;  // Bot control parameters
 }): Promise<Comment> {
   try {
+    console.log('[CloudAPI] Posting comment:', {
+      username: comment.username,
+      color: comment.color,
+      misc: comment.misc,
+      context: comment.context?.length,
+      botParams: comment.botParams
+    });
+    
     const response = await fetch(COMMENTS_CONFIG.apiUrl, {
       method: 'POST',
       headers: {
