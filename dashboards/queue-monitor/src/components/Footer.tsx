@@ -12,7 +12,7 @@ export const Footer: React.FC<FooterProps> = ({ connected, lastUpdate }) => {
       <div>
         <span style={{ color: '#006600' }}>STATUS: </span>
         <span className={connected ? styles.connected : styles.disconnected}>
-          {connected ? 'OPERATIONAL' : 'OFFLINE'}
+          {connected ? 'READY' : 'OFFLINE'}
         </span>
       </div>
       <div>
