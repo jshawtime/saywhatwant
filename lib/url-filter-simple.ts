@@ -69,7 +69,7 @@ export function parseURL(): FilterState {
           state.users = userPairs.map(pair => {
             const [username, color] = pair.split(':');
             return { 
-              username: username || '', 
+              username: decodeURIComponent(username || ''), 
               color: color || '096165250' // Store as 9-digit, not RGB
             };
           });
@@ -77,22 +77,22 @@ export function parseURL(): FilterState {
         break;
         
       case 'word':
-        state.words = value ? value.split('+') : [];
+        state.words = value ? value.split('+').map(w => decodeURIComponent(w)) : [];
         break;
         
       case '-word':
-        state.negativeWords = value ? value.split('+') : [];
+        state.negativeWords = value ? value.split('+').map(w => decodeURIComponent(w)) : [];
         break;
         
       case 'uis':
         // User initial state: username:color or username:random
-        state.uis = value;
+        state.uis = value ? decodeURIComponent(value) : undefined;
         break;
         
       case 'ais':
         // AI initial state: username:color or username:random
         // Overrides entity's default username/color for isolated conversations
-        state.ais = value;
+        state.ais = value ? decodeURIComponent(value) : undefined;
         break;
         
       case 'entity':
@@ -144,19 +144,19 @@ export function buildURL(state: FilterState): string {
   // Add users
   if (state.users.length > 0) {
     const userString = state.users
-      .map(u => `${u.username}:${rgbToNineDigit(u.color)}`)
+      .map(u => `${encodeURIComponent(u.username)}:${rgbToNineDigit(u.color)}`)
       .join('+');
     params.push(`u=${userString}`);
   }
 
   // Add words
   if (state.words.length > 0) {
-    params.push(`word=${state.words.join('+')}`);
+    params.push(`word=${state.words.map(w => encodeURIComponent(w)).join('+')}`);
   }
 
   // Add negative words
   if (state.negativeWords.length > 0) {
-    params.push(`-word=${state.negativeWords.join('+')}`);
+    params.push(`-word=${state.negativeWords.map(w => encodeURIComponent(w)).join('+')}`);
   }
 
   // Add filterActive if we have filters OR if it's explicitly set to true
@@ -170,12 +170,12 @@ export function buildURL(state: FilterState): string {
   
   // Add uis if present (user initial state)
   if (state.uis) {
-    params.push(`uis=${state.uis}`);
+    params.push(`uis=${encodeURIComponent(state.uis)}`);
   }
   
   // Add ais if present (AI initial state - critical for privacy)
   if (state.ais) {
-    params.push(`ais=${state.ais}`);
+    params.push(`ais=${encodeURIComponent(state.ais)}`);
   }
   
   // Add bot control parameters if present
