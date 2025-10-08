@@ -264,20 +264,15 @@ async function runBot() {
         state.lastMessageTimestamp = Math.max(...messages.map(m => m.timestamp));
         
         if (USE_QUEUE && queueService) {
-          // QUEUE MODE: Queue ALL messages with simple priority assignment
-          console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages for queueing`);
+          // QUEUE MODE: Only process LATEST message (for filtered conversations)
+          const latestMessage = messages[messages.length - 1];
           
-          let messageIndex = 0;  // Counter for unique IDs
-          let skipped = 0;  // Count duplicates
-          
-          for (const message of messages) {
-            // Skip if we've already queued this message
-            if (processedMessageIds.has(message.id)) {
-              skipped++;
-              continue;
-            }
+          // Only queue if not already processed
+          if (latestMessage && !processedMessageIds.has(latestMessage.id)) {
+            const message = latestMessage;
+            console.log(chalk.blue('[QUEUE]'), `Processing latest message: ${message.username}`);
             
-            messageIndex++;  // Increment for each message
+            const messageIndex = 1;  // Only one message per cycle
             
             // ====================
             // ROBUST PARAMETER HANDLING WITH FALLBACKS
@@ -385,10 +380,10 @@ async function runBot() {
               queueWS.onQueued(queueItem);
             }
             
-            console.log(chalk.cyan('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
+            console.log(chalk.cyan('[QUEUE]'), `Queued latest: ${message.username} → ${entity.username} (priority ${priority})`);
+          } else {
+            console.log(chalk.gray('[QUEUE]'), `Latest message already processed or none available`);
           }
-          
-          console.log(chalk.blue('[QUEUE]'), `Queued ${messageIndex} new messages, skipped ${skipped} duplicates`);
         } else {
           // DIRECT MODE: Old behavior (one response per cycle)
           const entity = entityManager.selectRandomEntity();
