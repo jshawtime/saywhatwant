@@ -200,7 +200,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       {filter.username}
                     </span>
                     <button
-                      onClick={() => onRemoveUsernameFilter(filter.username, filter.color)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveUsernameFilter(filter.username, filter.color);
+                      }}
                       className="hover:opacity-80"
                       style={{ color: filter.color }}
                       tabIndex={-1}
@@ -241,7 +244,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       {word}
                     </span>
                     <button
-                      onClick={() => onRemoveWordFilter(word)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveWordFilter(word);
+                      }}
                       className="hover:opacity-80"
                       style={{ color: userColor }}
                       tabIndex={-1}
@@ -266,7 +272,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     -{word}
                   </span>
                   <button
-                    onClick={() => onRemoveNegativeFilter(word)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveNegativeFilter(word);
+                    }}
                     className="hover:opacity-80"
                     style={{ color: '#8B0000' }}
                     tabIndex={-1}
@@ -296,7 +305,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   </span>
                   {onClearDateTimeFilter && (
                     <button
-                      onClick={onClearDateTimeFilter}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearDateTimeFilter();
+                      }}
                       className="hover:opacity-80"
                       style={{ color: '#9333EA' }}
                       tabIndex={-1}
