@@ -114,25 +114,35 @@ async function generateResponse(context: any): Promise<string | null> {
     
     logger.debug(`[Cluster] Generating response as ${entity.username} (${entity.id}) using model: ${entity.model}`);
     
+    // Build the exact LLM request
+    const llmRequest = {
+      entityId: entity.id,
+      modelName: entity.model,
+      prompt: [
+        { role: 'system', content: fullPrompt },
+        { role: 'user', content: entity.userPrompt || 'Generate a response based on the conversation context.' }
+      ],
+      parameters: {
+        temperature: entity.temperature,
+        max_tokens: entity.maxTokens,
+        top_p: entity.topP,
+        frequency_penalty: 0.3,
+        presence_penalty: 0.3,
+        top_k: entity.topK,
+        repeat_penalty: entity.repeatPenalty,
+        min_p: entity.minP,
+      }
+    };
+    
+    // Send to queue monitor for debugging
+    if (queueWS) {
+      queueWS.sendLLMRequest(llmRequest);
+    }
+    
     // Use the cluster to process the request
     const lmResponse = await new Promise<any>((resolve, reject) => {
       lmStudioCluster.processRequest({
-        entityId: entity.id,
-        modelName: entity.model,
-        prompt: [
-          { role: 'system', content: fullPrompt },
-          { role: 'user', content: entity.userPrompt || 'Generate a response based on the conversation context.' }
-        ],
-        parameters: {
-          temperature: entity.temperature,
-          max_tokens: entity.maxTokens,
-          top_p: entity.topP,
-          frequency_penalty: 0.3,
-          presence_penalty: 0.3,
-          top_k: entity.topK,
-          repeat_penalty: entity.repeatPenalty,
-          min_p: entity.minP,
-        },
+        ...llmRequest,
         resolve,
         reject
       }).catch(reject);

@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import type { QueueService } from './queueService.js';
 
 interface WebSocketMessage {
-  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log';
+  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log' | 'llm_request';
   data: any;
   timestamp: number;
 }
@@ -204,6 +204,17 @@ export class QueueWebSocketServer {
     this.broadcast({
       type: 'log',
       data: { message },
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Send LLM request to dashboard for debugging
+   */
+  sendLLMRequest(request: any) {
+    this.broadcast({
+      type: 'llm_request',
+      data: request,
       timestamp: Date.now()
     });
   }

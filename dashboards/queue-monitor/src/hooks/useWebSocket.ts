@@ -22,9 +22,11 @@ export function useWebSocket(url: string) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [stats, setStats] = useState<QueueStats>(initialStats);
   const [logs, setLogs] = useState<string[]>([]);
+  const [llmRequests, setLLMRequests] = useState<any[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const MAX_LOGS = 100;  // Configurable: Keep last N log lines (shows ~20 message processing cycles)
+  const MAX_LLM_REQUESTS = 50;  // Keep last 50 LLM requests
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     console.log('[Dashboard] ===== RECEIVED MESSAGE =====');
@@ -167,6 +169,7 @@ export function useWebSocket(url: string) {
     queue,
     stats,
     logs,
+    llmRequests,
     deleteItem,
     clearQueue
   };

@@ -10,7 +10,7 @@ import { Footer } from './components/Footer';
 import styles from './styles/terminal.module.css';
 
 function App() {
-  const { connected, queue, stats, logs, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
+  const { connected, queue, stats, logs, llmRequests, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
   const [showKV, setShowKV] = React.useState(false);
@@ -72,7 +72,30 @@ function App() {
         </div>
       </div>
       
-      <LogViewer logs={logs} maxLogs={100} />
+      {/* Debug Logs (Left) and LLM Requests (Right) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', height: '400px' }}>
+        {/* Debug Logs - Left */}
+        <div>
+          <LogViewer logs={logs} maxLogs={100} />
+        </div>
+        
+        {/* LLM Requests - Right */}
+        <div className={styles.logViewer}>
+          <div className={styles.sectionTitle}>LLM SERVER REQUESTS (LAST 50) - NEWEST FIRST</div>
+          <pre style={{
+            background: '#0a0a0a',
+            color: '#FFAA00',
+            padding: '15px',
+            overflow: 'auto',
+            height: 'calc(100% - 40px)',
+            fontSize: '10px',
+            lineHeight: '1.4',
+            margin: 0
+          }}>
+            {JSON.stringify(llmRequests, null, 2)}
+          </pre>
+        </div>
+      </div>
       <Footer connected={connected} lastUpdate={lastUpdate} />
     </div>
   );
