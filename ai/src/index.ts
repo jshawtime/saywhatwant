@@ -406,7 +406,9 @@ async function runBot() {
               queueWS.onQueued(queueItem);
             }
             
-            console.log(chalk.cyan('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
+            // Color-code priority for visibility
+            const priorityColor = priority <= 9 ? chalk.magenta : chalk.cyan;
+            console.log(priorityColor('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
             queued++;
           }
           

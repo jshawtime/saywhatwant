@@ -13,6 +13,7 @@ function App() {
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
   const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
   const [expandedKVMessages, setExpandedKVMessages] = React.useState<Set<number>>(new Set());
+  const [copiedItems, setCopiedItems] = React.useState<Set<string>>(new Set());
 
   // Update last update time
   React.useEffect(() => {
@@ -69,9 +70,21 @@ function App() {
   };
 
   // Copy to clipboard
-  const copyToClipboard = (text: string, e: React.MouseEvent) => {
+  const copyToClipboard = (text: string, itemId: string, e: React.MouseEvent) => {
     e.stopPropagation();  // Prevent toggle when clicking copy
     navigator.clipboard.writeText(text);
+    
+    // Add to copied items
+    setCopiedItems(prev => new Set(prev).add(itemId));
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      setCopiedItems(prev => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }, 3000);
   };
 
   return (
@@ -100,6 +113,8 @@ function App() {
           {kvMessages.length > 0 ? (
             kvMessages.map((msg, idx) => {
               const isExpanded = expandedKVMessages.has(idx);
+              const itemId = `kv-${msg.id || idx}`;
+              const isCopied = copiedItems.has(itemId);
               
               return (
                 <div key={msg.id || idx} className={styles.llmRequestItem} style={{ borderColor: '#003300' }}>
@@ -113,18 +128,19 @@ function App() {
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <button
-                        onClick={(e) => copyToClipboard(JSON.stringify(msg, null, 2), e)}
+                        onClick={(e) => copyToClipboard(JSON.stringify(msg, null, 2), itemId, e)}
                         style={{
-                          background: 'transparent',
+                          background: isCopied ? '#00FF00' : 'transparent',
                           border: '1px solid #00FF00',
-                          color: '#00FF00',
+                          color: isCopied ? '#000000' : '#00FF00',
                           padding: '2px 8px',
                           cursor: 'pointer',
                           fontSize: '11px',
-                          fontFamily: 'monospace'
+                          fontFamily: 'monospace',
+                          transition: 'all 0.2s'
                         }}
                       >
-                        COPY
+                        {isCopied ? 'COPIED!' : 'COPY'}
                       </button>
                       <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`} style={{ color: '#00FF00' }}>
                         ▼
@@ -171,6 +187,8 @@ function App() {
                 const timestamp = new Date().toLocaleTimeString();
                 const model = req.modelName || 'unknown';
                 const entity = req.entityId || 'unknown';
+                const itemId = `llm-${idx}`;
+                const isCopied = copiedItems.has(itemId);
                 
                 return (
                   <div key={idx} className={styles.llmRequestItem}>
@@ -183,18 +201,19 @@ function App() {
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <button
-                          onClick={(e) => copyToClipboard(JSON.stringify(req, null, 2), e)}
+                          onClick={(e) => copyToClipboard(JSON.stringify(req, null, 2), itemId, e)}
                           style={{
-                            background: 'transparent',
+                            background: isCopied ? '#FFAA00' : 'transparent',
                             border: '1px solid #FFAA00',
-                            color: '#FFAA00',
+                            color: isCopied ? '#000000' : '#FFAA00',
                             padding: '2px 8px',
                             cursor: 'pointer',
                             fontSize: '11px',
-                            fontFamily: 'monospace'
+                            fontFamily: 'monospace',
+                            transition: 'all 0.2s'
                           }}
                         >
-                          COPY
+                          {isCopied ? 'COPIED!' : 'COPY'}
                         </button>
                         <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`}>
                           ▼

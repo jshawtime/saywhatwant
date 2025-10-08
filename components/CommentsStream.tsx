@@ -971,16 +971,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           checkNotificationMatches(newComments);
         }
         
-        // Smart auto-scroll using the new system
-        // Only auto-scroll if user is near bottom AND filters are NOT active
-        // When filters are active, never auto-scroll - let user control their position
-        if (isNearBottom && !isFilterEnabled) {
-          console.log('[Polling] User near bottom (unfiltered view), auto-scrolling');
+        // Smart auto-scroll: If user is anchored to bottom, show them new messages
+        // This works in ALL modes: filtered, unfiltered, search, etc.
+        // The ONLY thing that matters: Is user at bottom?
+        if (isNearBottom) {
+          console.log('[Polling] User at bottom, auto-scrolling to show new messages');
           setTimeout(() => smoothScrollToBottom(), 50);
-          } else {
-          console.log('[Polling] User scrolled up or filters active, showing New Messages indicator');
-            setHasNewComments(true);
-          }
+        } else {
+          console.log('[Polling] User scrolled up, showing New Messages indicator');
+          setHasNewComments(true);
+        }
         }
         
         lastFetchTimeRef.current = Date.now();
