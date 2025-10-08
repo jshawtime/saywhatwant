@@ -509,17 +509,10 @@ async function runWorker() {
         const response = await generateResponse(context);
         
         if (response) {
-          // NEW: Extract ais from original message (for isolated conversations)
-          const aisOverride = item.message.misc || undefined;
+          // Extract ais from botParams (AI identity override)
+          const aisOverride = item.message.botParams?.ais || undefined;
           
-          console.log(chalk.blue('[WORKER]'), `Original message misc field: "${item.message.misc}"`);
-          console.log(chalk.blue('[WORKER]'), `ais override value: "${aisOverride}"`);
-          
-          // Send to dashboard
-          if (queueWS) {
-            queueWS.sendLog(`[WORKER] misc: "${item.message.misc}"`);
-            queueWS.sendLog(`[WORKER] ais: "${aisOverride}"`);
-          }
+          console.log(chalk.blue('[WORKER]'), `botParams.ais: "${aisOverride}"`);
           
           if (aisOverride) {
             console.log(chalk.magenta('[WORKER]'), `Using AI identity override: ${aisOverride}`);

@@ -8,6 +8,7 @@ export interface BotParams {
   priority?: number;    // Queue priority 0-99
   model?: string;       // Override LLM model
   nom?: number | 'ALL'; // Context size override
+  ais?: string;         // AI identity override: "username:color"
 }
 
 // Comment type matching Say What Want's structure
