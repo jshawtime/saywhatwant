@@ -613,7 +613,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const parseCommentTextWithHandlers = useCallback((text: string): React.ReactNode[] => {
     return parseCommentText(text, {
       onWordClick: addWordToFilter,
-      onWordRightClick: addNegativeWordFilter,
+      // onWordRightClick removed - context menu handles blocking via explicit user action
       onVideoClick: (videoKey) => {
         // Open video area if it's closed
         if (!showVideo && toggleVideo) {
@@ -627,7 +627,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         window.dispatchEvent(playEvent);
       }
     });
-  }, [addWordToFilter, addNegativeWordFilter, showVideo, toggleVideo]);
+  }, [addWordToFilter, showVideo, toggleVideo]);
 
   // Timestamp formatting is now imported from timestampSystem module
   // Storage functions are now defined earlier (before submission system)

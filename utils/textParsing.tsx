@@ -2,7 +2,6 @@ import React from 'react';
 
 interface ParseOptions {
   onWordClick?: (word: string) => void;
-  onWordRightClick?: (word: string) => void;
   onVideoClick?: (videoKey: string) => void;
 }
 
@@ -13,7 +12,7 @@ export const parseCommentText = (
   text: string, 
   options: ParseOptions = {}
 ): React.ReactNode[] => {
-  const { onWordClick, onWordRightClick, onVideoClick } = options;
+  const { onWordClick, onVideoClick } = options;
   
   // Check for video links first
   const videoRegex = /\[video:([^\]]+)\] <-- video/g;
@@ -57,7 +56,7 @@ export const parseCommentText = (
           );
           } else if (part) {
           // Split text into words and make each clickable if handler provided
-          if (onWordClick || onWordRightClick) {
+          if (onWordClick) {
             const words = part.split(/(\s+)/);
             words.forEach((word, wordIndex) => {
               // Check if this is whitespace
@@ -68,14 +67,10 @@ export const parseCommentText = (
                 result.push(
                   <span
                     key={`word-${i}-${urlIndex}-${wordIndex}`}
-                    onClick={onWordClick ? () => onWordClick(word) : undefined}
-                    onContextMenu={onWordRightClick ? (e) => {
-                      e.preventDefault();
-                      onWordRightClick(word);
-                    } : undefined}
+                    onClick={() => onWordClick(word)}
                     className="hover:underline cursor-pointer"
                     style={{ color: 'inherit' }}
-                    title={`Click to filter by: ${word} | Right-click to exclude`}
+                    title={`Click to filter by: ${word}`}
                   >
                     {word}
                   </span>
