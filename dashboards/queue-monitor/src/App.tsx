@@ -4,8 +4,6 @@ import { formatTime } from './lib/formatters';
 import { Header } from './components/Header';
 import { LeftPanel } from './components/LeftPanel';
 import { QueueList } from './components/QueueList';
-import { RightPanel } from './components/RightPanel';
-import { LogViewer } from './components/LogViewer';
 import { Footer } from './components/Footer';
 import styles from './styles/terminal.module.css';
 
@@ -13,7 +11,6 @@ function App() {
   const { connected, queue, stats, logs, llmRequests, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
-  const [showKV, setShowKV] = React.useState(false);
 
   // Update last update time
   React.useEffect(() => {
@@ -73,44 +70,23 @@ function App() {
       </div>
       
       {/* Bottom Section: Debug Logs (Left) and LLM Requests (Right) */}
-      <div style={{ 
-        display: 'flex',
-        gap: '10px',
-        width: '100%',
-        height: '600px'
-      }}>
-        {/* Debug Logs - LEFT */}
-        <div style={{ flex: 1, border: '1px solid #00FF00', display: 'flex', flexDirection: 'column' }}>
-          <div className={styles.sectionTitle}>DEBUG LOGS (LAST 100)</div>
-          <div style={{
-            flex: 1,
-            background: '#0a0a0a',
-            color: '#00FF00',
-            padding: '10px',
-            overflow: 'auto',
-            fontSize: '11px',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word'
-          }}>
+      <div className={styles.bottomSection}>
+        {/* Debug Logs - LEFT 50% */}
+        <div className={styles.logPanel}>
+          <div className={styles.panelHeader} style={{ borderBottomColor: '#00FF00', color: '#00FF00' }}>
+            DEBUG LOGS (LAST 100)
+          </div>
+          <div className={styles.panelContent} style={{ color: '#00FF00' }}>
             {logs.join('\n')}
           </div>
         </div>
         
-        {/* LLM Requests - RIGHT */}
-        <div style={{ flex: 1, border: '1px solid #FFAA00', display: 'flex', flexDirection: 'column' }}>
-          <div className={styles.sectionTitle}>LLM SERVER REQUESTS - NEWEST FIRST</div>
-          <div style={{
-            flex: 1,
-            background: '#0a0a0a',
-            color: '#FFAA00',
-            padding: '10px',
-            overflow: 'auto',
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word'
-          }}>
+        {/* LLM Requests - RIGHT 50% */}
+        <div className={styles.llmPanel}>
+          <div className={styles.panelHeader} style={{ borderBottomColor: '#FFAA00', color: '#FFAA00' }}>
+            LLM SERVER REQUESTS - NEWEST FIRST
+          </div>
+          <div className={styles.panelContent} style={{ color: '#FFAA00' }}>
             {llmRequests.length > 0 ? JSON.stringify(llmRequests, null, 2) : 'Waiting for LLM requests...'}
           </div>
         </div>

@@ -109,7 +109,7 @@ async function generateResponse(context: any): Promise<string | null> {
     // Build the context-aware prompt
     const contextInfo = isPing 
       ? `\n\nSomeone just sent a ping! Respond briefly to acknowledge you're here and active. Context: ${context.recentMessages}`
-      : `\n\nContext: ${context.recentMessages}\nActive users: ${context.activeUsers.join(', ')}`;
+      : `\n\nContext: ${context.recentMessages}`;
     const fullPrompt = entity.systemPrompt + contextInfo;
     
     logger.debug(`[Cluster] Generating response as ${entity.username} (${entity.id}) using model: ${entity.model}`);
@@ -514,12 +514,15 @@ async function runWorker() {
       console.log(chalk.blue('[WORKER]'), `Processing: ${item.id} (priority ${item.priority})`);
       
       try {
-        // Build context object
+        // Build context object - include the triggering message at the end
+        const triggeringMessage = `${item.message.username}: ${item.message.text}`;
+        const fullContext = [...item.context, triggeringMessage];
+        
         const context = {
-          recentMessages: item.context.join('\n'),
+          recentMessages: fullContext.join('\n'),
           activeUsers: [],
           topics: [],
-          hasQuestion: item.context.some(msg => msg.includes('?')),
+          hasQuestion: fullContext.some(msg => msg.includes('?')),
           mentionsBot: false
         };
         
