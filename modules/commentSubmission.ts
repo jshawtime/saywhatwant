@@ -77,8 +77,8 @@ export function prepareCommentData(
   userColor: string,
   processVideo?: (text: string) => string,
   context?: string[],  // Pre-formatted context from displayed messages
-  ais?: string,  // AI initial state (username:color override for bot)
-  botParams?: BotParams  // Bot control parameters (entity, priority, model, nom)
+  ais?: string,  // AI initial state (username:color override for bot) - NOT USED, in botParams now
+  botParams?: BotParams  // Bot control parameters (entity, priority, model, nom, ais)
 ): Comment {
   const processedText = processVideo ? processVideo(text.trim()) : text.trim();
   
@@ -95,9 +95,9 @@ export function prepareCommentData(
     domain: 'saywhatwant.app', // Always this domain
     language: 'en', // Default for now
     'message-type': 'human', // Human-generated message
-    misc: ais || '', // Store ais in misc field for bot to read
+    misc: '', // Empty - not used anymore
     context,  // Pre-formatted context messages ready for LLM
-    botParams,  // Structured bot control (entity, priority, model, nom)
+    botParams,  // Structured bot control (entity, priority, model, nom, ais)
   };
 }
 

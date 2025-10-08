@@ -205,7 +205,7 @@ async function postComment(text: string, ais?: string): Promise<boolean> {
     username: usernameToUse,  // Use overridden username
     color: colorToUse,  // Use overridden color
     timestamp: Date.now(),
-    domain: 'ai.saywhatwant.app',  // Exempt domain - no rate limits
+    domain: 'saywhatwant.app',  // Same domain as users
     'message-type': 'AI',
   };
   
@@ -401,9 +401,9 @@ async function runBot() {
           if (decision.shouldRespond) {
             const response = await generateResponse(context);
             if (response) {
-              // Extract ais from latest message (for isolated conversations)
+              // Extract ais from botParams (AI identity override)
               const latestMessage = messages[messages.length - 1];
-              const aisOverride = latestMessage?.misc || undefined;
+              const aisOverride = latestMessage?.botParams?.ais || undefined;
               
               await postComment(response, aisOverride);
             }

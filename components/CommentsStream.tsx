@@ -1021,6 +1021,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       if (urlEntity) params.entity = urlEntity;
       if (urlPriority !== undefined) params.priority = urlPriority;
       if (urlModel) params.model = urlModel;
+      if (aiStateParam) params.ais = aiStateParam;
       // Note: nom is used above to slice context, don't send to bot
       
       return Object.keys(params).length > 0 ? params : undefined;

@@ -660,7 +660,13 @@
         // Update KV data
         async function updateKvData() {
             try {
-                const response = await fetch(`https://sww-comments.bootloaders.workers.dev/api/comments?limit=${Math.max(currentMessageLimit, 100)}`);
+                const response = await fetch(`https://sww-comments.bootloaders.workers.dev/api/comments?limit=${Math.max(currentMessageLimit, 100)}`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
