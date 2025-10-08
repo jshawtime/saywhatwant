@@ -106,10 +106,20 @@ export function useSimpleFilters({
   }, [filterState]);
 
   const removeNegativeWord = useCallback((word: string) => {
+    console.log('[Filter] Removing negative word:', word);
+    console.log('[Filter] Current negative words:', filterState.negativeWords);
+    console.log('[Filter] Word lowercase:', word.toLowerCase());
+    
     const newState: FilterState = {
       ...filterState,
-      negativeWords: filterState.negativeWords.filter(w => w !== word.toLowerCase())
+      negativeWords: filterState.negativeWords.filter(w => {
+        const matches = w !== word.toLowerCase();
+        console.log(`[Filter] Comparing "${w}" !== "${word.toLowerCase()}" = ${matches}`);
+        return matches;
+      })
     };
+    
+    console.log('[Filter] New negative words:', newState.negativeWords);
     updateURL(newState);
   }, [filterState]);
 
