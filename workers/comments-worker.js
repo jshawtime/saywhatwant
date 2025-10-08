@@ -413,6 +413,12 @@ async function handlePostComment(request, env) {
     const misc = body.misc || ''; // Optional misc field
     const context = body.context; // Pre-formatted context messages from frontend
     const botParams = body.botParams; // Structured bot control parameters
+    
+    // DEBUG: Log what we received
+    console.log('[Worker] Received from frontend:');
+    console.log('[Worker]   body.botParams:', body.botParams);
+    console.log('[Worker]   body.context:', body.context?.length || 'undefined');
+    console.log('[Worker]   body.misc:', body.misc);
 
     // Validate input
     if (!text) {
