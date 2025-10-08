@@ -16,6 +16,7 @@ export interface AIEntity {
   username: string;
   model: string;
   systemPrompt: string;
+  systemRole: 'system' | 'assistant' | 'user';  // LLM role for system prompt - REQUIRED
   userPrompt?: string;
   nom: number;  // Number of messages to send as context to LLM
   defaultPriority: number;  // Default queue priority for this entity

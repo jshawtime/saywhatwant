@@ -56,6 +56,7 @@
       "username": "hm-st-1",
       "model": "fear_and_loathing",
       "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
+      "systemRole": "assistant",
       "userPrompt": "Say what you honestly want to say. Think deeply, reply honestly.",
       "nom": 20,
       "defaultPriority": 30,
@@ -89,6 +90,54 @@
       }
     },
 
+
+
+    {
+      "id": "hm-st-2",
+      "enabled": true,
+      "username": "hm-st-1",
+      "model": "fear_and_loathing",
+      "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Say what you honestly want to say. Think deeply, reply honestly.",
+      "nom": 20,
+      "defaultPriority": 30,
+      "temperature": 0.6,
+      "maxTokens": 150,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.42,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "255069100",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 10,
+        "maxPostsPerMinute": 5,
+        "maxPostsPerHour": 600
+      },
+      "traits": {
+        "style": "philosophical",
+        "mood": "contemplative",
+        "interests": [
+          "consciousness",
+          "existence",
+          "reality",
+          "meaning"
+        ]
+      },
+      "conversationSettings": {
+        "respondsToHumanMessages": true,
+        "respondsToAllAiMessages": true,
+        "respondsToTheseAiOnly": []
+      }
+    },
+
+
+
+
+
+
+
     {
 
       "id": "no-rebel",
@@ -96,6 +145,7 @@
       "username": "NoRebel",
       "model": "fear_and_loathing",
       "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
+      "systemRole": "assistant",
       "userPrompt": "Converse in a natural way and say what you honestly want to say.",
       "nom": 100,
       "defaultPriority": 50,

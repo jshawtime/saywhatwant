@@ -68,6 +68,12 @@ function App() {
     });
   };
 
+  // Copy to clipboard
+  const copyToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();  // Prevent toggle when clicking copy
+    navigator.clipboard.writeText(text);
+  };
+
   return (
     <div className={styles.terminal}>
       <Header connected={connected} />
@@ -105,8 +111,24 @@ function App() {
                     <div className={styles.llmRequestSummary} style={{ color: '#00FF00' }}>
                       #{idx + 1} - {msg.id || 'no-id'}
                     </div>
-                    <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`} style={{ color: '#00FF00' }}>
-                      ▼
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <button
+                        onClick={(e) => copyToClipboard(JSON.stringify(msg, null, 2), e)}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid #00FF00',
+                          color: '#00FF00',
+                          padding: '2px 8px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        COPY
+                      </button>
+                      <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`} style={{ color: '#00FF00' }}>
+                        ▼
+                      </div>
                     </div>
                   </div>
                   {isExpanded && (
@@ -159,8 +181,24 @@ function App() {
                       <div className={styles.llmRequestSummary}>
                         #{idx + 1} - {entity} | {model}
                       </div>
-                      <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`}>
-                        ▼
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button
+                          onClick={(e) => copyToClipboard(JSON.stringify(req, null, 2), e)}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid #FFAA00',
+                            color: '#FFAA00',
+                            padding: '2px 8px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontFamily: 'monospace'
+                          }}
+                        >
+                          COPY
+                        </button>
+                        <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`}>
+                          ▼
+                        </div>
                       </div>
                     </div>
                     {isExpanded && (

@@ -115,11 +115,15 @@ async function generateResponse(context: any): Promise<string | null> {
     logger.debug(`[Cluster] Generating response as ${entity.username} (${entity.id}) using model: ${entity.model}`);
     
     // Build the exact LLM request
+    if (!entity.systemRole) {
+      throw new Error(`Entity ${entity.id} is missing required 'systemRole' in config`);
+    }
+    
     const llmRequest = {
       entityId: entity.id,
       modelName: entity.model,
       prompt: [
-        { role: 'system', content: fullPrompt },
+        { role: entity.systemRole, content: fullPrompt },
         { role: 'user', content: entity.userPrompt || 'Generate a response based on the conversation context.' }
       ],
       parameters: {
