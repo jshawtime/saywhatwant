@@ -264,15 +264,25 @@ async function runBot() {
         state.lastMessageTimestamp = Math.max(...messages.map(m => m.timestamp));
         
         if (USE_QUEUE && queueService) {
-          // QUEUE MODE: Only process LATEST HUMAN message (not AI responses)
-          const latestMessage = messages[messages.length - 1];
+          // QUEUE MODE: Process ALL HUMAN messages (not AI responses)
+          console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages`);
           
-          // Only queue if: HUMAN message AND not already processed
-          if (latestMessage && 
-              latestMessage['message-type'] === 'human' && 
-              !processedMessageIds.has(latestMessage.id)) {
-            const message = latestMessage;
-            console.log(chalk.blue('[QUEUE]'), `Processing latest HUMAN message: ${message.username}`);
+          let queued = 0;
+          let skipped = 0;
+          
+          for (const message of messages) {
+            // Skip AI messages (don't queue bot responses)
+            if (message['message-type'] === 'AI') {
+              continue;
+            }
+            
+            // Skip already processed
+            if (processedMessageIds.has(message.id)) {
+              skipped++;
+              continue;
+            }
+            
+            console.log(chalk.blue('[QUEUE]'), `Processing human message: ${message.username}`);
             
             const messageIndex = 1;  // Only one message per cycle
             
@@ -382,10 +392,11 @@ async function runBot() {
               queueWS.onQueued(queueItem);
             }
             
-            console.log(chalk.cyan('[QUEUE]'), `Queued latest: ${message.username} → ${entity.username} (priority ${priority})`);
-          } else {
-            console.log(chalk.gray('[QUEUE]'), `Latest message already processed or none available`);
+            console.log(chalk.cyan('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
+            queued++;
           }
+          
+          console.log(chalk.blue('[QUEUE]'), `Queued ${queued} human messages, skipped ${skipped} duplicates`);
         } else {
           // DIRECT MODE: Old behavior (one response per cycle)
           const entity = entityManager.selectRandomEntity();
