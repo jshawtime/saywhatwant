@@ -72,47 +72,47 @@ function App() {
         </div>
       </div>
       
-      {/* Debug Logs (Left) and LLM Requests (Right) - Side by Side */}
+      {/* Bottom Section: Debug Logs (Left) and LLM Requests (Right) */}
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '10px', 
-        gridColumn: '1 / -1',
-        minHeight: '500px'
+        display: 'flex',
+        gap: '10px',
+        width: '100%',
+        height: '600px'
       }}>
-        {/* Debug Logs - Left */}
-        <div className={styles.logViewer} style={{ height: '500px' }}>
+        {/* Debug Logs - LEFT */}
+        <div style={{ flex: 1, border: '1px solid #00FF00', display: 'flex', flexDirection: 'column' }}>
           <div className={styles.sectionTitle}>DEBUG LOGS (LAST 100)</div>
           <div style={{
+            flex: 1,
             background: '#0a0a0a',
             color: '#00FF00',
             padding: '10px',
             overflow: 'auto',
-            height: 'calc(100% - 30px)',
             fontSize: '11px',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word'
           }}>
-            {logs.map((log, i) => (
-              <div key={i}>{log}</div>
-            ))}
+            {logs.join('\n')}
           </div>
         </div>
         
-        {/* LLM Requests - Right */}
-        <div className={styles.logViewer} style={{ height: '500px' }}>
-          <div className={styles.sectionTitle}>LLM SERVER REQUESTS (LAST 50) - NEWEST FIRST</div>
-          <pre style={{
+        {/* LLM Requests - RIGHT */}
+        <div style={{ flex: 1, border: '1px solid #FFAA00', display: 'flex', flexDirection: 'column' }}>
+          <div className={styles.sectionTitle}>LLM SERVER REQUESTS - NEWEST FIRST</div>
+          <div style={{
+            flex: 1,
             background: '#0a0a0a',
             color: '#FFAA00',
             padding: '10px',
             overflow: 'auto',
-            height: 'calc(100% - 30px)',
             fontSize: '10px',
-            lineHeight: '1.4',
-            margin: 0
+            fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word'
           }}>
             {llmRequests.length > 0 ? JSON.stringify(llmRequests, null, 2) : 'Waiting for LLM requests...'}
-          </pre>
+          </div>
         </div>
       </div>
       <Footer connected={connected} lastUpdate={lastUpdate} />
