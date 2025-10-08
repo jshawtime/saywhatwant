@@ -349,10 +349,10 @@ async function runBot() {
                 `Model override: ${entity.model} → ${botParams.model}`);
             }
             
-            // Use pre-formatted context from frontend (if present)
+            // Use pre-formatted context from frontend (if present), otherwise build from entity.nom
             const contextForLLM = message.context && message.context.length > 0
-              ? message.context
-              : messages.slice(-(entity.nom || 100)).map(m => `${m.username}: ${m.text}`);
+              ? message.context  // Frontend provided context (from URL nom=)
+              : messages.slice(-entity.nom).map(m => `${m.username}: ${m.text}`);  // Use entity.nom
             
             console.log(chalk.cyan('[QUEUE]'), 'Configuration:');
             console.log(chalk.cyan('  Entity:'), entity.id);
@@ -434,8 +434,10 @@ async function runBot() {
           const entity = entityManager.selectRandomEntity();
           const pingMessage = messages[messages.length - 1];
           
-          // Use context from message if present, otherwise use all messages
-          const pingContext = pingMessage.context || messages.slice(-(entity.nom || 100)).map(m => `${m.username}: ${m.text}`);
+          // Use context from message (if provided), otherwise build from entity.nom
+          const pingContext = pingMessage.context && pingMessage.context.length > 0
+            ? pingMessage.context
+            : messages.slice(-entity.nom).map(m => `${m.username}: ${m.text}`);
           
           await queueService.enqueue({
             id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,

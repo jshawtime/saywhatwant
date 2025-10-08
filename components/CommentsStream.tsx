@@ -1003,10 +1003,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Build pre-formatted context from displayed messages
+    // Build pre-formatted context from displayed messages (only if nom= in URL)
     const contextArray = (() => {
-      const nomLimit = urlNom || 100;
-      const messages = allComments.slice(-nomLimit);
+      // If no nom in URL, return undefined - let bot use entity.nom
+      if (!urlNom) return undefined;
+      
+      const messages = allComments.slice(-urlNom);
       return messages.length > 0 
         ? messages.map(m => `${m.username}: ${m.text}`)
         : undefined;

@@ -11,6 +11,8 @@ function App() {
   const { connected, queue, stats, logs, llmRequests, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
+  const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
+  const [expandedKVMessages, setExpandedKVMessages] = React.useState<Set<number>>(new Set());
 
   // Update last update time
   React.useEffect(() => {
@@ -40,6 +42,32 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchKVMessages]);
 
+  // Toggle LLM request expansion
+  const toggleRequest = (index: number) => {
+    setExpandedRequests(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  // Toggle KV message expansion
+  const toggleKVMessage = (index: number) => {
+    setExpandedKVMessages(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className={styles.terminal}>
       <Header connected={connected} />
@@ -52,7 +80,7 @@ function App() {
       
       {/* KV Store View (Top Right) */}
       <div className={`${styles.panel} ${styles.rightPanel}`}>
-        <div className={styles.sectionTitle}>KV STORE (LAST 100) - NEWEST FIRST</div>
+        <div className={styles.sectionTitle}>KV STORE (LAST 100) - NEWEST FIRST ({kvMessages.length})</div>
         <div style={{
           height: '100%',
           overflow: 'auto',
@@ -61,11 +89,39 @@ function App() {
           fontFamily: 'monospace',
           color: '#00FF00',
           background: '#0a0a0a',
-          padding: '10px'
+          padding: 0
         }}>
-          <pre style={{ margin: 0 }}>
-            {kvMessages.length > 0 ? JSON.stringify(kvMessages, null, 2) : 'Loading KV data...'}
-          </pre>
+          {kvMessages.length > 0 ? (
+            kvMessages.map((msg, idx) => {
+              const isExpanded = expandedKVMessages.has(idx);
+              
+              return (
+                <div key={msg.id || idx} className={styles.llmRequestItem} style={{ borderColor: '#003300' }}>
+                  <div 
+                    className={styles.llmRequestHeader}
+                    onClick={() => toggleKVMessage(idx)}
+                    style={{ borderBottomColor: '#003300' }}
+                  >
+                    <div className={styles.llmRequestSummary} style={{ color: '#00FF00' }}>
+                      #{idx + 1} - {msg.id || 'no-id'}
+                    </div>
+                    <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`} style={{ color: '#00FF00' }}>
+                      ▼
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div className={styles.llmRequestBody} style={{ color: '#00FF00' }}>
+                      {JSON.stringify(msg, null, 2)}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div style={{ padding: '20px', color: '#003300', textAlign: 'center' }}>
+              Loading KV data...
+            </div>
+          )}
         </div>
       </div>
       
@@ -84,10 +140,42 @@ function App() {
         {/* LLM Requests - RIGHT 50% */}
         <div className={styles.llmPanel}>
           <div className={styles.panelHeader} style={{ borderBottomColor: '#FFAA00', color: '#FFAA00' }}>
-            LLM SERVER REQUESTS - NEWEST FIRST
+            LLM SERVER REQUESTS - NEWEST FIRST ({llmRequests.length})
           </div>
-          <div className={styles.panelContent} style={{ color: '#FFAA00' }}>
-            {llmRequests.length > 0 ? JSON.stringify(llmRequests, null, 2) : 'Waiting for LLM requests...'}
+          <div className={styles.panelContent} style={{ color: '#FFAA00', padding: 0 }}>
+            {llmRequests.length > 0 ? (
+              llmRequests.map((req, idx) => {
+                const isExpanded = expandedRequests.has(idx);
+                const timestamp = new Date().toLocaleTimeString();
+                const model = req.modelName || 'unknown';
+                const entity = req.entityId || 'unknown';
+                
+                return (
+                  <div key={idx} className={styles.llmRequestItem}>
+                    <div 
+                      className={styles.llmRequestHeader}
+                      onClick={() => toggleRequest(idx)}
+                    >
+                      <div className={styles.llmRequestSummary}>
+                        #{idx + 1} - {entity} | {model}
+                      </div>
+                      <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`}>
+                        ▼
+                      </div>
+                    </div>
+                    {isExpanded && (
+                      <div className={styles.llmRequestBody}>
+                        {JSON.stringify(req, null, 2)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ padding: '20px', color: '#664400', textAlign: 'center' }}>
+                Waiting for LLM requests...
+              </div>
+            )}
           </div>
         </div>
       </div>
