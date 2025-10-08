@@ -826,11 +826,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, startLoadingMore, finishLoadingMore, setIndexedDbOffset]);
   
-  // Scroll to bottom ONLY on initial page load when comments first arrive
+  // Scroll to bottom on initial page load when comments first arrive
   useEffect(() => {
-    // Only scroll once when comments first arrive AND we haven't scrolled yet
-    // AND filters are not active (to avoid interfering with filter toggling)
-    if (allComments.length > 0 && !hasScrolledRef.current && !isFilterEnabled) {
+    // Only scroll once when comments first arrive (chat UX: always show newest on load)
+    if (allComments.length > 0 && !hasScrolledRef.current) {
       hasScrolledRef.current = true;
       
       // Initial scroll to bottom (only happens once per page load)
@@ -843,7 +842,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         });
       });
     }
-  }, [allComments.length, isFilterEnabled]); // Check filter state to avoid conflicts
+  }, [allComments.length]); // No filter check - always scroll to bottom on load
 
   // Don't auto-scroll when video area toggles - let user stay where they are
   

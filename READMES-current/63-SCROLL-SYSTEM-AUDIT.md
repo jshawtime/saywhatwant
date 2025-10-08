@@ -383,13 +383,129 @@ if (isNearBottom) {
 
 ---
 
-## Ready to Fix
+---
 
-I understand the complete picture:
+## COMPREHENSIVE SCROLL BEHAVIOR TABLE
 
-1. **Priority colors**: Add magenta for 0-9 ✅ (done)
-2. **Auto-scroll in filtered views**: Remove `!isFilterEnabled` check
-3. **Respect user position**: Still show banner if scrolled up
+### All Scroll Triggers in the Application
 
-Proceed with fix?
+| # | Event/Trigger | Current Behavior | Expected Behavior | File:Line | Status | Fix Needed |
+|---|---------------|------------------|-------------------|-----------|--------|------------|
+| **PAGE LOAD & REFRESH** |
+| 1 | Page first load (no filters in URL) | ✅ Scrolls to bottom | ✅ Scrolls to bottom | CommentsStream.tsx:833 | ✅ CORRECT | None |
+| 2 | Page first load (filters active in URL) | ❌ Stays at top | ✅ Scrolls to bottom | CommentsStream.tsx:833 | ❌ BUG | Remove `!isFilterEnabled` |
+| 3 | Page refresh (any URL state) | ❌ Stays at top | ✅ Scrolls to bottom | CommentsStream.tsx:833 | ❌ BUG | Remove `!isFilterEnabled` |
+| **NEW MESSAGES VIA POLLING** |
+| 4 | New message arrives, user at bottom, no filters | ✅ Auto-scrolls | ✅ Auto-scrolls | CommentsStream.tsx:977 | ✅ CORRECT | None |
+| 5 | New message arrives, user at bottom, filters active | ✅ Auto-scrolls (FIXED) | ✅ Auto-scrolls | CommentsStream.tsx:977 | ✅ CORRECT | None |
+| 6 | New message arrives, user scrolled up, no filters | ✅ Shows banner | ✅ Shows banner | CommentsStream.tsx:982 | ✅ CORRECT | None |
+| 7 | New message arrives, user scrolled up, filters active | ✅ Shows banner | ✅ Shows banner | CommentsStream.tsx:982 | ✅ CORRECT | None |
+| **USER POSTS MESSAGE** |
+| 8 | User submits comment | ✅ Scrolls to bottom | ✅ Scrolls to bottom | CommentsStream.tsx:1047 | ✅ CORRECT | None |
+| **FILTER TOGGLE** |
+| 9 | Filter activated (OFF→ON), user was at bottom | ✅ Stays at bottom | ✅ Stays at bottom | useScrollRestoration.ts:65 | ✅ CORRECT | None |
+| 10 | Filter activated (OFF→ON), user was at middle | ✅ Restores position | ✅ Restores position | useScrollRestoration.ts:65 | ✅ CORRECT | None |
+| 11 | Filter deactivated (ON→OFF), user was at bottom | ✅ Stays at bottom | ✅ Stays at bottom | useScrollRestoration.ts:65 | ✅ CORRECT | None |
+| 12 | Filter deactivated (ON→OFF), user was at middle | ✅ Restores position | ✅ Restores position | useScrollRestoration.ts:65 | ✅ CORRECT | None |
+| **SEARCH** |
+| 13 | Search term entered | ✅ Saves position | ✅ Saves position | useScrollRestoration.ts:98 | ✅ CORRECT | None |
+| 14 | Search term cleared | ✅ Restores position | ✅ Restores position | useScrollRestoration.ts:101 | ✅ CORRECT | None |
+| **MESSAGE TYPE TOGGLE** |
+| 15 | Toggle humans OFF/ON | ✅ Saves/restores | ✅ Saves/restores | useScrollRestoration.ts:122 | ✅ CORRECT | None |
+| 16 | Toggle AI OFF/ON | ✅ Saves/restores | ✅ Saves/restores | useScrollRestoration.ts:122 | ✅ CORRECT | None |
+| **MOBILE KEYBOARD** |
+| 17 | Keyboard opens, user at bottom | ✅ Re-scrolls to bottom | ✅ Re-scrolls to bottom | useMobileKeyboard.ts:58 | ✅ CORRECT | None |
+| 18 | Keyboard opens, user scrolled up | ✅ No action | ✅ No action | useMobileKeyboard.ts:58 | ✅ CORRECT | None |
+| **USER ACTIONS** |
+| 19 | User clicks "New Messages" banner | ✅ Scrolls to bottom | ✅ Scrolls to bottom | MessageInput.tsx:241 | ✅ CORRECT | None |
+| 20 | User clicks chevron scroll button | ✅ Scrolls to bottom | ✅ Scrolls to bottom | MessageInput.tsx:247 | ✅ CORRECT | None |
+| **LAZY LOADING** |
+| 21 | User scrolls to top, loads older messages | ✅ Maintains position | ✅ Maintains position | CommentsStream.tsx:795 | ✅ CORRECT | None |
+
+---
+
+## Analysis
+
+### The ONE Bug
+
+**Row 2-3: Initial page load with filters active**
+
+**Current code** (CommentsStream.tsx:833):
+```typescript
+if (allComments.length > 0 && !hasScrolledRef.current && !isFilterEnabled) {
+  //                                                      ^^^^^^^^^^^^^^^^
+  //                                                      THIS IS THE BUG
+  hasScrolledRef.current = true;
+  
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (streamRef.current) {
+        streamRef.current.scrollTop = streamRef.current.scrollHeight;
+        console.log('[Scroll] Initial scroll to bottom completed');
+      }
+    });
+  });
+}
+```
+
+**The problem**: `!isFilterEnabled` prevents initial scroll when URL has `filteractive=true`
+
+**Why this exists**: Previous agent thought "filter means user is browsing, don't interrupt"
+
+**Why it's wrong**: User loading a filtered conversation URL expects to see the NEWEST messages (bottom), not oldest (top)
+
+### UX Common Sense Rule
+
+**Initial page load should ALWAYS scroll to bottom (newest messages), regardless of:**
+- Filter state
+- Search state  
+- Message type filter state
+- Any other state
+
+**Exception**: NONE. It's a chat app. Chat apps show newest messages on load.
+
+---
+
+## Recommended Fix
+
+### Change 1: Remove filter check from initial scroll
+
+**File**: `components/CommentsStream.tsx`  
+**Line**: 833
+
+**From:**
+```typescript
+if (allComments.length > 0 && !hasScrolledRef.current && !isFilterEnabled) {
+```
+
+**To:**
+```typescript
+if (allComments.length > 0 && !hasScrolledRef.current) {
+```
+
+**Impact**: 
+- ✅ Fixes initial scroll on page load with filters
+- ✅ Fixes refresh behavior  
+- ✅ No side effects (hasScrolledRef prevents multiple scrolls)
+
+### Other Scroll Behaviors
+
+**ALL 21 other scroll behaviors are CORRECT.**
+
+No other changes needed.
+
+---
+
+## Summary
+
+**Total scroll triggers**: 21  
+**Working correctly**: 20  
+**Broken**: 1 (initial load with filters)
+
+**Fix required**: Remove 17 characters (`&& !isFilterEnabled`)  
+**Testing needed**: Load URL with `filteractive=true` → should scroll to bottom
+
+---
+
+**Ready for approval. Should I proceed with this ONE fix?**
 
