@@ -114,30 +114,35 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
   // Channel switch scroll restoration (when switching human ⟷ AI)
   const prevChannel = useRef(activeChannel);
   const scrollBeforeChannelSwitch = useRef<ScrollState | null>(null);
+  const channelSwitchPending = useRef(false);
+  const prevFilteredLength = useRef(filteredCommentsLength);
   
   // SAVE scroll state BEFORE channel changes
   useEffect(() => {
     if (streamRef.current && prevChannel.current !== activeChannel) {
       scrollBeforeChannelSwitch.current = saveScrollState(streamRef.current, 100);
+      channelSwitchPending.current = true;  // Mark that we're waiting for content
       console.log(`[Scroll] Saved scroll state before switching from ${prevChannel.current} to ${activeChannel}:`, scrollBeforeChannelSwitch.current);
+      prevChannel.current = activeChannel;
     }
   }, [activeChannel, streamRef]);
   
-  // RESTORE scroll state AFTER channel switch completes AND content renders
+  // RESTORE scroll AFTER new channel content has loaded and rendered
   useEffect(() => {
     if (!streamRef.current) return;
     
-    // Only restore if we have a saved state AND channel actually changed
-    if (prevChannel.current !== activeChannel && scrollBeforeChannelSwitch.current) {
+    // Check if we're waiting for content after a channel switch
+    // AND filteredCommentsLength has changed (new content loaded)
+    if (channelSwitchPending.current && 
+        scrollBeforeChannelSwitch.current &&
+        prevFilteredLength.current !== filteredCommentsLength) {
+      
       const savedState = scrollBeforeChannelSwitch.current;
       
-      console.log(`[Scroll] Channel changed ${prevChannel.current} → ${activeChannel}`);
-      console.log(`[Scroll] filteredCommentsLength: ${filteredCommentsLength}`);
-      console.log(`[Scroll] Content rendered, restoring scroll`);
+      console.log(`[Scroll] Channel content loaded: ${prevFilteredLength.current} → ${filteredCommentsLength}`);
       console.log(`[Scroll] scrollHeight: ${streamRef.current.scrollHeight}, wasAtBottom: ${savedState.wasAtBottom}`);
       
-      // Content has rendered (this effect fires AFTER React renders)
-      // Now restore scroll position
+      // Content has NOW rendered (filteredCommentsLength changed = React rendered new content)
       if (streamRef.current.scrollHeight > 0) {
         restoreScrollState(streamRef.current, savedState);
         
@@ -158,9 +163,11 @@ export function useScrollRestoration(params: UseScrollRestorationParams): void {
         });
       }
       
-      prevChannel.current = activeChannel;
+      channelSwitchPending.current = false;
       scrollBeforeChannelSwitch.current = null;
     }
-  }, [activeChannel, filteredCommentsLength, streamRef]);
+    
+    prevFilteredLength.current = filteredCommentsLength;
+  }, [filteredCommentsLength, streamRef]);
 }
 
