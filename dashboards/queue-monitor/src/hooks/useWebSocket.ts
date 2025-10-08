@@ -90,6 +90,13 @@ export function useWebSocket(url: string) {
           return trimmed;
         });
         break;
+        
+      case 'llm_request':
+        setLLMRequests(prev => {
+          const newRequests = [message.data, ...prev];  // Newest first
+          return newRequests.slice(0, MAX_LLM_REQUESTS);
+        });
+        break;
     }
   }, []);
 
