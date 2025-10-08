@@ -26,9 +26,11 @@ function App() {
   // Fetch KV messages
   const fetchKVMessages = React.useCallback(async () => {
     try {
-      const response = await fetch(`https://sww-comments.bootloaders.workers.dev/api/comments?limit=20&t=${Date.now()}`);
+      const response = await fetch(`https://sww-comments.bootloaders.workers.dev/api/comments?limit=100&t=${Date.now()}`);
       const data = await response.json();
-      setKvMessages(data.comments || []);
+      // Sort newest first
+      const sorted = (data.comments || []).sort((a: any, b: any) => b.timestamp - a.timestamp);
+      setKvMessages(sorted);
     } catch (error) {
       console.error('Failed to fetch KV:', error);
     }
@@ -50,39 +52,27 @@ function App() {
         onDelete={deleteItem}
         onClearAll={clearQueue}
       />
-      <RightPanel stats={stats} />
       
-      {/* Toggle between Logs and KV */}
-      <div style={{ padding: '10px', borderTop: '1px solid #00FF00' }}>
-        <button 
-          className={styles.button}
-          onClick={() => setShowKV(!showKV)}
-          style={{ width: '200px' }}
-        >
-          {showKV ? '[ SHOW LOGS ]' : '[ SHOW KV STORE ]'}
-        </button>
-        <span style={{ marginLeft: '20px', color: '#00FF00' }}>
-          {showKV ? 'KV Store (Last 20)' : 'Debug Logs (Last 100)'}
-        </span>
-      </div>
-      
-      {showKV ? (
-        <div className={styles.logViewer}>
-          <pre style={{ 
-            background: '#0a0a0a', 
-            color: '#00FF00', 
-            padding: '20px',
-            overflow: 'auto',
-            fontSize: '11px',
-            lineHeight: '1.4'
-          }}>
+      {/* KV Store View (replaces Right Panel Live Stats) */}
+      <div className={`${styles.panel} ${styles.rightPanel}`}>
+        <div className={styles.sectionTitle}>KV STORE (LAST 100) - NEWEST FIRST</div>
+        <div style={{
+          height: '100%',
+          overflow: 'auto',
+          fontSize: '10px',
+          lineHeight: '1.3',
+          fontFamily: 'monospace',
+          color: '#00FF00',
+          background: '#0a0a0a',
+          padding: '10px'
+        }}>
+          <pre style={{ margin: 0 }}>
             {JSON.stringify(kvMessages, null, 2)}
           </pre>
         </div>
-      ) : (
-        <LogViewer logs={logs} maxLogs={100} />
-      )}
+      </div>
       
+      <LogViewer logs={logs} maxLogs={100} />
       <Footer connected={connected} lastUpdate={lastUpdate} />
     </div>
   );
