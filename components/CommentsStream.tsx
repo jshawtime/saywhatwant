@@ -483,14 +483,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Color is now loaded automatically by useColorPicker hook (checks localStorage first)
   }, []);
-  
-  // Save color when username is set (ties them together)
-  useEffect(() => {
-    if (username && userColor) {
-      localStorage.setItem('sww-color', userColor);
-      console.log('[CommentsStream] Saved color with username');
-    }
-  }, [username, userColor]);
 
   // Video share events are now handled by useVideoSharing hook
   // When video is shared, it updates inputText directly via the hook
