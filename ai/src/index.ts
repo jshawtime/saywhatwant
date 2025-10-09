@@ -441,10 +441,8 @@ async function runBot() {
           const entity = entityManager.selectRandomEntity();
           const pingMessage = messages[messages.length - 1];
           
-          // Use context from message (if provided), otherwise build from entity.nom
-          const pingContext = pingMessage.context && pingMessage.context.length > 0
-            ? pingMessage.context
-            : messages.slice(-entity.nom).map(m => `${m.username}: ${m.text}`);
+          // Use context from message - NO FALLBACK
+          const pingContext = pingMessage.context || [];
           
           await queueService.enqueue({
             id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
