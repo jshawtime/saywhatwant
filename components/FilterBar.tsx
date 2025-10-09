@@ -165,7 +165,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
             ['--scrollbar-bg' as any]: getDarkerColor(userColor, OPACITY_LEVELS.DARKEST * 0.5), // 5% opacity
           } as React.CSSProperties}
         >
-          {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && (!mounted || !hasDateTimeFilter) ? (
+          {filterUsernames.length === 0 && filterWords.length === 0 && negativeFilterWords.length === 0 && !hasDateTimeFilter ? (
             <span style={{ color: getDarkerColor(userColor, OPACITY_LEVELS.DARKER) }}> {/* 30% opacity - one level lighter */}
               Click usernames or words to filter...
             </span>
