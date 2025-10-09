@@ -452,8 +452,8 @@ async function handlePostComment(request, env) {
       language: language, // Store the language
       'message-type': messageType, // Store message type (AI, human, etc)
       misc: misc,  // Store misc data
-      // Pre-formatted context messages from frontend
-      ...(context && Array.isArray(context) && context.length > 0 && {
+      // Pre-formatted context messages from frontend (store even if empty)
+      ...(context && Array.isArray(context) && {
         context: context
       }),
       // Bot control parameters (entity, priority, model, nom)

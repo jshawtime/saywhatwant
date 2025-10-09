@@ -353,10 +353,16 @@ async function runBot() {
                 `Model override: ${entity.model} → ${botParams.model}`);
             }
             
-            // Use pre-formatted context from frontend (if present), otherwise build from entity.nom
-            const contextForLLM = message.context && message.context.length > 0
-              ? message.context  // Frontend provided context (from URL nom=)
-              : messages.slice(-entity.nom).map(m => `${m.username}: ${m.text}`);  // Use entity.nom
+            // Use pre-formatted context from frontend
+            // If context is provided (even if empty), use it EXACTLY (don't fetch from KV)
+            // If context is undefined, fetch from KV using entity.nom
+            const contextForLLM = message.context !== undefined
+              ? message.context  // Frontend provided (could be empty array for new conversations)
+              : messages.slice(-entity.nom).map(m => `${m.username}: ${m.text}`);  // Fallback to KV
+            
+            console.log(chalk.cyan('[CONTEXT]'), message.context !== undefined 
+              ? `Using frontend context (${contextForLLM.length} messages)` 
+              : `Using KV messages (${contextForLLM.length} from entity.nom)`);
             
             console.log(chalk.cyan('[QUEUE]'), 'Configuration:');
             console.log(chalk.cyan('  Entity:'), entity.id);

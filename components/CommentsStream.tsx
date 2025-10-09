@@ -985,26 +985,30 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Build pre-formatted context from displayed messages (what user sees)
     const contextArray = (() => {
       // Use filteredComments (what's actually displayed on screen)
-      // This ensures context matches what user sees in the filtered view
       const displayedMessages = filteredComments;
       
       console.log('[DEBUG CONTEXT] filteredComments.length:', displayedMessages.length);
       console.log('[DEBUG CONTEXT] isFilterEnabled:', isFilterEnabled);
-      console.log('[DEBUG CONTEXT] First 5 usernames:', displayedMessages.slice(0, 5).map(m => m.username));
-      console.log('[DEBUG CONTEXT] Last 5 usernames:', displayedMessages.slice(-5).map(m => m.username));
       
-      // Determine how many to send
-      const contextSize = urlNom || (isFilterEnabled ? displayedMessages.length : undefined);
+      // If filters are active, ALWAYS send context (even if empty)
+      // This prevents bot from fetching unfiltered messages from KV
+      if (isFilterEnabled) {
+        const messages = displayedMessages.slice(-(urlNom || displayedMessages.length));
+        console.log(`[CommentsStream] Filter active - sending ${messages.length} messages as context`);
+        // Return empty array (not undefined) if no messages - tells bot "use nothing, don't fetch"
+        return messages.map(m => `${m.username}: ${m.text}`);
+      }
       
-      // If no context size specified and filters inactive, let bot use entity.nom from KV
-      if (!contextSize) return undefined;
+      // Filters inactive - only send context if nom specified in URL
+      if (urlNom) {
+        const messages = displayedMessages.slice(-urlNom);
+        console.log(`[CommentsStream] No filter, nom=${urlNom} - sending ${messages.length} messages`);
+        return messages.map(m => `${m.username}: ${m.text}`);
+      }
       
-      const messages = displayedMessages.slice(-contextSize);
-      console.log(`[CommentsStream] Building context from ${messages.length} displayed messages (filter: ${isFilterEnabled})`);
-      console.log(`[DEBUG CONTEXT] Context usernames:`, messages.map(m => m.username));
-      return messages.length > 0 
-        ? messages.map(m => `${m.username}: ${m.text}`)
-        : undefined;
+      // No filter, no nom - let bot use entity.nom from config
+      console.log(`[CommentsStream] No filter, no nom - bot will use entity.nom`);
+      return undefined;
     })();
     
     // Pass ais parameter (AI identity override)
