@@ -979,12 +979,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Build pre-formatted context from displayed messages (only if nom= in URL)
+    // Build pre-formatted context from displayed messages (what user sees)
     const contextArray = (() => {
-      // If no nom in URL, return undefined - let bot use entity.nom
-      if (!urlNom) return undefined;
+      // Use filteredComments (what's actually displayed on screen)
+      // This ensures context matches what user sees in the filtered view
+      const displayedMessages = filteredComments;
       
-      const messages = allComments.slice(-urlNom);
+      // Determine how many to send
+      const contextSize = urlNom || (isFilterEnabled ? displayedMessages.length : undefined);
+      
+      // If no context size specified and filters inactive, let bot use entity.nom from KV
+      if (!contextSize) return undefined;
+      
+      const messages = displayedMessages.slice(-contextSize);
+      console.log(`[CommentsStream] Building context from ${messages.length} displayed messages (filter: ${isFilterEnabled})`);
       return messages.length > 0 
         ? messages.map(m => `${m.username}: ${m.text}`)
         : undefined;
