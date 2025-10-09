@@ -78,7 +78,8 @@ interface UsernameEditorState {
  */
 export function useUsernameEditor(
   maxLength: number = 16,
-  storageKey: string = 'sww-username'
+  storageKey: string = 'sww-username',
+  onUsernameSaved?: () => void
 ): UsernameEditorState {
   // Username value
   const [username, setUsernameState] = useState('');

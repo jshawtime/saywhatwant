@@ -7,6 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import { getRandomColor, nineDigitToRgb } from '@/modules/colorSystem';
+import { rgbToNineDigit } from '@/lib/url-filter-simple';
 
 interface UseColorPickerReturn {
   userColor: string;           // 9-digit color format
@@ -20,7 +21,23 @@ interface UseColorPickerReturn {
 }
 
 export function useColorPicker(initialColor: string): UseColorPickerReturn {
-  const [userColor, setUserColor] = useState(initialColor);
+  const [userColor, setUserColor] = useState(() => {
+    // Check localStorage first - if user has set username before, they have a saved color
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sww-color');
+      if (saved) {
+        // Convert old format to 9-digit if needed (backward compatibility)
+        if (saved.startsWith('#') || saved.startsWith('rgb')) {
+          const colorDigits = rgbToNineDigit(saved);
+          localStorage.setItem('sww-color', colorDigits); // Update to new format
+          return colorDigits;
+        }
+        return saved;
+      }
+    }
+    // No saved color - use random (will be saved when username is set)
+    return initialColor;
+  });
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   

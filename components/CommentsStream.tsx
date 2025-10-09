@@ -481,22 +481,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       markUsernameAsInteracted();
     }
     
-    const savedColor = localStorage.getItem('sww-color');
-    if (savedColor) {
-      // Convert to 9-digit format if needed (for backwards compatibility)
-      // REPLACED: URLFilterManager with url-filter-simple (imported at top)
-      let colorDigits = savedColor;
-      
-      if (savedColor.startsWith('#') || savedColor.startsWith('rgb')) {
-        // Convert old format to 9-digit
-        colorDigits = rgbToNineDigit(savedColor);
-        localStorage.setItem('sww-color', colorDigits); // Update to new format
-      }
-      
-      // Store internally as 9-digit
-      setUserColor(colorDigits);
-    }
+    // Color is now loaded automatically by useColorPicker hook (checks localStorage first)
   }, []);
+  
+  // Save color when username is set (ties them together)
+  useEffect(() => {
+    if (username && userColor) {
+      localStorage.setItem('sww-color', userColor);
+      console.log('[CommentsStream] Saved color with username');
+    }
+  }, [username, userColor]);
 
   // Video share events are now handled by useVideoSharing hook
   // When video is shared, it updates inputText directly via the hook
