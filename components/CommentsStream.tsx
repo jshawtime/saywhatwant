@@ -4,6 +4,7 @@
 // REACT & EXTERNAL LIBRARIES
 // ==========================================
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Send, ChevronDown, Tv, Ban, Users, Sparkles } from 'lucide-react';
 
 // ==========================================
@@ -41,9 +42,11 @@ import { EmptyState } from '@/components/MessageList/EmptyState';
 import { ContextMenu } from '@/components/ContextMenu';
 import { TitleContextMenu } from '@/components/TitleContextMenu';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
-import FilterBar from '@/components/FilterBar';
 import DomainFilter from '@/components/DomainFilter';
 import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
+
+// Dynamic import FilterBar to prevent hydration errors (uses localStorage in render)
+const FilterBar = dynamic(() => import('@/components/FilterBar'), { ssr: false });
 
 // ==========================================
 // CUSTOM HOOKS (Feature-specific)
@@ -985,6 +988,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // This ensures context matches what user sees in the filtered view
       const displayedMessages = filteredComments;
       
+      console.log('[DEBUG CONTEXT] filteredComments.length:', displayedMessages.length);
+      console.log('[DEBUG CONTEXT] isFilterEnabled:', isFilterEnabled);
+      console.log('[DEBUG CONTEXT] First 5 usernames:', displayedMessages.slice(0, 5).map(m => m.username));
+      console.log('[DEBUG CONTEXT] Last 5 usernames:', displayedMessages.slice(-5).map(m => m.username));
+      
       // Determine how many to send
       const contextSize = urlNom || (isFilterEnabled ? displayedMessages.length : undefined);
       
@@ -993,6 +1001,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       
       const messages = displayedMessages.slice(-contextSize);
       console.log(`[CommentsStream] Building context from ${messages.length} displayed messages (filter: ${isFilterEnabled})`);
+      console.log(`[DEBUG CONTEXT] Context usernames:`, messages.map(m => m.username));
       return messages.length > 0 
         ? messages.map(m => `${m.username}: ${m.text}`)
         : undefined;
