@@ -210,12 +210,58 @@ Never break existing user data. Always provide an upgrade path.
 
 ## The Pitfalls to Avoid
 
+### ⚠️ CRITICAL: NEVER USE FALLBACKS
+
+**This is a HARD RULE. No exceptions.**
+
+Fallbacks create bug-solving complexity and hide real issues. When something doesn't have data, it should fail explicitly or use empty/null, NOT fall back to different data.
+
+**Examples of FORBIDDEN fallbacks:**
+
+```javascript
+// ❌ NEVER DO THIS
+const context = message.context || fetchFromDatabase();  // WRONG!
+const color = userColor || defaultColor;  // WRONG!
+const value = param || fallbackValue;  // WRONG!
+
+// ✅ DO THIS INSTEAD
+const context = message.context || [];  // Explicit empty
+const color = userColor;  // Let it be undefined if not set
+const value = param;  // No fallback, handle undefined explicitly
+```
+
+**Why fallbacks are evil:**
+1. Hide bugs - you don't know what data is actually being used
+2. Create mystery behavior - "it works sometimes"
+3. Make debugging impossible - which source is active?
+4. Compound over time - fallback chains get longer
+5. Break user expectations - they see one thing, system uses another
+
+**Real example from this project:**
+```javascript
+// BUG: Bot used KV messages when context was empty
+const contextForLLM = message.context?.length > 0 
+  ? message.context 
+  : fetchFromKV();  // ← FALLBACK CAUSED 4 HOURS OF DEBUGGING
+
+// FIX: No fallback, use exactly what frontend sends
+const contextForLLM = message.context || [];  // Empty is valid
+```
+
+**The rule:** If data is missing, either:
+- Use explicit empty (`[]`, `null`, `''`)
+- Throw error to expose the issue
+- Log warning and continue with empty
+
+**NEVER silently substitute different data.**
+
 ### The Silent Failure
 Never swallow errors silently. Even if you can't fix it, log it:
 ```javascript
 catch (error) {
   console.error('[Context] What failed:', error);
-  return fallbackValue; // Keep the app running
+  // Don't use fallbackValue - let it fail or return empty
+  return null; // Explicit empty, not hidden fallback
 }
 ```
 
