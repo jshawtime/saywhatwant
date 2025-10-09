@@ -67,5 +67,46 @@ if (scrollTop matches lastProgrammaticScroll) {
 
 ---
 
+---
+
+## Filter Toggle Behavior Fix
+
+**User feedback:** Filter toggle was scrolling to top, not bottom
+
+### What Was Wrong
+
+The code only handled filter BAR changes (adding/removing filters), not filter toggle on/off.
+
+**Current behavior (broken):**
+- Toggle filter ON → Restore saved filter position
+- Toggle filter OFF → Restore channel position
+
+**Required behavior:**
+- Toggle filter ON → Clear filter position, go to bottom
+- Toggle filter OFF → Clear filter position, go to bottom
+
+### The Fix
+
+Added filter toggle detection in Effect 2:
+
+```typescript
+// Check if filter was toggled (on/off)
+const filterToggled = prevFilterActive.current !== isFilterActive;
+
+if (filterToggled) {
+  // Clear filter position
+  positions.current['filter-active'] = null;
+  
+  // Scroll to bottom
+  scrollTop = scrollHeight;
+  
+  return; // Don't do other view change logic
+}
+```
+
+**Result:** Both filter ON and OFF clear position and scroll to bottom.
+
+---
+
 **Status**: Deployed to production
 

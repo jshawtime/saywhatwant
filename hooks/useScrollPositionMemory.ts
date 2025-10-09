@@ -115,6 +115,7 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
   
   // Previous state tracking
   const prevView = useRef<string>(getViewKey(activeChannel, isFilterActive));
+  const prevFilterActive = useRef<boolean>(isFilterActive);
   const prevFilterHash = useRef<string>(getFilterHash(filterState));
   
   // Track programmatic scrolls (not user-initiated)
@@ -173,7 +174,34 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
   useEffect(() => {
     const currentView = getViewKey(activeChannel, isFilterActive);
     
-    // View changed?
+    // Check if filter was toggled (on/off)
+    const filterToggled = prevFilterActive.current !== isFilterActive;
+    
+    if (filterToggled) {
+      console.log(`[ScrollMemory] Filter toggled: ${prevFilterActive.current} → ${isFilterActive}`);
+      
+      // Clear filter position
+      positions.current['filter-active'] = null;
+      savePositions(positions.current);
+      
+      // Scroll to bottom
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!streamRef.current) return;
+          
+          const bottomPosition = streamRef.current.scrollHeight;
+          console.log(`[ScrollMemory] Filter toggle - going to bottom (scrollHeight: ${bottomPosition})`);
+          lastProgrammaticScroll.current = bottomPosition;
+          streamRef.current.scrollTop = bottomPosition;
+        });
+      });
+      
+      prevFilterActive.current = isFilterActive;
+      prevView.current = currentView;
+      return;
+    }
+    
+    // View changed (channel switch)?
     if (prevView.current !== currentView) {
       console.log(`[ScrollMemory] View changed: ${prevView.current} → ${currentView}`);
       
