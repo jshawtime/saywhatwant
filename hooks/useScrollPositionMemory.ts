@@ -117,29 +117,51 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
   const prevView = useRef<string>(getViewKey(activeChannel, isFilterActive));
   const prevFilterHash = useRef<string>(getFilterHash(filterState));
   
-  // Effect 1: Save/clear position based on scroll position
+  // Restoration flag (prevent clearing during restoration)
+  const isRestoring = useRef(false);
+  
+  // Effect 1: Listen to scroll events and save/clear position continuously
   useEffect(() => {
+    const element = streamRef.current;
+    if (!element) return;
+    
     const currentView = getViewKey(activeChannel, isFilterActive);
     
-    if (!streamRef.current) return;
+    const handleScroll = () => {
+      // Don't update position if we're in the middle of restoring
+      if (isRestoring.current) return;
+      
+      const scrollTop = element.scrollTop;
+      const scrollHeight = element.scrollHeight;
+      const clientHeight = element.clientHeight;
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+      const atBottom = distanceFromBottom < 100;
+      
+      if (atBottom) {
+        // User at bottom - clear position for this view (if exists)
+        if (positions.current[currentView] !== null) {
+          console.log(`[ScrollMemory] At bottom - clearing ${currentView} position`);
+          positions.current[currentView] = null;
+          savePositions(positions.current);
+        }
+      } else {
+        // User scrolled up - save current position
+        const roundedPosition = Math.round(scrollTop);
+        if (positions.current[currentView] !== roundedPosition) {
+          console.log(`[ScrollMemory] Saving ${currentView} position: ${roundedPosition}`);
+          positions.current[currentView] = roundedPosition;
+          savePositions(positions.current);
+        }
+      }
+    };
     
-    if (isNearBottom) {
-      // User at bottom - clear position for this view (if exists)
-      if (positions.current[currentView] !== null) {
-        console.log(`[ScrollMemory] At bottom - clearing ${currentView} position`);
-        positions.current[currentView] = null;
-        savePositions(positions.current);
-      }
-    } else {
-      // User scrolled up - save position
-      const newPosition = streamRef.current.scrollTop;
-      if (positions.current[currentView] !== newPosition) {
-        console.log(`[ScrollMemory] Saving ${currentView} position: ${newPosition}`);
-        positions.current[currentView] = newPosition;
-        savePositions(positions.current);
-      }
-    }
-  }, [isNearBottom, activeChannel, isFilterActive, streamRef]);
+    // Attach scroll listener
+    element.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      element.removeEventListener('scroll', handleScroll);
+    };
+  }, [activeChannel, isFilterActive, streamRef]);
   
   // Effect 2: Restore position when view changes
   useEffect(() => {
@@ -149,10 +171,16 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
     if (prevView.current !== currentView) {
       console.log(`[ScrollMemory] View changed: ${prevView.current} → ${currentView}`);
       
+      // Set restoration flag to prevent scroll listener from interfering
+      isRestoring.current = true;
+      
       // Wait for content to render (double RAF ensures DOM paint)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (!streamRef.current) return;
+          if (!streamRef.current) {
+            isRestoring.current = false;
+            return;
+          }
           
           const savedPosition = positions.current[currentView];
           
@@ -165,6 +193,11 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
             console.log(`[ScrollMemory] No saved position for ${currentView}, going to bottom`);
             streamRef.current.scrollTop = streamRef.current.scrollHeight;
           }
+          
+          // Clear restoration flag after a short delay
+          setTimeout(() => {
+            isRestoring.current = false;
+          }, 100);
         });
       });
       
@@ -185,11 +218,19 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
       positions.current['filter-active'] = null;
       savePositions(positions.current);
       
+      // Set restoration flag to prevent scroll listener from saving this scroll
+      isRestoring.current = true;
+      
       // Scroll to bottom
       requestAnimationFrame(() => {
         if (streamRef.current) {
           console.log(`[ScrollMemory] Scrolling to bottom after filter change`);
           streamRef.current.scrollTop = streamRef.current.scrollHeight;
+          
+          // Clear restoration flag after scroll completes
+          setTimeout(() => {
+            isRestoring.current = false;
+          }, 100);
         }
       });
     }
