@@ -116,11 +116,9 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
   // Previous state tracking
   const prevView = useRef<string>(getViewKey(activeChannel, isFilterActive));
   const prevFilterHash = useRef<string>(getFilterHash(filterState));
-  const prevContentLength = useRef<number>(filteredCommentsLength);
-  const pendingRestoration = useRef<number | null>(null);
   
-  // Restoration flag (prevent clearing during restoration)
-  const isRestoring = useRef(false);
+  // Track programmatic scrolls (not user-initiated)
+  const lastProgrammaticScroll = useRef<number | null>(null);
   
   // Effect 1: Listen to scroll events and save/clear position continuously
   useEffect(() => {
@@ -130,10 +128,16 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
     const currentView = getViewKey(activeChannel, isFilterActive);
     
     const handleScroll = () => {
-      // Don't update position if we're in the middle of restoring
-      if (isRestoring.current) return;
-      
       const scrollTop = element.scrollTop;
+      
+      // Check if this scroll was programmatic (we just set it)
+      if (lastProgrammaticScroll.current !== null && 
+          Math.abs(scrollTop - lastProgrammaticScroll.current) < 2) {
+        console.log(`[ScrollMemory] Ignoring programmatic scroll to ${scrollTop}`);
+        lastProgrammaticScroll.current = null;
+        return;
+      }
+      
       const scrollHeight = element.scrollHeight;
       const clientHeight = element.clientHeight;
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
@@ -173,14 +177,10 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
     if (prevView.current !== currentView) {
       console.log(`[ScrollMemory] View changed: ${prevView.current} → ${currentView}`);
       
-      // Set restoration flag to prevent scroll listener from interfering
-      isRestoring.current = true;
-      
       // Wait for content to render (double RAF ensures DOM paint)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (!streamRef.current) {
-            isRestoring.current = false;
             return;
           }
           
@@ -191,19 +191,17 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
           if (savedPosition !== null) {
             // Restore saved position
             console.log(`[ScrollMemory] BEFORE restore - scrollHeight: ${scrollHeight}, clientHeight: ${clientHeight}, savedPosition: ${savedPosition}`);
+            lastProgrammaticScroll.current = savedPosition;
             streamRef.current.scrollTop = savedPosition;
             console.log(`[ScrollMemory] AFTER restore - actual scrollTop: ${streamRef.current.scrollTop}`);
           } else {
             // No saved position - go to bottom
+            const bottomPosition = streamRef.current.scrollHeight;
             console.log(`[ScrollMemory] No saved position for ${currentView}, going to bottom (scrollHeight: ${scrollHeight})`);
-            streamRef.current.scrollTop = streamRef.current.scrollHeight;
+            lastProgrammaticScroll.current = bottomPosition;
+            streamRef.current.scrollTop = bottomPosition;
             console.log(`[ScrollMemory] After bottom scroll - actual scrollTop: ${streamRef.current.scrollTop}`);
           }
-          
-          // Clear restoration flag after a short delay
-          setTimeout(() => {
-            isRestoring.current = false;
-          }, 100);
         });
       });
       
@@ -224,19 +222,13 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
       positions.current['filter-active'] = null;
       savePositions(positions.current);
       
-      // Set restoration flag to prevent scroll listener from saving this scroll
-      isRestoring.current = true;
-      
       // Scroll to bottom
       requestAnimationFrame(() => {
         if (streamRef.current) {
+          const bottomPosition = streamRef.current.scrollHeight;
           console.log(`[ScrollMemory] Scrolling to bottom after filter change`);
-          streamRef.current.scrollTop = streamRef.current.scrollHeight;
-          
-          // Clear restoration flag after scroll completes
-          setTimeout(() => {
-            isRestoring.current = false;
-          }, 100);
+          lastProgrammaticScroll.current = bottomPosition;
+          streamRef.current.scrollTop = bottomPosition;
         }
       });
     }
