@@ -54,7 +54,7 @@ import { useIndexedDBFiltering } from '@/hooks/useIndexedDBFiltering';
 import { useMessageCounts } from '@/hooks/useMessageCounts';
 import { useColorPicker } from '@/hooks/useColorPicker';
 import { useMessageTypeFilters } from '@/hooks/useMessageTypeFilters';
-import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { useScrollPositionMemory } from '@/hooks/useScrollPositionMemory';
 import { useContextMenus } from '@/hooks/useContextMenus';
 import { useMobileKeyboard } from '@/hooks/useMobileKeyboard';
 import { useMessageLoadingState } from '@/hooks/useMessageLoadingState';
@@ -442,17 +442,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     domainConfigTitle: domainConfig.title,
   });
   
-  // Scroll restoration for filters and search (extracted to hook)
-  useScrollRestoration({
+  // Scroll position memory - manages 4 independent view positions
+  useScrollPositionMemory({
     streamRef,
-    isFilterEnabled,
-    searchTerm,
-    savedHumansScrollPosition,
-    savedEntitiesScrollPosition,
-    setSavedHumansScrollPosition,
-    setSavedEntitiesScrollPosition,
-    activeChannel: messageType,  // NEW: Use exclusive channel
+    activeChannel: messageType,
+    isFilterActive: isFilterEnabled,
+    isNearBottom,
     filteredCommentsLength: filteredComments.length,
+    filterState,
   });
   
   // Mobile keyboard handling (extracted to hook)
@@ -762,9 +759,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     loadInitialComments();
   }, [fetchComments]);
 
-  // Track if we've done initial scroll
-  const hasScrolledRef = useRef(false);
-  
   // Helper to trim messages to dynamic display limit
   const trimToMaxMessages = useCallback((messages: Comment[]): Comment[] => {
     if (messages.length <= dynamicMaxMessages) {
@@ -826,40 +820,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [hasMoreInIndexedDb, isLoadingMoreFromIndexedDb, indexedDbOffset, startLoadingMore, finishLoadingMore, setIndexedDbOffset]);
   
-  // Scroll to bottom on initial page load when comments first arrive AND render
+  // One-time initial scroll to bottom (happens once per page load)
+  const hasInitialScrolled = useRef(false);
+  
   useEffect(() => {
-    console.log('[Scroll DEBUG] Initial scroll effect fired');
-    console.log('[Scroll DEBUG] filteredComments.length:', filteredComments.length);
-    console.log('[Scroll DEBUG] hasScrolledRef.current:', hasScrolledRef.current);
-    console.log('[Scroll DEBUG] streamRef.current exists:', !!streamRef.current);
-    console.log('[Scroll DEBUG] isFilterMode:', isFilterMode);
-    console.log('[Scroll DEBUG] isLoading:', isLoading);
-    
-    // Wait for content to be ready (either filtered or all comments)
-    // AND wait for loading to finish so DOM is rendered
-    if (filteredComments.length > 0 && !hasScrolledRef.current && !isLoading) {
-      hasScrolledRef.current = true;
+    if (!hasInitialScrolled.current && 
+        filteredComments.length > 0 && 
+        !isLoading && 
+        streamRef.current) {
       
-      console.log('[Scroll DEBUG] Content rendered, scrolling to bottom');
-      
-      // Content has rendered (this effect fires AFTER React renders filteredComments)
-      // Scroll immediately - no timers needed
-      if (streamRef.current) {
-        console.log('[Scroll DEBUG] Scrolling - scrollHeight:', streamRef.current.scrollHeight);
-        console.log('[Scroll DEBUG] Scrolling - clientHeight:', streamRef.current.clientHeight);
-        console.log('[Scroll DEBUG] Scrolling - current scrollTop:', streamRef.current.scrollTop);
-        
-        streamRef.current.scrollTop = streamRef.current.scrollHeight;
-        
-        console.log('[Scroll DEBUG] After scroll - scrollTop:', streamRef.current.scrollTop);
-        console.log('[Scroll] Initial scroll to bottom completed');
-      } else {
-        console.log('[Scroll DEBUG] streamRef.current is null!');
-      }
-    } else {
-      console.log('[Scroll DEBUG] Skipping scroll - conditions not met');
+      streamRef.current.scrollTop = streamRef.current.scrollHeight;
+      hasInitialScrolled.current = true;
+      console.log('[Init] Initial scroll to bottom');
     }
-  }, [filteredComments.length, isLoading, isFilterMode]); // Effect fires AFTER content renders
+  }, [filteredComments.length, isLoading]);
 
   // Don't auto-scroll when video area toggles - let user stay where they are
   
