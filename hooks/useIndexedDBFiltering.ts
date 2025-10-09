@@ -160,8 +160,6 @@ export function useIndexedDBFiltering(
   
   // Test if a message matches current filter criteria
   const matchesCurrentFilter = useCallback((message: Comment): boolean => {
-    if (!isFilterMode) return true; // No filters = all messages match
-    
     // CHANNEL CHECK FIRST (Top-level: Human, AI, or ALL)
     // Handle 'ALL' to allow both human and AI messages
     if (params.activeChannel !== 'ALL') {
@@ -170,7 +168,12 @@ export function useIndexedDBFiltering(
     }
     // If activeChannel === 'ALL', skip this check (allow both types)
     
-    // Now apply filters WITHIN the active channel:
+    // If filter is NOT active, only channel filtering applies
+    if (!params.isFilterEnabled) {
+      return true; // Channel matched, no other filters
+    }
+    
+    // Filter IS active - now apply username/word filters WITHIN the active channel:
     
     // Username filter - EXACT case match for both username and color
     if (params.filterUsernames.length > 0) {
