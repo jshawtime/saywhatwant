@@ -61,19 +61,32 @@ const FilterBar: React.FC<FilterBarProps> = ({
   } | null>(null);
   
   // Track notification settings for each filter
-  const [filterNotificationSettings, setFilterNotificationSettings] = useState<Record<string, { sound: NotificationSound; isUnread: boolean }>>({});
-  
-  useEffect(() => {
-    setMounted(true);
-    // Load initial notification settings
-    const loadSettings = () => {
-      const settings: Record<string, { sound: NotificationSound; isUnread: boolean }> = {};
-      // Only usernames have colors - words don't have colors
+  // Initialize from localStorage to avoid hydration mismatch
+  const [filterNotificationSettings, setFilterNotificationSettings] = useState<Record<string, { sound: NotificationSound; isUnread: boolean }>>(() => {
+    const settings: Record<string, { sound: NotificationSound; isUnread: boolean }> = {};
+    // Only load on client to avoid SSR mismatch
+    if (typeof window !== 'undefined') {
       filterUsernames.forEach(filter => {
         const key = getFilterKey(filter.username, filter.color || userColor);
         settings[key] = getFilterNotificationSetting(key);
       });
-      // Words don't have colors - just use the word as the key
+      filterWords.forEach(word => {
+        const key = getFilterKey(word, '');
+        settings[key] = getFilterNotificationSetting(key);
+      });
+    }
+    return settings;
+  });
+  
+  useEffect(() => {
+    setMounted(true);
+    // Reload settings when filters change
+    const loadSettings = () => {
+      const settings: Record<string, { sound: NotificationSound; isUnread: boolean }> = {};
+      filterUsernames.forEach(filter => {
+        const key = getFilterKey(filter.username, filter.color || userColor);
+        settings[key] = getFilterNotificationSetting(key);
+      });
       filterWords.forEach(word => {
         const key = getFilterKey(word, '');
         settings[key] = getFilterNotificationSetting(key);

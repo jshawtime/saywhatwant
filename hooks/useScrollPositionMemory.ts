@@ -142,7 +142,8 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
       const scrollHeight = element.scrollHeight;
       const clientHeight = element.clientHeight;
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-      const atBottom = distanceFromBottom < 100;
+      // Bottom means ACTUALLY at bottom (< 2px for rounding tolerance only)
+      const atBottom = distanceFromBottom < 2;
       
       if (atBottom) {
         // User at bottom - clear position for this view (if exists)
