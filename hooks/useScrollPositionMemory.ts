@@ -116,6 +116,8 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
   // Previous state tracking
   const prevView = useRef<string>(getViewKey(activeChannel, isFilterActive));
   const prevFilterHash = useRef<string>(getFilterHash(filterState));
+  const prevContentLength = useRef<number>(filteredCommentsLength);
+  const pendingRestoration = useRef<number | null>(null);
   
   // Restoration flag (prevent clearing during restoration)
   const isRestoring = useRef(false);
@@ -148,7 +150,7 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
         // User scrolled up - save current position
         const roundedPosition = Math.round(scrollTop);
         if (positions.current[currentView] !== roundedPosition) {
-          console.log(`[ScrollMemory] Saving ${currentView} position: ${roundedPosition}`);
+          console.log(`[ScrollMemory] Saving ${currentView} position: ${roundedPosition} (scrollHeight: ${scrollHeight}, distFromBottom: ${distanceFromBottom})`);
           positions.current[currentView] = roundedPosition;
           savePositions(positions.current);
         }
@@ -183,15 +185,19 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
           }
           
           const savedPosition = positions.current[currentView];
+          const scrollHeight = streamRef.current.scrollHeight;
+          const clientHeight = streamRef.current.clientHeight;
           
           if (savedPosition !== null) {
             // Restore saved position
-            console.log(`[ScrollMemory] Restoring ${currentView} to position ${savedPosition}`);
+            console.log(`[ScrollMemory] BEFORE restore - scrollHeight: ${scrollHeight}, clientHeight: ${clientHeight}, savedPosition: ${savedPosition}`);
             streamRef.current.scrollTop = savedPosition;
+            console.log(`[ScrollMemory] AFTER restore - actual scrollTop: ${streamRef.current.scrollTop}`);
           } else {
             // No saved position - go to bottom
-            console.log(`[ScrollMemory] No saved position for ${currentView}, going to bottom`);
+            console.log(`[ScrollMemory] No saved position for ${currentView}, going to bottom (scrollHeight: ${scrollHeight})`);
             streamRef.current.scrollTop = streamRef.current.scrollHeight;
+            console.log(`[ScrollMemory] After bottom scroll - actual scrollTop: ${streamRef.current.scrollTop}`);
           }
           
           // Clear restoration flag after a short delay
