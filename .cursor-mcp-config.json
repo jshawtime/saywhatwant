@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/puppeteer-mcp-server"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant"
+      ]
+    }
+  }
+}

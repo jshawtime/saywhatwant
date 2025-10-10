@@ -1,0 +1,60 @@
+import { test, expect } from '@playwright/test';
+
+/**
+ * Smoke Tests - Basic functionality checks
+ * These tests ensure the app loads and core elements are present
+ */
+
+test.describe('App Smoke Tests', () => {
+  test('homepage loads successfully', async ({ page }) => {
+    await page.goto('/');
+    
+    // Check that the page loads without errors
+    await expect(page).toHaveTitle(/SayWhatWant|Say What Want/i);
+    
+    // Check for main layout elements
+    const main = page.locator('main');
+    await expect(main).toBeVisible();
+  });
+
+  test('no console errors on initial load', async ({ page }) => {
+    const consoleErrors: string[] = [];
+    
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    
+    // Allow some time for any delayed errors
+    await page.waitForTimeout(2000);
+    
+    // Filter out known acceptable errors (if any)
+    const criticalErrors = consoleErrors.filter(error => {
+      // Add filters here if needed for known non-critical errors
+      return !error.includes('favicon'); // Example: ignore favicon errors
+    });
+    
+    expect(criticalErrors).toHaveLength(0);
+  });
+
+  test('app is responsive to viewport changes', async ({ page }) => {
+    await page.goto('/');
+    
+    // Test at desktop resolution
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await expect(page.locator('main')).toBeVisible();
+    
+    // Test at tablet resolution
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await expect(page.locator('main')).toBeVisible();
+    
+    // Test at mobile resolution
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(page.locator('main')).toBeVisible();
+  });
+});
+
