@@ -94,6 +94,222 @@ tests/
 
 ---
 
+## 🔑 CRITICAL: Reading Playwright Results via MCP Filesystem
+
+### DO NOT Rely on Screenshots from User
+
+**YOU HAVE DIRECT ACCESS TO TEST RESULTS!** Use the filesystem MCP to read:
+
+1. **Test Results JSON** (Most Important)
+2. **Screenshots** (on failures)
+3. **Videos** (on failures)
+4. **Error Context** (detailed markdown)
+5. **Trace files** (for deep debugging)
+
+### How to Read Test Results
+
+#### Step 1: Read the JSON Results File
+```typescript
+// Use this MCP tool:
+mcp_filesystem-saywhatwant_read_text_file(
+  path: "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/test-results/results.json"
+)
+```
+
+**This gives you:**
+- Pass/fail status for every test
+- Error messages and stack traces
+- Exact line numbers of failures
+- Duration of each test
+- Paths to screenshots/videos/traces
+
+#### Step 2: Check What Test Artifacts Exist
+```typescript
+// List test results directory:
+mcp_filesystem-saywhatwant_list_directory(
+  path: "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/test-results"
+)
+```
+
+#### Step 3: Read Specific Error Context
+```typescript
+// For failed tests, read the error-context.md:
+mcp_filesystem-saywhatwant_read_text_file(
+  path: "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/test-results/[test-name]/error-context.md"
+)
+```
+
+#### Step 4: Read Screenshots (if needed)
+```typescript
+// Screenshots are PNG files - you can read them:
+mcp_filesystem-saywhatwant_read_media_file(
+  path: "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/test-results/[test-name]/test-failed-1.png"
+)
+```
+
+### Test Results JSON Structure
+
+**Key fields to look for:**
+
+```json
+{
+  "stats": {
+    "expected": 10,      // Passed tests
+    "unexpected": 5,     // Failed tests
+    "skipped": 0,        // Skipped tests
+    "flaky": 0          // Flaky tests
+  },
+  "suites": [
+    {
+      "title": "color-system.spec.ts",
+      "suites": [
+        {
+          "specs": [
+            {
+              "title": "user is assigned a random color on first visit",
+              "ok": false,  // ❌ Failed
+              "tests": [{
+                "status": "unexpected",
+                "results": [{
+                  "status": "failed",
+                  "error": {
+                    "message": "expect(received).toBeTruthy()\n\nReceived: null",
+                    "location": {
+                      "file": "tests/color-system.spec.ts",
+                      "line": 20,
+                      "column": 23
+                    }
+                  },
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "path": "/path/to/screenshot.png"
+                    },
+                    {
+                      "name": "video",
+                      "path": "/path/to/video.webm"
+                    }
+                  ]
+                }]
+              }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Workflow for Test Analysis
+
+**DO THIS automatically after tests run:**
+
+1. **Read results.json**
+   ```typescript
+   const results = mcp_filesystem-saywhatwant_read_text_file(
+     "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/test-results/results.json"
+   );
+   ```
+
+2. **Parse the stats**
+   - `stats.expected` = passed tests
+   - `stats.unexpected` = failed tests
+   - Report: "X/15 tests passed (Y%)"
+
+3. **Find all failed tests**
+   - Look for `"ok": false` in specs
+   - Extract test titles and error messages
+
+4. **Analyze each failure**
+   - Read `error.message` for what failed
+   - Read `error.location` for where it failed
+   - Check `attachments` for screenshot/video paths
+
+5. **Read error context if needed**
+   - Each failed test has an `error-context.md` file
+   - Contains full error details + context
+
+6. **View screenshots only if necessary**
+   - Use `read_media_file` for PNG screenshots
+   - Only do this if error message isn't clear
+
+### Common Failure Patterns
+
+**Pattern 1: Element Not Found**
+```json
+"error": {
+  "message": "expect(locator).toBeVisible() failed"
+}
+```
+→ Selector is wrong or element doesn't exist
+
+**Pattern 2: localStorage is null**
+```json
+"error": {
+  "message": "expect(received).toBeTruthy()\nReceived: null"
+}
+```
+→ localStorage item not set or cleared incorrectly
+
+**Pattern 3: Console Errors**
+```json
+"error": {
+  "message": "expect(criticalErrors).toHaveLength(0)\nReceived length: 1"
+}
+```
+→ App has console errors (often React hydration issues)
+
+**Pattern 4: Timing Issues**
+```json
+"error": {
+  "message": "expect(locator).toHaveCSS() failed\nTimeout: 5000ms"
+}
+```
+→ Element not ready or animation not complete
+
+### DO NOT Ask User for Screenshots
+
+**❌ BAD:**
+"Can you send me a screenshot of the Playwright UI?"
+
+**✅ GOOD:**
+```typescript
+// Read results automatically
+const results = mcp_filesystem-saywhatwant_read_text_file(
+  "/Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant/test-results/results.json"
+);
+// Parse and analyze
+// Report findings
+```
+
+### Reporting Test Results to User
+
+**Template:**
+```
+📊 Test Results: X/15 Passed (Y%)
+
+✅ Passing Tests (X):
+1. Test name
+2. Test name
+...
+
+❌ Failing Tests (Y):
+
+**1. Test Name**
+- Problem: <error message>
+- Location: tests/file.spec.ts:line:column
+- Why: <root cause analysis>
+- Screenshot: test-results/[path] (if relevant)
+
+**2. Test Name**
+...
+
+🎯 Root Cause: <overall analysis>
+```
+
+---
+
 ## When User Asks to Run Tests
 
 ### Standard Flow
