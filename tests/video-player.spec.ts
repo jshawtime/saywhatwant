@@ -10,6 +10,8 @@ test.describe('Video Player', () => {
     await page.goto('/');
     // Clear localStorage to start fresh
     await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForLoadState('networkidle');
   });
 
   test('video player can be toggled on and off', async ({ page }) => {

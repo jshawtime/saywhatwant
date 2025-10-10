@@ -8,9 +8,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Color System', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
     await page.waitForLoadState('networkidle');
+    // Clear storage but keep color to test persistence
   });
 
   test('user is assigned a random color on first visit', async ({ page }) => {

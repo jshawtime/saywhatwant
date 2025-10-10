@@ -9,6 +9,12 @@ test.describe('Comments Stream', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    
+    // Set up username (required for posting)
+    const usernameInput = page.locator('input[type="text"]').first();
+    if (await usernameInput.isVisible()) {
+      await usernameInput.fill('TestUser');
+    }
   });
 
   test('comments stream is visible and functional', async ({ page }) => {
