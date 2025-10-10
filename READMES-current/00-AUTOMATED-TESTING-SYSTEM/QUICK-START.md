@@ -1,5 +1,31 @@
 # Quick Start - Automated Testing System (Cursor AI Reference)
 
+## 🎯 READ THIS FIRST
+
+**Before running or fixing tests, ALWAYS read:**
+
+1. **This file (QUICK-START.md)** - How to execute and read test results
+2. **APP-TESTING-CONTEXT.md** - Critical app behavior and testing quirks
+
+The APP-TESTING-CONTEXT file contains essential knowledge about:
+- How app features actually work (vs what tests expect)
+- Known quirks (hydration issues, timing, localStorage behavior)
+- Why certain tests fail (and if that's expected)
+- App-specific testing patterns
+
+**Workflow:**
+```
+1. User asks to run tests
+2. Read APP-TESTING-CONTEXT.md first ← CRITICAL
+3. Execute tests
+4. Read results.json via MCP
+5. Analyze failures using context from step 2
+6. Propose fixes (test adjustments or app changes)
+7. Update APP-TESTING-CONTEXT.md with new learnings
+```
+
+---
+
 ## System Overview
 
 **Stack**: Playwright + Puppeteer MCP + Cursor AI + GitHub Actions
