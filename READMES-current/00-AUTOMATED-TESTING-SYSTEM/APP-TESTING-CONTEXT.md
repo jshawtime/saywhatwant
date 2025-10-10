@@ -1,5 +1,37 @@
 # App Testing Context - SayWhatWant
 
+## ⚠️ Documentation Guidelines
+
+**IMPORTANT: Keep entries brief but complete.**
+
+This document will grow large over time as features are added. When documenting:
+
+✅ **DO:**
+- Write concise summaries with just enough detail to understand the behavior
+- Focus on: What it does, Why it matters, How tests should handle it
+- Use bullet points and short paragraphs
+- Include only essential code examples (2-5 lines max)
+- State the impact on testing clearly
+
+❌ **DON'T:**
+- Include full code files or large code blocks
+- Repeat information that's obvious from context
+- Write lengthy explanations when a sentence will do
+- Document implementation details tests don't need to know
+
+**Format:** 
+```
+Feature Name
+- What: One sentence about what it does
+- Why: One sentence about why it works this way  
+- Testing Impact: What tests must do differently
+- Example: 2-3 line code snippet (only if needed)
+```
+
+**Goal:** Any AI agent can scan this file in 30 seconds and understand all app quirks.
+
+---
+
 ## 🎯 Purpose
 
 This document contains critical knowledge about how the SayWhatWant app actually works. Read this BEFORE analyzing test failures to understand what's expected vs what's a test bug.
