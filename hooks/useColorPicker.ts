@@ -35,24 +35,11 @@ export function useColorPicker(initialColor: string): UseColorPickerReturn {
         return saved;
       }
     }
-    // No saved color - use placeholder (will generate random client-side)
+    // No saved color - use random (will be saved when username is set)
     return initialColor;
   });
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
-  
-  // Generate random color client-side if using placeholder
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sww-color');
-      if (!saved && userColor === initialColor) {
-        // No saved color and still using placeholder - generate random
-        const randomColor = getRandomColor();
-        setUserColor(randomColor);
-        localStorage.setItem('sww-color', randomColor);
-      }
-    }
-  }, []);
   
   // Convert to RGB for CSS
   const userColorRgb = useMemo(() => nineDigitToRgb(userColor), [userColor]);

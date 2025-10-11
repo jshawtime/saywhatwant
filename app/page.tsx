@@ -8,9 +8,8 @@ import { getRandomColor } from '@/modules/colorSystem';
 export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
-  // Initialize with placeholder to avoid hydration mismatch
-  // Color will be set client-side in useEffect
-  const [userColor, setUserColor] = useState('#808080');
+  // Generate random color directly - hydration warning is acceptable
+  const [userColor, setUserColor] = useState(() => getRandomColor());
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -23,17 +22,12 @@ export default function Home() {
     }
   }, []);
 
-  // Load and sync user color (client-side only)
+  // Load and sync user color
   useEffect(() => {
     const loadColor = () => {
       const savedColor = localStorage.getItem('sww-color');
       if (savedColor) {
         setUserColor(savedColor);
-      } else {
-        // Generate random color only on client (avoids hydration mismatch)
-        const newColor = getRandomColor();
-        setUserColor(newColor);
-        localStorage.setItem('sww-color', newColor);
       }
     };
 
