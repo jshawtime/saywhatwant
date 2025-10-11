@@ -5,8 +5,8 @@
  * Handles random color generation, localStorage persistence, and picker visibility
  */
 
-import { useState, useMemo, useEffect } from 'react';
-import { getRandomColor, nineDigitToRgb } from '@/modules/colorSystem';
+import { useState, useMemo } from 'react';
+import { getRandomColor, nineDigitToRgb, loadUserColor, saveUserColor } from '@/modules/colorSystem';
 import { rgbToNineDigit } from '@/lib/url-filter-simple';
 
 interface UseColorPickerReturn {
@@ -21,27 +21,8 @@ interface UseColorPickerReturn {
 }
 
 export function useColorPicker(initialColor?: string): UseColorPickerReturn {
-  const [userColor, setUserColor] = useState(() => {
-    // Client: check localStorage or generate random
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sww-color');
-      if (saved) {
-        // Convert old format to 9-digit if needed (backward compatibility)
-        if (saved.startsWith('#') || saved.startsWith('rgb')) {
-          const colorDigits = rgbToNineDigit(saved);
-          localStorage.setItem('sww-color', colorDigits); // Update to new format
-          return colorDigits;
-        }
-        return saved;
-      }
-      // No saved color - generate random and save immediately
-      const newColor = getRandomColor();
-      localStorage.setItem('sww-color', newColor);
-      return newColor;
-    }
-    // Server: use first color from palette (deterministic)
-    return '096165250'; // Blue from COLOR_PALETTE[0]
-  });
+  // Use existing colorSystem - it handles server/client automatically
+  const [userColor, setUserColor] = useState(() => loadUserColor() || getRandomColor());
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   
@@ -77,7 +58,7 @@ export function useColorPicker(initialColor?: string): UseColorPickerReturn {
   // Handle color selection
   const selectColor = (color: string) => {
     setUserColor(color);
-    localStorage.setItem('sww-color', color);
+    saveUserColor(color); // Use colorSystem function
     window.dispatchEvent(new Event('colorChanged'));
     setShowColorPicker(false);
   };
