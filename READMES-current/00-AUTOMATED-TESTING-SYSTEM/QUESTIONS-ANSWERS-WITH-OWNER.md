@@ -52,6 +52,42 @@ git push origin main
 
 ---
 
+## 🚨 CRITICAL: Client-Side First Architecture
+
+**This app is designed to run 99% client-side**
+
+**Why:**
+- Static export for Cloudflare Pages (no server runtime)
+- Scaling and cost optimization
+- All operations should be client-side unless absolutely no alternative
+
+**Server-Side Code Causes Bugs:**
+- Server-rendered values bleed into client DOM
+- Hydration mismatches
+- Race conditions between server HTML and client JS
+- Example: Color initialized on server caused title/LED to show DEFAULT_COLOR instead of random
+
+**Rules:**
+1. **Check `typeof window !== 'undefined'` for client-only code**
+2. **Server should return empty/minimal values** (not functional values)
+3. **useLayoutEffect for client operations** (runs before paint, client-only)
+4. **Never assume server and client share state** (they don't)
+5. **When debugging: suspect server-side bleeding first**
+
+**Recent Bug Example:**
+- Initial fix: `useState(DEFAULT_COLOR)` on both server and client
+- Problem: Server-rendered DOM showed DEFAULT_COLOR blue
+- Client JS generated random but DOM didn't update in time
+- Solution: `useState('')` server returns nothing, useLayoutEffect handles all client logic
+- Result: 19/19 tests passing
+
+**Key Insight:**
+- Don't try to make server "smarter" - make it dumber
+- Server: Return empty, null, or simplest possible value
+- Client: Handle all real logic in useLayoutEffect/useEffect
+
+---
+
 ## ⚠️ CRITICAL: Component-Based Architecture
 
 **DO NOT hard-code values - use existing components!**
