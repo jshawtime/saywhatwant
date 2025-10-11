@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
 import { getRandomColor } from '@/modules/colorSystem';
@@ -8,8 +8,19 @@ import { getRandomColor } from '@/modules/colorSystem';
 export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
-  // Generate random color directly - hydration warning is acceptable
-  const [userColor, setUserColor] = useState(() => getRandomColor());
+  // Initialize color - client generates random, server uses deterministic value
+  const [userColor, setUserColor] = useState(() => {
+    // Client: generate random and save immediately
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sww-color');
+      if (saved) return saved;
+      const newColor = getRandomColor();
+      localStorage.setItem('sww-color', newColor);
+      return newColor;
+    }
+    // Server: use first color from palette (deterministic, no mismatch)
+    return '096165250'; // Blue from COLOR_PALETTE[0]
+  });
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -22,8 +33,8 @@ export default function Home() {
     }
   }, []);
 
-  // Load and sync user color
-  useEffect(() => {
+  // Sync user color from localStorage - runs BEFORE paint (very early)
+  useLayoutEffect(() => {
     const loadColor = () => {
       const savedColor = localStorage.getItem('sww-color');
       if (savedColor) {

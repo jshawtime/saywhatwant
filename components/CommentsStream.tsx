@@ -169,6 +169,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   } = useUsernameEditor(MAX_USERNAME_LENGTH);
   
   // Color picker management (extracted to hook)
+  // Hook generates random color internally - no need to pass it
   const {
     userColor,
     userColorRgb,
@@ -178,7 +179,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     selectColor,
     setUserColor,
     setShowColorPicker
-  } = useColorPicker(getRandomColor());
+  } = useColorPicker();
   
   // Consolidated loading state (replaces 6 separate useState calls)
   const {

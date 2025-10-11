@@ -20,9 +20,9 @@ interface UseColorPickerReturn {
   setShowColorPicker: (show: boolean) => void; // For external close (click outside)
 }
 
-export function useColorPicker(initialColor: string): UseColorPickerReturn {
+export function useColorPicker(initialColor?: string): UseColorPickerReturn {
   const [userColor, setUserColor] = useState(() => {
-    // Check localStorage first - if user has set username before, they have a saved color
+    // Client: check localStorage or generate random
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sww-color');
       if (saved) {
@@ -34,9 +34,13 @@ export function useColorPicker(initialColor: string): UseColorPickerReturn {
         }
         return saved;
       }
+      // No saved color - generate random and save immediately
+      const newColor = getRandomColor();
+      localStorage.setItem('sww-color', newColor);
+      return newColor;
     }
-    // No saved color - use random (will be saved when username is set)
-    return initialColor;
+    // Server: use first color from palette (deterministic)
+    return '096165250'; // Blue from COLOR_PALETTE[0]
   });
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
