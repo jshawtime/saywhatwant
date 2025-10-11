@@ -10,10 +10,20 @@ test.describe('UI Color Consistency', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     
-    // Wait for color to be set in localStorage (client-side generation)
+    // Wait for client-side color to be generated AND rendered in DOM
+    // Check that title element has updated from server color to client color
     await page.waitForFunction(() => {
-      return localStorage.getItem('sww-color') !== null;
-    }, { timeout: 5000 });
+      const color = localStorage.getItem('sww-color');
+      if (!color) return false;
+      
+      // Also verify DOM has updated (title should not be showing DEFAULT_COLOR blue)
+      const title = document.querySelector('h2');
+      if (!title) return false;
+      const titleColor = window.getComputedStyle(title).color;
+      
+      // If title is still showing default blue rgb(96, 165, 250), React hasn't re-rendered yet
+      return titleColor !== 'rgb(96, 165, 250)';
+    }, { timeout: 10000 });
   });
 
   test('domain filter button uses userColor', async ({ page }) => {

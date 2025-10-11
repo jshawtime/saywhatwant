@@ -5,7 +5,7 @@
  * Handles random color generation, localStorage persistence, and picker visibility
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useLayoutEffect } from 'react';
 import { getRandomColor, nineDigitToRgb, DEFAULT_COLOR } from '@/modules/colorSystem';
 import { rgbToNineDigit } from '@/lib/url-filter-simple';
 
@@ -21,16 +21,22 @@ interface UseColorPickerReturn {
 }
 
 export function useColorPicker(initialColor?: string): UseColorPickerReturn {
-  const [userColor, setUserColor] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_COLOR; // Server: deterministic
-    const saved = localStorage.getItem('sww-color');
-    if (saved) return saved;
-    const newColor = getRandomColor();
-    localStorage.setItem('sww-color', newColor);
-    return newColor;
-  });
+  // Server uses DEFAULT_COLOR, client sets in useLayoutEffect
+  const [userColor, setUserColor] = useState(DEFAULT_COLOR);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
+  
+  // Set client color - runs BEFORE paint (client-only)
+  useLayoutEffect(() => {
+    const saved = localStorage.getItem('sww-color');
+    if (saved) {
+      setUserColor(saved);
+    } else {
+      const newColor = getRandomColor();
+      setUserColor(newColor);
+      localStorage.setItem('sww-color', newColor);
+    }
+  }, []);
   
   // Convert to RGB for CSS
   const userColorRgb = useMemo(() => nineDigitToRgb(userColor), [userColor]);

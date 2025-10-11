@@ -8,15 +8,8 @@ import { getRandomColor, DEFAULT_COLOR } from '@/modules/colorSystem';
 export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
-  // Color: client generates random, server uses DEFAULT_COLOR
-  const [userColor, setUserColor] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_COLOR; // Server: deterministic  
-    const saved = localStorage.getItem('sww-color');
-    if (saved) return saved;
-    const newColor = getRandomColor();
-    localStorage.setItem('sww-color', newColor);
-    return newColor;
-  });
+  // Color: server uses DEFAULT_COLOR, client sets in useLayoutEffect
+  const [userColor, setUserColor] = useState(DEFAULT_COLOR);
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -29,11 +22,16 @@ export default function Home() {
     }
   }, []);
 
-  // Sync user color from storage - runs BEFORE paint (very early)
+  // Set client color - runs BEFORE paint (very early, client-only)
   useLayoutEffect(() => {
     const saved = localStorage.getItem('sww-color');
     if (saved) {
       setUserColor(saved);
+    } else {
+      // First visit - generate and save
+      const newColor = getRandomColor();
+      setUserColor(newColor);
+      localStorage.setItem('sww-color', newColor);
     }
     
     // Listen for changes

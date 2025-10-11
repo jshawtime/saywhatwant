@@ -124,11 +124,16 @@ const element = page.locator('button');
 await expect(element).toBeVisible();
 ```
 
+**Playwright Tests Can Sometimes Create Issues With Other Playwright Tests**
+Sometimes a Playwright test can perform operations that may effect other Playwright tests in a way that makes it hard to isolatte where bugs exist. Eg. Clearing local storage. Always be mindful of this when looking for bugs and bug fixes.
+
 ---
 
 ## 📋 How This Document Works
 
 **Purpose:** Maintain a permanent record of all Q&A, decisions, and context discussions about the testing system and app behavior.
+
+IMPORTANT! ALWAYS BE HONEST - sometime you will want to please the user and tell them they are right or that is a good idea - but hjonesty is prized much much more than appeasing the user. 
 
 **Format:**
 - **Newest entries at the top** (reverse chronological)
