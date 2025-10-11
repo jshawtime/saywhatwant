@@ -52,6 +52,80 @@ git push origin main
 
 ---
 
+## ⚠️ CRITICAL: Component-Based Architecture
+
+**DO NOT hard-code values - use existing components!**
+
+**Problem:**
+- AI often patches with hard-coded values instead of using existing components
+- This breaks reliability, creates bugs, and violates project architecture
+- Example: Hard-coding `'096165250'` instead of using color system functions
+
+**Rules:**
+1. **Always search for existing components first** before writing new code
+2. **This project uses component-based architecture** - most repeated operations have components
+3. **Check modules/**, **hooks/**, **utils/** for existing functions
+4. **Never reinvent** what already exists
+5. **If uncertain** - grep for similar functionality before coding
+
+**Example - Color System:**
+- ✅ Use: `getRandomColor()`, `nineDigitToRgb()` from colorSystem module
+- ❌ Don't: Hard-code colors, use placeholders, reinvent conversion logic
+
+**9-Digit Color Format:**
+- Format: `'080198226'` = RGB(080, 198, 226)
+- Why: Dynamic URL system - avoids commas, spaces, special characters in URLs
+- Conversion: Use `nineDigitToRgb()` and `rgbToNineDigit()` from existing codebase
+- Never hard-code conversions!
+
+---
+
+## 🧪 Creating Thorough Playwright Tests
+
+**When creating new tests:**
+
+**1. Be Specific**
+- Test exact behavior, not general assumptions
+- Target specific UI elements (use proper selectors)
+- Verify actual values (colors, text, state) not just presence
+
+**2. Test What Matters**
+- Focus on user-visible behavior
+- Test integration between components
+- Catch visual bugs (color consistency, layout, etc.)
+
+**3. Use Proper Selectors**
+- Prefer: `getByRole()`, `getByText()`, `getByLabel()`
+- Avoid: Generic CSS selectors that might break
+- Be specific enough to target the right element
+
+**4. Add Assertions That Fail Meaningfully**
+- Don't just check "element exists"
+- Verify element has correct color, text, state
+- Error messages should clearly state what's wrong
+
+**5. Run in Headed Mode**
+- Always use `npm run test:headed` for new tests
+- Observe what the test actually does
+- Catch issues that assertions might miss
+
+**Example: Color Consistency Test**
+```typescript
+// ✅ GOOD - Specific, verifies actual color values
+const userColor = await page.evaluate(() => localStorage.getItem('sww-color'));
+const r = parseInt(userColor.substring(0, 3));
+const elementColor = await element.evaluate(el => window.getComputedStyle(el).color);
+if (!elementColor.includes(`${r}`)) {
+  throw new Error(`Element not using userColor. Expected RGB(${r},${g},${b}), got: ${elementColor}`);
+}
+
+// ❌ BAD - Too generic, doesn't catch color bugs
+const element = page.locator('button');
+await expect(element).toBeVisible();
+```
+
+---
+
 ## 📋 How This Document Works
 
 **Purpose:** Maintain a permanent record of all Q&A, decisions, and context discussions about the testing system and app behavior.
@@ -125,6 +199,44 @@ git push origin main
 
 
 
+
+---
+
+## 2025-10-10 7:45 PM
+
+### UI Color Bugs Caught by New Tests
+
+**Test Results: 17/19 passing (89.47%)**
+
+**New test file created:** `tests/ui-color-consistency.spec.ts`
+- 4 tests to verify UI elements use userColor
+- Caught 2 real bugs automatically
+
+**Bugs Found:**
+
+**1. Domain Filter Button LED - Using White Instead of userColor**
+- Expected: RGB from userColor (e.g., 80,225,178)
+- Got: `rgb(255, 255, 255)` (white)
+- Location: Domain filter button LED/dot indicator
+
+**2. Title - Using Server Color Instead of Client Random**
+- Expected: RGB from userColor (random client color)
+- Got: `rgb(96, 165, 250)` (blue - the DEFAULT_COLOR from server)
+- Location: "Say What Want" heading/title
+
+**Root Cause (Likely):**
+- Elements hard-coded with specific colors instead of using userColor prop
+- Or receiving server color instead of client-generated random color
+- Need to trace where these elements get their color values
+
+**Next Steps:**
+- Find domain button component
+- Find title component
+- Verify they receive and use userColor prop correctly
+- Fix to use existing color system (no hard-coding)
+
+#OWNER COMMENT
+[Awaiting response - should we fix these now?]
 
 ---
 
