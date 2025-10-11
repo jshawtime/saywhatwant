@@ -9,10 +9,15 @@ test.describe('UI Color Consistency', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    
+    // Wait for color to be set in localStorage (client-side generation)
+    await page.waitForFunction(() => {
+      return localStorage.getItem('sww-color') !== null;
+    }, { timeout: 5000 });
   });
 
   test('domain filter button uses userColor', async ({ page }) => {
-    // Get the userColor from localStorage
+    // Get the userColor from localStorage (guaranteed to exist after beforeEach)
     const userColor = await page.evaluate(() => localStorage.getItem('sww-color'));
     expect(userColor).toBeTruthy();
     
