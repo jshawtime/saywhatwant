@@ -3,13 +3,21 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
-import { getRandomColor, loadUserColor, saveUserColor } from '@/modules/colorSystem';
+import { getRandomColor } from '@/modules/colorSystem';
 
 export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
-  // Initialize color using existing colorSystem (handles server/client automatically)
-  const [userColor, setUserColor] = useState(() => loadUserColor() || getRandomColor());
+  // Color generation - client only, server returns empty
+  const [userColor, setUserColor] = useState(() => {
+    if (typeof window === 'undefined') return ''; // Server: no rendering
+    const saved = localStorage.getItem('sww-color');
+    if (saved) return saved;
+    // First visit - generate and save
+    const newColor = getRandomColor();
+    localStorage.setItem('sww-color', newColor);
+    return newColor;
+  });
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -22,14 +30,14 @@ export default function Home() {
     }
   }, []);
 
-  // Sync user color - runs BEFORE paint (very early)
+  // Sync user color from storage - runs BEFORE paint (very early)
   useLayoutEffect(() => {
-    const color = loadUserColor();
-    if (color) {
-      setUserColor(color);
+    const saved = localStorage.getItem('sww-color');
+    if (saved) {
+      setUserColor(saved);
     }
     
-    // Initial load complete - listen for changes
+    // Listen for changes
 
     // Listen for storage changes
     const handleStorageChange = (e: StorageEvent) => {

@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { getRandomColor, nineDigitToRgb, loadUserColor, saveUserColor } from '@/modules/colorSystem';
+import { getRandomColor, nineDigitToRgb } from '@/modules/colorSystem';
 import { rgbToNineDigit } from '@/lib/url-filter-simple';
 
 interface UseColorPickerReturn {
@@ -21,8 +21,15 @@ interface UseColorPickerReturn {
 }
 
 export function useColorPicker(initialColor?: string): UseColorPickerReturn {
-  // Use existing colorSystem - it handles server/client automatically
-  const [userColor, setUserColor] = useState(() => loadUserColor() || getRandomColor());
+  const [userColor, setUserColor] = useState(() => {
+    if (typeof window === 'undefined') return ''; // Server: no color
+    const saved = localStorage.getItem('sww-color');
+    if (saved) return saved;
+    // Generate and save
+    const newColor = getRandomColor();
+    localStorage.setItem('sww-color', newColor);
+    return newColor;
+  });
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   
@@ -58,7 +65,7 @@ export function useColorPicker(initialColor?: string): UseColorPickerReturn {
   // Handle color selection
   const selectColor = (color: string) => {
     setUserColor(color);
-    saveUserColor(color); // Use colorSystem function
+    localStorage.setItem('sww-color', color);
     window.dispatchEvent(new Event('colorChanged'));
     setShowColorPicker(false);
   };
