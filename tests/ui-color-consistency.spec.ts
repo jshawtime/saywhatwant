@@ -27,8 +27,9 @@ test.describe('UI Color Consistency', () => {
     const b = parseInt(userColor!.substring(6, 9));
     const expectedRgb = `rgb(${r}, ${g}, ${b})`;
     
-    // Find domain filter button (has dot/LED indicator)
+    // Wait for domain filter button to mount (mounted state becomes true in useEffect)
     const domainButton = page.getByRole('button', { name: /domain/i }).first();
+    await domainButton.waitFor({ state: 'visible', timeout: 5000 });
     
     if (await domainButton.isVisible()) {
       // Check the button or its child elements for color
