@@ -7,7 +7,9 @@ import { getRandomColor } from '@/modules/colorSystem';
 
 export default function Home() {
   const [showVideo, setShowVideo] = useState(false);
-  const [userColor, setUserColor] = useState(() => getRandomColor());
+  // Initialize with placeholder to avoid hydration mismatch
+  // Color will be set client-side in useEffect
+  const [userColor, setUserColor] = useState('#808080');
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -17,12 +19,17 @@ export default function Home() {
     }
   }, []);
 
-  // Load and sync user color
+  // Load and sync user color (client-side only)
   useEffect(() => {
     const loadColor = () => {
       const savedColor = localStorage.getItem('sww-color');
       if (savedColor) {
         setUserColor(savedColor);
+      } else {
+        // Generate random color only on client (avoids hydration mismatch)
+        const newColor = getRandomColor();
+        setUserColor(newColor);
+        localStorage.setItem('sww-color', newColor);
       }
     };
 

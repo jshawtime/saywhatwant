@@ -169,6 +169,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   } = useUsernameEditor(MAX_USERNAME_LENGTH);
   
   // Color picker management (extracted to hook)
+  // Use placeholder color to avoid hydration mismatch - hook will load from localStorage or generate random
   const {
     userColor,
     userColorRgb,
@@ -178,7 +179,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     selectColor,
     setUserColor,
     setShowColorPicker
-  } = useColorPicker(getRandomColor());
+  } = useColorPicker('128128128'); // Placeholder 9-digit gray color
   
   // Consolidated loading state (replaces 6 separate useState calls)
   const {
