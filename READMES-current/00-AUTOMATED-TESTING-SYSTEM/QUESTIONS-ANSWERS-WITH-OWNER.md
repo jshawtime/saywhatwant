@@ -1,5 +1,33 @@
 # Questions & Answers with Owner
 
+## 🌐 Manual Testing
+
+**Local Development URL:** http://localhost:3000
+
+**Before starting manual testing:**
+1. AI kills all dev servers and Playwright processes
+2. AI starts dev server on port 3000: `npm run dev`
+3. Bookmark http://localhost:3000 for easy access
+
+**Commands for AI:**
+```bash
+# Kill all servers
+lsof -ti:3000,3001,3002,3003 | xargs kill -9 2>/dev/null
+pkill -f "playwright" 2>/dev/null
+
+# Start dev server on port 3000
+cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant
+npm run dev
+```
+
+**Owner can then:**
+- Visit http://localhost:3000
+- Test features manually
+- Verify fixes work as expected
+- Provide feedback
+
+---
+
 ## 📋 How This Document Works
 
 **Purpose:** Maintain a permanent record of all Q&A, decisions, and context discussions about the testing system and app behavior.
