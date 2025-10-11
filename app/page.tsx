@@ -8,8 +8,8 @@ import { getRandomColor, DEFAULT_COLOR } from '@/modules/colorSystem';
 export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
-  // Color: server uses DEFAULT_COLOR, client sets in useLayoutEffect
-  const [userColor, setUserColor] = useState(DEFAULT_COLOR);
+  // Color: server has no value, client sets in useLayoutEffect (100% client-side)
+  const [userColor, setUserColor] = useState('');
 
   // Load video preference from localStorage
   useEffect(() => {

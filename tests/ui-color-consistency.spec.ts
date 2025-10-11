@@ -48,21 +48,20 @@ test.describe('UI Color Consistency', () => {
         return computed.color || computed.backgroundColor || computed.borderColor;
       });
       
-      // Also check for any LED/dot indicator child elements
-      const ledIndicator = domainButton.locator('span, div, svg').first();
+      // Check the LED/dot indicator child element
+      const ledIndicator = domainButton.locator('div.rounded-full').first();
       if (await ledIndicator.count() > 0) {
-        const ledColor = await ledIndicator.evaluate(el => {
-          const computed = window.getComputedStyle(el);
-          return computed.color || computed.backgroundColor || computed.fill;
+        // Get backgroundColor directly (before opacity is applied)
+        const bgColor = await ledIndicator.evaluate(el => {
+          return el.style.backgroundColor; // Get inline style, not computed
         });
         
-        // LED should use userColor (check if it contains the RGB values)
-        const hasCorrectColor = ledColor.includes(`${r}`) || 
-                                ledColor.includes(`${g}`) || 
-                                ledColor.includes(`${b}`);
+        // LED should use userColor - check if it matches expected RGB
+        const hasCorrectColor = bgColor === expectedRgb || 
+                                bgColor.includes(`${r}`) && bgColor.includes(`${g}`) && bgColor.includes(`${b}`);
         
         if (!hasCorrectColor) {
-          throw new Error(`Domain LED not using userColor. Expected RGB(${r},${g},${b}), got: ${ledColor}`);
+          throw new Error(`Domain LED not using userColor. Expected ${expectedRgb}, got: ${bgColor}`);
         }
       }
     }
