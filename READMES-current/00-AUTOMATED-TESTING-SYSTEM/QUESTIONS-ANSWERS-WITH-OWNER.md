@@ -15,6 +15,12 @@
 - These are direct responses/feedback from the project owner
 - Read and incorporate these into decisions and APP-TESTING-CONTEXT.md
 
+**Testing Preference:**
+- **ALWAYS use `npm run test:headed`** for test execution
+- Owner wants to observe tests running in visible browser
+- Observation helps catch issues AI might miss
+- Only use headless mode (`npm run test`) for quick checks
+
 **Usage:**
 1. AI asks questions or presents issues → adds entry with timestamp
 2. Owner responds in the same section

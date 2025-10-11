@@ -18,7 +18,8 @@ test.describe('Color System', () => {
     );
     
     expect(userColor).toBeTruthy();
-    expect(userColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    // App uses 9-digit color format (e.g., "080198226" = RGB 080,198,226)
+    expect(userColor).toMatch(/^[0-9]{9}$/);
   });
 
   test('can open color picker', async ({ page }) => {
