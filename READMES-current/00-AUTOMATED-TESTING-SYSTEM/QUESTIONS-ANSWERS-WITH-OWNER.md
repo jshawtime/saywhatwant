@@ -20,11 +20,35 @@ cd /Users/pbmacstudiomain/devrepo/SAYWHATWANTv1/saywhatwant
 npm run dev
 ```
 
-**Owner can then:**
+**Main test system is AI does automated testing through Playright**
+**But if Owner wants to test manually they can then:**
 - Visit http://localhost:3000
 - Test features manually
 - Verify fixes work as expected
 - Provide feedback
+
+## 🚀 Deployment to Production
+
+**When ready to test on live site:**
+- Owner decides milestone checkpoints
+- AI merges HEAVY-DEV → main
+- Push to main triggers Cloudflare deployment
+- Test on live Cloudflare URL (no users yet, safe to test)
+- Iterate based on live testing feedback
+
+**Why test on Cloudflare:**
+- Matches production environment exactly
+- Tests real R2 videos + KV messages
+- Catches deployment-specific issues
+- Owner prefers testing on actual infrastructure
+
+**Commands for AI:**
+```bash
+# Merge to main and push
+git checkout main
+git merge HEAVY-DEV
+git push origin main
+```
 
 ---
 
