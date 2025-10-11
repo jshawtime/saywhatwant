@@ -46,7 +46,10 @@ export default function Home() {
     window.addEventListener('storage', handleStorageChange);
     
     // Also listen for custom event for same-tab changes
-    const handleColorChange = () => loadColor();
+    const handleColorChange = () => {
+      const saved = localStorage.getItem('sww-color');
+      if (saved) setUserColor(saved);
+    };
     window.addEventListener('colorChanged', handleColorChange);
     
     return () => {
