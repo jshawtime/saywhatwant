@@ -44,12 +44,11 @@ const DomainFilter: React.FC<DomainFilterProps> = ({
         <div
           className="relative w-3 h-3 rounded-full transition-all cursor-pointer"
           style={{
-            backgroundColor: isEnabled 
-              ? color // Use FULL color when active (100% opacity)
-              : `rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST})`, // DARKEST level white when off
+            backgroundColor: color, // Always use userColor
+            opacity: isEnabled ? 1.0 : OPACITY_LEVELS.DARKEST, // Control visibility with opacity
             boxShadow: isEnabled 
               ? `0 0 10px ${color}` 
-              : `inset 0 0 2px rgba(255, 255, 255, ${OPACITY_LEVELS.DARKEST * 0.5})`, // Even subtler inset
+              : `inset 0 0 2px ${color}`, // Use color for inset too
           }}
         />
       </div>

@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { getRandomColor, nineDigitToRgb } from '@/modules/colorSystem';
+import { getRandomColor, nineDigitToRgb, DEFAULT_COLOR } from '@/modules/colorSystem';
 import { rgbToNineDigit } from '@/lib/url-filter-simple';
 
 interface UseColorPickerReturn {
@@ -22,10 +22,9 @@ interface UseColorPickerReturn {
 
 export function useColorPicker(initialColor?: string): UseColorPickerReturn {
   const [userColor, setUserColor] = useState(() => {
-    if (typeof window === 'undefined') return ''; // Server: no color
+    if (typeof window === 'undefined') return DEFAULT_COLOR; // Server: deterministic
     const saved = localStorage.getItem('sww-color');
     if (saved) return saved;
-    // Generate and save
     const newColor = getRandomColor();
     localStorage.setItem('sww-color', newColor);
     return newColor;

@@ -3,17 +3,16 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
-import { getRandomColor } from '@/modules/colorSystem';
+import { getRandomColor, DEFAULT_COLOR } from '@/modules/colorSystem';
 
 export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
-  // Color generation - client only, server returns empty
+  // Color: client generates random, server uses DEFAULT_COLOR
   const [userColor, setUserColor] = useState(() => {
-    if (typeof window === 'undefined') return ''; // Server: no rendering
+    if (typeof window === 'undefined') return DEFAULT_COLOR; // Server: deterministic  
     const saved = localStorage.getItem('sww-color');
     if (saved) return saved;
-    // First visit - generate and save
     const newColor = getRandomColor();
     localStorage.setItem('sww-color', newColor);
     return newColor;
