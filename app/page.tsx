@@ -6,7 +6,8 @@ import CommentsStream from '@/components/CommentsStream';
 import { getRandomColor } from '@/modules/colorSystem';
 
 export default function Home() {
-  const [showVideo, setShowVideo] = useState(false);
+  // Video visible by default on first visit
+  const [showVideo, setShowVideo] = useState(true);
   // Initialize with placeholder to avoid hydration mismatch
   // Color will be set client-side in useEffect
   const [userColor, setUserColor] = useState('#808080');
@@ -16,6 +17,9 @@ export default function Home() {
     const savedShowVideo = localStorage.getItem('sww-show-video');
     if (savedShowVideo !== null) {
       setShowVideo(savedShowVideo === 'true');
+    } else {
+      // First visit - set default to true and save to localStorage
+      localStorage.setItem('sww-show-video', 'true');
     }
   }, []);
 

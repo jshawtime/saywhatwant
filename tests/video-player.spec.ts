@@ -15,26 +15,33 @@ test.describe('Video Player', () => {
   });
 
   test('video player can be toggled on and off', async ({ page }) => {
-    // Initially, video should not be visible (default state)
+    // Video should be visible by default on first visit
     const videoContainer = page.locator('div').filter({ has: page.locator('video') }).first();
     
-    // Look for toggle button (might be in header or UI)
+    // Wait for page to load and video to appear
+    await page.waitForTimeout(600);
+    
+    // Video should be visible by default
+    await expect(videoContainer).toBeVisible({ timeout: 5000 });
+    await expect(videoContainer).toHaveCSS('opacity', '1', { timeout: 5000 });
+    
+    // Look for toggle button
     const toggleButton = page.getByRole('button', { name: /video|toggle/i }).first();
     
     if (await toggleButton.isVisible()) {
-      // Click to show video
-      await toggleButton.click();
-      await page.waitForTimeout(600); // Wait for animation
-      
-      // Video should now be visible
-      await expect(videoContainer).toBeVisible({ timeout: 5000 });
-      
       // Click to hide video
       await toggleButton.click();
       await page.waitForTimeout(600); // Wait for animation
       
       // Video should be hidden
       await expect(videoContainer).toHaveCSS('opacity', '0', { timeout: 5000 });
+      
+      // Click to show video again
+      await toggleButton.click();
+      await page.waitForTimeout(600); // Wait for animation
+      
+      // Video should be visible again
+      await expect(videoContainer).toHaveCSS('opacity', '1', { timeout: 5000 });
     }
   });
 
