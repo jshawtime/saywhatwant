@@ -285,7 +285,7 @@ export class LMStudioCluster {
    * Process request - CLOSED SYSTEM
    * Everything happens on-demand for this specific request
    */
-  public async processRequest(request: any): Promise<any> {
+  public async processRequest(request: any, retryCount: number = 0): Promise<any> {
     const { entityId, modelName, prompt, parameters, resolve, reject } = request;
     
     try {
@@ -295,10 +295,31 @@ export class LMStudioCluster {
         throw new Error('No healthy LM Studio servers available');
       }
       
-      // Step 2: Load model if needed
+      // Step 2: Load model if needed (with memory error recovery)
       if (!server.loadedModels.has(modelName)) {
         logger.info(`[Cluster] Loading ${modelName} on ${server.name}`);
-        await this.loadModelAndWait(server, modelName);
+        
+        try {
+          await this.loadModelAndWait(server, modelName);
+        } catch (loadError: any) {
+          // Memory error recovery
+          const isMemoryError = loadError.message?.includes('insufficient system resources') ||
+                                loadError.message?.includes('overload your system') ||
+                                loadError.message?.includes('requires approximately');
+          
+          if (isMemoryError && retryCount === 0) {
+            logger.warn(`[Recovery] Memory error on ${server.name}, unloading all models`);
+            const { LMStudioCLI } = await import('./lmStudioCliWrapper.js');
+            const cli = new LMStudioCLI();
+            await cli.unloadAll(server.ip);
+            logger.info('[Recovery] All models unloaded, retrying request');
+            
+            // Retry entire request (recursive call with retry count)
+            return await this.processRequest(request, retryCount + 1);
+          }
+          
+          throw loadError; // Not memory error or already retried
+        }
       }
       
       // Step 3: Send request
