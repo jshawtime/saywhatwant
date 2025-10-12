@@ -310,20 +310,22 @@ async function runBot() {
             // 1. SELECT ENTITY (with fallback chain)
             let entity;
             if (botParams.entity) {
-              // URL specified entity - try to use it
+              // URL specified entity - MUST exist (no fallback)
               entity = fullConfig.entities.find((e: any) => e.id === botParams.entity);
               
               if (!entity) {
-                console.warn(chalk.yellow('[BOT PARAMS]'), 
-                  `Entity "${botParams.entity}" not found in config, using random`);
-                entity = entityManager.selectRandomEntity();
-              } else {
-                console.log(chalk.green('[BOT PARAMS]'), 
-                  `Using specified entity: ${botParams.entity}`);
+                const error = `Entity "${botParams.entity}" not found in config. Available entities: ${fullConfig.entities.map((e: any) => e.id).join(', ')}`;
+                console.error(chalk.red('[BOT PARAMS ERROR]'), error);
+                throw new Error(error);
               }
+              
+              console.log(chalk.green('[BOT PARAMS]'), 
+                `Using specified entity: ${botParams.entity}`);
             } else {
-              // No entity specified - select random
-              entity = entityManager.selectRandomEntity();
+              // No entity specified - use current entity (don't select random)
+              entity = entityManager.getCurrentEntity();
+              console.log(chalk.yellow('[BOT PARAMS]'), 
+                `No entity specified, using current: ${entity.id}`);
             }
             
             // 2. DETERMINE PRIORITY (with fallback chain)
@@ -417,9 +419,9 @@ async function runBot() {
           
           console.log(chalk.blue('[QUEUE]'), `Queued ${queued} human messages, skipped ${skipped} duplicates`);
         } else {
-          // DIRECT MODE: Old behavior (one response per cycle)
-          const entity = entityManager.selectRandomEntity();
-          updateStateFromEntity();
+          // DIRECT MODE: Use current entity (no random selection)
+          const entity = entityManager.getCurrentEntity();
+          console.log(chalk.yellow('[DIRECT]'), `Using current entity: ${entity.id}`);
           
           const context = analyzer.analyzeContext(messages, entity);
           const rateLimitCheck = entityManager.checkRateLimits(entity.id);
@@ -440,7 +442,7 @@ async function runBot() {
         // Check for ping trigger (queue with highest priority)
         if (USE_QUEUE && queueService && analyzer.hasPingTrigger(messages)) {
           console.log(chalk.yellow('[PING]'), 'Detected ping trigger - queuing with priority 0');
-          const entity = entityManager.selectRandomEntity();
+          const entity = entityManager.getCurrentEntity();
           const pingMessage = messages[messages.length - 1];
           
           // Use context from message - NO FALLBACK
