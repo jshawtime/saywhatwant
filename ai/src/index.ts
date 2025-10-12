@@ -11,7 +11,7 @@ import { logger } from './console-logger.js';
 
 // Import our clean modules
 import { LMStudioCluster } from './modules/lmStudioCluster-closed.js';
-import { getEntityManager } from './modules/entityManager.js';
+import { getEntityManager, getModelName } from './modules/entityManager.js';
 import { getConversationAnalyzer } from './modules/conversationAnalyzer.js';
 import { getKVClient } from './modules/kvClient.js';
 import { QueueService } from './modules/queueService.js';
@@ -112,7 +112,8 @@ async function generateResponse(context: any): Promise<string | null> {
       : `\n\nContext: ${context.recentMessages}`;
     const fullPrompt = entity.systemPrompt + contextInfo;
     
-    logger.debug(`[Cluster] Generating response as ${entity.username} (${entity.id}) using model: ${entity.model}`);
+    const modelName = getModelName(entity);
+    logger.debug(`[Cluster] Generating response as ${entity.username} (${entity.id}) using model: ${modelName}`);
     
     // Build the exact LLM request
     if (!entity.systemRole) {
@@ -121,7 +122,7 @@ async function generateResponse(context: any): Promise<string | null> {
     
     const llmRequest = {
       entityId: entity.id,
-      modelName: entity.model,
+      modelName,
       prompt: [
         { role: entity.systemRole, content: fullPrompt },
         { role: 'user', content: entity.userPrompt || 'Generate a response based on the conversation context.' }
@@ -347,10 +348,11 @@ async function runBot() {
             }
             
             // 3. SELECT MODEL (with fallback chain)
-            const modelToUse = botParams.model || entity.model;
+            const entityModel = getModelName(entity);
+            const modelToUse = botParams.model || entityModel;
             if (botParams.model) {
               console.log(chalk.green('[BOT PARAMS]'), 
-                `Model override: ${entity.model} → ${botParams.model}`);
+                `Model override: ${entityModel} → ${botParams.model}`);
             }
             
             // Use pre-formatted context from frontend - NO FALLBACK
@@ -451,7 +453,7 @@ async function runBot() {
             message: pingMessage,
             context: pingContext,
             entity,
-            model: entity.model,
+            model: getModelName(entity),
             routerReason: 'Ping trigger detected',
             maxRetries: QUEUE_MAX_RETRIES
           });

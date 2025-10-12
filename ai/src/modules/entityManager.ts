@@ -14,7 +14,14 @@ export interface AIEntity {
   id: string;
   enabled: boolean;
   username: string;
-  model: string;
+  model?: string;  // Legacy - deprecated
+  baseModel?: string;  // New structure
+  quantizations?: {
+    f16: { modelPath: string; enabled: boolean };
+    f32: { modelPath: string; enabled: boolean };
+    q8_0: { modelPath: string; enabled: boolean };
+  };
+  defaultQuantization?: 'f16' | 'f32' | 'q8_0';
   systemPrompt: string;
   systemRole: 'system' | 'assistant' | 'user';  // LLM role for system prompt - REQUIRED
   userPrompt?: string;
@@ -38,6 +45,21 @@ export interface AIEntity {
     respondsToAllAiMessages: boolean;
     respondsToTheseAiOnly: string[];
   };
+}
+
+/**
+ * Get the actual model name to use with LM Studio
+ * Handles both old (model) and new (quantizations) config structures
+ */
+export function getModelName(entity: AIEntity): string {
+  // New structure with quantizations
+  if (entity.quantizations && entity.defaultQuantization) {
+    const quant = entity.quantizations[entity.defaultQuantization];
+    return quant?.modelPath || entity.baseModel || 'unknown';
+  }
+  
+  // Legacy structure
+  return entity.model || 'unknown';
 }
 
 export interface EntityState {

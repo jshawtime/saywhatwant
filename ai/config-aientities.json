@@ -21,13 +21,21 @@
       "ip": "10.0.0.102",
       "port": 1234,
       "enabled": true,
-      "name": "Mac Studio 1"
+      "name": "Mac Studio 1",
+      "capabilities": {
+        "maxMemory": 120,
+        "supportedFormats": ["GGUF", "MLX"]
+      }
     },
     {
       "ip": "10.0.0.100",
       "port": 1234,
       "enabled": true,
-      "name": "Mac Studio 2"
+      "name": "Mac Studio 2",
+      "capabilities": {
+        "maxMemory": 120,
+        "supportedFormats": ["GGUF", "MLX"]
+      }
     }
   ],
 
