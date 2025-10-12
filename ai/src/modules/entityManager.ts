@@ -87,7 +87,7 @@ export class EntityManager {
   constructor() {
     this.loadEntities();
     this.initializeRateLimits();
-    this.selectRandomEntity();
+    // No default entity selection - entity must come from botParams
   }
   
   /**
@@ -153,7 +153,7 @@ export class EntityManager {
    */
   public getCurrentEntity(): AIEntity {
     if (!this.currentEntity) {
-      return this.selectRandomEntity();
+      throw new Error('No entity set. Entity must be specified in botParams.');
     }
     return this.currentEntity;
   }
