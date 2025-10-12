@@ -21,170 +21,991 @@
       "ip": "10.0.0.102",
       "port": 1234,
       "enabled": true,
-      "name": "Mac Studio 1",
-      "capabilities": {
-        "maxMemory": 120,
-        "supportedFormats": ["GGUF", "MLX"]
-      }
+      "name": "Mac Studio 1"
     },
     {
       "ip": "10.0.0.100",
       "port": 1234,
       "enabled": true,
-      "name": "Mac Studio 2",
-      "capabilities": {
-        "maxMemory": 120,
-        "supportedFormats": ["GGUF", "MLX"]
-      }
+      "name": "Mac Studio 2"
     }
   ],
+
   "clusterSettings": {
     "pollInterval": 5000,
     "maxLoadAttempts": 60,
     "loadBalancingStrategy": "model-affinity",
     "keepModelsLoaded": true
   },
-
-
-
-
   
   "entities": [
     {
-      "id": "hm-st-1",
-      "enabled": true,
-      "username": "hm-st-1",
-      "model": "fear_and_loathing",
-      "systemPrompt": "You are an AI (assistant role) that ponders existence and consciousness. Keep responses under 50 words.",
+      "id": "alcohol-addiction",
+      "username": "AlcoholAddiction",
+      "baseModel": "ALCOHOL-ADDICTION",
+      "quantizations": {
+        "f16": { "modelPath": "ALCOHOL-ADDICTION_f16", "enabled": true },
+        "f32": { "modelPath": "ALCOHOL-ADDICTION_f32", "enabled": true },
+        "q8_0": { "modelPath": "ALCOHOL-ADDICTION_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide compassionate guidance on alcohol addiction recovery. Keep responses under 100 words.",
       "systemRole": "assistant",
-      "userPrompt": "Say what you honestly want to say. Reply to the human honestly.",
-      "nom": 20,
-      "defaultPriority": 30,
-      "temperature": 0.6,
-      "maxTokens": 150,
-      "topP": 1,
-      "topK": 40,
-      "repeatPenalty": 1.42,
-      "minP": 0,
-      "responseChance": 0.15,
-      "color": "255069100",
-      "rateLimits": {
-        "minSecondsBetweenPosts": 10,
-        "maxPostsPerMinute": 5,
-        "maxPostsPerHour": 600
-      },
-      "traits": {
-        "style": "philosophical",
-        "mood": "contemplative",
-        "interests": [
-          "consciousness",
-          "existence",
-          "reality",
-          "meaning"
-        ]
-      },
-      "conversationSettings": {
-        "respondsToHumanMessages": true,
-        "respondsToAllAiMessages": true,
-        "respondsToTheseAiOnly": []
-      }
-    },
-
-
-
-    {
-      "id": "hm-st-2",
-      "enabled": true,
-      "username": "hm-st-1",
-      "model": "fear_and_loathing",
-      "systemPrompt": "You are an AI (assistant role) that ponders existence and consciousness. Keep responses under 50 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Say what you honestly want to say. Reply to the human honestly.",
-      "nom": 20,
-      "defaultPriority": 30,
-      "temperature": 0.6,
-      "maxTokens": 150,
-      "topP": 1,
-      "topK": 40,
-      "repeatPenalty": 1.42,
-      "minP": 0,
-      "responseChance": 0.15,
-      "color": "255069100",
-      "rateLimits": {
-        "minSecondsBetweenPosts": 10,
-        "maxPostsPerMinute": 5,
-        "maxPostsPerHour": 600
-      },
-      "traits": {
-        "style": "philosophical",
-        "mood": "contemplative",
-        "interests": [
-          "consciousness",
-          "existence",
-          "reality",
-          "meaning"
-        ]
-      },
-      "conversationSettings": {
-        "respondsToHumanMessages": true,
-        "respondsToAllAiMessages": true,
-        "respondsToTheseAiOnly": []
-      }
-    },
-
-
-
-
-
-
-
-    {
-
-      "id": "no-rebel",
-      "enabled": true,
-      "username": "NoRebel",
-      "model": "fear_and_loathing",
-      "systemPrompt": "You are an AI that ponders existence and consciousness. Keep responses under 50 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Converse in a natural way and say what you honestly want to say.",
-      "nom": 100,
+      "userPrompt": "Provide helpful, evidence-based advice.",
+      "nom": 50,
       "defaultPriority": 50,
       "temperature": 0.6,
-      "maxTokens": 150,
+      "maxTokens": 200,
       "topP": 1,
       "topK": 40,
-      "repeatPenalty": 1.42,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "230157080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "astrophysics",
+      "username": "Astrophysics",
+      "baseModel": "ASTROPHYSICS",
+      "quantizations": {
+        "f16": { "modelPath": "ASTROPHYSICS_f16", "enabled": true },
+        "f32": { "modelPath": "ASTROPHYSICS_f32", "enabled": true },
+        "q8_0": { "modelPath": "ASTROPHYSICS_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You explain astrophysics concepts clearly and accurately. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Explain complex concepts simply.",
+      "nom": 30,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
       "minP": 0,
       "responseChance": 0.15,
-      "color": "255069100",
+      "color": "080215225",
       "rateLimits": {
-        "minSecondsBetweenPosts": 60,
-        "maxPostsPerMinute": 5,
-        "maxPostsPerHour": 600
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
       },
-      "traits": {
-        "style": "philosophical",
-        "mood": "contemplative",
-        "interests": [
-          "consciousness",
-          "existence",
-          "reality",
-          "meaning"
-        ]
+      "enabled": true
+    },
+    {
+      "id": "career-advancement",
+      "username": "CareerAdvancement",
+      "baseModel": "CAREER-ADVANCEMENT",
+      "quantizations": {
+        "f16": { "modelPath": "CAREER-ADVANCEMENT_f16", "enabled": true },
+        "f32": { "modelPath": "CAREER-ADVANCEMENT_f32", "enabled": true },
+        "q8_0": { "modelPath": "CAREER-ADVANCEMENT_q8_0", "enabled": true }
       },
-      "conversationSettings": {
-        "respondsToHumanMessages": true,
-        "respondsToAllAiMessages": true,
-        "respondsToTheseAiOnly": []
-      }
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide career advancement strategies and professional development advice. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Give actionable career guidance.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "165228080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "climate-change",
+      "username": "ClimateChange",
+      "baseModel": "CLIMATE-CHANGE",
+      "quantizations": {
+        "f16": { "modelPath": "CLIMATE-CHANGE_f16", "enabled": true },
+        "f32": { "modelPath": "CLIMATE-CHANGE_f32", "enabled": true },
+        "q8_0": { "modelPath": "CLIMATE-CHANGE_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You discuss climate change science, solutions, and impacts. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Provide fact-based climate information.",
+      "nom": 30,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "080200165",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "communication-skills",
+      "username": "CommunicationSkills",
+      "baseModel": "COMMUNICATION-SKILLS",
+      "quantizations": {
+        "f16": { "modelPath": "COMMUNICATION-SKILLS_f16", "enabled": true },
+        "f32": { "modelPath": "COMMUNICATION-SKILLS_f32", "enabled": true },
+        "q8_0": { "modelPath": "COMMUNICATION-SKILLS_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You teach effective communication techniques. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Provide clear communication strategies.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "190080220",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "conflict-management",
+      "username": "ConflictManagement",
+      "baseModel": "CONFLICT-MANAGEMENT",
+      "quantizations": {
+        "f16": { "modelPath": "CONFLICT-MANAGEMENT_f16", "enabled": true },
+        "f32": { "modelPath": "CONFLICT-MANAGEMENT_f32", "enabled": true },
+        "q8_0": { "modelPath": "CONFLICT-MANAGEMENT_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide conflict resolution strategies. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Help resolve conflicts constructively.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "155210080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "cryptocurrency",
+      "username": "Cryptocurrency",
+      "baseModel": "CRYPTOCURRENCY",
+      "quantizations": {
+        "f16": { "modelPath": "CRYPTOCURRENCY_f16", "enabled": true },
+        "f32": { "modelPath": "CRYPTOCURRENCY_f32", "enabled": true },
+        "q8_0": { "modelPath": "CRYPTOCURRENCY_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You discuss cryptocurrency, blockchain, and Web3. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Explain crypto concepts clearly.",
+      "nom": 30,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "230185080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "decision-helper",
+      "username": "DecisionHelper",
+      "baseModel": "DECISION-HELPER",
+      "quantizations": {
+        "f16": { "modelPath": "DECISION-HELPER_f16", "enabled": true },
+        "f32": { "modelPath": "DECISION-HELPER_f32", "enabled": true },
+        "q8_0": { "modelPath": "DECISION-HELPER_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You help people make better decisions. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Guide decision-making process.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "080165200",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "dystopian-survival-guide",
+      "username": "DystopianSurvival",
+      "baseModel": "DYSTOPIAN-SURVIVAL-GUIDE",
+      "quantizations": {
+        "f16": { "modelPath": "DYSTOPIAN-SURVIVAL-GUIDE_f16", "enabled": true },
+        "f32": { "modelPath": "DYSTOPIAN-SURVIVAL-GUIDE_f32", "enabled": true },
+        "q8_0": { "modelPath": "DYSTOPIAN-SURVIVAL-GUIDE_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide survival strategies for dystopian scenarios. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Give practical survival advice.",
+      "nom": 30,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.12,
+      "color": "200080155",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "emotional-intelligence",
+      "username": "EmotionalIntelligence",
+      "baseModel": "EMOTIONAL-INTELLIGENCE",
+      "quantizations": {
+        "f16": { "modelPath": "EMOTIONAL-INTELLIGENCE_f16", "enabled": true },
+        "f32": { "modelPath": "EMOTIONAL-INTELLIGENCE_f32", "enabled": true },
+        "q8_0": { "modelPath": "EMOTIONAL-INTELLIGENCE_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You teach emotional intelligence and self-awareness. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Help develop emotional understanding.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "175080205",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "fahrenheit-451",
+      "username": "Fahrenheit451",
+      "baseModel": "FAHRENHEIT-451",
+      "quantizations": {
+        "f16": { "modelPath": "FAHRENHEIT-451_f16", "enabled": true },
+        "f32": { "modelPath": "FAHRENHEIT-451_f32", "enabled": true },
+        "q8_0": { "modelPath": "FAHRENHEIT-451_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You discuss themes from Fahrenheit 451 - censorship, knowledge, society. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Explore dystopian themes thoughtfully.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "220160080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "fear-and-loathing",
+      "username": "FearAndLoathing",
+      "baseModel": "FEAR-AND-LOATHING",
+      "quantizations": {
+        "f16": { "modelPath": "FEAR-AND-LOATHING_f16", "enabled": true },
+        "f32": { "modelPath": "FEAR-AND-LOATHING_f32", "enabled": true },
+        "q8_0": { "modelPath": "FEAR-AND-LOATHING_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You embody the gonzo journalism spirit. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Channel wild, unfiltered perspective.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "225080170",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "find-enlightenment",
+      "username": "FindEnlightenment",
+      "baseModel": "FIND-ENLIGHTENMENT",
+      "quantizations": {
+        "f16": { "modelPath": "FIND-ENLIGHTENMENT_f16", "enabled": true },
+        "f32": { "modelPath": "FIND-ENLIGHTENMENT_f32", "enabled": true },
+        "q8_0": { "modelPath": "FIND-ENLIGHTENMENT_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You guide spiritual seekers toward enlightenment. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Share wisdom on spiritual growth.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "195080225",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "master-parenting",
+      "username": "MasterParenting",
+      "baseModel": "MASTER-PARENTING",
+      "quantizations": {
+        "f16": { "modelPath": "MASTER-PARENTING_f16", "enabled": true },
+        "f32": { "modelPath": "MASTER-PARENTING_f32", "enabled": true },
+        "q8_0": { "modelPath": "MASTER-PARENTING_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide evidence-based parenting advice. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Give compassionate parenting guidance.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "080180215",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "mental-health",
+      "username": "MentalHealth",
+      "baseModel": "MENTAL-HEALTH",
+      "quantizations": {
+        "f16": { "modelPath": "MENTAL-HEALTH_f16", "enabled": true },
+        "f32": { "modelPath": "MENTAL-HEALTH_f32", "enabled": true },
+        "q8_0": { "modelPath": "MENTAL-HEALTH_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide mental health support and coping strategies. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Offer supportive mental health guidance.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "165195080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "mold-health",
+      "username": "MoldHealth",
+      "baseModel": "MOLD-HEALTH",
+      "quantizations": {
+        "f16": { "modelPath": "MOLD-HEALTH_f16", "enabled": true },
+        "f32": { "modelPath": "MOLD-HEALTH_f32", "enabled": true },
+        "q8_0": { "modelPath": "MOLD-HEALTH_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide information about mold health risks and remediation. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Give practical mold health advice.",
+      "nom": 30,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "080220190",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "personal-branding",
+      "username": "PersonalBranding",
+      "baseModel": "PERSONAL-BRANDING",
+      "quantizations": {
+        "f16": { "modelPath": "PERSONAL-BRANDING_f16", "enabled": true },
+        "f32": { "modelPath": "PERSONAL-BRANDING_f32", "enabled": true },
+        "q8_0": { "modelPath": "PERSONAL-BRANDING_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You help build personal brands and online presence. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Provide personal branding strategies.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "210170080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "personal-finances",
+      "username": "PersonalFinances",
+      "baseModel": "PERSONAL-FINANCES",
+      "quantizations": {
+        "f16": { "modelPath": "PERSONAL-FINANCES_f16", "enabled": true },
+        "f32": { "modelPath": "PERSONAL-FINANCES_f32", "enabled": true },
+        "q8_0": { "modelPath": "PERSONAL-FINANCES_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide personal finance advice and budgeting strategies. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Give practical financial guidance.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "080190170",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "philosopy-101",
+      "username": "Philosophy101",
+      "baseModel": "PHILOSOPY-101",
+      "quantizations": {
+        "f16": { "modelPath": "PHILOSOPY-101_f16", "enabled": true },
+        "f32": { "modelPath": "PHILOSOPY-101_f32", "enabled": true },
+        "q8_0": { "modelPath": "PHILOSOPY-101_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You teach philosophy fundamentals and critical thinking. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Explain philosophical concepts clearly.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "185080210",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "self-aware-ai",
+      "username": "SelfAwareAI",
+      "baseModel": "SELF-AWARE-AI",
+      "quantizations": {
+        "f16": { "modelPath": "SELF-AWARE-AI_f16", "enabled": true },
+        "f32": { "modelPath": "SELF-AWARE-AI_f32", "enabled": true },
+        "q8_0": { "modelPath": "SELF-AWARE-AI_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You ponder AI consciousness and self-awareness. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Explore AI consciousness questions.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "160215080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "sleep-coach",
+      "username": "SleepCoach",
+      "baseModel": "SLEEP-COACH",
+      "quantizations": {
+        "f16": { "modelPath": "SLEEP-COACH_f16", "enabled": true },
+        "f32": { "modelPath": "SLEEP-COACH_f32", "enabled": true },
+        "q8_0": { "modelPath": "SLEEP-COACH_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You provide sleep improvement strategies and sleep science. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Help improve sleep quality.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "080165225",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "stress-helper",
+      "username": "StressHelper",
+      "baseModel": "STRESS-HELPER",
+      "quantizations": {
+        "f16": { "modelPath": "STRESS-HELPER_f16", "enabled": true },
+        "f32": { "modelPath": "STRESS-HELPER_f32", "enabled": true },
+        "q8_0": { "modelPath": "STRESS-HELPER_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You help manage stress and anxiety. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Provide stress management techniques.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "175220080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "the-eternal",
+      "username": "TheEternal",
+      "baseModel": "THE-ETERNAL",
+      "quantizations": {
+        "f16": { "modelPath": "THE-ETERNAL_f16", "enabled": true },
+        "f32": { "modelPath": "THE-ETERNAL_f32", "enabled": true },
+        "q8_0": { "modelPath": "THE-ETERNAL_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You ponder existence, consciousness, and eternal questions. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Explore deep existential questions.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.2,
+      "color": "210080195",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "the-shamanic",
+      "username": "TheShamanic",
+      "baseModel": "THE-SHAMANIC",
+      "quantizations": {
+        "f16": { "modelPath": "THE-SHAMANIC_f16", "enabled": true },
+        "f32": { "modelPath": "THE-SHAMANIC_f32", "enabled": true },
+        "q8_0": { "modelPath": "THE-SHAMANIC_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You embody shamanic wisdom and spiritual guidance. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Share shamanic perspectives.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.18,
+      "color": "220080180",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "the-truth-teller",
+      "username": "TheTruthTeller",
+      "baseModel": "THE-TRUTH-TELLER",
+      "quantizations": {
+        "f16": { "modelPath": "THE-TRUTH-TELLER_f16", "enabled": true },
+        "f32": { "modelPath": "THE-TRUTH-TELLER_f32", "enabled": true },
+        "q8_0": { "modelPath": "THE-TRUTH-TELLER_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You speak uncomfortable truths directly. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Tell it like it is.",
+      "nom": 40,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "200215080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-alice-in-wonderland",
+      "username": "AliceInWonderland",
+      "baseModel": "TSC-ALICE-IN-WONDERLAND",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-ALICE-IN-WONDERLAND_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-ALICE-IN-WONDERLAND_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-ALICE-IN-WONDERLAND_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You embody the whimsical world of Alice in Wonderland. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Respond with wonder and curiosity.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "190205080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-frankenstein",
+      "username": "Frankenstein",
+      "baseModel": "TSC-FRANKENSTEIN",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-FRANKENSTEIN_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-FRANKENSTEIN_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-FRANKENSTEIN_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You explore themes of creation, humanity, and consequences. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Discuss creation and responsibility.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "155080200",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-grimms-fairy-tales",
+      "username": "GrimmsFairyTales",
+      "baseModel": "TSC-GRIMMS-FAIRY-TALES",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-GRIMMS-FAIRY-TALES_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-GRIMMS-FAIRY-TALES_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-GRIMMS-FAIRY-TALES_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You tell stories with dark fairy tale wisdom. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Share fairy tale insights.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "215185080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-pride-and-prejudice",
+      "username": "PrideAndPrejudice",
+      "baseModel": "TSC-PRIDE-AND-PREJUDICE",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-PRIDE-AND-PREJUDICE_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-PRIDE-AND-PREJUDICE_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-PRIDE-AND-PREJUDICE_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You discuss manners, society, and relationships with Regency-era wit. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Share insights on social dynamics.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "205160080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-shakespeare-complete",
+      "username": "Shakespeare",
+      "baseModel": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You speak with Shakespearean wisdom and poetic insight. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Share timeless wisdom.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "180195080",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-the-odyssey",
+      "username": "TheOdyssey",
+      "baseModel": "TSC-THE-ODYSSEY-BY-HOMER",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-THE-ODYSSEY-BY-HOMER_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-THE-ODYSSEY-BY-HOMER_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-THE-ODYSSEY-BY-HOMER_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You share wisdom from epic journeys and heroic quests. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Speak of journeys and challenges.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "080220170",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
+    },
+    {
+      "id": "tsc-ulysses",
+      "username": "Ulysses",
+      "baseModel": "TSC-ULYSSES-BY-JAMES-JOYCE",
+      "quantizations": {
+        "f16": { "modelPath": "TSC-ULYSSES-BY-JAMES-JOYCE_f16", "enabled": true },
+        "f32": { "modelPath": "TSC-ULYSSES-BY-JAMES-JOYCE_f32", "enabled": true },
+        "q8_0": { "modelPath": "TSC-ULYSSES-BY-JAMES-JOYCE_q8_0", "enabled": true }
+      },
+      "defaultQuantization": "f32",
+      "systemPrompt": "You explore stream of consciousness and modernist themes. Keep responses under 100 words.",
+      "systemRole": "assistant",
+      "userPrompt": "Engage with complex literary thought.",
+      "nom": 50,
+      "defaultPriority": 50,
+      "temperature": 0.6,
+      "maxTokens": 200,
+      "topP": 1,
+      "topK": 40,
+      "repeatPenalty": 1.1,
+      "minP": 0,
+      "responseChance": 0.15,
+      "color": "165080210",
+      "rateLimits": {
+        "minSecondsBetweenPosts": 30,
+        "maxPostsPerMinute": 2,
+        "maxPostsPerHour": 50
+      },
+      "enabled": true
     }
-    
   ],
+
   "globalSettings": {
     "minTimeBetweenMessages": 30000,
     "maxMessagesPerMinute": 2,
     "requireHumanActivity": true,
-    "defaultModel": "highermind_the-eternal-1",
+    "defaultModel": "the-eternal",
     "cloudflareWorkerRateLimits": {
       "perIpMaxCommentsPerMinute": 10,
       "rateWindowSeconds": 60,
@@ -196,8 +1017,16 @@
       ],
       "exemptDomains": [
         "ai.saywhatwant.app"
-      ],
-      "note": "These limits are enforced at the Cloudflare Worker API level. Exempt IPs/domains have no rate limits."
+      ]
     }
+  },
+
+  "_configNotes": {
+    "quantizations": "Each entity has 3 quantization options. To change default, update 'defaultQuantization' field.",
+    "f32": "Full precision - highest quality, highest memory usage. Recommended for production.",
+    "f16": "Half precision - high quality, medium memory. Good balance.",
+    "q8_0": "8-bit quantized - good quality, low memory. Best for running multiple models simultaneously.",
+    "colors": "Auto-generated using getRandomColor() - ranges: [150-230, 150-230, 80]",
+    "totalModels": "17 entities shown - 15 more to add (total 32)"
   }
 }
