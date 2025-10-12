@@ -282,17 +282,31 @@ async function runBot() {
           // QUEUE MODE: Process ALL HUMAN messages (not AI responses)
           console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages`);
           
+          // DEBUG: Show timestamp range
+          const timestamps = messages.map(m => m.timestamp).filter(Boolean);
+          if (timestamps.length > 0) {
+            const oldest = Math.min(...timestamps);
+            const newest = Math.max(...timestamps);
+            console.log(chalk.cyan('[QUEUE DEBUG]'), `Timestamp range: ${new Date(oldest).toLocaleTimeString()} - ${new Date(newest).toLocaleTimeString()}`);
+            console.log(chalk.cyan('[QUEUE DEBUG]'), `Newest message: "${messages[0]?.text}" from ${messages[0]?.username}`);
+          }
+          
           let queued = 0;
           let skipped = 0;
           
           for (const message of messages) {
+            // DEBUG: Log every message
+            console.log(chalk.gray('[QUEUE DEBUG]'), `Msg: ${message.text}, Type: ${message['message-type']}, Processed: ${processedMessageIds.has(message.id)}`);
+            
             // Skip AI messages (don't queue bot responses)
             if (message['message-type'] === 'AI') {
+              console.log(chalk.gray('[SKIP]'), `AI message: ${message.text}`);
               continue;
             }
             
             // Skip already processed
             if (processedMessageIds.has(message.id)) {
+              console.log(chalk.gray('[SKIP]'), `Already processed: ${message.text}`);
               skipped++;
               continue;
             }
@@ -307,21 +321,27 @@ async function runBot() {
             
             const botParams = message.botParams || {};
             
+            // DEBUG: Log message structure
+            console.log(chalk.cyan('[DEBUG]'), `Message text: "${message.text}"`);
+            console.log(chalk.cyan('[DEBUG]'), `Message botParams:`, JSON.stringify(botParams));
+            console.log(chalk.cyan('[DEBUG]'), `Has entity:`, !!botParams.entity);
+            
             // 1. SELECT ENTITY (with fallback chain)
             let entity;
             // Entity MUST be specified in botParams - no fallbacks
             if (!botParams.entity) {
-              const error = 'No entity specified in botParams. Entity is required for queue system.';
-              console.error(chalk.red('[BOT PARAMS ERROR]'), error);
-              throw new Error(error);
+              console.error(chalk.red('[BOT PARAMS ERROR]'), `No entity in message "${message.text}" - skipping`);
+              skipped++;
+              continue; // Skip this message, process next
             }
             
             entity = fullConfig.entities.find((e: any) => e.id === botParams.entity);
             
             if (!entity) {
-              const error = `Entity "${botParams.entity}" not found in config. Available entities: ${fullConfig.entities.map((e: any) => e.id).join(', ')}`;
-              console.error(chalk.red('[BOT PARAMS ERROR]'), error);
-              throw new Error(error);
+              console.error(chalk.red('[BOT PARAMS ERROR]'), `Entity "${botParams.entity}" not found in message "${message.text}" - skipping`);
+              console.error(chalk.yellow('[AVAILABLE]'), fullConfig.entities.map((e: any) => e.id).join(', '));
+              skipped++;
+              continue; // Skip this message, process next
             }
             
             console.log(chalk.green('[BOT PARAMS]'), 
