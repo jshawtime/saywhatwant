@@ -86,15 +86,7 @@ const state: BotState = {
 // Track processed message IDs to prevent re-queueing
 const processedMessageIds = new Set<string>();
 
-// Update state with current entity
-function updateStateFromEntity() {
-  const entity = entityManager.getCurrentEntity();
-  state.currentUsername = entity.username;
-  state.currentColor = entity.color;
-}
-
-// Initialize state
-updateStateFromEntity();
+// State no longer needs initialization - entity comes from botParams
 
 /**
  * Generate response using LM Studio Cluster
