@@ -91,8 +91,8 @@ const processedMessageIds = new Set<string>();
 /**
  * Generate response using LM Studio Cluster
  */
-async function generateResponse(context: any): Promise<string | null> {
-  const entity = entityManager.getCurrentEntity();
+async function generateResponse(context: any, entity: any): Promise<string | null> {
+  // Entity is now passed as parameter (from queue item)
   
   try {
     // Check if this is a ping request
@@ -523,8 +523,8 @@ async function runWorker() {
           mentionsBot: false
         };
         
-        // Generate response using existing function
-        const response = await generateResponse(context);
+        // Generate response using existing function (pass entity from queue item)
+        const response = await generateResponse(context, item.entity);
         
         if (response) {
           // Extract ais from botParams (AI identity override)
