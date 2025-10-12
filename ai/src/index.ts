@@ -175,8 +175,8 @@ async function generateResponse(context: any, entity: any): Promise<string | nul
  * @param text - The response text to post
  * @param ais - Optional AI identity override (username:color or username:random)
  */
-async function postComment(text: string, ais?: string): Promise<boolean> {
-  const entity = entityManager.getCurrentEntity();
+async function postComment(text: string, entity: any, ais?: string): Promise<boolean> {
+  // Entity is now passed as parameter
   
   // Default to entity config
   let usernameToUse = entity.username;
@@ -540,8 +540,8 @@ async function runWorker() {
             if (queueWS) queueWS.sendLog(`[WORKER] No ais, using entity defaults`);
           }
           
-          // Post with ais override (if present)
-          await postComment(response, aisOverride);
+          // Post with ais override (if present) - pass entity from queue item
+          await postComment(response, item.entity, aisOverride);
           
           // Mark as complete
           await queueService.complete(item.id, true);
