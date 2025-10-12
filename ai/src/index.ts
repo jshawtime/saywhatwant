@@ -309,24 +309,23 @@ async function runBot() {
             
             // 1. SELECT ENTITY (with fallback chain)
             let entity;
-            if (botParams.entity) {
-              // URL specified entity - MUST exist (no fallback)
-              entity = fullConfig.entities.find((e: any) => e.id === botParams.entity);
-              
-              if (!entity) {
-                const error = `Entity "${botParams.entity}" not found in config. Available entities: ${fullConfig.entities.map((e: any) => e.id).join(', ')}`;
-                console.error(chalk.red('[BOT PARAMS ERROR]'), error);
-                throw new Error(error);
-              }
-              
-              console.log(chalk.green('[BOT PARAMS]'), 
-                `Using specified entity: ${botParams.entity}`);
-            } else {
-              // No entity specified - use current entity (don't select random)
-              entity = entityManager.getCurrentEntity();
-              console.log(chalk.yellow('[BOT PARAMS]'), 
-                `No entity specified, using current: ${entity.id}`);
+            // Entity MUST be specified in botParams - no fallbacks
+            if (!botParams.entity) {
+              const error = 'No entity specified in botParams. Entity is required for queue system.';
+              console.error(chalk.red('[BOT PARAMS ERROR]'), error);
+              throw new Error(error);
             }
+            
+            entity = fullConfig.entities.find((e: any) => e.id === botParams.entity);
+            
+            if (!entity) {
+              const error = `Entity "${botParams.entity}" not found in config. Available entities: ${fullConfig.entities.map((e: any) => e.id).join(', ')}`;
+              console.error(chalk.red('[BOT PARAMS ERROR]'), error);
+              throw new Error(error);
+            }
+            
+            console.log(chalk.green('[BOT PARAMS]'), 
+              `Using specified entity: ${botParams.entity}`);
             
             // 2. DETERMINE PRIORITY (with fallback chain)
             let priority;
@@ -419,46 +418,15 @@ async function runBot() {
           
           console.log(chalk.blue('[QUEUE]'), `Queued ${queued} human messages, skipped ${skipped} duplicates`);
         } else {
-          // DIRECT MODE: Use current entity (no random selection)
-          const entity = entityManager.getCurrentEntity();
-          console.log(chalk.yellow('[DIRECT]'), `Using current entity: ${entity.id}`);
-          
-          const context = analyzer.analyzeContext(messages, entity);
-          const rateLimitCheck = entityManager.checkRateLimits(entity.id);
-          const decision = analyzer.shouldRespond(context, entity, rateLimitCheck);
-          
-          if (decision.shouldRespond) {
-            const response = await generateResponse(context);
-            if (response) {
-              // Extract ais from botParams (AI identity override)
-              const latestMessage = messages[messages.length - 1];
-              const aisOverride = latestMessage?.botParams?.ais || undefined;
-              
-              await postComment(response, aisOverride);
-            }
-          }
+          // DIRECT MODE: Disabled - queue system required
+          console.error(chalk.red('[DIRECT]'), 'Direct mode disabled - use queue system with entity specified');
+          continue; // Skip this cycle
         }
         
         // Check for ping trigger (queue with highest priority)
         if (USE_QUEUE && queueService && analyzer.hasPingTrigger(messages)) {
-          console.log(chalk.yellow('[PING]'), 'Detected ping trigger - queuing with priority 0');
-          const entity = entityManager.getCurrentEntity();
-          const pingMessage = messages[messages.length - 1];
-          
-          // Use context from message - NO FALLBACK
-          const pingContext = pingMessage.context || [];
-          
-          await queueService.enqueue({
-            id: `ping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            priority: 0,  // HIGHEST priority for pings
-            timestamp: Date.now(),
-            message: pingMessage,
-            context: pingContext,
-            entity,
-            model: getModelName(entity),
-            routerReason: 'Ping trigger detected',
-            maxRetries: QUEUE_MAX_RETRIES
-          });
+          console.log(chalk.yellow('[PING]'), 'Ping trigger requires entity in message botParams - skipping');
+          continue; // Skip - pings need entity specified too
         }
       }
       
