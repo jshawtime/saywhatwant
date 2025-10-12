@@ -184,9 +184,10 @@ function App() {
             {llmRequests.length > 0 ? (
               llmRequests.map((req, idx) => {
                 const isExpanded = expandedRequests.has(idx);
-                const timestamp = new Date().toLocaleTimeString();
+                const timestamp = req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
                 const model = req.modelName || 'unknown';
                 const entity = req.entityId || 'unknown';
+                const hasError = req.error || req.status === 'error' || req.status === 'failed';
                 const itemId = `llm-${idx}`;
                 const isCopied = copiedItems.has(itemId);
                 
@@ -195,9 +196,10 @@ function App() {
                     <div 
                       className={styles.llmRequestHeader}
                       onClick={() => toggleRequest(idx)}
+                      style={{ borderLeftColor: hasError ? '#FF0000' : '#FFAA00' }}
                     >
-                      <div className={styles.llmRequestSummary}>
-                        #{idx + 1} - {entity} | {model}
+                      <div className={styles.llmRequestSummary} style={{ color: hasError ? '#FF0000' : '#FFAA00' }}>
+                        [{timestamp}] #{idx + 1} - {entity} | {model} {hasError && '❌ ERROR'}
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <button

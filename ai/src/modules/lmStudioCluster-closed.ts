@@ -308,7 +308,8 @@ export class LMStudioCluster {
                                 loadError.message?.includes('requires approximately');
           
           if (isMemoryError && retryCount === 0) {
-            logger.warn(`[Recovery] Memory error on ${server.name}, unloading all models`);
+            logger.error(`[Recovery] ❌ Memory error on ${server.name}: ${loadError.message}`);
+            logger.warn(`[Recovery] Unloading all models on ${server.name}`);
             const { LMStudioCLI } = await import('./lmStudioCliWrapper.js');
             const cli = new LMStudioCLI();
             await cli.unloadAll(server.ip);
