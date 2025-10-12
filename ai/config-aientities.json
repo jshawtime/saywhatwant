@@ -40,7 +40,7 @@
   
   "entities": [
     {
-      "id": "alcohol-addiction",
+      "id": "ALCOHOL-ADDICTION",
       "username": "AlcoholAddiction",
       "baseModel": "ALCOHOL-ADDICTION",
       "quantizations": {
@@ -70,7 +70,7 @@
       "enabled": true
     },
     {
-      "id": "astrophysics",
+      "id": "ASTROPHYSICS",
       "username": "Astrophysics",
       "baseModel": "ASTROPHYSICS",
       "quantizations": {
@@ -100,7 +100,7 @@
       "enabled": true
     },
     {
-      "id": "career-advancement",
+      "id": "CAREER-ADVANCEMENT",
       "username": "CareerAdvancement",
       "baseModel": "CAREER-ADVANCEMENT",
       "quantizations": {
@@ -130,7 +130,7 @@
       "enabled": true
     },
     {
-      "id": "climate-change",
+      "id": "CLIMATE-CHANGE",
       "username": "ClimateChange",
       "baseModel": "CLIMATE-CHANGE",
       "quantizations": {
@@ -160,7 +160,7 @@
       "enabled": true
     },
     {
-      "id": "communication-skills",
+      "id": "COMMUNICATION-SKILLS",
       "username": "CommunicationSkills",
       "baseModel": "COMMUNICATION-SKILLS",
       "quantizations": {
@@ -190,7 +190,7 @@
       "enabled": true
     },
     {
-      "id": "conflict-management",
+      "id": "CONFLICT-MANAGEMENT",
       "username": "ConflictManagement",
       "baseModel": "CONFLICT-MANAGEMENT",
       "quantizations": {
@@ -220,7 +220,7 @@
       "enabled": true
     },
     {
-      "id": "cryptocurrency",
+      "id": "CRYPTOCURRENCY",
       "username": "Cryptocurrency",
       "baseModel": "CRYPTOCURRENCY",
       "quantizations": {
@@ -250,7 +250,7 @@
       "enabled": true
     },
     {
-      "id": "decision-helper",
+      "id": "DECISION-HELPER",
       "username": "DecisionHelper",
       "baseModel": "DECISION-HELPER",
       "quantizations": {
@@ -280,7 +280,7 @@
       "enabled": true
     },
     {
-      "id": "dystopian-survival-guide",
+      "id": "DYSTOPIAN-SURVIVAL-GUIDE",
       "username": "DystopianSurvival",
       "baseModel": "DYSTOPIAN-SURVIVAL-GUIDE",
       "quantizations": {
@@ -310,7 +310,7 @@
       "enabled": true
     },
     {
-      "id": "emotional-intelligence",
+      "id": "EMOTIONAL-INTELLIGENCE",
       "username": "EmotionalIntelligence",
       "baseModel": "EMOTIONAL-INTELLIGENCE",
       "quantizations": {
@@ -340,7 +340,7 @@
       "enabled": true
     },
     {
-      "id": "fahrenheit-451",
+      "id": "FAHRENHEIT-451",
       "username": "Fahrenheit451",
       "baseModel": "FAHRENHEIT-451",
       "quantizations": {
@@ -370,7 +370,7 @@
       "enabled": true
     },
     {
-      "id": "fear-and-loathing",
+      "id": "FEAR-AND-LOATHING",
       "username": "FearAndLoathing",
       "baseModel": "FEAR-AND-LOATHING",
       "quantizations": {
@@ -400,7 +400,7 @@
       "enabled": true
     },
     {
-      "id": "find-enlightenment",
+      "id": "FIND-ENLIGHTENMENT",
       "username": "FindEnlightenment",
       "baseModel": "FIND-ENLIGHTENMENT",
       "quantizations": {
@@ -430,7 +430,7 @@
       "enabled": true
     },
     {
-      "id": "master-parenting",
+      "id": "MASTER-PARENTING",
       "username": "MasterParenting",
       "baseModel": "MASTER-PARENTING",
       "quantizations": {
@@ -460,7 +460,7 @@
       "enabled": true
     },
     {
-      "id": "mental-health",
+      "id": "MENTAL-HEALTH",
       "username": "MentalHealth",
       "baseModel": "MENTAL-HEALTH",
       "quantizations": {
@@ -490,7 +490,7 @@
       "enabled": true
     },
     {
-      "id": "mold-health",
+      "id": "MOLD-HEALTH",
       "username": "MoldHealth",
       "baseModel": "MOLD-HEALTH",
       "quantizations": {
@@ -520,7 +520,7 @@
       "enabled": true
     },
     {
-      "id": "personal-branding",
+      "id": "PERSONAL-BRANDING",
       "username": "PersonalBranding",
       "baseModel": "PERSONAL-BRANDING",
       "quantizations": {
@@ -550,7 +550,7 @@
       "enabled": true
     },
     {
-      "id": "personal-finances",
+      "id": "PERSONAL-FINANCES",
       "username": "PersonalFinances",
       "baseModel": "PERSONAL-FINANCES",
       "quantizations": {
@@ -580,7 +580,7 @@
       "enabled": true
     },
     {
-      "id": "philosopy-101",
+      "id": "PHILOSOPY-101",
       "username": "Philosophy101",
       "baseModel": "PHILOSOPY-101",
       "quantizations": {
@@ -610,7 +610,7 @@
       "enabled": true
     },
     {
-      "id": "self-aware-ai",
+      "id": "SELF-AWARE-AI",
       "username": "SelfAwareAI",
       "baseModel": "SELF-AWARE-AI",
       "quantizations": {
@@ -640,7 +640,7 @@
       "enabled": true
     },
     {
-      "id": "sleep-coach",
+      "id": "SLEEP-COACH",
       "username": "SleepCoach",
       "baseModel": "SLEEP-COACH",
       "quantizations": {
@@ -670,7 +670,7 @@
       "enabled": true
     },
     {
-      "id": "stress-helper",
+      "id": "STRESS-HELPER",
       "username": "StressHelper",
       "baseModel": "STRESS-HELPER",
       "quantizations": {
@@ -700,7 +700,7 @@
       "enabled": true
     },
     {
-      "id": "the-eternal",
+      "id": "THE-ETERNAL",
       "username": "TheEternal",
       "baseModel": "THE-ETERNAL",
       "quantizations": {
@@ -730,7 +730,7 @@
       "enabled": true
     },
     {
-      "id": "the-shamanic",
+      "id": "THE-SHAMANIC",
       "username": "TheShamanic",
       "baseModel": "THE-SHAMANIC",
       "quantizations": {
@@ -760,7 +760,7 @@
       "enabled": true
     },
     {
-      "id": "the-truth-teller",
+      "id": "THE-TRUTH-TELLER",
       "username": "TheTruthTeller",
       "baseModel": "THE-TRUTH-TELLER",
       "quantizations": {
@@ -790,7 +790,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-alice-in-wonderland",
+      "id": "TSC-ALICE-IN-WONDERLAND",
       "username": "AliceInWonderland",
       "baseModel": "TSC-ALICE-IN-WONDERLAND",
       "quantizations": {
@@ -820,7 +820,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-frankenstein",
+      "id": "TSC-FRANKENSTEIN",
       "username": "Frankenstein",
       "baseModel": "TSC-FRANKENSTEIN",
       "quantizations": {
@@ -850,7 +850,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-grimms-fairy-tales",
+      "id": "TSC-GRIMMS-FAIRY-TALES",
       "username": "GrimmsFairyTales",
       "baseModel": "TSC-GRIMMS-FAIRY-TALES",
       "quantizations": {
@@ -880,7 +880,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-pride-and-prejudice",
+      "id": "TSC-PRIDE-AND-PREJUDICE",
       "username": "PrideAndPrejudice",
       "baseModel": "TSC-PRIDE-AND-PREJUDICE",
       "quantizations": {
@@ -910,7 +910,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-shakespeare-complete",
+      "id": "TSC-SHAKESPEARE-COMPLETE",
       "username": "Shakespeare",
       "baseModel": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION",
       "quantizations": {
@@ -940,7 +940,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-the-odyssey",
+      "id": "TSC-THE-ODYSSEY",
       "username": "TheOdyssey",
       "baseModel": "TSC-THE-ODYSSEY-BY-HOMER",
       "quantizations": {
@@ -970,7 +970,7 @@
       "enabled": true
     },
     {
-      "id": "tsc-ulysses",
+      "id": "TSC-ULYSSES",
       "username": "Ulysses",
       "baseModel": "TSC-ULYSSES-BY-JAMES-JOYCE",
       "quantizations": {
@@ -1005,7 +1005,7 @@
     "minTimeBetweenMessages": 30000,
     "maxMessagesPerMinute": 2,
     "requireHumanActivity": true,
-    "defaultModel": "the-eternal",
+    "defaultModel": "THE-ETERNAL",
     "cloudflareWorkerRateLimits": {
       "perIpMaxCommentsPerMinute": 10,
       "rateWindowSeconds": 60,
