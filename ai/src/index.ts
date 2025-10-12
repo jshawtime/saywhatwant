@@ -286,9 +286,15 @@ async function runBot() {
           let queued = 0;
           let skipped = 0;
           
+          // DEBUG: Show Set size and sample contents
+          console.log(chalk.magenta('[SET DEBUG]'), `processedMessageIds size: ${processedMessageIds.size}`);
+          if (processedMessageIds.size > 0 && processedMessageIds.size < 10) {
+            console.log(chalk.magenta('[SET CONTENTS]'), Array.from(processedMessageIds));
+          }
+          
           for (const message of messages) {
-            // DEBUG: Log every message
-            console.log(chalk.gray('[QUEUE DEBUG]'), `Msg: ${message.text}, Type: ${message['message-type']}, Processed: ${processedMessageIds.has(message.id)}`);
+            // DEBUG: Log every message with actual ID
+            console.log(chalk.gray('[QUEUE DEBUG]'), `Msg: "${message.text}", ID: ${message.id}, Processed: ${processedMessageIds.has(message.id)}`);
             
             // Skip AI messages (don't queue bot responses)
             if (message['message-type'] === 'AI') {
