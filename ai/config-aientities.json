@@ -918,7 +918,7 @@
       "enabled": true
     },
     {
-      "id": "TSC-SHAKESPEARE-COMPLETE",
+      "id": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION",
       "username": "Shakespeare",
       "baseModel": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION",
       "quantizations": {
@@ -948,7 +948,7 @@
       "enabled": true
     },
     {
-      "id": "TSC-THE-ODYSSEY",
+      "id": "TSC-THE-ODYSSEY-BY-HOMER",
       "username": "TheOdyssey",
       "baseModel": "TSC-THE-ODYSSEY-BY-HOMER",
       "quantizations": {
@@ -978,7 +978,7 @@
       "enabled": true
     },
     {
-      "id": "TSC-ULYSSES",
+      "id": "TSC-ULYSSES-BY-JAMES-JOYCE",
       "username": "Ulysses",
       "baseModel": "TSC-ULYSSES-BY-JAMES-JOYCE",
       "quantizations": {
