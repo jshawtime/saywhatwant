@@ -26,14 +26,16 @@ export class LMStudioCLI {
       
       if (stderr && !stderr.includes('warning')) {
         logger.error(`[CLI] Error loading model: ${stderr}`);
-        return false;
+        // Throw error with actual stderr message so recovery can detect memory issues
+        throw new Error(stderr);
       }
       
       logger.success(`[CLI] Model loaded: ${stdout}`);
       return true;
     } catch (error: any) {
       logger.error(`[CLI] Failed to load model: ${error.message}`);
-      return false;
+      // Re-throw with actual error message (includes LM Studio memory errors)
+      throw error;
     }
   }
   

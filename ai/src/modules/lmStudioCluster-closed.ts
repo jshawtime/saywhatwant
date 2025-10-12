@@ -244,11 +244,8 @@ export class LMStudioCluster {
       const cli = new LMStudioCLI();
       
       // Use the CLI to load the model on the remote host
-      const success = await cli.loadModel(modelName, server.ip);
-      
-      if (!success) {
-        throw new Error(`CLI failed to load ${modelName} on ${server.ip}`);
-      }
+      // CLI now throws errors directly (including memory errors from LM Studio)
+      await cli.loadModel(modelName, server.ip);
       
       // Poll until loaded (since CLI is async)
       let attempts = 0;
