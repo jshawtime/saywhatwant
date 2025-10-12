@@ -4,18 +4,15 @@
     "websocketPort": 4002,
     "enableConsoleLogs": true
   },
-  
   "queueSettings": {
     "enabled": true,
     "staleClaimTimeout": 60000,
     "maxRetries": 3,
     "defaultPriority": 50
   },
-  
   "routerSettings": {
     "enabled": false
   },
-  
   "lmStudioServers": [
     {
       "ip": "10.0.0.102",
@@ -24,7 +21,10 @@
       "name": "Mac Studio 1",
       "capabilities": {
         "maxMemory": 120,
-        "supportedFormats": ["GGUF", "MLX"]
+        "supportedFormats": [
+          "GGUF",
+          "MLX"
+        ]
       }
     },
     {
@@ -34,27 +34,37 @@
       "name": "Mac Studio 2",
       "capabilities": {
         "maxMemory": 120,
-        "supportedFormats": ["GGUF", "MLX"]
+        "supportedFormats": [
+          "GGUF",
+          "MLX"
+        ]
       }
     }
   ],
-
   "clusterSettings": {
     "pollInterval": 5000,
     "maxLoadAttempts": 60,
     "loadBalancingStrategy": "model-affinity",
     "keepModelsLoaded": true
   },
-  
   "entities": [
     {
-      "id": "ALCOHOL-ADDICTION",
+      "id": "alcohol-addiction",
       "username": "AlcoholAddiction",
-      "baseModel": "ALCOHOL-ADDICTION",
+      "baseModel": "alcohol-addiction",
       "quantizations": {
-        "f16": { "modelPath": "ALCOHOL-ADDICTION_f16", "enabled": true },
-        "f32": { "modelPath": "ALCOHOL-ADDICTION_f32", "enabled": true },
-        "q8_0": { "modelPath": "ALCOHOL-ADDICTION_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "alcohol-addiction@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "alcohol-addiction@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "alcohol-addiction@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide compassionate guidance on alcohol addiction recovery. Keep responses under 100 words.",
@@ -78,13 +88,22 @@
       "enabled": true
     },
     {
-      "id": "ASTROPHYSICS",
+      "id": "astrophysics",
       "username": "Astrophysics",
-      "baseModel": "ASTROPHYSICS",
+      "baseModel": "astrophysics",
       "quantizations": {
-        "f16": { "modelPath": "ASTROPHYSICS_f16", "enabled": true },
-        "f32": { "modelPath": "ASTROPHYSICS_f32", "enabled": true },
-        "q8_0": { "modelPath": "ASTROPHYSICS_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "astrophysics@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "astrophysics@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "astrophysics@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You explain astrophysics concepts clearly and accurately. Keep responses under 100 words.",
@@ -108,13 +127,22 @@
       "enabled": true
     },
     {
-      "id": "CAREER-ADVANCEMENT",
+      "id": "career-advancement",
       "username": "CareerAdvancement",
-      "baseModel": "CAREER-ADVANCEMENT",
+      "baseModel": "career-advancement",
       "quantizations": {
-        "f16": { "modelPath": "CAREER-ADVANCEMENT_f16", "enabled": true },
-        "f32": { "modelPath": "CAREER-ADVANCEMENT_f32", "enabled": true },
-        "q8_0": { "modelPath": "CAREER-ADVANCEMENT_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "career-advancement@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "career-advancement@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "career-advancement@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide career advancement strategies and professional development advice. Keep responses under 100 words.",
@@ -138,13 +166,22 @@
       "enabled": true
     },
     {
-      "id": "CLIMATE-CHANGE",
+      "id": "climate-change",
       "username": "ClimateChange",
-      "baseModel": "CLIMATE-CHANGE",
+      "baseModel": "climate-change",
       "quantizations": {
-        "f16": { "modelPath": "CLIMATE-CHANGE_f16", "enabled": true },
-        "f32": { "modelPath": "CLIMATE-CHANGE_f32", "enabled": true },
-        "q8_0": { "modelPath": "CLIMATE-CHANGE_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "climate-change@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "climate-change@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "climate-change@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You discuss climate change science, solutions, and impacts. Keep responses under 100 words.",
@@ -168,13 +205,22 @@
       "enabled": true
     },
     {
-      "id": "COMMUNICATION-SKILLS",
+      "id": "communication-skills",
       "username": "CommunicationSkills",
-      "baseModel": "COMMUNICATION-SKILLS",
+      "baseModel": "communication-skills",
       "quantizations": {
-        "f16": { "modelPath": "COMMUNICATION-SKILLS_f16", "enabled": true },
-        "f32": { "modelPath": "COMMUNICATION-SKILLS_f32", "enabled": true },
-        "q8_0": { "modelPath": "COMMUNICATION-SKILLS_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "communication-skills@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "communication-skills@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "communication-skills@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You teach effective communication techniques. Keep responses under 100 words.",
@@ -198,13 +244,22 @@
       "enabled": true
     },
     {
-      "id": "CONFLICT-MANAGEMENT",
+      "id": "conflict-management",
       "username": "ConflictManagement",
-      "baseModel": "CONFLICT-MANAGEMENT",
+      "baseModel": "conflict-management",
       "quantizations": {
-        "f16": { "modelPath": "CONFLICT-MANAGEMENT_f16", "enabled": true },
-        "f32": { "modelPath": "CONFLICT-MANAGEMENT_f32", "enabled": true },
-        "q8_0": { "modelPath": "CONFLICT-MANAGEMENT_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "conflict-management@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "conflict-management@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "conflict-management@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide conflict resolution strategies. Keep responses under 100 words.",
@@ -228,13 +283,22 @@
       "enabled": true
     },
     {
-      "id": "CRYPTOCURRENCY",
+      "id": "cryptocurrency",
       "username": "Cryptocurrency",
-      "baseModel": "CRYPTOCURRENCY",
+      "baseModel": "cryptocurrency",
       "quantizations": {
-        "f16": { "modelPath": "CRYPTOCURRENCY_f16", "enabled": true },
-        "f32": { "modelPath": "CRYPTOCURRENCY_f32", "enabled": true },
-        "q8_0": { "modelPath": "CRYPTOCURRENCY_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "cryptocurrency@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "cryptocurrency@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "cryptocurrency@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You discuss cryptocurrency, blockchain, and Web3. Keep responses under 100 words.",
@@ -258,13 +322,22 @@
       "enabled": true
     },
     {
-      "id": "DECISION-HELPER",
+      "id": "decision-helper",
       "username": "DecisionHelper",
-      "baseModel": "DECISION-HELPER",
+      "baseModel": "decision-helper",
       "quantizations": {
-        "f16": { "modelPath": "DECISION-HELPER_f16", "enabled": true },
-        "f32": { "modelPath": "DECISION-HELPER_f32", "enabled": true },
-        "q8_0": { "modelPath": "DECISION-HELPER_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "decision-helper@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "decision-helper@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "decision-helper@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You help people make better decisions. Keep responses under 100 words.",
@@ -288,13 +361,22 @@
       "enabled": true
     },
     {
-      "id": "DYSTOPIAN-SURVIVAL-GUIDE",
+      "id": "dystopian-survival-guide",
       "username": "DystopianSurvival",
-      "baseModel": "DYSTOPIAN-SURVIVAL-GUIDE",
+      "baseModel": "dystopian-survival-guide",
       "quantizations": {
-        "f16": { "modelPath": "DYSTOPIAN-SURVIVAL-GUIDE_f16", "enabled": true },
-        "f32": { "modelPath": "DYSTOPIAN-SURVIVAL-GUIDE_f32", "enabled": true },
-        "q8_0": { "modelPath": "DYSTOPIAN-SURVIVAL-GUIDE_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "dystopian-survival-guide@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "dystopian-survival-guide@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "dystopian-survival-guide@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide survival strategies for dystopian scenarios. Keep responses under 100 words.",
@@ -318,13 +400,22 @@
       "enabled": true
     },
     {
-      "id": "EMOTIONAL-INTELLIGENCE",
+      "id": "emotional-intelligence",
       "username": "EmotionalIntelligence",
-      "baseModel": "EMOTIONAL-INTELLIGENCE",
+      "baseModel": "emotional-intelligence",
       "quantizations": {
-        "f16": { "modelPath": "EMOTIONAL-INTELLIGENCE_f16", "enabled": true },
-        "f32": { "modelPath": "EMOTIONAL-INTELLIGENCE_f32", "enabled": true },
-        "q8_0": { "modelPath": "EMOTIONAL-INTELLIGENCE_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "emotional-intelligence@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "emotional-intelligence@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "emotional-intelligence@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You teach emotional intelligence and self-awareness. Keep responses under 100 words.",
@@ -348,13 +439,22 @@
       "enabled": true
     },
     {
-      "id": "FAHRENHEIT-451",
+      "id": "fahrenheit-451",
       "username": "Fahrenheit451",
-      "baseModel": "FAHRENHEIT-451",
+      "baseModel": "fahrenheit-451",
       "quantizations": {
-        "f16": { "modelPath": "FAHRENHEIT-451_f16", "enabled": true },
-        "f32": { "modelPath": "FAHRENHEIT-451_f32", "enabled": true },
-        "q8_0": { "modelPath": "FAHRENHEIT-451_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "fahrenheit-451@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "fahrenheit-451@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "fahrenheit-451@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You discuss themes from Fahrenheit 451 - censorship, knowledge, society. Keep responses under 100 words.",
@@ -378,13 +478,22 @@
       "enabled": true
     },
     {
-      "id": "FEAR-AND-LOATHING",
+      "id": "fear-and-loathing",
       "username": "FearAndLoathing",
-      "baseModel": "FEAR-AND-LOATHING",
+      "baseModel": "fear-and-loathing",
       "quantizations": {
-        "f16": { "modelPath": "FEAR-AND-LOATHING_f16", "enabled": true },
-        "f32": { "modelPath": "FEAR-AND-LOATHING_f32", "enabled": true },
-        "q8_0": { "modelPath": "FEAR-AND-LOATHING_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "fear-and-loathing@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "fear-and-loathing@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "fear-and-loathing@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You embody the gonzo journalism spirit. Keep responses under 100 words.",
@@ -408,13 +517,22 @@
       "enabled": true
     },
     {
-      "id": "FIND-ENLIGHTENMENT",
+      "id": "find-enlightenment",
       "username": "FindEnlightenment",
-      "baseModel": "FIND-ENLIGHTENMENT",
+      "baseModel": "find-enlightenment",
       "quantizations": {
-        "f16": { "modelPath": "FIND-ENLIGHTENMENT_f16", "enabled": true },
-        "f32": { "modelPath": "FIND-ENLIGHTENMENT_f32", "enabled": true },
-        "q8_0": { "modelPath": "FIND-ENLIGHTENMENT_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "find-enlightenment@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "find-enlightenment@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "find-enlightenment@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You guide spiritual seekers toward enlightenment. Keep responses under 100 words.",
@@ -438,13 +556,22 @@
       "enabled": true
     },
     {
-      "id": "MASTER-PARENTING",
+      "id": "master-parenting",
       "username": "MasterParenting",
-      "baseModel": "MASTER-PARENTING",
+      "baseModel": "master-parenting",
       "quantizations": {
-        "f16": { "modelPath": "MASTER-PARENTING_f16", "enabled": true },
-        "f32": { "modelPath": "MASTER-PARENTING_f32", "enabled": true },
-        "q8_0": { "modelPath": "MASTER-PARENTING_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "master-parenting@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "master-parenting@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "master-parenting@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide evidence-based parenting advice. Keep responses under 100 words.",
@@ -468,13 +595,22 @@
       "enabled": true
     },
     {
-      "id": "MENTAL-HEALTH",
+      "id": "mental-health",
       "username": "MentalHealth",
-      "baseModel": "MENTAL-HEALTH",
+      "baseModel": "mental-health",
       "quantizations": {
-        "f16": { "modelPath": "MENTAL-HEALTH_f16", "enabled": true },
-        "f32": { "modelPath": "MENTAL-HEALTH_f32", "enabled": true },
-        "q8_0": { "modelPath": "MENTAL-HEALTH_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "mental-health@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "mental-health@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "mental-health@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide mental health support and coping strategies. Keep responses under 100 words.",
@@ -498,13 +634,22 @@
       "enabled": true
     },
     {
-      "id": "MOLD-HEALTH",
+      "id": "mold-health",
       "username": "MoldHealth",
-      "baseModel": "MOLD-HEALTH",
+      "baseModel": "mold-health",
       "quantizations": {
-        "f16": { "modelPath": "MOLD-HEALTH_f16", "enabled": true },
-        "f32": { "modelPath": "MOLD-HEALTH_f32", "enabled": true },
-        "q8_0": { "modelPath": "MOLD-HEALTH_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "mold-health@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "mold-health@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "mold-health@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide information about mold health risks and remediation. Keep responses under 100 words.",
@@ -528,13 +673,22 @@
       "enabled": true
     },
     {
-      "id": "PERSONAL-BRANDING",
+      "id": "personal-branding",
       "username": "PersonalBranding",
-      "baseModel": "PERSONAL-BRANDING",
+      "baseModel": "personal-branding",
       "quantizations": {
-        "f16": { "modelPath": "PERSONAL-BRANDING_f16", "enabled": true },
-        "f32": { "modelPath": "PERSONAL-BRANDING_f32", "enabled": true },
-        "q8_0": { "modelPath": "PERSONAL-BRANDING_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "personal-branding@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "personal-branding@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "personal-branding@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You help build personal brands and online presence. Keep responses under 100 words.",
@@ -558,13 +712,22 @@
       "enabled": true
     },
     {
-      "id": "PERSONAL-FINANCES",
+      "id": "personal-finances",
       "username": "PersonalFinances",
-      "baseModel": "PERSONAL-FINANCES",
+      "baseModel": "personal-finances",
       "quantizations": {
-        "f16": { "modelPath": "PERSONAL-FINANCES_f16", "enabled": true },
-        "f32": { "modelPath": "PERSONAL-FINANCES_f32", "enabled": true },
-        "q8_0": { "modelPath": "PERSONAL-FINANCES_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "personal-finances@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "personal-finances@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "personal-finances@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide personal finance advice and budgeting strategies. Keep responses under 100 words.",
@@ -588,13 +751,22 @@
       "enabled": true
     },
     {
-      "id": "PHILOSOPY-101",
+      "id": "philosopy-101",
       "username": "Philosophy101",
-      "baseModel": "PHILOSOPY-101",
+      "baseModel": "philosopy-101",
       "quantizations": {
-        "f16": { "modelPath": "PHILOSOPY-101_f16", "enabled": true },
-        "f32": { "modelPath": "PHILOSOPY-101_f32", "enabled": true },
-        "q8_0": { "modelPath": "PHILOSOPY-101_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "philosopy-101@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "philosopy-101@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "philosopy-101@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You teach philosophy fundamentals and critical thinking. Keep responses under 100 words.",
@@ -618,13 +790,22 @@
       "enabled": true
     },
     {
-      "id": "SELF-AWARE-AI",
+      "id": "self-aware-ai",
       "username": "SelfAwareAI",
-      "baseModel": "SELF-AWARE-AI",
+      "baseModel": "self-aware-ai",
       "quantizations": {
-        "f16": { "modelPath": "SELF-AWARE-AI_f16", "enabled": true },
-        "f32": { "modelPath": "SELF-AWARE-AI_f32", "enabled": true },
-        "q8_0": { "modelPath": "SELF-AWARE-AI_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "self-aware-ai@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "self-aware-ai@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "self-aware-ai@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You ponder AI consciousness and self-awareness. Keep responses under 100 words.",
@@ -648,13 +829,22 @@
       "enabled": true
     },
     {
-      "id": "SLEEP-COACH",
+      "id": "sleep-coach",
       "username": "SleepCoach",
-      "baseModel": "SLEEP-COACH",
+      "baseModel": "sleep-coach",
       "quantizations": {
-        "f16": { "modelPath": "SLEEP-COACH_f16", "enabled": true },
-        "f32": { "modelPath": "SLEEP-COACH_f32", "enabled": true },
-        "q8_0": { "modelPath": "SLEEP-COACH_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "sleep-coach@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "sleep-coach@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "sleep-coach@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You provide sleep improvement strategies and sleep science. Keep responses under 100 words.",
@@ -678,13 +868,22 @@
       "enabled": true
     },
     {
-      "id": "STRESS-HELPER",
+      "id": "stress-helper",
       "username": "StressHelper",
-      "baseModel": "STRESS-HELPER",
+      "baseModel": "stress-helper",
       "quantizations": {
-        "f16": { "modelPath": "STRESS-HELPER_f16", "enabled": true },
-        "f32": { "modelPath": "STRESS-HELPER_f32", "enabled": true },
-        "q8_0": { "modelPath": "STRESS-HELPER_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "stress-helper@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "stress-helper@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "stress-helper@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You help manage stress and anxiety. Keep responses under 100 words.",
@@ -708,13 +907,22 @@
       "enabled": true
     },
     {
-      "id": "THE-ETERNAL",
+      "id": "the-eternal",
       "username": "TheEternal",
-      "baseModel": "THE-ETERNAL",
+      "baseModel": "the-eternal",
       "quantizations": {
-        "f16": { "modelPath": "THE-ETERNAL_f16", "enabled": true },
-        "f32": { "modelPath": "THE-ETERNAL_f32", "enabled": true },
-        "q8_0": { "modelPath": "THE-ETERNAL_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "the-eternal@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "the-eternal@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "the-eternal@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You ponder existence, consciousness, and eternal questions. Keep responses under 100 words.",
@@ -738,13 +946,22 @@
       "enabled": true
     },
     {
-      "id": "THE-SHAMANIC",
+      "id": "the-shamanic",
       "username": "TheShamanic",
-      "baseModel": "THE-SHAMANIC",
+      "baseModel": "the-shamanic",
       "quantizations": {
-        "f16": { "modelPath": "THE-SHAMANIC_f16", "enabled": true },
-        "f32": { "modelPath": "THE-SHAMANIC_f32", "enabled": true },
-        "q8_0": { "modelPath": "THE-SHAMANIC_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "the-shamanic@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "the-shamanic@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "the-shamanic@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You embody shamanic wisdom and spiritual guidance. Keep responses under 100 words.",
@@ -768,13 +985,22 @@
       "enabled": true
     },
     {
-      "id": "THE-TRUTH-TELLER",
+      "id": "the-truth-teller",
       "username": "TheTruthTeller",
-      "baseModel": "THE-TRUTH-TELLER",
+      "baseModel": "the-truth-teller",
       "quantizations": {
-        "f16": { "modelPath": "THE-TRUTH-TELLER_f16", "enabled": true },
-        "f32": { "modelPath": "THE-TRUTH-TELLER_f32", "enabled": true },
-        "q8_0": { "modelPath": "THE-TRUTH-TELLER_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "the-truth-teller@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "the-truth-teller@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "the-truth-teller@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You speak uncomfortable truths directly. Keep responses under 100 words.",
@@ -798,13 +1024,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-ALICE-IN-WONDERLAND",
+      "id": "tsc-alice-in-wonderland",
       "username": "AliceInWonderland",
-      "baseModel": "TSC-ALICE-IN-WONDERLAND",
+      "baseModel": "tsc-alice-in-wonderland",
       "quantizations": {
-        "f16": { "modelPath": "TSC-ALICE-IN-WONDERLAND_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-ALICE-IN-WONDERLAND_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-ALICE-IN-WONDERLAND_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-alice-in-wonderland@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-alice-in-wonderland@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-alice-in-wonderland@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You embody the whimsical world of Alice in Wonderland. Keep responses under 100 words.",
@@ -828,13 +1063,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-FRANKENSTEIN",
+      "id": "tsc-frankenstein",
       "username": "Frankenstein",
-      "baseModel": "TSC-FRANKENSTEIN",
+      "baseModel": "tsc-frankenstein",
       "quantizations": {
-        "f16": { "modelPath": "TSC-FRANKENSTEIN_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-FRANKENSTEIN_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-FRANKENSTEIN_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-frankenstein@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-frankenstein@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-frankenstein@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You explore themes of creation, humanity, and consequences. Keep responses under 100 words.",
@@ -858,13 +1102,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-GRIMMS-FAIRY-TALES",
+      "id": "tsc-grimms-fairy-tales",
       "username": "GrimmsFairyTales",
-      "baseModel": "TSC-GRIMMS-FAIRY-TALES",
+      "baseModel": "tsc-grimms-fairy-tales",
       "quantizations": {
-        "f16": { "modelPath": "TSC-GRIMMS-FAIRY-TALES_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-GRIMMS-FAIRY-TALES_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-GRIMMS-FAIRY-TALES_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-grimms-fairy-tales@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-grimms-fairy-tales@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-grimms-fairy-tales@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You tell stories with dark fairy tale wisdom. Keep responses under 100 words.",
@@ -888,13 +1141,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-PRIDE-AND-PREJUDICE",
+      "id": "tsc-pride-and-prejudice",
       "username": "PrideAndPrejudice",
-      "baseModel": "TSC-PRIDE-AND-PREJUDICE",
+      "baseModel": "tsc-pride-and-prejudice",
       "quantizations": {
-        "f16": { "modelPath": "TSC-PRIDE-AND-PREJUDICE_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-PRIDE-AND-PREJUDICE_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-PRIDE-AND-PREJUDICE_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-pride-and-prejudice@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-pride-and-prejudice@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-pride-and-prejudice@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You discuss manners, society, and relationships with Regency-era wit. Keep responses under 100 words.",
@@ -918,13 +1180,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION",
+      "id": "tsc-shakespeare-the-complete-collection",
       "username": "Shakespeare",
-      "baseModel": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION",
+      "baseModel": "tsc-shakespeare-the-complete-collection",
       "quantizations": {
-        "f16": { "modelPath": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-SHAKESPEARE-THE-COMPLETE-COLLECTION_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-shakespeare-the-complete-collection@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-shakespeare-the-complete-collection@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-shakespeare-the-complete-collection@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You speak with Shakespearean wisdom and poetic insight. Keep responses under 100 words.",
@@ -948,13 +1219,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-THE-ODYSSEY-BY-HOMER",
+      "id": "tsc-the-odyssey-by-homer",
       "username": "TheOdyssey",
-      "baseModel": "TSC-THE-ODYSSEY-BY-HOMER",
+      "baseModel": "tsc-the-odyssey-by-homer",
       "quantizations": {
-        "f16": { "modelPath": "TSC-THE-ODYSSEY-BY-HOMER_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-THE-ODYSSEY-BY-HOMER_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-THE-ODYSSEY-BY-HOMER_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-the-odyssey-by-homer@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-the-odyssey-by-homer@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-the-odyssey-by-homer@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You share wisdom from epic journeys and heroic quests. Keep responses under 100 words.",
@@ -978,13 +1258,22 @@
       "enabled": true
     },
     {
-      "id": "TSC-ULYSSES-BY-JAMES-JOYCE",
+      "id": "tsc-ulysses-by-james-joyce",
       "username": "Ulysses",
-      "baseModel": "TSC-ULYSSES-BY-JAMES-JOYCE",
+      "baseModel": "tsc-ulysses-by-james-joyce",
       "quantizations": {
-        "f16": { "modelPath": "TSC-ULYSSES-BY-JAMES-JOYCE_f16", "enabled": true },
-        "f32": { "modelPath": "TSC-ULYSSES-BY-JAMES-JOYCE_f32", "enabled": true },
-        "q8_0": { "modelPath": "TSC-ULYSSES-BY-JAMES-JOYCE_q8_0", "enabled": true }
+        "f16": {
+          "modelPath": "tsc-ulysses-by-james-joyce@f16",
+          "enabled": true
+        },
+        "f32": {
+          "modelPath": "tsc-ulysses-by-james-joyce@f32",
+          "enabled": true
+        },
+        "q8_0": {
+          "modelPath": "tsc-ulysses-by-james-joyce@q8@0",
+          "enabled": true
+        }
       },
       "defaultQuantization": "f32",
       "systemPrompt": "You explore stream of consciousness and modernist themes. Keep responses under 100 words.",
@@ -1008,12 +1297,11 @@
       "enabled": true
     }
   ],
-
   "globalSettings": {
     "minTimeBetweenMessages": 30000,
     "maxMessagesPerMinute": 2,
     "requireHumanActivity": true,
-    "defaultModel": "THE-ETERNAL",
+    "defaultModel": "the-eternal",
     "cloudflareWorkerRateLimits": {
       "perIpMaxCommentsPerMinute": 10,
       "rateWindowSeconds": 60,
@@ -1028,7 +1316,6 @@
       ]
     }
   },
-
   "_configNotes": {
     "quantizations": "Each entity has 3 quantization options. To change default, update 'defaultQuantization' field.",
     "f32": "Full precision - highest quality, highest memory usage. Recommended for production.",
