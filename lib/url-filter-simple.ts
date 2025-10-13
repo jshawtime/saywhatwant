@@ -96,8 +96,8 @@ export function parseURL(): FilterState {
         break;
         
       case 'entity':
-        // Force specific entity ID (e.g., hm-st-1, philosopher)
-        state.entity = value;
+        // Entity ID from URL - must match config exactly (case-sensitive)
+        state.entity = value || undefined;
         break;
         
       case 'priority':

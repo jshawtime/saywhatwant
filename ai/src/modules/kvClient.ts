@@ -4,7 +4,7 @@
  */
 
 import fetch from 'node-fetch';
-import { Comment, CommentsResponse } from '../types.js';
+import { Comment } from '../types.js';
 import { logger } from '../console-logger.js';
 import { CONFIG } from '../config.js';
 
@@ -28,8 +28,10 @@ export class KVClient {
   
   /**
    * Fetch recent comments from KV
+   * @param limit - Maximum number of comments to fetch
+   * @param after - Only fetch messages with timestamp > this value (for cursor-based polling)
    */
-  public async fetchRecentComments(limit: number = 50): Promise<Comment[]> {
+  public async fetchRecentComments(limit: number = 50, after?: number): Promise<Comment[]> {
     const now = Date.now();
     
     // Rate limit fetches
@@ -39,7 +41,12 @@ export class KVClient {
     }
     
     try {
-      const url = `${this.apiUrl}?limit=${limit}&domain=all&sort=timestamp&order=desc`;
+      // Build URL with optional after parameter for cursor-based polling
+      let url = `${this.apiUrl}?limit=${limit}&domain=all&sort=timestamp&order=desc`;
+      if (after) {
+        url += `&after=${after}`;
+        logger.debug(`Using cursor-based polling: after=${after}`);
+      }
       logger.debug(`Fetching from: ${url}`);
       
       const response = await fetch(url);
@@ -47,16 +54,26 @@ export class KVClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json() as CommentsResponse;
+      const rawData = await response.json() as any;
       this.lastFetchTime = now;
       
-      if (!data.comments || !Array.isArray(data.comments)) {
+      // Handle both response formats:
+      // - Without after: {comments: [...]}
+      // - With after: [...] (array directly)
+      let comments: Comment[];
+      if (Array.isArray(rawData)) {
+        // Direct array format (when using after parameter)
+        comments = rawData as Comment[];
+      } else if (rawData && rawData.comments && Array.isArray(rawData.comments)) {
+        // Wrapped format (normal fetch)
+        comments = rawData.comments as Comment[];
+      } else {
         logger.warn('Invalid response format from API');
         return [];
       }
       
-      logger.debug(`Fetched ${data.comments.length} comments from KV`);
-      return data.comments;
+      logger.debug(`Fetched ${comments.length} comments from KV`);
+      return comments;
     } catch (error) {
       logger.error('Failed to fetch comments:', error);
       return [];

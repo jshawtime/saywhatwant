@@ -16,9 +16,12 @@ import { getConversationAnalyzer } from './modules/conversationAnalyzer.js';
 import { getKVClient } from './modules/kvClient.js';
 import { QueueService } from './modules/queueService.js';
 import { QueueWebSocketServer } from './modules/websocketServer.js';
+import { SlidingWindowTracker, MessageDeduplicator } from './modules/slidingWindowTracker.js';
+import { EntityValidator } from './modules/entityValidator.js';
 
 // Initialize modules
 const entityManager = getEntityManager();
+const entityValidator = new EntityValidator(entityManager);
 const analyzer = getConversationAnalyzer();
 const kvClient = getKVClient();
 
@@ -83,8 +86,10 @@ const state: BotState = {
   consecutiveSilence: 0,
 };
 
-// Track processed message IDs to prevent re-queueing
-const processedMessageIds = new Set<string>();
+// Initialize sliding window tracker - simple, stateless, scales to 10M+ users
+// Only process messages from the last 5 minutes to prevent reprocessing on restart
+const windowTracker = new SlidingWindowTracker(5); // 5 minute window
+const deduplicator = new MessageDeduplicator();
 
 // State no longer needs initialization - entity comes from botParams
 
@@ -262,6 +267,10 @@ async function runBot() {
       const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.nom || 100));
       
       console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${POLLING_INTERVAL/1000}s)`);
+      const windowStart = windowTracker.getWindowStart();
+      console.log(chalk.cyan('[WINDOW]'), `Processing messages from last 5 minutes (after ${new Date(windowStart).toISOString()})`);
+      // Note: We fetch more messages but only process those in our window
+      // This is more robust than relying on stored state
       const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
       console.log(chalk.magenta('[POLLING]'), `Fetched ${messages.length} messages`);
       
@@ -274,28 +283,23 @@ async function runBot() {
           // QUEUE MODE: Process ALL HUMAN messages (not AI responses)
           console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages`);
           
-          // DEBUG: Show timestamp range
-          const timestamps = messages.map(m => m.timestamp).filter(Boolean);
-          if (timestamps.length > 0) {
-            const oldest = Math.min(...timestamps);
-            const newest = Math.max(...timestamps);
-            console.log(chalk.cyan('[QUEUE DEBUG]'), `Timestamp range: ${new Date(oldest).toLocaleTimeString()} - ${new Date(newest).toLocaleTimeString()}`);
-            console.log(chalk.cyan('[QUEUE DEBUG]'), `Newest message: "${messages[0]?.text}" from ${messages[0]?.username}`);
-          }
-          
           let queued = 0;
           let skipped = 0;
           
-          // DEBUG: Show Set size and sample contents
-          console.log(chalk.magenta('[SET DEBUG]'), `processedMessageIds size: ${processedMessageIds.size}`);
-          if (processedMessageIds.size > 0 && processedMessageIds.size < 20) {
-            console.log(chalk.magenta('[SET CONTENTS]'), Array.from(processedMessageIds));
-          }
-          console.log(chalk.magenta('[SET DEBUG]'), `First few message IDs from KV:`, messages.slice(0, 5).map(m => m.id));
           
           for (const message of messages) {
-            // DEBUG: Log every message with actual ID
-            console.log(chalk.gray('[QUEUE DEBUG]'), `Msg: "${message.text}", ID: ${message.id}, Processed: ${processedMessageIds.has(message.id)}`);
+            // Check if message is within our processing window
+            if (!windowTracker.shouldProcess(message.timestamp)) {
+              console.log(chalk.gray('[SKIP]'), `Outside window: ${message.text.substring(0, 30)}... (${new Date(message.timestamp).toISOString()})`);
+              continue;
+            }
+            
+            // Fast-path deduplication check
+            if (deduplicator.hasSeenRecently(message.id)) {
+              console.log(chalk.gray('[SKIP]'), `Already seen: ${message.id}`);
+              skipped++;
+              continue;
+            }
             
             // Skip AI messages (don't queue bot responses)
             if (message['message-type'] === 'AI') {
@@ -303,12 +307,6 @@ async function runBot() {
               continue;
             }
             
-            // Skip already processed
-            if (processedMessageIds.has(message.id)) {
-              console.log(chalk.gray('[SKIP]'), `Already processed: ${message.text}`);
-              skipped++;
-              continue;
-            }
             
             console.log(chalk.blue('[QUEUE]'), `Processing human message: ${message.username}`);
             
@@ -320,28 +318,18 @@ async function runBot() {
             
             const botParams = message.botParams || {};
             
-            // DEBUG: Log message structure
-            console.log(chalk.cyan('[DEBUG]'), `Message text: "${message.text}"`);
-            console.log(chalk.cyan('[DEBUG]'), `Message botParams:`, JSON.stringify(botParams));
-            console.log(chalk.cyan('[DEBUG]'), `Has entity:`, !!botParams.entity);
+            // Validate entity using EntityValidator
+            const validation = entityValidator.validateEntity(botParams, {
+              id: message.id,
+              text: message.text
+            });
             
-            // 1. SELECT ENTITY (with fallback chain)
-            let entity;
-            // Entity MUST be specified in botParams - no fallbacks
-            if (!botParams.entity) {
-              console.error(chalk.red('[BOT PARAMS ERROR]'), `No entity in message "${message.text}" - skipping`);
+            if (!validation.valid) {
               skipped++;
-              continue; // Skip this message, process next
+              continue; // Skip invalid message, process next
             }
             
-            entity = fullConfig.entities.find((e: any) => e.id === botParams.entity);
-            
-            if (!entity) {
-              console.error(chalk.red('[BOT PARAMS ERROR]'), `Entity "${botParams.entity}" not found in message "${message.text}" - skipping`);
-              console.error(chalk.yellow('[AVAILABLE]'), fullConfig.entities.map((e: any) => e.id).join(', '));
-              skipped++;
-              continue; // Skip this message, process next
-            }
+            const entity = validation.entity;
             
             console.log(chalk.green('[BOT PARAMS]'), 
               `Using specified entity: ${botParams.entity}`);
@@ -414,16 +402,8 @@ async function runBot() {
             
             await queueService.enqueue(queueItem);
             
-            // Mark as processed AFTER successful queue (not before!)
-            processedMessageIds.add(message.id);
-            console.log(chalk.green('[SET DEBUG]'), `Added to processedMessageIds: ${message.id}`);
-            
-            // Limit Set size (keep last 10000 IDs)
-            if (processedMessageIds.size > 10000) {
-              const idsArray = Array.from(processedMessageIds);
-              processedMessageIds.clear();
-              idsArray.slice(-5000).forEach(id => processedMessageIds.add(id));
-            }
+            // Mark as seen for deduplication
+            deduplicator.markSeen(message.id);
             
             // Emit WebSocket event
             if (queueWS) {
@@ -436,7 +416,9 @@ async function runBot() {
             queued++;
           }
           
-          console.log(chalk.blue('[QUEUE]'), `Queued ${queued} human messages, skipped ${skipped} duplicates`);
+          // No state to update - we're stateless and that's good for scale
+          
+          console.log(chalk.blue('[QUEUE]'), `Queued ${queued} human messages, skipped ${skipped} AI/system messages`);
         } else {
           // DIRECT MODE: Disabled - queue system required
           console.error(chalk.red('[DIRECT]'), 'Direct mode disabled - use queue system with entity specified');

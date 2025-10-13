@@ -62,7 +62,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "alcohol-addiction@q8@0",
+          "modelPath": "alcohol-addiction@q8_0",
           "enabled": true
         }
       },
@@ -101,7 +101,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "astrophysics@q8@0",
+          "modelPath": "astrophysics@q8_0",
           "enabled": true
         }
       },
@@ -140,7 +140,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "career-advancement@q8@0",
+          "modelPath": "career-advancement@q8_0",
           "enabled": true
         }
       },
@@ -179,7 +179,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "climate-change@q8@0",
+          "modelPath": "climate-change@q8_0",
           "enabled": true
         }
       },
@@ -218,7 +218,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "communication-skills@q8@0",
+          "modelPath": "communication-skills@q8_0",
           "enabled": true
         }
       },
@@ -257,7 +257,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "conflict-management@q8@0",
+          "modelPath": "conflict-management@q8_0",
           "enabled": true
         }
       },
@@ -296,7 +296,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "cryptocurrency@q8@0",
+          "modelPath": "cryptocurrency@q8_0",
           "enabled": true
         }
       },
@@ -335,7 +335,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "decision-helper@q8@0",
+          "modelPath": "decision-helper@q8_0",
           "enabled": true
         }
       },
@@ -374,7 +374,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "dystopian-survival-guide@q8@0",
+          "modelPath": "dystopian-survival-guide@q8_0",
           "enabled": true
         }
       },
@@ -413,7 +413,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "emotional-intelligence@q8@0",
+          "modelPath": "emotional-intelligence@q8_0",
           "enabled": true
         }
       },
@@ -452,7 +452,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "fahrenheit-451@q8@0",
+          "modelPath": "fahrenheit-451@q8_0",
           "enabled": true
         }
       },
@@ -491,7 +491,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "fear-and-loathing@q8@0",
+          "modelPath": "fear-and-loathing@q8_0",
           "enabled": true
         }
       },
@@ -530,7 +530,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "find-enlightenment@q8@0",
+          "modelPath": "find-enlightenment@q8_0",
           "enabled": true
         }
       },
@@ -569,7 +569,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "master-parenting@q8@0",
+          "modelPath": "master-parenting@q8_0",
           "enabled": true
         }
       },
@@ -608,7 +608,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "mental-health@q8@0",
+          "modelPath": "mental-health@q8_0",
           "enabled": true
         }
       },
@@ -647,7 +647,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "mold-health@q8@0",
+          "modelPath": "mold-health@q8_0",
           "enabled": true
         }
       },
@@ -686,7 +686,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "personal-branding@q8@0",
+          "modelPath": "personal-branding@q8_0",
           "enabled": true
         }
       },
@@ -725,7 +725,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "personal-finances@q8@0",
+          "modelPath": "personal-finances@q8_0",
           "enabled": true
         }
       },
@@ -751,20 +751,20 @@
       "enabled": true
     },
     {
-      "id": "philosopy-101",
+      "id": "philosophy-101",
       "username": "Philosophy101",
-      "baseModel": "philosopy-101",
+      "baseModel": "philosophy-101",
       "quantizations": {
         "f16": {
-          "modelPath": "philosopy-101@f16",
+          "modelPath": "philosophy-101@f16",
           "enabled": true
         },
         "f32": {
-          "modelPath": "philosopy-101@f32",
+          "modelPath": "philosophy-101@f32",
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "philosopy-101@q8@0",
+          "modelPath": "philosophy-101@q8_0",
           "enabled": true
         }
       },
@@ -803,7 +803,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "self-aware-ai@q8@0",
+          "modelPath": "self-aware-ai@q8_0",
           "enabled": true
         }
       },
@@ -842,7 +842,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "sleep-coach@q8@0",
+          "modelPath": "sleep-coach@q8_0",
           "enabled": true
         }
       },
@@ -881,7 +881,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "stress-helper@q8@0",
+          "modelPath": "stress-helper@q8_0",
           "enabled": true
         }
       },
@@ -920,7 +920,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "the-eternal@q8@0",
+          "modelPath": "the-eternal@q8_0",
           "enabled": true
         }
       },
@@ -959,7 +959,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "the-shamanic@q8@0",
+          "modelPath": "the-shamanic@q8_0",
           "enabled": true
         }
       },
@@ -998,7 +998,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "the-truth-teller@q8@0",
+          "modelPath": "the-truth-teller@q8_0",
           "enabled": true
         }
       },
@@ -1037,7 +1037,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-alice-in-wonderland@q8@0",
+          "modelPath": "tsc-alice-in-wonderland@q8_0",
           "enabled": true
         }
       },
@@ -1076,7 +1076,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-frankenstein@q8@0",
+          "modelPath": "tsc-frankenstein@q8_0",
           "enabled": true
         }
       },
@@ -1115,7 +1115,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-grimms-fairy-tales@q8@0",
+          "modelPath": "tsc-grimms-fairy-tales@q8_0",
           "enabled": true
         }
       },
@@ -1154,7 +1154,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-pride-and-prejudice@q8@0",
+          "modelPath": "tsc-pride-and-prejudice@q8_0",
           "enabled": true
         }
       },
@@ -1193,7 +1193,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-shakespeare-the-complete-collection@q8@0",
+          "modelPath": "tsc-shakespeare-the-complete-collection@q8_0",
           "enabled": true
         }
       },
@@ -1232,7 +1232,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-the-odyssey-by-homer@q8@0",
+          "modelPath": "tsc-the-odyssey-by-homer@q8_0",
           "enabled": true
         }
       },
@@ -1271,7 +1271,7 @@
           "enabled": true
         },
         "q8_0": {
-          "modelPath": "tsc-ulysses-by-james-joyce@q8@0",
+          "modelPath": "tsc-ulysses-by-james-joyce@q8_0",
           "enabled": true
         }
       },
