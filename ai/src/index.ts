@@ -288,9 +288,10 @@ async function runBot() {
           
           // DEBUG: Show Set size and sample contents
           console.log(chalk.magenta('[SET DEBUG]'), `processedMessageIds size: ${processedMessageIds.size}`);
-          if (processedMessageIds.size > 0 && processedMessageIds.size < 10) {
+          if (processedMessageIds.size > 0 && processedMessageIds.size < 20) {
             console.log(chalk.magenta('[SET CONTENTS]'), Array.from(processedMessageIds));
           }
+          console.log(chalk.magenta('[SET DEBUG]'), `First few message IDs from KV:`, messages.slice(0, 5).map(m => m.id));
           
           for (const message of messages) {
             // DEBUG: Log every message with actual ID
@@ -415,6 +416,7 @@ async function runBot() {
             
             // Mark as processed AFTER successful queue (not before!)
             processedMessageIds.add(message.id);
+            console.log(chalk.green('[SET DEBUG]'), `Added to processedMessageIds: ${message.id}`);
             
             // Limit Set size (keep last 10000 IDs)
             if (processedMessageIds.size > 10000) {

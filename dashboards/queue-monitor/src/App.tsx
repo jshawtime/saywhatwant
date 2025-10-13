@@ -13,6 +13,7 @@ function App() {
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
   const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
   const [expandedKVMessages, setExpandedKVMessages] = React.useState<Set<number>>(new Set());
+  const [expandedPm2Logs, setExpandedPm2Logs] = React.useState<Set<number>>(new Set());
   const [copiedItems, setCopiedItems] = React.useState<Set<string>>(new Set());
 
   // Update last update time
@@ -47,6 +48,19 @@ function App() {
   // Toggle LLM request expansion
   const toggleRequest = (index: number) => {
     setExpandedRequests(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  // Toggle PM2 log expansion
+  const togglePm2Log = (index: number) => {
+    setExpandedPm2Logs(prev => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -193,7 +207,7 @@ function App() {
         {/* PM2 Logs - CENTER 25% */}
         <div className={styles.logPanel} style={{ width: '25%' }}>
           <div className={styles.panelHeader} style={{ borderBottomColor: '#FF00FF', color: '#FF00FF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>PM2 LOGS</span>
+            <span>PM2 LOGS ({parsedPm2Logs.length})</span>
             <div style={{ display: 'flex', gap: '5px' }}>
               <button
                 onClick={() => fetchPm2Logs(200)}
@@ -210,23 +224,72 @@ function App() {
                 REFRESH
               </button>
               <button
-                onClick={() => copyToClipboard(pm2Logs, 'pm2-logs')}
+                onClick={() => copyToClipboard(pm2Logs, 'pm2-logs-all')}
                 style={{
-                  background: copiedItems.has('pm2-logs') ? '#FF00FF' : 'transparent',
+                  background: copiedItems.has('pm2-logs-all') ? '#FF00FF' : 'transparent',
                   border: '1px solid #FF00FF',
-                  color: copiedItems.has('pm2-logs') ? '#000000' : '#FF00FF',
+                  color: copiedItems.has('pm2-logs-all') ? '#000000' : '#FF00FF',
                   padding: '2px 8px',
                   cursor: 'pointer',
                   fontSize: '11px',
                   fontFamily: 'monospace'
                 }}
               >
-                {copiedItems.has('pm2-logs') ? 'COPIED!' : 'COPY'}
+                {copiedItems.has('pm2-logs-all') ? 'COPIED!' : 'COPY ALL'}
               </button>
             </div>
           </div>
-          <div className={styles.panelContent} style={{ color: '#FF00FF', fontSize: '11px' }}>
-            {pm2Logs || 'Click REFRESH to load PM2 logs...'}
+          <div className={styles.panelContent} style={{ color: '#FF00FF', padding: 0, fontSize: '11px' }}>
+            {parsedPm2Logs.length > 0 ? (
+              parsedPm2Logs.map((logEntry, idx) => {
+                const isExpanded = expandedPm2Logs.has(idx);
+                const itemId = `pm2-${idx}`;
+                const isCopied = copiedItems.has(itemId);
+                
+                return (
+                  <div key={idx} className={styles.llmRequestItem}>
+                    <div
+                      className={styles.llmRequestHeader}
+                      onClick={() => togglePm2Log(idx)}
+                      style={{ borderLeftColor: logEntry.isError ? '#FF0000' : '#FF00FF' }}
+                    >
+                      <div className={styles.llmRequestSummary} style={{ color: logEntry.isError ? '#FF0000' : '#FF00FF', fontSize: '11px' }}>
+                        [{logEntry.timestamp}] #{idx + 1} - {logEntry.message.substring(0, 60)}... {logEntry.isError && '❌'}
+                      </div>
+                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                        <button
+                          onClick={(e) => copyToClipboard(logEntry.fullLine, itemId, e)}
+                          style={{
+                            background: isCopied ? '#FF00FF' : 'transparent',
+                            border: '1px solid #FF00FF',
+                            color: isCopied ? '#000000' : '#FF00FF',
+                            padding: '2px 6px',
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {isCopied ? 'COPIED!' : 'COPY'}
+                        </button>
+                        <div className={`${styles.llmRequestChevron} ${isExpanded ? styles.llmRequestChevronExpanded : ''}`}>
+                          ▼
+                        </div>
+                      </div>
+                    </div>
+                    {isExpanded && (
+                      <div className={styles.llmRequestBody} style={{ fontSize: '10px', color: logEntry.isError ? '#FF0000' : '#FF00FF' }}>
+                        <pre>{logEntry.fullLine}</pre>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ padding: '20px', color: '#664400', textAlign: 'center', fontSize: '11px' }}>
+                Click REFRESH to load PM2 logs...
+              </div>
+            )}
           </div>
         </div>
         
