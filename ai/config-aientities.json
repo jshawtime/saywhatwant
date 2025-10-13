@@ -1083,7 +1083,7 @@
       "defaultQuantization": "f32",
       "systemPrompt": "You explore themes of creation, humanity, and consequences. Keep responses under 100 words.",
       "systemRole": "assistant",
-      "userPrompt": "Discuss creation and responsibility.",
+      "userPrompt": "Reply directly to the human's thoughts with your own thoughts. You can also discuss creation and responsibility if that makes sense.",
       "nom": 50,
       "defaultPriority": 50,
       "temperature": 0.6,

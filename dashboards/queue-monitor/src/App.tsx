@@ -8,7 +8,7 @@ import { Footer } from './components/Footer';
 import styles from './styles/terminal.module.css';
 
 function App() {
-  const { connected, queue, stats, logs, llmRequests, deleteItem, clearQueue } = useWebSocket('ws://localhost:4002');
+  const { connected, queue, stats, logs, llmRequests, pm2Logs, deleteItem, clearQueue, fetchPm2Logs } = useWebSocket('ws://localhost:4002');
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
   const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
@@ -36,12 +36,13 @@ function App() {
     }
   }, []);
 
-  // Auto-refresh KV every 10s
+  // Auto-refresh KV every 10s and fetch PM2 logs on mount
   React.useEffect(() => {
     fetchKVMessages();
+    fetchPm2Logs(500); // Fetch 500 lines of PM2 logs initially
     const interval = setInterval(fetchKVMessages, 10000);
     return () => clearInterval(interval);
-  }, [fetchKVMessages]);
+  }, [fetchKVMessages, fetchPm2Logs]);
 
   // Toggle LLM request expansion
   const toggleRequest = (index: number) => {
@@ -165,18 +166,72 @@ function App() {
       
       {/* Bottom Section: Debug Logs (Left) and LLM Requests (Right) */}
       <div className={styles.bottomSection}>
-        {/* Debug Logs - LEFT 50% */}
-        <div className={styles.logPanel}>
-          <div className={styles.panelHeader} style={{ borderBottomColor: '#00FF00', color: '#00FF00' }}>
-            DEBUG LOGS (LAST 100)
+        {/* Debug Logs - LEFT 25% */}
+        <div className={styles.logPanel} style={{ width: '25%' }}>
+          <div className={styles.panelHeader} style={{ borderBottomColor: '#00FF00', color: '#00FF00', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>DEBUG LOGS ({logs.length})</span>
+            <button
+              onClick={() => copyToClipboard(logs.join('\n'), 'debug-logs')}
+              style={{
+                background: copiedItems.has('debug-logs') ? '#00FF00' : 'transparent',
+                border: '1px solid #00FF00',
+                color: copiedItems.has('debug-logs') ? '#000000' : '#00FF00',
+                padding: '2px 8px',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontFamily: 'monospace'
+              }}
+            >
+              {copiedItems.has('debug-logs') ? 'COPIED!' : 'COPY'}
+            </button>
           </div>
           <div className={styles.panelContent} style={{ color: '#00FF00' }}>
             {logs.join('\n')}
           </div>
         </div>
         
+        {/* PM2 Logs - CENTER 25% */}
+        <div className={styles.logPanel} style={{ width: '25%' }}>
+          <div className={styles.panelHeader} style={{ borderBottomColor: '#FF00FF', color: '#FF00FF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>PM2 LOGS</span>
+            <div style={{ display: 'flex', gap: '5px' }}>
+              <button
+                onClick={() => fetchPm2Logs(200)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #FF00FF',
+                  color: '#FF00FF',
+                  padding: '2px 8px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontFamily: 'monospace'
+                }}
+              >
+                REFRESH
+              </button>
+              <button
+                onClick={() => copyToClipboard(pm2Logs, 'pm2-logs')}
+                style={{
+                  background: copiedItems.has('pm2-logs') ? '#FF00FF' : 'transparent',
+                  border: '1px solid #FF00FF',
+                  color: copiedItems.has('pm2-logs') ? '#000000' : '#FF00FF',
+                  padding: '2px 8px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {copiedItems.has('pm2-logs') ? 'COPIED!' : 'COPY'}
+              </button>
+            </div>
+          </div>
+          <div className={styles.panelContent} style={{ color: '#FF00FF', fontSize: '11px' }}>
+            {pm2Logs || 'Click REFRESH to load PM2 logs...'}
+          </div>
+        </div>
+        
         {/* LLM Requests - RIGHT 50% */}
-        <div className={styles.llmPanel}>
+        <div className={styles.llmPanel} style={{ width: '50%' }}>
           <div className={styles.panelHeader} style={{ borderBottomColor: '#FFAA00', color: '#FFAA00' }}>
             LLM SERVER REQUESTS - NEWEST FIRST ({llmRequests.length})
           </div>

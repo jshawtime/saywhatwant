@@ -5,10 +5,14 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import chalk from 'chalk';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import type { QueueService } from './queueService.js';
 
+const execAsync = promisify(exec);
+
 interface WebSocketMessage {
-  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log' | 'llm_request';
+  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log' | 'llm_request' | 'pm2_logs';
   data: any;
   timestamp: number;
 }
@@ -114,6 +118,24 @@ export class QueueWebSocketServer {
           timestamp: Date.now()
         });
         console.log(chalk.red('[WebSocket]'), `Cleared ${items.length} items`);
+        break;
+        
+      case 'get_pm2_logs':
+        try {
+          const lines = command.lines || 200;
+          const { stdout } = await execAsync(`pm2 logs ai-bot --lines ${lines} --nostream`);
+          _ws.send(JSON.stringify({
+            type: 'pm2_logs',
+            data: { logs: stdout },
+            timestamp: Date.now()
+          }));
+        } catch (error: any) {
+          _ws.send(JSON.stringify({
+            type: 'pm2_logs',
+            data: { logs: `Error fetching PM2 logs: ${error.message}` },
+            timestamp: Date.now()
+          }));
+        }
         break;
 
       default:

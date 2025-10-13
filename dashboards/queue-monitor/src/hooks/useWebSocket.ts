@@ -23,6 +23,7 @@ export function useWebSocket(url: string) {
   const [stats, setStats] = useState<QueueStats>(initialStats);
   const [logs, setLogs] = useState<string[]>([]);
   const [llmRequests, setLLMRequests] = useState<any[]>([]);
+  const [pm2Logs, setPm2Logs] = useState<string>('');
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const MAX_LOGS = 100;  // Configurable: Keep last N log lines (shows ~20 message processing cycles)
@@ -99,6 +100,10 @@ export function useWebSocket(url: string) {
           return newRequests.slice(0, MAX_LLM_REQUESTS);
         });
         break;
+        
+      case 'pm2_logs':
+        setPm2Logs(message.data.logs || '');
+        break;
     }
   }, []);
 
@@ -172,6 +177,10 @@ export function useWebSocket(url: string) {
     console.log('[Dashboard] Sending clear command');
     sendCommand('clear');
   }, [sendCommand]);
+  
+  const fetchPm2Logs = useCallback((lines: number = 200) => {
+    sendCommand('get_pm2_logs', { lines });
+  }, [sendCommand]);
 
   return {
     connected,
@@ -179,7 +188,9 @@ export function useWebSocket(url: string) {
     stats,
     logs,
     llmRequests,
+    pm2Logs,
     deleteItem,
-    clearQueue
+    clearQueue,
+    fetchPm2Logs
   };
 }
