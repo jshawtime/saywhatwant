@@ -220,7 +220,7 @@ function App() {
         {/* Debug Logs - LEFT 25% */}
         <div className={styles.logPanel} style={{ width: '25%' }}>
           <div className={styles.panelHeader} style={{ borderBottomColor: '#00FF00', color: '#00FF00', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>DEBUG LOGS ({logs.length})</span>
+            <span>DEBUG LOGS - NEWEST FIRST ({logs.length})</span>
             <button
               onClick={(e) => copyToClipboard(logs.join('\n'), 'debug-logs', e)}
               style={{

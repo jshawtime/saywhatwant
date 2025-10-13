@@ -82,13 +82,13 @@ export function useWebSocket(url: string) {
         break;
         
       case 'log':
-        // Add log message with timestamp (keep last MAX_LOGS)
+        // Add log message with timestamp (keep last MAX_LOGS, newest first)
         const timestamp = new Date(message.timestamp).toLocaleTimeString();
         const logWithTimestamp = `[${timestamp}] ${message.data.message}`;
         console.log('[Dashboard] Received log:', logWithTimestamp);
         setLogs(prev => {
-          const newLogs = [...prev, logWithTimestamp];
-          const trimmed = newLogs.slice(-MAX_LOGS);
+          const newLogs = [logWithTimestamp, ...prev];  // Newest first
+          const trimmed = newLogs.slice(0, MAX_LOGS);   // Take first N (newest)
           console.log('[Dashboard] Logs in state:', trimmed.length);
           return trimmed;
         });
