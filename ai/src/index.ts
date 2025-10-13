@@ -18,28 +18,24 @@ import { QueueService } from './modules/queueService.js';
 import { QueueWebSocketServer } from './modules/websocketServer.js';
 import { SlidingWindowTracker, MessageDeduplicator } from './modules/slidingWindowTracker.js';
 import { EntityValidator } from './modules/entityValidator.js';
+import { getConfigOnce, getConfig } from './modules/configLoader.js';
 
 // Initialize modules
 const entityManager = getEntityManager();
-const entityValidator = new EntityValidator(entityManager);
+const entityValidator = new EntityValidator(); // No EntityManager needed - reads fresh config
 const analyzer = getConversationAnalyzer();
 const kvClient = getKVClient();
 
-// Load configuration FIRST
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+// Load configuration ONCE for startup settings (polling, websocket, etc.)
+// Entity configs will be hot-reloaded on every message
+const startupConfig = getConfigOnce();
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const configPath = join(__dirname, '..', 'config-aientities.json');
-const fullConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
-
-// Read settings from config (NEW MASTER CONTROLLER)
-const POLLING_INTERVAL = fullConfig.botSettings?.pollingInterval || 30000;
-const WEBSOCKET_PORT = fullConfig.botSettings?.websocketPort || 4002;
-const USE_QUEUE = fullConfig.queueSettings?.enabled !== false;  // Default: enabled
-const USE_ROUTER = fullConfig.routerSettings?.enabled === true;  // Default: disabled
-const QUEUE_MAX_RETRIES = fullConfig.queueSettings?.maxRetries || 3;
+// Read settings from config (these don't need hot-reload)
+const POLLING_INTERVAL = startupConfig.botSettings?.pollingInterval || 30000;
+const WEBSOCKET_PORT = startupConfig.botSettings?.websocketPort || 4002;
+const USE_QUEUE = startupConfig.queueSettings?.enabled !== false;  // Default: enabled
+const USE_ROUTER = startupConfig.routerSettings?.enabled === true;  // Default: disabled
+const QUEUE_MAX_RETRIES = startupConfig.queueSettings?.maxRetries || 3;
 
 console.log(chalk.blue('[CONFIG]'), `Polling interval: ${POLLING_INTERVAL/1000}s (from config)`);
 console.log(chalk.blue('[CONFIG]'), `WebSocket port: ${WEBSOCKET_PORT} (from config)`);
@@ -64,11 +60,11 @@ if (USE_ROUTER) {
 console.log(chalk.blue('[STARTUP]'), 'Initializing AI Bot with clean architecture');
 
 const clusterConfig = {
-  servers: fullConfig.lmStudioServers || [],
-  pollInterval: fullConfig.clusterSettings?.pollInterval || 5000,
-  maxLoadAttempts: fullConfig.clusterSettings?.maxLoadAttempts || 60,
-  loadBalancingStrategy: fullConfig.clusterSettings?.loadBalancingStrategy || 'model-affinity' as const,
-  keepModelsLoaded: fullConfig.clusterSettings?.keepModelsLoaded !== false,
+  servers: startupConfig.lmStudioServers || [],
+  pollInterval: startupConfig.clusterSettings?.pollInterval || 5000,
+  maxLoadAttempts: startupConfig.clusterSettings?.maxLoadAttempts || 60,
+  loadBalancingStrategy: startupConfig.clusterSettings?.loadBalancingStrategy || 'model-affinity' as const,
+  keepModelsLoaded: startupConfig.clusterSettings?.keepModelsLoaded !== false,
 };
 
 const lmStudioCluster = new LMStudioCluster(clusterConfig);
@@ -264,7 +260,9 @@ async function runBot() {
       const botId = `bot-${startTime}`;
       
       // Fetch recent comments - use the maximum nom from all entities
-      const maxMessagesToRead = Math.max(...fullConfig.entities.map((e: any) => e.nom || 100));
+      // Get fresh config for hot-reload capability
+      const config = getConfig();
+      const maxMessagesToRead = Math.max(...config.entities.map((e: any) => e.nom || 100));
       
       console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${POLLING_INTERVAL/1000}s)`);
       const windowStart = windowTracker.getWindowStart();

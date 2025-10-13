@@ -141,7 +141,7 @@ function App() {
 
   return (
     <div className={styles.terminal}>
-      <Header connected={connected} />
+      <Header connected={connected} configVersion={stats.configVersion} />
       <LeftPanel stats={stats} />
       <QueueList 
         queue={queue}

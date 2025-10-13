@@ -8,6 +8,7 @@ import chalk from 'chalk';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { QueueService } from './queueService.js';
+import { getConfig } from './configLoader.js';
 
 const execAsync = promisify(exec);
 
@@ -67,6 +68,15 @@ export class QueueWebSocketServer {
   private sendSnapshot(ws: WebSocket) {
     const stats = this.queueService.getStats();
     const items = this.queueService.getAllItems();
+    
+    // Get config version for dashboard display
+    let configVersion = 'unknown';
+    try {
+      const config = getConfig();
+      configVersion = config.version || 'v1.0';
+    } catch (error) {
+      console.error('[WebSocket] Failed to read config version:', error);
+    }
 
     // Calculate rolling hour average
     const now = Date.now();
@@ -82,7 +92,8 @@ export class QueueWebSocketServer {
         stats: {
           ...stats,
           throughputHour,
-          lastSuccess: this.lastSuccessTime
+          lastSuccess: this.lastSuccessTime,
+          configVersion  // Add version to stats
         }
       },
       timestamp: Date.now()

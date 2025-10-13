@@ -24,7 +24,7 @@ interface MessageTypeToggleProps {
   /**
    * Callback when channel changes
    */
-  onChannelChange: (channel: 'human' | 'AI') => void;
+  onChannelChange: (channel: 'human' | 'AI' | 'ALL') => void;
 }
 
 /**
@@ -65,57 +65,33 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
       <button
         onClick={() => onChannelChange('human')}
         className={`p-2 rounded-full transition-all ${
-          isHumanActive ? 'bg-black/40' : 'hover:bg-black/20'
+          (isHumanActive || isALLActive) ? 'bg-black/40' : 'hover:bg-black/20'
         }`}
-        title={isHumanActive ? "Viewing Human channel" : "Switch to Human channel"}
+        title={isHumanActive ? "Viewing Human channel" : isALLActive ? "Viewing All channels" : "Switch to Human channel"}
       >
         <Users 
           className="w-3.5 h-3.5"
           style={{ 
             color: getDarkerColor(userColorRgb, 
-              isHumanActive ? OPACITY_LEVELS.FULL :    // Active: 100% opacity
-              isALLActive ? OPACITY_LEVELS.MEDIUM :    // ALL mode: 50% opacity (both shown)
-              OPACITY_LEVELS.DARK                      // Inactive: 40% opacity
+              (isHumanActive || isALLActive) ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
             )
           }}
         />
       </button>
       
-      {/* Slider Track */}
-      <div 
-        className="relative w-12 h-6 rounded-full cursor-pointer transition-all"
-        style={{
-          backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST * 0.5),
-          border: `1px solid ${getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK)}`
-        }}
-        onClick={() => onChannelChange(isHumanActive ? 'AI' : 'human')}
-      >
-        {/* Slider Thumb */}
-        <div 
-          className="absolute top-0.5 w-5 h-5 rounded-full transition-all duration-300 ease-out"
-          style={{
-            left: isHumanActive ? '2px' : 'calc(100% - 22px)',
-            backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-            boxShadow: `0 2px 4px ${getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST)}`
-          }}
-        />
-      </div>
-      
       {/* AI Icon Button */}
       <button
         onClick={() => onChannelChange('AI')}
         className={`p-2 rounded-full transition-all ${
-          isAIActive ? 'bg-black/40' : 'hover:bg-black/20'
+          (isAIActive || isALLActive) ? 'bg-black/40' : 'hover:bg-black/20'
         }`}
-        title={isAIActive ? "Viewing AI channel" : "Switch to AI channel"}
+        title={isAIActive ? "Viewing AI channel" : isALLActive ? "Viewing All channels" : "Switch to AI channel"}
       >
         <Sparkles 
           className="w-3.5 h-3.5"
           style={{ 
             color: getDarkerColor(userColorRgb, 
-              isAIActive ? OPACITY_LEVELS.FULL :       // Active: 100% opacity
-              isALLActive ? OPACITY_LEVELS.MEDIUM :    // ALL mode: 50% opacity (both shown)
-              OPACITY_LEVELS.DARK                      // Inactive: 40% opacity
+              (isAIActive || isALLActive) ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
             )
           }}
         />

@@ -15,6 +15,7 @@ export interface QueueStats {
   throughputHour: number;
   avgWait: number;
   lastSuccess: number | null;
+  configVersion?: string;
   priorityBands: {
     critical: number;
     high: number;

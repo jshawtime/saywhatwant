@@ -4,9 +4,10 @@
  * 
  * Philosophy: Single source of truth for entity validation
  * No fallbacks, explicit errors, consistent messaging
+ * Hot-reload: Reads fresh config on every validation
  */
 
-import { EntityManager } from './entityManager.js';
+import { getConfig } from './configLoader.js';
 import chalk from 'chalk';
 
 export interface ValidationResult {
@@ -21,11 +22,11 @@ export interface MessageContext {
 }
 
 export class EntityValidator {
-  constructor(private entityManager: EntityManager) {}
-
   /**
    * Validate entity from botParams
    * Returns validation result with entity or error reason
+   * 
+   * Hot-reload: Reads fresh config on every validation
    * 
    * @param botParams - Bot parameters from message
    * @param messageContext - Message ID and text for logging
@@ -57,15 +58,20 @@ export class EntityValidator {
       };
     }
 
-    // Try to find entity in config
-    const entity = this.entityManager.getEntityById(botParams.entity);
+    // Get fresh config for hot-reload
+    const config = getConfig();
+    
+    // Try to find entity in fresh config
+    const entity = config.entities.find((e: any) => e.id === botParams.entity);
     
     if (!entity) {
       console.error(chalk.red('[VALIDATION]'), 
         `Entity "${botParams.entity}" not found - message ID: ${messageContext.id}`);
       
       // Show available entities for debugging
-      const availableIds = this.entityManager.getEnabledEntities().map(e => e.id);
+      const availableIds = config.entities
+        .filter((e: any) => e.enabled)
+        .map((e: any) => e.id);
       console.log(chalk.gray('[AVAILABLE]'), availableIds.join(', '));
       
       return { 
@@ -74,7 +80,7 @@ export class EntityValidator {
       };
     }
 
-    // Valid entity found
+    // Valid entity found (fresh from config)
     return { 
       valid: true, 
       entity 
@@ -83,10 +89,13 @@ export class EntityValidator {
 
   /**
    * Get a list of available entity IDs
-   * Useful for error messages
+   * Useful for error messages (fresh read)
    */
   getAvailableEntities(): string[] {
-    return this.entityManager.getEnabledEntities().map(e => e.id);
+    const config = getConfig();
+    return config.entities
+      .filter((e: any) => e.enabled)
+      .map((e: any) => e.id);
   }
 }
 

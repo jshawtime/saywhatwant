@@ -1,4 +1,5 @@
 {
+  "version": "v0.1 - PHASE 1",
   "botSettings": {
     "pollingInterval": 10000,
     "websocketPort": 4002,
