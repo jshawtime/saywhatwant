@@ -25,7 +25,7 @@ export interface QueueStats {
 }
 
 export interface WebSocketMessage {
-  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log' | 'llm_request';
+  type: 'snapshot' | 'queued' | 'claimed' | 'completed' | 'deleted' | 'stats' | 'log' | 'llm_request' | 'pm2_logs';
   data: any;
   timestamp: number;
 }

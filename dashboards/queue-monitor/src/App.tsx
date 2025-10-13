@@ -58,6 +58,43 @@ function App() {
     });
   };
 
+  // Parse PM2 logs into structured entries
+  const parsedPm2Logs = React.useMemo(() => {
+    if (!pm2Logs) return [];
+    
+    return pm2Logs.split('\n')
+      .filter(line => line.trim() && line.includes('|'))
+      .map((line, index) => {
+        // Parse PM2 log format: "0|ai-bot   | [LOG LEVEL] Message"
+        const parts = line.split('|');
+        if (parts.length >= 3) {
+          const process = parts[0].trim();
+          const service = parts[1].trim();
+          const message = parts.slice(2).join('|').trim();
+          
+          // Extract timestamp if present in message
+          const timestampMatch = message.match(/\[(\d{1,2}:\d{2}:\d{2})\]/);
+          const timestamp = timestampMatch ? timestampMatch[1] : new Date().toLocaleTimeString();
+          
+          // Check for error indicators
+          const isError = message.includes('ERROR') || message.includes('Failed') || message.includes('Error:') || message.includes('❌');
+          
+          return {
+            id: `pm2-${index}`,
+            timestamp,
+            process,
+            service,
+            message,
+            fullLine: line,
+            isError
+          };
+        }
+        return null;
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .reverse(); // Newest first
+  }, [pm2Logs]);
+
   // Toggle PM2 log expansion
   const togglePm2Log = (index: number) => {
     setExpandedPm2Logs(prev => {
@@ -185,7 +222,7 @@ function App() {
           <div className={styles.panelHeader} style={{ borderBottomColor: '#00FF00', color: '#00FF00', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>DEBUG LOGS ({logs.length})</span>
             <button
-              onClick={() => copyToClipboard(logs.join('\n'), 'debug-logs')}
+              onClick={(e) => copyToClipboard(logs.join('\n'), 'debug-logs', e)}
               style={{
                 background: copiedItems.has('debug-logs') ? '#00FF00' : 'transparent',
                 border: '1px solid #00FF00',
@@ -224,7 +261,7 @@ function App() {
                 REFRESH
               </button>
               <button
-                onClick={() => copyToClipboard(pm2Logs, 'pm2-logs-all')}
+                onClick={(e) => copyToClipboard(pm2Logs, 'pm2-logs-all', e)}
                 style={{
                   background: copiedItems.has('pm2-logs-all') ? '#FF00FF' : 'transparent',
                   border: '1px solid #FF00FF',
@@ -241,7 +278,7 @@ function App() {
           </div>
           <div className={styles.panelContent} style={{ color: '#FF00FF', padding: 0, fontSize: '11px' }}>
             {parsedPm2Logs.length > 0 ? (
-              parsedPm2Logs.map((logEntry, idx) => {
+              parsedPm2Logs.map((logEntry: any, idx: number) => {
                 const isExpanded = expandedPm2Logs.has(idx);
                 const itemId = `pm2-${idx}`;
                 const isCopied = copiedItems.has(itemId);
