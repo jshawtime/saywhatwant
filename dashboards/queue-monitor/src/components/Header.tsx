@@ -13,18 +13,26 @@ export const Header: React.FC<HeaderProps> = ({ connected, configVersion }) => {
   return (
     <div className={styles.header}>
       <div className={styles.title}>
-        ┌─ AI QUEUE MONITOR v1.0 ─┐
+        {/* Config Version (primary display - largest) */}
         {configVersion && (
           <div style={{ 
-            fontSize: '18px', 
-            marginTop: '8px', 
+            fontSize: '28px', 
             color: '#00ff00',
             fontWeight: 'bold',
-            letterSpacing: '2px'
+            letterSpacing: '3px',
+            marginBottom: '4px'
           }}>
             ENTITY CONFIG: {configVersion}
           </div>
         )}
+        {/* App Version (secondary - smaller) */}
+        <div style={{
+          fontSize: '14px',
+          color: '#00ff0080',
+          letterSpacing: '1px'
+        }}>
+          ┌─ AI QUEUE MONITOR v1.0 ─┐
+        </div>
       </div>
       <div className={styles.clock}>{time}</div>
       <div className={connected ? styles.connected : styles.disconnected}>

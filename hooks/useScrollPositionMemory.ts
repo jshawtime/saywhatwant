@@ -236,7 +236,7 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
       
       prevView.current = currentView;
     }
-  }, [activeChannel, isFilterActive, filteredCommentsLength, streamRef]);
+  }, [activeChannel, isFilterActive, streamRef]);
   
   // Effect 3: Clear filter position when filter bar changes
   useEffect(() => {
