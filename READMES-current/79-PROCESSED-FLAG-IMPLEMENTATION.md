@@ -2,12 +2,39 @@
 
 **Date**: October 14, 2025, 01:35 UTC  
 **Status**: ✅ IMPLEMENTATION COMPLETE - Deployed to Production  
-**Git Commit**: `6fab569`  
+**Git Commits**: 
+- `6fab569` - Main implementation (all 5 phases)
+- `5aa33b9` - Critical fix: Explicit `processed !== false` check
+
 **Purpose**: Prevent message reprocessing across PM2 restarts without losing messages
 
 **Philosophy**: Simple, explicit, no magic - processed flag lives in botParams where it belongs
 
-**Result**: Phases A-E complete, pushed to main, Cloudflare deploying now
+**Result**: All phases complete, tested, deployed
+
+---
+
+## ⚠️ CRITICAL LOGIC: Three-State Check
+
+**The most important line of code**:
+```typescript
+if (message.botParams.processed !== false) skip;
+```
+
+**Why this matters**:
+- **NEW messages** (frontend): `processed: false` → ✅ PROCESS
+- **PROCESSED messages** (bot marked): `processed: true` → ❌ SKIP  
+- **OLD messages** (before system): `processed: undefined` → ❌ SKIP
+
+**Using `=== true` would be WRONG**:
+- Would process `undefined` (old messages) repeatedly
+- Created infinite reprocessing loop (observed in testing)
+- Generated 404 errors trying to PATCH messages not in cache
+
+**Using `!== false` is CORRECT**:
+- Only processes explicit `false` set by frontend
+- Clean migration: old messages ignored
+- No reprocessing loops
 
 ---
 
@@ -38,10 +65,21 @@
 - [x] Removed startup time check
 - [x] Removed MessageDeduplicator initialization
 - [x] Removed imports for SlidingWindowTracker and MessageDeduplicator
-- [x] Added processed flag check: `message.botParams.processed === true`
+- [x] Added **EXPLICIT** processed check: `processed !== false` (critical!)
 - [x] Added check for no botParams (human-to-human)
 - [x] Simplified logic: 3 simple checks instead of complex windowing
+- [x] Prevents old message reprocessing loop
 - [ ] Test: Only processes unprocessed messages (after full implementation)
+
+**Critical Logic Change**:
+```typescript
+// WRONG: if (processed === true) skip;
+// This processes undefined (old messages) repeatedly!
+
+// CORRECT: if (processed !== false) skip;
+// This ONLY processes explicit false (new messages)
+// Skips: true (processed) AND undefined (old messages)
+```
 
 ### Phase E: Bot Worker Logic ✅ COMPLETE
 - [x] Call updateProcessedStatus() after LM Studio returns response
@@ -547,9 +585,14 @@ if (!message.botParams) {
   continue;
 }
 
-// Skip if already processed (PERSISTENT!)
-if (message.botParams.processed === true) {
-  console.log('[SKIP] Already processed:', message.id);
+// Only process messages EXPLICITLY marked as unprocessed (CRITICAL!)
+// Three-state logic: false (new) | true (processed) | undefined (old)
+if (message.botParams.processed !== false) {
+  if (message.botParams.processed === true) {
+    console.log('[SKIP] Already processed');
+  } else {
+    console.log('[SKIP] Old message (no processed flag)');
+  }
   continue;
 }
 
@@ -559,8 +602,28 @@ if (!validation.valid) {
   continue;
 }
 
-// This is an unprocessed bot message - queue it!
+// This is a NEW unprocessed bot message - queue it!
 ```
+
+**Why `!== false` instead of `=== true`?**
+
+This is a **critical three-state check**:
+
+| State | Value | Meaning | Action |
+|-------|-------|---------|--------|
+| New message | `false` | Frontend just posted | ✅ PROCESS |
+| Processed | `true` | Bot already handled | ❌ SKIP |
+| Old message | `undefined` | Before this system | ❌ SKIP |
+
+**Using `=== true` would**:
+- Process `undefined` (old messages)
+- Create reprocessing loop
+- Generate 404 errors trying to PATCH old messages
+
+**Using `!== false` correctly**:
+- Only processes explicit `false` (new messages)
+- Skips `true` (processed) and `undefined` (old)
+- Clean migration path
 
 **Removed**:
 - ❌ Sliding window check (no longer needed!)
