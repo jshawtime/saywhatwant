@@ -81,8 +81,9 @@ const state: BotState = {
   consecutiveSilence: 0,
 };
 
-// No more sliding window or deduplicator needed!
-// Processed flag in KV botParams handles deduplication persistently
+// In-session deduplication to prevent queueing same message multiple times
+// This prevents duplicate queueing during the ~10-30s window before processed flag updates
+const queuedThisSession = new Set<string>();
 
 // State no longer needs initialization - entity comes from botParams
 
@@ -305,6 +306,13 @@ async function runBot() {
               continue;
             }
             
+            // Check if already queued this session (prevents duplicate queueing)
+            if (queuedThisSession.has(message.id)) {
+              console.log(chalk.gray('[SKIP]'), `Already queued this session: ${message.id}`);
+              skipped++;
+              continue;
+            }
+            
             console.log(chalk.blue('[QUEUE]'), `New unprocessed message from ${message.username}: "${message.text.substring(0, 40)}..."`);
             
             const botParams = message.botParams;
@@ -393,7 +401,9 @@ async function runBot() {
             
             await queueService.enqueue(queueItem);
             
-            // No need to mark as seen - processed flag in KV handles this
+            // Mark as queued this session (prevents re-queueing in next poll)
+            queuedThisSession.add(message.id);
+            console.log(chalk.green('[SESSION]'), `Marked as queued: ${message.id}`);
             
             // Emit WebSocket event
             if (queueWS) {
