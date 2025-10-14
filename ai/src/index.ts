@@ -16,7 +16,6 @@ import { getConversationAnalyzer } from './modules/conversationAnalyzer.js';
 import { getKVClient } from './modules/kvClient.js';
 import { QueueService } from './modules/queueService.js';
 import { QueueWebSocketServer } from './modules/websocketServer.js';
-import { SlidingWindowTracker, MessageDeduplicator } from './modules/slidingWindowTracker.js';
 import { EntityValidator } from './modules/entityValidator.js';
 import { getConfigOnce, getConfig } from './modules/configLoader.js';
 
@@ -82,10 +81,8 @@ const state: BotState = {
   consecutiveSilence: 0,
 };
 
-// Initialize sliding window tracker - simple, stateless, scales to 10M+ users
-// Only process messages from the last 5 minutes to prevent reprocessing on restart
-const windowTracker = new SlidingWindowTracker(5); // 5 minute window
-const deduplicator = new MessageDeduplicator();
+// No more sliding window or deduplicator needed!
+// Processed flag in KV botParams handles deduplication persistently
 
 // State no longer needs initialization - entity comes from botParams
 
@@ -265,10 +262,6 @@ async function runBot() {
       const maxMessagesToRead = Math.max(...config.entities.map((e: any) => e.nom || 100));
       
       console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${POLLING_INTERVAL/1000}s)`);
-      const windowStart = windowTracker.getWindowStart();
-      console.log(chalk.cyan('[WINDOW]'), `Processing messages from last 5 minutes (after ${new Date(windowStart).toISOString()})`);
-      // Note: We fetch more messages but only process those in our window
-      // This is more robust than relying on stored state
       const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
       console.log(chalk.magenta('[POLLING]'), `Fetched ${messages.length} messages`);
       
@@ -286,35 +279,30 @@ async function runBot() {
           
           
           for (const message of messages) {
-            // Check if message is within our processing window
-            if (!windowTracker.shouldProcess(message.timestamp)) {
-              console.log(chalk.gray('[SKIP]'), `Outside window: ${message.text.substring(0, 30)}... (${new Date(message.timestamp).toISOString()})`);
-              continue;
-            }
-            
-            // Fast-path deduplication check
-            if (deduplicator.hasSeenRecently(message.id)) {
-              console.log(chalk.gray('[SKIP]'), `Already seen: ${message.id}`);
+            // Skip AI messages (not for bot)
+            if (message['message-type'] === 'AI') {
+              console.log(chalk.gray('[SKIP]'), `AI message: ${message.text.substring(0, 30)}...`);
               skipped++;
               continue;
             }
             
-            // Skip AI messages (don't queue bot responses)
-            if (message['message-type'] === 'AI') {
-              console.log(chalk.gray('[SKIP]'), `AI message: ${message.text}`);
+            // Skip if no botParams (human-to-human message)
+            if (!message.botParams) {
+              console.log(chalk.gray('[SKIP]'), `No botParams - human-to-human: ${message.text.substring(0, 30)}...`);
+              skipped++;
               continue;
             }
             
+            // Skip if already processed (PERSISTENT!)
+            if (message.botParams.processed === true) {
+              console.log(chalk.gray('[SKIP]'), `Already processed: ${message.id}`);
+              skipped++;
+              continue;
+            }
             
-            console.log(chalk.blue('[QUEUE]'), `Processing human message: ${message.username}`);
+            console.log(chalk.blue('[QUEUE]'), `New unprocessed message from ${message.username}: "${message.text.substring(0, 40)}..."`);
             
-            const messageIndex = 1;  // Only one message per cycle
-            
-            // ====================
-            // ROBUST PARAMETER HANDLING WITH FALLBACKS
-            // ====================
-            
-            const botParams = message.botParams || {};
+            const botParams = message.botParams;
             
             // Validate entity using EntityValidator
             const validation = entityValidator.validateEntity(botParams, {
@@ -375,7 +363,7 @@ async function runBot() {
             
             // Queue the message with GUARANTEED unique ID
             const queueItem = {
-              id: `req-${Date.now()}-${messageIndex}-${Math.random().toString(36).substr(2, 9)}`,
+              id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               priority,
               timestamp: Date.now(),
               message,
@@ -400,8 +388,7 @@ async function runBot() {
             
             await queueService.enqueue(queueItem);
             
-            // Mark as seen for deduplication
-            deduplicator.markSeen(message.id);
+            // No need to mark as seen - processed flag in KV handles this
             
             // Emit WebSocket event
             if (queueWS) {
@@ -509,6 +496,15 @@ async function runWorker() {
         const response = await generateResponse(context, item.entity);
         
         if (response) {
+          // LM Studio returned successfully! Mark message as processed immediately
+          console.log(chalk.green('[WORKER]'), `Got response from LM Studio - marking message as processed`);
+          const updateSuccess = await kvClient.updateProcessedStatus(item.message.id, true);
+          
+          if (!updateSuccess) {
+            console.warn(chalk.yellow('[WORKER]'), `Failed to mark as processed - might reprocess on restart`);
+            // Continue anyway - we have a valid response to post
+          }
+          
           // Extract ais from botParams (AI identity override)
           const aisOverride = item.message.botParams?.ais || undefined;
           

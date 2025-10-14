@@ -9,6 +9,7 @@ export interface BotParams {
   model?: string;       // Override LLM model
   nom?: number | 'ALL'; // Context size override
   ais?: string;         // AI identity override: "username:color"
+  processed?: boolean;  // Track if message has been processed by bot (persistent)
 }
 
 // Comment type matching Say What Want's structure

@@ -7,7 +7,7 @@
 // CORS Configuration
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
 };
@@ -91,6 +91,12 @@ export default {
             headers: corsHeaders 
           });
       }
+    }
+    
+    // PATCH /api/comments/:id - Update message processed status
+    if (path.startsWith('/api/comments/') && request.method === 'PATCH') {
+      const messageId = path.split('/').pop();
+      return await handlePatchComment(request, env, messageId);
     }
     
     // Stats endpoint
@@ -509,6 +515,89 @@ async function handlePostComment(request, env) {
         ...corsHeaders,
         'Content-Type': 'application/json',
       },
+    });
+  }
+}
+
+/**
+ * Update comment processed status
+ * PATCH /api/comments/:id
+ * 
+ * Updates botParams.processed field to track if message has been processed by bot
+ * This prevents reprocessing across PM2 restarts
+ */
+async function handlePatchComment(request, env, messageId) {
+  try {
+    console.log('[Comments] PATCH request for message:', messageId);
+    
+    const updates = await request.json();
+    
+    // Validate updates (only allow botParams.processed updates from bot)
+    if (!updates.botParams || updates.botParams.processed === undefined) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid update - only botParams.processed can be updated' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Get cache
+    const cacheKey = 'recent:comments';
+    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    
+    if (!cachedData) {
+      return new Response(JSON.stringify({ error: 'Message not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const allComments = JSON.parse(cachedData);
+    
+    // Find the message
+    const messageIndex = allComments.findIndex(m => m.id === messageId);
+    
+    if (messageIndex === -1) {
+      return new Response(JSON.stringify({ error: 'Message not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Update the message
+    const message = allComments[messageIndex];
+    
+    // Initialize botParams if it doesn't exist
+    if (!message.botParams) {
+      message.botParams = {};
+    }
+    
+    // Update processed field
+    message.botParams.processed = updates.botParams.processed;
+    
+    // Save back to cache
+    allComments[messageIndex] = message;
+    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(allComments));
+    
+    console.log('[Comments] Updated message processed status:', messageId, '→', updates.botParams.processed);
+    
+    return new Response(JSON.stringify(message), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+  } catch (error) {
+    console.error('[Comments] Error updating message:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to update message',
+      details: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 }

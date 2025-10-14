@@ -1,0 +1,160 @@
+[18:30:36.000] [MAIN] 🚀 Model Loading Test Suite
+[18:30:36.000] [MAIN] Entity: dystopian-survival-guide
+[18:30:36.000] [MAIN] Model: dystopian-survival-guide@f32
+[18:30:36.000] [MAIN] LM Studio: 10.0.0.100:1234
+[18:30:36.000] [MAIN] KV API: https://sww-comments.bootloaders.workers.dev/api/comments
+
+[18:30:36.000] [INFO] ================================================================================
+[18:30:36.000] [TEST] 🧪 STARTING TEST #1
+[18:30:36.000] [INFO] ================================================================================
+[18:30:36.102] [PM2] PM2 Status: online, Restarts: 20
+[18:30:36.102] [SETUP] 🔄 Unloading all models...
+[18:30:36.126] [SETUP] Currently loaded: ['dystopian-survival-guide@f32']
+[18:30:36.126] [CLI] Executing: lms unload --all --host 10.0.0.100
+[18:30:39.850] [CLI] ✅ Success: 
+[18:30:41.863] [SETUP] ✅ All models unloaded successfully
+[18:30:44.881] [API] Model dystopian-survival-guide@f32: state=not-loaded
+[18:30:44.881] [TEST] ✅ Model confirmed unloaded
+[18:30:46.886] [KV] 📤 Posting message: 'test message 1 at 18:30:46'
+[18:30:47.020] [KV] ❌ Exception posting message: HTTP Error 403: Forbidden
+[18:30:47.020] [TEST] ❌ Failed to post message
+[18:30:47.020] [MAIN] ❌ Test 1/3 failed
+[18:30:47.020] [MAIN] ⏸  Waiting 30 seconds before next test...
+
+[18:31:17.025] [INFO] ================================================================================
+[18:31:17.025] [TEST] 🧪 STARTING TEST #2
+[18:31:17.025] [INFO] ================================================================================
+[18:31:17.150] [PM2] PM2 Status: online, Restarts: 20
+[18:31:17.150] [SETUP] 🔄 Unloading all models...
+[18:31:17.161] [SETUP] No models currently loaded
+[18:31:17.161] [CLI] Executing: lms unload --all --host 10.0.0.100
+[18:31:17.313] [CLI] ✅ Success: 
+[18:31:19.332] [SETUP] ✅ All models unloaded successfully
+[18:31:22.345] [API] Model dystopian-survival-guide@f32: state=not-loaded
+[18:31:22.345] [TEST] ✅ Model confirmed unloaded
+[18:31:24.350] [KV] 📤 Posting message: 'test message 2 at 18:31:24'
+[18:31:25.447] [KV] ✅ Message posted successfully
+[18:31:25.447] [KV] Message ID: 1760405484484-xp2if30
+[18:31:25.447] [TEST] ✅ Message posted: ID=1760405484484-xp2if30
+[18:31:30.452] [MONITOR] 👀 Monitoring for AI response (timeout: 180s)...
+[18:31:40.553] [KV] Failed to fetch messages: The read operation timed out
+[18:31:42.559] [MONITOR] Waiting for response... (12s elapsed)
+[18:31:42.570] [API] Model dystopian-survival-guide@f32: state=not-loaded
+[18:31:42.570] [MONITOR] ⏳ Model still loading...
+[18:31:53.811] [MONITOR] Waiting for response... (23s elapsed)
+[18:31:53.818] [API] Model dystopian-survival-guide@f32: state=loading
+[18:31:53.818] [MONITOR] ⏳ Model still loading...
+[18:32:11.635] [KV] Failed to fetch messages: The read operation timed out
+[18:32:13.640] [MONITOR] Waiting for response... (43s elapsed)
+[18:32:13.653] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:32:13.653] [MONITOR] ✅ Model is now LOADED
+[18:32:24.609] [MONITOR] Waiting for response... (54s elapsed)
+[18:32:24.623] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:32:24.623] [MONITOR] ✅ Model is now LOADED
+[18:32:42.591] [KV] Failed to fetch messages: The read operation timed out
+[18:32:44.597] [MONITOR] Waiting for response... (74s elapsed)
+[18:32:44.609] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:32:44.609] [MONITOR] ✅ Model is now LOADED
+[18:32:55.972] [MONITOR] Waiting for response... (85s elapsed)
+[18:32:55.984] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:32:55.984] [MONITOR] ✅ Model is now LOADED
+[18:33:11.324] [KV] Failed to fetch messages: The read operation timed out
+[18:33:13.328] [MONITOR] Waiting for response... (102s elapsed)
+[18:33:13.342] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:33:13.342] [MONITOR] ✅ Model is now LOADED
+[18:33:24.961] [MONITOR] Waiting for response... (114s elapsed)
+[18:33:24.974] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:33:24.974] [MONITOR] ✅ Model is now LOADED
+[18:33:42.798] [KV] Failed to fetch messages: The read operation timed out
+[18:33:44.801] [MONITOR] Waiting for response... (134s elapsed)
+[18:33:44.814] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:33:44.814] [MONITOR] ✅ Model is now LOADED
+[18:33:57.905] [MONITOR] Waiting for response... (147s elapsed)
+[18:33:57.918] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:33:57.918] [MONITOR] ✅ Model is now LOADED
+[18:34:13.140] [KV] Failed to fetch messages: The read operation timed out
+[18:34:15.143] [MONITOR] Waiting for response... (164s elapsed)
+[18:34:15.155] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:34:15.155] [MONITOR] ✅ Model is now LOADED
+[18:34:15.321] [KV] Failed to fetch messages: HTTP Error 403: Forbidden
+[18:34:26.961] [MONITOR] Waiting for response... (176s elapsed)
+[18:34:26.973] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:34:26.973] [MONITOR] ✅ Model is now LOADED
+[18:34:29.628] [KV] Failed to fetch messages: HTTP Error 403: Forbidden
+[18:34:31.633] [MONITOR] ❌ TIMEOUT: No response after 180s
+[18:34:31.633] [TEST] ❌❌❌ TEST #2 FAILED! No response after 180s
+[18:34:31.646] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:34:31.646] [TEST] ⚠️  Model DID load, but no response was posted
+[18:34:31.646] [TEST] This suggests request was lost AFTER model loaded
+[18:34:31.646] [MAIN] ❌ Test 2/3 failed
+[18:34:31.646] [MAIN] ⏸  Waiting 30 seconds before next test...
+
+[18:35:01.649] [INFO] ================================================================================
+[18:35:01.649] [TEST] 🧪 STARTING TEST #3
+[18:35:01.649] [INFO] ================================================================================
+[18:35:01.773] [PM2] PM2 Status: online, Restarts: 20
+[18:35:01.773] [SETUP] 🔄 Unloading all models...
+[18:35:01.785] [SETUP] Currently loaded: ['dystopian-survival-guide@f32']
+[18:35:01.785] [CLI] Executing: lms unload --all --host 10.0.0.100
+[18:35:05.512] [CLI] ✅ Success: 
+[18:35:07.527] [SETUP] ✅ All models unloaded successfully
+[18:35:10.545] [API] Model dystopian-survival-guide@f32: state=not-loaded
+[18:35:10.545] [TEST] ✅ Model confirmed unloaded
+[18:35:12.550] [KV] 📤 Posting message: 'test message 3 at 18:35:12'
+[18:35:13.668] [KV] ✅ Message posted successfully
+[18:35:13.668] [KV] Message ID: 1760405712667-ikfh4um
+[18:35:13.668] [TEST] ✅ Message posted: ID=1760405712667-ikfh4um
+[18:35:18.673] [MONITOR] 👀 Monitoring for AI response (timeout: 180s)...
+[18:35:30.895] [MONITOR] Waiting for response... (12s elapsed)
+[18:35:30.903] [API] Model dystopian-survival-guide@f32: state=loading
+[18:35:30.903] [MONITOR] ⏳ Model still loading...
+[18:35:48.836] [KV] Failed to fetch messages: The read operation timed out
+[18:35:50.837] [MONITOR] Waiting for response... (32s elapsed)
+[18:35:50.849] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:35:50.849] [MONITOR] ✅ Model is now LOADED
+[18:36:03.187] [MONITOR] Waiting for response... (44s elapsed)
+[18:36:03.199] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:36:03.199] [MONITOR] ✅ Model is now LOADED
+[18:36:08.648] [KV] Failed to fetch messages: HTTP Error 403: Forbidden
+[18:36:20.723] [KV] Failed to fetch messages: The read operation timed out
+[18:36:22.725] [MONITOR] Waiting for response... (64s elapsed)
+[18:36:22.737] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:36:22.737] [MONITOR] ✅ Model is now LOADED
+[18:36:34.227] [MONITOR] Waiting for response... (75s elapsed)
+[18:36:34.242] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:36:34.242] [MONITOR] ✅ Model is now LOADED
+[18:36:49.835] [KV] Failed to fetch messages: The read operation timed out
+[18:36:51.840] [MONITOR] Waiting for response... (93s elapsed)
+[18:36:51.854] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:36:51.854] [MONITOR] ✅ Model is now LOADED
+[18:37:03.279] [MONITOR] Waiting for response... (104s elapsed)
+[18:37:03.291] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:37:03.291] [MONITOR] ✅ Model is now LOADED
+[18:37:21.100] [KV] Failed to fetch messages: The read operation timed out
+[18:37:23.107] [MONITOR] Waiting for response... (124s elapsed)
+[18:37:23.120] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:37:23.120] [MONITOR] ✅ Model is now LOADED
+[18:37:35.073] [MONITOR] Waiting for response... (136s elapsed)
+[18:37:35.085] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:37:35.085] [MONITOR] ✅ Model is now LOADED
+[18:37:50.331] [KV] Failed to fetch messages: The read operation timed out
+[18:37:52.338] [MONITOR] Waiting for response... (153s elapsed)
+[18:37:52.351] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:37:52.351] [MONITOR] ✅ Model is now LOADED
+[18:38:04.724] [MONITOR] Waiting for response... (166s elapsed)
+[18:38:04.736] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:38:04.736] [MONITOR] ✅ Model is now LOADED
+[18:38:22.735] [KV] Failed to fetch messages: The read operation timed out
+[18:38:24.743] [MONITOR] ❌ TIMEOUT: No response after 180s
+[18:38:24.743] [TEST] ❌❌❌ TEST #3 FAILED! No response after 180s
+[18:38:24.757] [API] Model dystopian-survival-guide@f32: state=loaded
+[18:38:24.757] [TEST] ⚠️  Model DID load, but no response was posted
+[18:38:24.757] [TEST] This suggests request was lost AFTER model loaded
+[18:38:24.757] [MAIN] ❌ Test 3/3 failed
+
+[18:38:24.757] [INFO] ================================================================================
+[18:38:24.757] [MAIN] 📊 TEST SUMMARY
+[18:38:24.757] [INFO] ================================================================================
+[18:38:24.757] [MAIN] Passed: 0/3
+[18:38:24.757] [MAIN] ❌❌❌ ALL TESTS FAILED!
+[18:38:24.757] [MAIN] The model loading system is broken

@@ -232,51 +232,9 @@ export class LMStudioCluster {
     return null;
   }
 
-  /**
-   * Load model using LM Studio CLI (only works when bot runs locally!)
-   */
-  private async loadModelAndWait(server: LMStudioServer, modelName: string): Promise<void> {
-    logger.info(`[Cluster] Loading ${modelName} on ${server.name} via CLI...`);
-    
-    // Dynamic import to avoid issues if CLI not available
-    try {
-      const { LMStudioCLI } = await import('./lmStudioCliWrapper.js');
-      const cli = new LMStudioCLI();
-      
-      // Use the CLI to load the model on the remote host
-      // CLI now throws errors directly (including memory errors from LM Studio)
-      await cli.loadModel(modelName, server.ip);
-      
-      // Poll until loaded (since CLI is async)
-      let attempts = 0;
-      const maxAttempts = 30; // 2.5 minutes max
-      
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second polls
-        
-        if (await this.checkServerNow(server) && server.loadedModels.has(modelName)) {
-          logger.success(`[Cluster] Model ${modelName} loaded on ${server.name}!`);
-          return;
-        }
-        
-        attempts++;
-      }
-      
-      throw new Error(`Model ${modelName} failed to load after ${attempts * 5} seconds`);
-      
-    } catch (error: any) {
-      if (error.message.includes('Cannot find module')) {
-        // CLI wrapper not available, fallback to error
-        logger.error(`[Cluster] CLI wrapper not available, cannot auto-load models`);
-        logger.error(`[Cluster] Please manually load ${modelName} on ${server.name}`);
-        throw new Error(
-          `Model ${modelName} not loaded. Bot cannot use CLI from Cloudflare. ` +
-          `Either run bot locally with PM2 or pre-load models manually.`
-        );
-      }
-      throw error;
-    }
-  }
+  // loadModelAndWait() removed - no longer needed!
+  // LM Studio handles JIT loading automatically when we send chat completion requests
+  // Python test proved this works perfectly - model loads and request is queued
 
   /**
    * Process request - CLOSED SYSTEM
@@ -284,44 +242,34 @@ export class LMStudioCluster {
    */
   public async processRequest(request: any, retryCount: number = 0): Promise<any> {
     const { entityId, modelName, prompt, parameters, resolve, reject } = request;
+    let server = null;
     
     try {
       // Step 1: Find available server (checks status NOW)
-      const server = await this.findAvailableServerNow(modelName);
+      server = await this.findAvailableServerNow(modelName);
       if (!server) {
         throw new Error('No healthy LM Studio servers available');
       }
       
-      // Step 2: Load model if needed (with memory error recovery)
+      // Step 2: No need to pre-load model!
+      // LM Studio handles JIT loading automatically and queues the request
+      // Python test proved: sending chat completion while model is loading works perfectly
+      // LM Studio loads the model and processes the request (response in ~7s)
+      
       if (!server.loadedModels.has(modelName)) {
-        logger.info(`[Cluster] Loading ${modelName} on ${server.name}`);
-        
-        try {
-          await this.loadModelAndWait(server, modelName);
-        } catch (loadError: any) {
-          // Memory error recovery
-          const isMemoryError = loadError.message?.includes('insufficient system resources') ||
-                                loadError.message?.includes('overload your system') ||
-                                loadError.message?.includes('requires approximately');
-          
-          if (isMemoryError && retryCount === 0) {
-            logger.error(`[Recovery] ❌ Memory error on ${server.name}: ${loadError.message}`);
-            logger.warn(`[Recovery] Unloading all models on ${server.name}`);
-            const { LMStudioCLI } = await import('./lmStudioCliWrapper.js');
-            const cli = new LMStudioCLI();
-            await cli.unloadAll(server.ip);
-            logger.info('[Recovery] All models unloaded, retrying request');
-            
-            // Retry entire request (recursive call with retry count)
-            return await this.processRequest(request, retryCount + 1);
-          }
-          
-          throw loadError; // Not memory error or already retried
-        }
+        logger.info(`[Cluster] Model ${modelName} not in cache - LM Studio will JIT load it`);
+      } else {
+        logger.info(`[Cluster] Model ${modelName} already loaded on ${server.name}`);
       }
       
       // Step 3: Send request
       server.requestsInFlight++;
+      console.log(`[CHAT REQUEST DEBUG] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`[CHAT REQUEST DEBUG] About to send chat completion request`);
+      console.log(`[CHAT REQUEST DEBUG] Server: ${server.name} (${server.ip}:${server.port})`);
+      console.log(`[CHAT REQUEST DEBUG] Model: ${modelName}`);
+      console.log(`[CHAT REQUEST DEBUG] Entity: ${entityId}`);
+      console.log(`[CHAT REQUEST DEBUG] Messages count: ${prompt.length}`);
       logger.success(`[Cluster] 🚀 Sending to ${server.name} (${server.ip}:${server.port}) - Entity: ${entityId}`);
       
       const response = await fetch(`http://${server.ip}:${server.port}/v1/chat/completions`, {
@@ -334,13 +282,38 @@ export class LMStudioCluster {
         }),
       });
       
+      console.log(`[CHAT REQUEST DEBUG] Response status: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
-        throw new Error(`Request failed: ${response.statusText}`);
+        const errorText = await response.text();
+        console.log(`[CHAT REQUEST DEBUG] Error body: ${errorText}`);
+        
+        // Check for memory errors in response
+        const isMemoryError = errorText.includes('insufficient system resources') ||
+                             errorText.includes('overload your system') ||
+                             errorText.includes('requires approximately');
+        
+        if (isMemoryError && retryCount === 0) {
+          logger.error(`[Recovery] ❌ Memory error during chat completion: ${errorText}`);
+          logger.warn(`[Recovery] Unloading all models on ${server.name}`);
+          const { LMStudioCLI } = await import('./lmStudioCliWrapper.js');
+          const cli = new LMStudioCLI();
+          await cli.unloadAll(server.ip);
+          logger.info('[Recovery] All models unloaded, retrying request');
+          
+          // Retry entire request
+          return await this.processRequest(request, retryCount + 1);
+        }
+        
+        throw new Error(`Request failed: ${response.statusText} - ${errorText}`);
       }
       
       const data = await response.json();
       server.requestsInFlight--;
       logger.success(`[Cluster] ✅ ${server.name} completed request for ${entityId}`);
+      
+      // Update loaded models cache (now we know it's loaded)
+      server.loadedModels.add(modelName);
       
       // Track usage
       server.lastUsedModel = modelName;
@@ -349,7 +322,10 @@ export class LMStudioCluster {
       if (resolve) resolve(data);
       return data;
       
-    } catch (error) {
+    } catch (error: any) {
+      if (server) {
+        server.requestsInFlight--;
+      }
       logger.error(`[Cluster] Error processing request: ${error}`);
       if (reject) reject(error);
       throw error;

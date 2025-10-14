@@ -5,6 +5,7 @@ export interface BotParams {
   model?: string;       // Override LLM model selection
   nom?: number | 'ALL'; // Context size override (number of messages or ALL)
   ais?: string;         // AI identity override: "username:color" or "username:random"
+  processed?: boolean;  // Track if message has been processed by bot (persistent in KV)
 }
 
 // Comment types - MUST match KV structure exactly

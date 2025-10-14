@@ -1024,6 +1024,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       if (aiStateParam) params.ais = aiStateParam;
       // Note: nom is used above to slice context, don't send to bot
       
+      // Set processed = false for new bot messages
+      if (Object.keys(params).length > 0) {
+        params.processed = false;
+      }
+      
       return Object.keys(params).length > 0 ? params : undefined;
     })();
     

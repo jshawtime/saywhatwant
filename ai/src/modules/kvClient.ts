@@ -162,6 +162,43 @@ export class KVClient {
   }
   
   /**
+   * Update processed status of a message
+   * Marks a message as processed in KV to prevent reprocessing
+   * 
+   * @param messageId - The message ID to update
+   * @param processed - true = processed, false = unprocessed
+   */
+  public async updateProcessedStatus(messageId: string, processed: boolean): Promise<boolean> {
+    try {
+      console.log('[KV] Updating processed status:', messageId, '→', processed);
+      
+      const response = await fetch(`${this.apiUrl}/${messageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          botParams: {
+            processed: processed
+          }
+        })
+      });
+      
+      if (response.ok) {
+        console.log('[KV] ✅ Processed status updated');
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('[KV] ❌ Failed to update:', response.status, errorText);
+        return false;
+      }
+    } catch (error: any) {
+      console.error('[KV] ❌ Error updating processed status:', error.message);
+      // Don't throw - this is a "best effort" update
+      // If it fails, worst case is message gets reprocessed on restart
+      return false;
+    }
+  }
+  
+  /**
    * Generate a unique ID for comments
    */
   public generateId(): string {
