@@ -422,7 +422,7 @@ async function runBot() {
             
             // Mark as queued this session with timestamp
             queuedThisSession.set(message.id, Date.now());
-            console.log(chalk.green('[SESSION]'), `Marked as queued: ${message.id} (Map size: ${queuedThisSession.size})`);
+            console.log(chalk.green('[SESSION]'), `Queued: ${message.id} (Map size: ${queuedThisSession.size})`);
             
             // Emit WebSocket event
             if (queueWS) {

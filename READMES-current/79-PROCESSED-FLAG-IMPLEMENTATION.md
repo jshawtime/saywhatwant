@@ -16,7 +16,7 @@
 
 ---
 
-## 🎯 Final Solution: Hybrid Deduplication
+## 🎯 Final Solution: Hybrid Deduplication with Rolling Window
 
 **Two-Layer Protection**:
 
@@ -25,16 +25,32 @@
    - Prevents reprocessing across sessions
    - Updated after LM Studio returns
 
-2. **Transient** (queuedThisSession Set):
+2. **Transient** (queuedThisSession Map with rolling cleanup):
    - Prevents duplicate queueing within session
    - Fast in-memory check
+   - **Rolling cleanup every poll**: Removes entries older than 5 minutes
+   - Naturally bounded (no sudden cleanups)
    - Cleared on restart (intentional)
 
 **Why both are needed**:
 - Bot polls every 10s
 - Worker takes 10-30s to mark processed=true
-- Without session Set: Message queued 2-8 times
-- With session Set: Message queued exactly once ✅
+- Without session Map: Message queued 2-8 times
+- With session Map: Message queued exactly once ✅
+
+**Rolling Window Cleanup** (Every Poll):
+```
+1. Poll KV for messages
+2. Clean Map: for each entry, if timestamp < (now - 5min), delete it
+3. Process messages
+4. Add new IDs with current timestamp
+```
+
+**Scaling Characteristics**:
+- Current (1K msg/day): Map has ~10 entries, cleanup finds nothing
+- Medium (100K msg/day): Map has ~350 entries (~10KB)
+- Massive (500 msg/sec): Map maxes at ~150K entries (~4.5MB)
+- **No edge cases**: 5 minutes is longer than any processing time
 
 ---
 
