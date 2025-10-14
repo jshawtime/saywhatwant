@@ -1027,6 +1027,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // Set processed = false for new bot messages
       if (Object.keys(params).length > 0) {
         params.processed = false;
+        console.log('[CommentsStream] Setting processed=false in botParams:', params);
       }
       
       return Object.keys(params).length > 0 ? params : undefined;
