@@ -293,9 +293,14 @@ async function runBot() {
               continue;
             }
             
-            // Skip if already processed (PERSISTENT!)
-            if (message.botParams.processed === true) {
-              console.log(chalk.gray('[SKIP]'), `Already processed: ${message.id}`);
+            // Only process messages explicitly marked as unprocessed
+            // This skips both processed messages (true) and old messages (undefined)
+            if (message.botParams.processed !== false) {
+              if (message.botParams.processed === true) {
+                console.log(chalk.gray('[SKIP]'), `Already processed: ${message.id}`);
+              } else {
+                console.log(chalk.gray('[SKIP]'), `Old message (no processed flag): ${message.id}`);
+              }
               skipped++;
               continue;
             }
