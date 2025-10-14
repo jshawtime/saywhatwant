@@ -82,8 +82,10 @@ const state: BotState = {
 };
 
 // In-session deduplication to prevent queueing same message multiple times
-// This prevents duplicate queueing during the ~10-30s window before processed flag updates
-const queuedThisSession = new Set<string>();
+// Map stores: message ID → timestamp when queued
+// Rolling cleanup every poll removes entries older than 5 minutes
+const queuedThisSession = new Map<string, number>();
+const SESSION_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes
 
 // State no longer needs initialization - entity comes from botParams
 
@@ -275,6 +277,23 @@ async function runBot() {
           // QUEUE MODE: Process ALL HUMAN messages (not AI responses)
           console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages`);
           
+          // Rolling cleanup: Remove session IDs older than 5 minutes
+          // This runs every poll cycle (10s) - simple, continuous maintenance
+          const now = Date.now();
+          const cutoff = now - SESSION_WINDOW_MS;
+          let cleanedCount = 0;
+          
+          for (const [id, timestamp] of queuedThisSession.entries()) {
+            if (timestamp < cutoff) {
+              queuedThisSession.delete(id);
+              cleanedCount++;
+            }
+          }
+          
+          if (cleanedCount > 0) {
+            console.log(chalk.cyan('[SESSION]'), `Cleaned ${cleanedCount} old entries (>5 min), Map size: ${queuedThisSession.size}`);
+          }
+          
           let queued = 0;
           let skipped = 0;
           
@@ -401,9 +420,9 @@ async function runBot() {
             
             await queueService.enqueue(queueItem);
             
-            // Mark as queued this session (prevents re-queueing in next poll)
-            queuedThisSession.add(message.id);
-            console.log(chalk.green('[SESSION]'), `Marked as queued: ${message.id}`);
+            // Mark as queued this session with timestamp
+            queuedThisSession.set(message.id, Date.now());
+            console.log(chalk.green('[SESSION]'), `Marked as queued: ${message.id} (Map size: ${queuedThisSession.size})`);
             
             // Emit WebSocket event
             if (queueWS) {
