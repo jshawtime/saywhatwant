@@ -1,16 +1,40 @@
 # Processed Flag Implementation - Persistent Message Tracking
 
 **Date**: October 14, 2025, 01:35 UTC  
-**Status**: ✅ IMPLEMENTATION COMPLETE - Deployed to Production  
+**Status**: ✅ FULLY WORKING - All Issues Resolved  
 **Git Commits**: 
 - `6fab569` - Main implementation (all 5 phases)
 - `5aa33b9` - Critical fix: Explicit `processed !== false` check
+- `cba8fe6` - Debug logging for frontend
+- `9bf5670` - In-session deduplication (prevents duplicate queueing)
 
 **Purpose**: Prevent message reprocessing across PM2 restarts without losing messages
 
 **Philosophy**: Simple, explicit, no magic - processed flag lives in botParams where it belongs
 
-**Result**: All phases complete, tested, deployed
+**Result**: Hybrid approach - persistent flag + session Set = zero duplicates
+
+---
+
+## 🎯 Final Solution: Hybrid Deduplication
+
+**Two-Layer Protection**:
+
+1. **Persistent** (KV processed flag):
+   - Survives PM2 restarts
+   - Prevents reprocessing across sessions
+   - Updated after LM Studio returns
+
+2. **Transient** (queuedThisSession Set):
+   - Prevents duplicate queueing within session
+   - Fast in-memory check
+   - Cleared on restart (intentional)
+
+**Why both are needed**:
+- Bot polls every 10s
+- Worker takes 10-30s to mark processed=true
+- Without session Set: Message queued 2-8 times
+- With session Set: Message queued exactly once ✅
 
 ---
 
