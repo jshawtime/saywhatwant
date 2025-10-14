@@ -84,26 +84,39 @@ if (message.botParams.processed !== false) skip;
 - [x] Best-effort pattern (logs errors, doesn't throw)
 - [ ] Test: Can mark messages (will test after deployment)
 
-### Phase D: Bot Polling Logic ✅ COMPLETE
+### Phase D: Bot Polling Logic ✅ COMPLETE + ENHANCED
 - [x] Removed sliding window check
 - [x] Removed startup time check
 - [x] Removed MessageDeduplicator initialization
 - [x] Removed imports for SlidingWindowTracker and MessageDeduplicator
 - [x] Added **EXPLICIT** processed check: `processed !== false` (critical!)
 - [x] Added check for no botParams (human-to-human)
-- [x] Simplified logic: 3 simple checks instead of complex windowing
+- [x] Added **IN-SESSION** deduplication check (prevents duplicate queueing)
+- [x] Simplified logic: 4 simple checks instead of complex windowing
 - [x] Prevents old message reprocessing loop
-- [ ] Test: Only processes unprocessed messages (after full implementation)
+- [x] Prevents duplicate queueing within session
+- [x] Tested: No duplicates in queue ✅
 
-**Critical Logic Change**:
+**Critical Logic - Two Layers**:
 ```typescript
-// WRONG: if (processed === true) skip;
-// This processes undefined (old messages) repeatedly!
+// Layer 1: Persistent (KV flag)
+if (processed !== false) skip;  // Only process explicit false
 
-// CORRECT: if (processed !== false) skip;
-// This ONLY processes explicit false (new messages)
-// Skips: true (processed) AND undefined (old messages)
+// Layer 2: Session (in-memory Set) - NEW!
+if (queuedThisSession.has(id)) skip;  // Already queued this session
+
+// Queue it
+await enqueue();
+
+// Mark as queued
+queuedThisSession.add(id);  // Prevents re-queueing on next poll
 ```
+
+**Why both layers?**:
+- Bot polls every 10s
+- Worker takes 10-30s to update processed=true
+- Without session Set: 2-8 duplicates queued
+- With session Set: Queued exactly once ✅
 
 ### Phase E: Bot Worker Logic ✅ COMPLETE
 - [x] Call updateProcessedStatus() after LM Studio returns response
