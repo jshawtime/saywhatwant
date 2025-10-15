@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Prompt Viewer - Internal Tool</title>
+  <title>ALIVE - Prompt Maker</title>
   <style>
     * {
       margin: 0;
@@ -248,6 +248,53 @@
 
     <div class="entity-badge" id="entityBadge">Loading...</div>
 
+    <!-- ALIVE Mode 2: Conversation Input -->
+    <div class="section" style="background: #0f1f0f; border-color: #00ff00;">
+      <div class="section-title" style="color: #00ff00;">
+        <span>📥 SUBMIT NEW CONVERSATION (ALIVE Mode 2)</span>
+      </div>
+      <div style="margin-bottom: 15px; color: #888; font-size: 12px;">
+        Paste your latest conversation below. Add your feedback with '#OWNER COMMENT:' at the end. When you click submit, Cursor AI monitors the logs and autonomously analyzes, updates the prompt, and refreshes this page.
+      </div>
+      <textarea 
+        id="conversationInput" 
+        placeholder="Paste conversation export here...
+
+Example format:
+Human (time): message
+TheEternal (time): response
+Human (time): message
+
+#OWNER COMMENT:
+1. The AI repeated itself
+2. Response was too long
+..."
+        style="
+          width: 100%;
+          min-height: 200px;
+          background: #050505;
+          border: 1px solid #00ff00;
+          border-radius: 4px;
+          color: #00ff00;
+          font-family: inherit;
+          font-size: 13px;
+          padding: 15px;
+          resize: vertical;
+          line-height: 1.6;
+        "
+      ></textarea>
+      <div style="margin-top: 15px; display: flex; gap: 15px; align-items: center;">
+        <button 
+          class="copy-btn" 
+          onclick="submitConversation()"
+          style="padding: 12px 30px; font-size: 14px;"
+        >
+          🚀 SUBMIT FOR ANALYSIS
+        </button>
+        <div id="submitStatus" style="color: #00ff00; font-size: 12px;"></div>
+      </div>
+    </div>
+
     <div class="legend">
       <div class="legend-item">
         <div class="legend-box changed"></div>
@@ -422,6 +469,53 @@
       "userPrompt": "${PROMPT_DATA.userPrompt.text}",`;
       
       copyText(fullPrompt, event.target);
+    }
+
+    // Submit conversation for ALIVE Mode 2 processing
+    function submitConversation() {
+      const conversation = document.getElementById('conversationInput').value.trim();
+      const statusDiv = document.getElementById('submitStatus');
+      
+      if (!conversation) {
+        statusDiv.textContent = '⚠️ Please paste a conversation first';
+        statusDiv.style.color = '#ffaa00';
+        setTimeout(() => statusDiv.textContent = '', 3000);
+        return;
+      }
+      
+      // Send to Flask server - this will log to terminal stdout for Cursor monitoring
+      fetch('/submit-conversation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation: conversation,
+          entity: PROMPT_DATA.entity,
+          timestamp: new Date().toISOString()
+        })
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.status === 'success') {
+          statusDiv.textContent = '✅ ' + result.message;
+          statusDiv.style.color = '#00ff00';
+        } else {
+          statusDiv.textContent = '❌ ' + result.message;
+          statusDiv.style.color = '#ff0000';
+        }
+      })
+      .catch(error => {
+        statusDiv.textContent = '❌ Network error: ' + error.message;
+        statusDiv.style.color = '#ff0000';
+      });
+      
+      // Clear textarea
+      document.getElementById('conversationInput').value = '';
+      
+      // Set initial status
+      statusDiv.textContent = '📡 Sending to ALIVE server...';
+      statusDiv.style.color = '#00aaff';
     }
 
     // Load on page load

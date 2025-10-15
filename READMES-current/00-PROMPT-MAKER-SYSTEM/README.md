@@ -5,18 +5,25 @@
 ### 1. **Open the Viewer**
 Double-click `prompt-viewer.html` to open in your browser.
 
-### 2. **The Workflow**
-1. Have conversation with AI entity
-2. Export conversation
-3. Paste into `00-PROMPT-MAKER.md` (LATEST EXAMPLE CONVERSATION section)
-4. Add your feedback in OWNER COMMENT
-5. Message Cursor AI about the results
-6. Cursor updates `prompt-data.js` with new prompt
-7. Refresh `prompt-viewer.html` in browser
-8. See changes highlighted in green
-9. Click COPY button to get clean text
-10. Paste into `config-aientities.json`
-11. Test again
+### 2. **The Workflow (ALIVE Mode 2)**
+
+**Simple version - Just use the web interface:**
+1. Open `prompt-viewer.html` in browser (leave it open)
+2. Have conversation with AI entity
+3. Export conversation
+4. Paste into the **📥 SUBMIT NEW CONVERSATION** text box
+5. Click **🚀 SUBMIT FOR ANALYSIS** button
+6. Cursor AI monitors logs, sees submission
+7. Cursor autonomously analyzes and updates prompt
+8. Page auto-refreshes (within 2-10 seconds)
+9. See new prompt with changes highlighted in green
+10. Click COPY button, paste into `config-aientities.json`
+11. Test new prompt
+
+**Advanced version - Document feedback:**
+- Optionally paste conversation into `00-PROMPT-MAKER.md` as well
+- Add detailed feedback in OWNER COMMENT section
+- Provides additional context for Cursor's analysis
 
 ### 3. **Files in This System**
 
@@ -45,13 +52,40 @@ Double-click `prompt-viewer.html` to open in your browser.
 - **Green text** = Changed in this iteration
 - **White text** = Unchanged from previous version
 
-## The Magic
+## The Magic (ALIVE Architecture)
 
-You never edit code. You just:
-1. Paste conversations
-2. Give feedback
-3. Cursor updates everything
-4. You copy and test
+**ALIVE Mode 2 - Fully Autonomous:**
 
-**Cursor is the engine. Code is the execution layer.**
+You never:
+- Edit code files
+- Message Cursor in chat
+- Manually trigger updates
+
+You only:
+1. Paste conversation into web form
+2. Click submit button
+
+**Then autonomously:**
+- App logs instructions to console
+- Cursor monitors logs (watching terminal)
+- Cursor sees submission + instructions
+- Cursor creates internal todo list
+- Cursor executes: analyze → update → refresh
+- Page auto-updates with new prompt
+- You see changes highlighted in green
+
+**The application programs Cursor. Cursor executes. You just observe.**
+
+### How Cursor Monitors
+
+When you open the viewer, Cursor can monitor your terminal:
+- Watches for `🎯 ALIVE_MODE_2_CONVERSATION_SUBMITTED 🎯` markers
+- Reads the logged conversation
+- Sees numbered instruction list
+- Creates todos from instructions
+- Executes autonomously
+
+**No chat needed. Just click submit in the browser.**
+
+**Cursor is the engine. Code is the execution layer. Logs are the programming interface.**
 
