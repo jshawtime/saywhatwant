@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Prompt Viewer - Internal Tool</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #00ff00;
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: normal;
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .timestamp-box {
+      background: #1a1a1a;
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .timestamp-label {
+      color: #888;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .timestamp-time {
+      color: #00ff00;
+      font-size: 48px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .timestamp-date {
+      color: #00aaff;
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #00ff00;
+      border-radius: 50%;
+      margin-left: 10px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .entity-badge {
+      display: inline-block;
+      background: #00ff0020;
+      color: #00ff00;
+      padding: 6px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-bottom: 30px;
+      border: 1px solid #00ff0040;
+    }
+
+    .section {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      color: #00aaff;
+      font-size: 18px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .copy-btn {
+      background: #00ff00;
+      color: #0a0a0a;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #00ff0080;
+      transform: scale(1.05);
+    }
+
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+
+    .copy-btn.copied {
+      background: #ffaa00;
+    }
+
+    .prompt-text {
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      padding: 20px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .changed {
+      background: #90ee9020;
+      color: #90ee90;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+
+    .code-block {
+      background: #050505;
+      border-left: 3px solid #00ff00;
+      padding: 20px;
+      margin: 20px 0;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+
+    .key {
+      color: #ff6b6b;
+    }
+
+    .value {
+      color: #4ecdc4;
+    }
+
+    .legend {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-box {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+    }
+
+    .legend-box.changed {
+      background: #90ee9020;
+      border: 1px solid #90ee90;
+    }
+
+    .legend-box.unchanged {
+      background: #1a1a1a;
+      border: 1px solid #333;
+    }
+
+    .update-info {
+      color: #666;
+      font-size: 11px;
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .full-prompt-copy {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .full-prompt-copy .copy-btn {
+      padding: 12px 40px;
+      font-size: 14px;
+    }
+
+    .warning {
+      background: #ffaa0020;
+      border: 1px solid #ffaa00;
+      color: #ffaa00;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 30px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 AI PROMPT VIEWER<span class="live-indicator"></span></h1>
+    <div class="subtitle">Internal Tool - Cursor + Code Hybrid System • Auto-Refresh Enabled</div>
+
+    <div class="timestamp-box">
+      <div class="timestamp-label">Last Updated by Cursor AI</div>
+      <div class="timestamp-time" id="updateTime">--:--:--</div>
+      <div class="timestamp-date" id="updateDate">---- -- --</div>
+    </div>
+
+    <div class="warning">
+      ⚠️ This file is auto-generated by Cursor AI. Changes made here will be overwritten.
+      Edit the WORKING PROMPT in the README, then Cursor will update this file.
+    </div>
+
+    <div class="entity-badge" id="entityBadge">Loading...</div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-box changed"></div>
+        <span>Changed in this iteration</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box unchanged"></div>
+        <span>Unchanged</span>
+      </div>
+    </div>
+
+    <!-- System Prompt -->
+    <div class="section">
+      <div class="section-title">
+        <span>systemPrompt</span>
+        <button class="copy-btn" onclick="copySystemPrompt()">COPY</button>
+      </div>
+      <div class="prompt-text" id="systemPromptDisplay"></div>
+    </div>
+
+    <!-- User Prompt -->
+    <div class="section">
+      <div class="section-title">
+        <span>userPrompt</span>
+        <button class="copy-btn" onclick="copyUserPrompt()">COPY</button>
+      </div>
+      <div class="prompt-text" id="userPromptDisplay"></div>
+    </div>
+
+    <!-- Full Prompt Copy -->
+    <div class="section">
+      <div class="section-title">
+        <span>Full Prompt (Ready for config-aientities.json)</span>
+      </div>
+      <div class="code-block" id="fullPromptDisplay"></div>
+      <div class="full-prompt-copy">
+        <button class="copy-btn" onclick="copyFullPrompt()">📋 COPY FULL PROMPT</button>
+      </div>
+    </div>
+
+    <div class="update-info" id="updateInfo"></div>
+  </div>
+
+  <script src="prompt-data.js"></script>
+  <script>
+    let lastKnownUpdate = null;
+
+    function highlightChanges(text, changes) {
+      if (!changes || changes.length === 0) {
+        return text;
+      }
+      
+      // For now, if there are any changes, highlight the entire text
+      // In future iterations, we can get more granular
+      if (changes.length > 0 && changes[0].start === 0 && changes[0].end === 999) {
+        return `<span class="changed">${text}</span>`;
+      }
+      
+      return text;
+    }
+
+    function updateTimestamp(isoString) {
+      const date = new Date(isoString);
+      
+      // Format time: HH:MM:SS
+      const time = date.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+      
+      // Format date: Month DD, YYYY
+      const dateStr = date.toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+      
+      document.getElementById('updateTime').textContent = time;
+      document.getElementById('updateDate').textContent = dateStr;
+    }
+
+    function loadPromptData() {
+      const data = PROMPT_DATA;
+      
+      // Update timestamp
+      updateTimestamp(data.lastUpdated);
+      lastKnownUpdate = data.lastUpdated;
+      
+      // Entity badge
+      document.getElementById('entityBadge').textContent = `ENTITY: ${data.entity}`;
+      
+      // System Prompt
+      const systemPromptHTML = highlightChanges(data.systemPrompt.text, data.systemPrompt.changes);
+      document.getElementById('systemPromptDisplay').innerHTML = systemPromptHTML;
+      
+      // User Prompt
+      const userPromptHTML = highlightChanges(data.userPrompt.text, data.userPrompt.changes);
+      document.getElementById('userPromptDisplay').innerHTML = userPromptHTML;
+      
+      // Full Prompt
+      const fullPrompt = `      "systemPrompt": "${data.systemPrompt.text}",
+      "systemRole": "${data.systemRole}",
+      "userPrompt": "${data.userPrompt.text}",`;
+      
+      document.getElementById('fullPromptDisplay').innerHTML = 
+        fullPrompt
+          .replace(/("systemPrompt":|"systemRole":|"userPrompt":)/g, '<span class="key">$1</span>')
+          .replace(/: "([^"]+)"/g, ': <span class="value">"$1"</span>');
+      
+      // Update info
+      const date = new Date(data.lastUpdated);
+      document.getElementById('updateInfo').textContent = 
+        `Auto-generated by Cursor AI`;
+    }
+
+    // Auto-refresh: Check for changes every 2 seconds
+    function checkForUpdates() {
+      // Reload the prompt-data.js by fetching it
+      fetch('prompt-data.js?t=' + Date.now())
+        .then(response => response.text())
+        .then(scriptText => {
+          // Extract the PROMPT_DATA object by executing the script
+          const tempScript = document.createElement('script');
+          tempScript.textContent = scriptText;
+          
+          // Execute in isolated context
+          const tempWindow = {};
+          eval(scriptText.replace('const PROMPT_DATA', 'tempWindow.PROMPT_DATA'));
+          
+          // Check if data changed
+          if (tempWindow.PROMPT_DATA && tempWindow.PROMPT_DATA.lastUpdated !== lastKnownUpdate) {
+            console.log('🔄 New prompt detected! Reloading...');
+            location.reload();
+          }
+        })
+        .catch(err => {
+          console.log('⚠️ Could not check for updates:', err.message);
+        });
+    }
+
+    // Start auto-refresh check every 2 seconds
+    setInterval(checkForUpdates, 2000);
+
+    function copyText(text, buttonElement) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = buttonElement.textContent;
+        buttonElement.textContent = '✓ COPIED!';
+        buttonElement.classList.add('copied');
+        
+        setTimeout(() => {
+          buttonElement.textContent = originalText;
+          buttonElement.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    function copySystemPrompt() {
+      const text = PROMPT_DATA.systemPrompt.text;
+      copyText(text, event.target);
+    }
+
+    function copyUserPrompt() {
+      const text = PROMPT_DATA.userPrompt.text;
+      copyText(text, event.target);
+    }
+
+    function copyFullPrompt() {
+      const fullPrompt = `      "systemPrompt": "${PROMPT_DATA.systemPrompt.text}",
+      "systemRole": "${PROMPT_DATA.systemRole}",
+      "userPrompt": "${PROMPT_DATA.userPrompt.text}",`;
+      
+      copyText(fullPrompt, event.target);
+    }
+
+    // Load on page load
+    loadPromptData();
+  </script>
+</body>
+</html>
+
