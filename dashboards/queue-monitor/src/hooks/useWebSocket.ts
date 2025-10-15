@@ -78,7 +78,11 @@ export function useWebSocket(url: string) {
         
       case 'stats':
         console.log('[Dashboard] Updating stats:', message.data);
-        setStats(message.data);
+        // Preserve configVersion when updating stats
+        setStats(prev => ({
+          ...message.data,
+          configVersion: prev.configVersion || message.data.configVersion
+        }));
         break;
         
       case 'log':
