@@ -20,10 +20,12 @@ export interface PostResult {
 export class KVClient {
   private apiUrl: string;
   private lastFetchTime: number = 0;
-  private fetchCooldown: number = 5000; // 5 seconds between fetches
+  private fetchCooldown: number; // Will be set from config
   
-  constructor(apiUrl: string = CONFIG.SWW_API.baseURL + CONFIG.SWW_API.endpoints.postComment) {
+  constructor(apiUrl: string = CONFIG.SWW_API.baseURL + CONFIG.SWW_API.endpoints.postComment, fetchCooldown?: number) {
     this.apiUrl = apiUrl;
+    // Use provided cooldown or default to 5000ms
+    this.fetchCooldown = fetchCooldown || 5000;
   }
   
   /**
@@ -225,9 +227,9 @@ export class KVClient {
 // Singleton instance
 let kvClientInstance: KVClient | null = null;
 
-export function getKVClient(): KVClient {
+export function getKVClient(fetchCooldown?: number): KVClient {
   if (!kvClientInstance) {
-    kvClientInstance = new KVClient();
+    kvClientInstance = new KVClient(undefined, fetchCooldown);
   }
   return kvClientInstance;
 }

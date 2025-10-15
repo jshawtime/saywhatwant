@@ -19,18 +19,18 @@ import { QueueWebSocketServer } from './modules/websocketServer.js';
 import { EntityValidator } from './modules/entityValidator.js';
 import { getConfigOnce, getConfig } from './modules/configLoader.js';
 
-// Initialize modules
-const entityManager = getEntityManager();
-const entityValidator = new EntityValidator(); // No EntityManager needed - reads fresh config
-const analyzer = getConversationAnalyzer();
-const kvClient = getKVClient();
-
-// Load configuration ONCE for startup settings (polling, websocket, etc.)
+// Load configuration FIRST for startup settings (polling, websocket, etc.)
 // Entity configs will be hot-reloaded on every message
 const startupConfig = getConfigOnce();
 
 // Read settings from config (these don't need hot-reload)
 const POLLING_INTERVAL = startupConfig.botSettings?.pollingInterval || 30000;
+
+// Initialize modules (after config is loaded so we can pass polling interval)
+const entityManager = getEntityManager();
+const entityValidator = new EntityValidator(); // No EntityManager needed - reads fresh config
+const analyzer = getConversationAnalyzer();
+const kvClient = getKVClient(POLLING_INTERVAL); // Pass polling interval as fetch cooldown
 const WEBSOCKET_PORT = startupConfig.botSettings?.websocketPort || 4002;
 const USE_QUEUE = startupConfig.queueSettings?.enabled !== false;  // Default: enabled
 const USE_ROUTER = startupConfig.routerSettings?.enabled === true;  // Default: disabled
