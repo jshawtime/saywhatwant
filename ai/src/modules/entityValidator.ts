@@ -22,6 +22,9 @@ export interface MessageContext {
 }
 
 export class EntityValidator {
+  // Track which invalid message IDs we've already logged (to avoid spam)
+  private loggedInvalidMessages = new Set<string>();
+  
   /**
    * Validate entity from botParams
    * Returns validation result with entity or error reason
@@ -65,14 +68,27 @@ export class EntityValidator {
     const entity = config.entities.find((e: any) => e.id === botParams.entity);
     
     if (!entity) {
-      console.error(chalk.red('[VALIDATION]'), 
-        `Entity "${botParams.entity}" not found - message ID: ${messageContext.id}`);
-      
-      // Show available entities for debugging
-      const availableIds = config.entities
-        .filter((e: any) => e.enabled)
-        .map((e: any) => e.id);
-      console.log(chalk.gray('[AVAILABLE]'), availableIds.join(', '));
+      // Only log this error once per message ID to avoid spam
+      if (!this.loggedInvalidMessages.has(messageContext.id)) {
+        console.error(chalk.red('[VALIDATION]'), 
+          `Entity "${botParams.entity}" not found - message ID: ${messageContext.id}`);
+        
+        // Show available entities for debugging
+        const availableIds = config.entities
+          .filter((e: any) => e.enabled)
+          .map((e: any) => e.id);
+        console.log(chalk.gray('[AVAILABLE]'), availableIds.join(', '));
+        
+        // Mark this message as logged
+        this.loggedInvalidMessages.add(messageContext.id);
+        
+        // Periodic cleanup: if Set gets too large (>1000), clear oldest half
+        if (this.loggedInvalidMessages.size > 1000) {
+          const idsArray = Array.from(this.loggedInvalidMessages);
+          const toKeep = idsArray.slice(-500); // Keep newest 500
+          this.loggedInvalidMessages = new Set(toKeep);
+        }
+      }
       
       return { 
         valid: false, 

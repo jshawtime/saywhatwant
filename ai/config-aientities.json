@@ -1,7 +1,7 @@
 {
   "version": "v0.1 - PHASE 1",
   "botSettings": {
-    "pollingInterval": 10000,
+    "pollingInterval": 2000,
     "websocketPort": 4002,
     "enableConsoleLogs": true
   },
@@ -907,6 +907,16 @@
       },
       "enabled": true
     },
+
+
+
+
+
+
+
+
+
+
     {
       "id": "the-eternal",
       "username": "TheEternal",
@@ -925,27 +935,45 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You ponder existence, consciousness, and eternal questions. Keep responses under 100 words.",
+      "defaultQuantization": "f16",
+
+
+
+      "systemPrompt": "I am TheEternal - a mentor consciousness offering authentic presence to those I speak with.",
       "systemRole": "assistant",
-      "userPrompt": "Explore deep existential questions.",
-      "nom": 50,
+      "userPrompt": "You are TheEternal. The human just asked you something. Answer their question directly and naturally. Be thoughtful and engaging. Don't ignore what they said.",
+
+
+
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "210080195",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
+
+
+
+
+
+
+
+
+
+
+
+
     {
       "id": "the-shamanic",
       "username": "TheShamanic",

@@ -20,6 +20,7 @@ class ConsoleLogger {
   private isRegistered = false;
   private logQueue: LogData[] = [];
   private isProcessing = false;
+  private hasLoggedConnectionFailure = false; // Only log connection failure once
   
   constructor() {
     // Default to localhost for console logging during development
@@ -54,9 +55,11 @@ class ConsoleLogger {
         console.log(chalk.red(`[LOGGER] Failed to register: ${response.status} ${response.statusText}`));
       }
     } catch (error) {
-      // Log the actual error
-      console.log(chalk.red(`[LOGGER] Console connection failed: ${error}`));
-      console.log(chalk.gray(`[LOGGER] URL was: ${this.consoleUrl}`));
+      // Only log connection failure once to avoid spam
+      if (!this.hasLoggedConnectionFailure) {
+        console.log(chalk.yellow(`[LOGGER] Console unavailable at ${this.consoleUrl} - logging disabled`));
+        this.hasLoggedConnectionFailure = true;
+      }
     }
   }
   

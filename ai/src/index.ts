@@ -189,7 +189,7 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
     
     if (aisUsername) {
       usernameToUse = aisUsername;
-      console.log(chalk.magenta('[AIS]'), `Username override: ${entity.username} → ${aisUsername}`);
+      // Silent
       if (queueWS) queueWS.sendLog(`[AIS] Username: ${entity.username} → ${aisUsername}`);
     }
     
@@ -201,7 +201,7 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
         if (queueWS) queueWS.sendLog(`[AIS] Random color: ${colorToUse}`);
       } else {
         colorToUse = aisColor;
-        console.log(chalk.magenta('[AIS]'), `Color override: ${entity.color} → ${aisColor}`);
+        // Silent
         if (queueWS) queueWS.sendLog(`[AIS] Color: ${entity.color} → ${aisColor}`);
       }
     }
@@ -218,14 +218,7 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
   };
   
   // DEBUG: Log exactly what we're posting
-  console.log(chalk.yellow('[POST DEBUG]'), 'Comment object being sent:');
-  console.log(chalk.yellow('[POST DEBUG]'), `  username: "${comment.username}"`);
-  console.log(chalk.yellow('[POST DEBUG]'), `  color: "${comment.color}"`);
-  console.log(chalk.yellow('[POST DEBUG]'), `  usernameToUse was: "${usernameToUse}"`);
-  console.log(chalk.yellow('[POST DEBUG]'), `  colorToUse was: "${colorToUse}"`);
-  if (queueWS) {
-    queueWS.sendLog(`[POST DEBUG] Sending username: "${comment.username}", color: "${comment.color}"`);
-  }
+  // Silent - debug logs removed for clean output
   
   const result = await kvClient.postComment(comment, CONFIG.DEV.dryRun);
   
@@ -264,9 +257,8 @@ async function runBot() {
       const config = getConfig();
       const maxMessagesToRead = Math.max(...config.entities.map((e: any) => e.nom || 100));
       
-      console.log(chalk.magenta('[POLLING]'), `Fetching from KV (interval: ${POLLING_INTERVAL/1000}s)`);
+      // Silent fetch - only log errors or new messages
       const messages = await kvClient.fetchRecentComments(maxMessagesToRead);
-      console.log(chalk.magenta('[POLLING]'), `Fetched ${messages.length} messages`);
       
       if (messages.length > 0) {
         // Update message history
@@ -275,7 +267,7 @@ async function runBot() {
         
         if (USE_QUEUE && queueService) {
           // QUEUE MODE: Process ALL HUMAN messages (not AI responses)
-          console.log(chalk.blue('[QUEUE]'), `Analyzing ${messages.length} messages`);
+          // Silent analysis - only log when queuing new messages
           
           // Rolling cleanup: Remove session IDs older than 5 minutes
           // This runs every poll cycle (10s) - simple, continuous maintenance
@@ -290,44 +282,34 @@ async function runBot() {
             }
           }
           
-          if (cleanedCount > 0) {
-            console.log(chalk.cyan('[SESSION]'), `Cleaned ${cleanedCount} old entries (>5 min), Map size: ${queuedThisSession.size}`);
-          }
+          // Silent cleanup
           
           let queued = 0;
           let skipped = 0;
           
           
           for (const message of messages) {
-            // Skip AI messages (not for bot)
+            // Skip AI messages (not for bot) - SILENT
             if (message['message-type'] === 'AI') {
-              console.log(chalk.gray('[SKIP]'), `AI message: ${message.text.substring(0, 30)}...`);
               skipped++;
               continue;
             }
             
-            // Skip if no botParams (human-to-human message)
+            // Skip if no botParams (human-to-human message) - SILENT
             if (!message.botParams) {
-              console.log(chalk.gray('[SKIP]'), `No botParams - human-to-human: ${message.text.substring(0, 30)}...`);
               skipped++;
               continue;
             }
             
-            // Only process messages explicitly marked as unprocessed
+            // Only process messages explicitly marked as unprocessed - SILENT
             // This skips both processed messages (true) and old messages (undefined)
             if (message.botParams.processed !== false) {
-              if (message.botParams.processed === true) {
-                console.log(chalk.gray('[SKIP]'), `Already processed: ${message.id}`);
-              } else {
-                console.log(chalk.gray('[SKIP]'), `Old message (no processed flag): ${message.id}`);
-              }
               skipped++;
               continue;
             }
             
-            // Check if already queued this session (prevents duplicate queueing)
+            // Check if already queued this session (prevents duplicate queueing) - SILENT
             if (queuedThisSession.has(message.id)) {
-              console.log(chalk.gray('[SKIP]'), `Already queued this session: ${message.id}`);
               skipped++;
               continue;
             }
@@ -349,21 +331,12 @@ async function runBot() {
             
             const entity = validation.entity;
             
-            console.log(chalk.green('[BOT PARAMS]'), 
-              `Using specified entity: ${botParams.entity}`);
-            
             // 2. DETERMINE PRIORITY (with fallback chain)
             let priority;
             if (botParams.priority !== undefined) {
-              // URL specified priority - HIGHEST PRIORITY (clamped 0-99)
               priority = Math.max(0, Math.min(99, botParams.priority));
-              console.log(chalk.green('[BOT PARAMS]'), 
-                `Using URL priority: ${priority}`);
             } else {
-              // Use entity's default priority from config
-              priority = entity.defaultPriority || 50;  // Fallback to 50 if not in config
-              console.log(chalk.gray('[PRIORITY]'), 
-                `Using entity default: ${priority}`);
+              priority = entity.defaultPriority || 50;
             }
             
             // Check rate limits before queuing
@@ -376,22 +349,9 @@ async function runBot() {
             // 3. SELECT MODEL (with fallback chain)
             const entityModel = getModelName(entity);
             const modelToUse = botParams.model || entityModel;
-            if (botParams.model) {
-              console.log(chalk.green('[BOT PARAMS]'), 
-                `Model override: ${entityModel} → ${botParams.model}`);
-            }
             
             // Use pre-formatted context from frontend - NO FALLBACK
-            // Frontend ALWAYS sends context when needed, bot uses it exactly
             const contextForLLM = message.context || [];
-            
-            console.log(chalk.cyan('[CONTEXT]'), `Using ${contextForLLM.length} messages from frontend`);
-            
-            console.log(chalk.cyan('[QUEUE]'), 'Configuration:');
-            console.log(chalk.cyan('  Entity:'), entity.id);
-            console.log(chalk.cyan('  Model:'), modelToUse);
-            console.log(chalk.cyan('  Priority:'), priority);
-            console.log(chalk.cyan('  Context:'), contextForLLM.length, 'messages');
             
             // Queue the message with GUARANTEED unique ID
             const queueItem = {
@@ -422,7 +382,6 @@ async function runBot() {
             
             // Mark as queued this session with timestamp
             queuedThisSession.set(message.id, Date.now());
-            console.log(chalk.green('[SESSION]'), `Queued: ${message.id} (Map size: ${queuedThisSession.size})`);
             
             // Emit WebSocket event
             if (queueWS) {
@@ -437,7 +396,7 @@ async function runBot() {
           
           // No state to update - we're stateless and that's good for scale
           
-          console.log(chalk.blue('[QUEUE]'), `Queued ${queued} human messages, skipped ${skipped} AI/system messages`);
+          // Silent summary - only logged new messages above
         } else {
           // DIRECT MODE: Disabled - queue system required
           console.error(chalk.red('[DIRECT]'), 'Direct mode disabled - use queue system with entity specified');
@@ -465,9 +424,7 @@ async function runBot() {
       // Calculate sleep time
       const elapsed = Date.now() - startTime;
       const sleepTime = Math.max(POLLING_INTERVAL - elapsed, 1000);
-      
-      console.log(chalk.gray('[POLLING]'), `Cycle took ${elapsed}ms, sleeping ${sleepTime}ms (${Math.round(sleepTime/1000)}s)`);
-      console.log(chalk.gray('[POLLING]'), `Next poll in ${Math.round(sleepTime/1000)} seconds...`);
+      // Silent polling - no cycle timing logs
       
       // Wait before next poll
       await new Promise(resolve => setTimeout(resolve, sleepTime));
@@ -542,15 +499,7 @@ async function runWorker() {
           // Extract ais from botParams (AI identity override)
           const aisOverride = item.message.botParams?.ais || undefined;
           
-          console.log(chalk.blue('[WORKER]'), `botParams.ais: "${aisOverride}"`);
-          
-          if (aisOverride) {
-            console.log(chalk.magenta('[WORKER]'), `Using AI identity override: ${aisOverride}`);
-            if (queueWS) queueWS.sendLog(`[WORKER] Using ais override: ${aisOverride}`);
-          } else {
-            console.log(chalk.gray('[WORKER]'), `No ais override, using entity defaults`);
-            if (queueWS) queueWS.sendLog(`[WORKER] No ais, using entity defaults`);
-          }
+          // Silent ais processing
           
           // Post with ais override (if present) - pass entity from queue item
           await postComment(response, item.entity, aisOverride);

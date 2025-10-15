@@ -15,6 +15,8 @@ function App() {
   const [expandedKVMessages, setExpandedKVMessages] = React.useState<Set<number>>(new Set());
   const [expandedPm2Logs, setExpandedPm2Logs] = React.useState<Set<number>>(new Set());
   const [copiedItems, setCopiedItems] = React.useState<Set<string>>(new Set());
+  const [newKVMessageId, setNewKVMessageId] = React.useState<string | null>(null);
+  const [newLLMRequestIndex, setNewLLMRequestIndex] = React.useState<number | null>(null);
 
   // Update last update time
   React.useEffect(() => {
@@ -31,11 +33,19 @@ function App() {
       const data = await response.json();
       // Sort newest first
       const sorted = (data.comments || []).sort((a: any, b: any) => b.timestamp - a.timestamp);
+      
+      // Check if there's a new message (different from current newest)
+      if (sorted.length > 0 && kvMessages.length > 0 && sorted[0].id !== kvMessages[0].id) {
+        setNewKVMessageId(sorted[0].id);
+        // Clear after 3 seconds
+        setTimeout(() => setNewKVMessageId(null), 3000);
+      }
+      
       setKvMessages(sorted);
     } catch (error) {
       console.error('Failed to fetch KV:', error);
     }
-  }, []);
+  }, [kvMessages]);
 
   // Auto-refresh KV every 10s and fetch PM2 logs on mount
   React.useEffect(() => {
@@ -44,6 +54,17 @@ function App() {
     const interval = setInterval(fetchKVMessages, 10000);
     return () => clearInterval(interval);
   }, [fetchKVMessages, fetchPm2Logs]);
+  
+  // Track new LLM requests
+  const prevLLMRequestsLength = React.useRef(llmRequests.length);
+  React.useEffect(() => {
+    if (llmRequests.length > prevLLMRequestsLength.current && llmRequests.length > 0) {
+      setNewLLMRequestIndex(0); // Newest is always at index 0
+      // Clear after 3 seconds
+      setTimeout(() => setNewLLMRequestIndex(null), 3000);
+    }
+    prevLLMRequestsLength.current = llmRequests.length;
+  }, [llmRequests]);
 
   // Toggle LLM request expansion
   const toggleRequest = (index: number) => {
@@ -168,14 +189,31 @@ function App() {
               const itemId = `kv-${msg.id || idx}`;
               const isCopied = copiedItems.has(itemId);
               
+              const isNew = msg.id === newKVMessageId;
+              
               return (
-                <div key={msg.id || idx} className={styles.llmRequestItem} style={{ borderColor: '#003300' }}>
+                <div 
+                  key={msg.id || idx} 
+                  className={styles.llmRequestItem} 
+                  style={{ 
+                    borderColor: '#003300',
+                    animation: isNew ? 'highlightNew 3s ease-out' : undefined,
+                    backgroundColor: isNew ? 'rgba(255, 255, 255, 0.1)' : undefined
+                  }}
+                >
                   <div 
                     className={styles.llmRequestHeader}
                     onClick={() => toggleKVMessage(idx)}
-                    style={{ borderBottomColor: '#003300' }}
+                    style={{ 
+                      borderBottomColor: '#003300',
+                      backgroundColor: isNew ? 'rgba(255, 255, 255, 0.15)' : undefined
+                    }}
                   >
-                    <div className={styles.llmRequestSummary} style={{ color: '#00FF00' }}>
+                    <div className={styles.llmRequestSummary} style={{ 
+                      color: isNew ? '#FFFFFF' : '#00FF00',
+                      fontWeight: isNew ? 'bold' : 'normal',
+                      transition: 'all 3s ease-out'
+                    }}>
                       #{idx + 1} - {msg.id || 'no-id'}
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -345,15 +383,30 @@ function App() {
                 const hasError = req.error || req.status === 'error' || req.status === 'failed';
                 const itemId = `llm-${idx}`;
                 const isCopied = copiedItems.has(itemId);
+                const isNew = idx === newLLMRequestIndex;
                 
                 return (
-                  <div key={idx} className={styles.llmRequestItem}>
+                  <div 
+                    key={idx} 
+                    className={styles.llmRequestItem}
+                    style={{
+                      animation: isNew ? 'highlightNew 3s ease-out' : undefined,
+                      backgroundColor: isNew ? 'rgba(255, 255, 255, 0.1)' : undefined
+                    }}
+                  >
                     <div 
                       className={styles.llmRequestHeader}
                       onClick={() => toggleRequest(idx)}
-                      style={{ borderLeftColor: hasError ? '#FF0000' : '#FFAA00' }}
+                      style={{ 
+                        borderLeftColor: hasError ? '#FF0000' : '#FFAA00',
+                        backgroundColor: isNew ? 'rgba(255, 255, 255, 0.15)' : undefined
+                      }}
                     >
-                      <div className={styles.llmRequestSummary} style={{ color: hasError ? '#FF0000' : '#FFAA00' }}>
+                      <div className={styles.llmRequestSummary} style={{ 
+                        color: isNew ? '#FFFFFF' : (hasError ? '#FF0000' : '#FFAA00'),
+                        fontWeight: isNew ? 'bold' : 'normal',
+                        transition: 'all 3s ease-out'
+                      }}>
                         [{timestamp}] #{idx + 1} - {entity} | {model} {hasError && '❌ ERROR'}
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

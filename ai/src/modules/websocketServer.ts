@@ -103,8 +103,8 @@ export class QueueWebSocketServer {
   }
 
   private async handleCommand(command: any, _ws: WebSocket) {
-    console.log(chalk.blue('[WebSocket]'), 'Command received:', command.action);
-
+    // Silent - no need to log every command (reduces spam)
+    
     switch (command.action) {
       case 'delete':
         await this.queueService.remove(command.itemId);
@@ -158,7 +158,7 @@ export class QueueWebSocketServer {
    * Broadcast event to all connected dashboards
    */
   private broadcast(message: WebSocketMessage) {
-    console.log(chalk.cyan('[WebSocket]'), `Broadcasting: ${message.type} to ${this.clients.size} clients`);
+    // Silent broadcast
     const data = JSON.stringify(message);
     let sent = 0;
     this.clients.forEach(client => {
@@ -167,7 +167,7 @@ export class QueueWebSocketServer {
         sent++;
       }
     });
-    console.log(chalk.cyan('[WebSocket]'), `Sent to ${sent} clients`);
+    // Silent
   }
 
   /**

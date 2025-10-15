@@ -95,11 +95,6 @@ export class KVClient {
     }
     
     try {
-      console.log('=== SENDING TO KV ===');
-      console.log('URL:', this.apiUrl);
-      console.log('Payload:', JSON.stringify(comment, null, 2));
-      console.log('===================');
-      
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -108,30 +103,20 @@ export class KVClient {
         body: JSON.stringify(comment),
       });
       
-      console.log('=== API RESPONSE ===');
-      console.log('Status:', response.status, response.statusText);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('❌ Error Response:', errorText);
-        console.log('====================');
+        console.log('❌ KV Error:', response.status, errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
       const responseText = await response.text();
-      console.log('Response Text:', responseText);
-      
       let result: any;
       try {
         result = JSON.parse(responseText);
-        console.log('Parsed JSON:', result);
       } catch (e) {
         console.log('❌ JSON Parse Error:', e);
-        console.log('====================');
         throw new Error(`Invalid JSON from API: ${responseText.substring(0, 200)}`);
       }
-      
-      console.log('====================');
       
       // Check if it's an error response
       if (result.error) {
@@ -172,7 +157,7 @@ export class KVClient {
    */
   public async updateProcessedStatus(messageId: string, processed: boolean): Promise<boolean> {
     try {
-      console.log('[KV] Updating processed status:', messageId, '→', processed);
+      // Silent update
       
       const response = await fetch(`${this.apiUrl}/${messageId}`, {
         method: 'PATCH',
@@ -185,7 +170,7 @@ export class KVClient {
       });
       
       if (response.ok) {
-        console.log('[KV] ✅ Processed status updated');
+        // Silent success
         return true;
       } else {
         const errorText = await response.text();

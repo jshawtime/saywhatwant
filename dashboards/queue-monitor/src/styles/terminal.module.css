@@ -305,3 +305,15 @@
   font-size: 14px;
   text-align: center;
 }
+
+/* Animation for new items */
+@keyframes highlightNew {
+  0% {
+    background-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
