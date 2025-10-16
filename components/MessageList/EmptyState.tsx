@@ -26,14 +26,20 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div style={{ color: userColor }}>
         {searchTerm ? 'No matching comments' : (
           <>
-            Say What You Want...
-            <br /><br />This is either 
-            your first time here
-            <br />or
-            a new conversation with AI
-            <br />or
-            <br /><br />
-            try turning filters off{' '}
+            <div style={{ fontSize: '24px', marginBottom: '20px' }}>
+              Say What You Want...
+            </div>
+            
+            <div style={{ fontSize: '16px' }}>
+              This is either 
+              <br />your first time here
+              <br />or
+              <br />a new conversation with AI
+              <br />or
+            </div>
+
+            <div style={{ fontSize: '14px', marginTop: '20px' }}>
+              try turning filters off{' '}
             <button
               onClick={onToggleFilter}
               style={{
@@ -53,6 +59,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               />
             </button>
             , changing filters, search term<br />or check what link got you here.<br />Maybe the link maker fucked something up.<br /><br />99.99% chance it's not a Cloudflare server issue.
+            </div>
           </>
         )}
       </div>
