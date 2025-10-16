@@ -99,26 +99,30 @@ async function generateResponse(context: any, entity: any): Promise<string | nul
     // Check if this is a ping request
     const isPing = context.recentMessages.toLowerCase().includes('ping');
     
-    // Build the context-aware prompt
+    // Optionally add newline to context (per-entity config)
+    let contextMessages = context.recentMessages;
+    if (entity.addNewlineToContext === true) {
+      contextMessages = contextMessages + '\n';
+    }
+    
+    // Build the full prompt with proper structure:
+    // systemPrompt + userPrompt + context
+    const userPromptText = entity.userPrompt || 'Generate a response based on the conversation context.';
     const contextInfo = isPing 
-      ? `\n\nSomeone just sent a ping! Respond briefly to acknowledge you're here and active. Context: ${context.recentMessages}`
-      : `\n\nContext: ${context.recentMessages}`;
-    const fullPrompt = entity.systemPrompt + contextInfo;
+      ? `\n\nSomeone just sent a ping! Respond briefly to acknowledge you're here and active. Context: ${contextMessages}`
+      : `\n\nContext: ${contextMessages}`;
+    
+    const fullPrompt = entity.systemPrompt + userPromptText + contextInfo;
     
     const modelName = getModelName(entity);
     logger.debug(`[Cluster] Generating response as ${entity.username} (${entity.id}) using model: ${modelName}`);
     
-    // Build the exact LLM request
-    if (!entity.systemRole) {
-      throw new Error(`Entity ${entity.id} is missing required 'systemRole' in config`);
-    }
-    
+    // Build the exact LLM request using entity's systemRole
     const llmRequest = {
       entityId: entity.id,
       modelName,
       prompt: [
-        { role: entity.systemRole, content: fullPrompt },
-        { role: 'user', content: entity.userPrompt || 'Generate a response based on the conversation context.' }
+        { role: entity.systemRole, content: fullPrompt }
       ],
       parameters: {
         temperature: entity.temperature,
@@ -179,6 +183,25 @@ async function generateResponse(context: any, entity: any): Promise<string | nul
 async function postComment(text: string, entity: any, ais?: string): Promise<boolean> {
   // Entity is now passed as parameter
   
+  // Filter out unwanted phrases (per-entity configuration)
+  let filteredText = text;
+  if (entity.filterOut && Array.isArray(entity.filterOut)) {
+    entity.filterOut.forEach((phrase: string) => {
+      // Remove all occurrences of this phrase (case-sensitive)
+      filteredText = filteredText.split(phrase).join('');
+    });
+    
+    // Trim whitespace if entity has trimWhitespace enabled
+    if (entity.trimWhitespace === true) {
+      filteredText = filteredText.trim();
+    }
+    
+    // Only log if something was actually filtered out
+    if (filteredText !== text) {
+      console.log(chalk.yellow('[FILTER]'), `Removed phrases for ${entity.id}`);
+    }
+  }
+  
   // Default to entity config
   let usernameToUse = entity.username;
   let colorToUse = entity.color;
@@ -209,7 +232,7 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
   
   const comment: Comment = {
     id: kvClient.generateId(),
-    text,
+    text: filteredText,  // Use filtered text (phrases removed)
     username: usernameToUse,  // Use overridden username
     color: colorToUse,  // Use overridden color
     timestamp: Date.now(),
