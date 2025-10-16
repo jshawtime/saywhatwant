@@ -26,19 +26,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div style={{ color: userColor }}>
         {searchTerm ? 'No matching comments' : (
           <>
-            <div style={{ fontSize: '24px', marginBottom: '20px' }}>
-              Say What You Want...
+            <div style={{ fontSize: '28px', marginBottom: '20px' }}>
+              SAY WHAT YOU WANT...
             </div>
             
             <div style={{ fontSize: '16px' }}>
-              This is either 
-              <br />your first time here
-              <br />or
-              <br />a new conversation with AI
-              <br />or
+              This is either your first time here or
+              <br />a new conversation with AI or
             </div>
 
-            <div style={{ fontSize: '14px', marginTop: '20px' }}>
+            <div style={{ fontSize: '11px', marginTop: '20px' }}>
               try turning filters off{' '}
             <button
               onClick={onToggleFilter}
