@@ -6,7 +6,6 @@
  */
 
 import React from 'react';
-import { Ban } from 'lucide-react';
 import { StyledFilterIcon } from '@/components/UIElements';
 
 interface EmptyStateProps {
@@ -24,18 +23,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div className="text-center py-8">
-      {!searchTerm && (
-        <Ban 
-          className="w-12 h-12 mx-auto mb-4" 
-          style={{ color: userColor }}
-        />
-      )}
       <div style={{ color: userColor }}>
         {searchTerm ? 'No matching comments' : (
           <>
-            Apparently there's nothing to see here.
+            Say What You Want...
+            <br /><br />This is either 
+            your first time here
+            <br />or
+            a new conversation with AI
+            <br />or
             <br /><br />
-            Try turning filters off{' '}
+            try turning filters off{' '}
             <button
               onClick={onToggleFilter}
               style={{
@@ -54,7 +52,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 opacity={isFilterEnabled ? 1.0 : 0.4}
               />
             </button>
-            , changing filters, search term<br />or check what link got you here.<br />Maybe someone fucked something up.<br /><br />99.9% chance it's not a server issue.
+            , changing filters, search term<br />or check what link got you here.<br />Maybe the link maker fucked something up.<br /><br />99.99% chance it's not a Cloudflare server issue.
           </>
         )}
       </div>

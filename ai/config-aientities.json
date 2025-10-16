@@ -933,10 +933,11 @@
       "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\n\n",
       "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\n\n",
 
-
-      "filterOut": ["TheEternal:", "yeysysye and words"],
+      
+      "filterOut": ["TheEternal:", "Assitant:"],
       "trimWhitespace": true,
       "addNewlineToContext": true,
+      "addEntityUsername": true,
 
       "nom": 100,
       "defaultPriority": 50,

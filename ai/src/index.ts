@@ -190,21 +190,44 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
   
   // Filter out unwanted phrases (per-entity configuration)
   let filteredText = text;
+  
+  // Step 1: Remove unwanted phrases
   if (entity.filterOut && Array.isArray(entity.filterOut)) {
     entity.filterOut.forEach((phrase: string) => {
       // Remove all occurrences of this phrase (case-sensitive)
       filteredText = filteredText.split(phrase).join('');
     });
+  }
+  
+  // Step 2: Trim after first occurrence of any specified phrase (prevents LLM role-playing)
+  if (entity.trimAfter && Array.isArray(entity.trimAfter)) {
+    let trimPosition = -1;
+    let foundPhrase = '';
     
-    // Trim whitespace if entity has trimWhitespace enabled
-    if (entity.trimWhitespace === true) {
-      filteredText = filteredText.trim();
-    }
+    // Find the earliest occurrence of any trimAfter phrase
+    entity.trimAfter.forEach((phrase: string) => {
+      const pos = filteredText.indexOf(phrase);
+      if (pos !== -1 && (trimPosition === -1 || pos < trimPosition)) {
+        trimPosition = pos;
+        foundPhrase = phrase;
+      }
+    });
     
-    // Only log if something was actually filtered out
-    if (filteredText !== text) {
-      console.log(chalk.yellow('[FILTER]'), `Removed phrases for ${entity.id}`);
+    // Trim at that position if found
+    if (trimPosition !== -1) {
+      filteredText = filteredText.substring(0, trimPosition);
+      console.log(chalk.yellow('[TRIM]'), `Trimmed after "${foundPhrase}" for ${entity.id}`);
     }
+  }
+  
+  // Step 3: Trim whitespace if entity has trimWhitespace enabled
+  if (entity.trimWhitespace === true) {
+    filteredText = filteredText.trim();
+  }
+  
+  // Only log filtering if something changed (not logged above already)
+  if (filteredText !== text && entity.filterOut) {
+    console.log(chalk.yellow('[FILTER]'), `Cleaned response for ${entity.id}`);
   }
   
   // Default to entity config
