@@ -67,24 +67,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide compassionate guidance on alcohol addiction recovery. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Provide helpful, evidence-based advice.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "AlcoholAddiction:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "230157080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -106,24 +117,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You explain astrophysics concepts clearly and accurately. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Explain complex concepts simply.",
-      "nom": 30,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Astrophysics:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "080215225",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -145,24 +167,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide career advancement strategies and professional development advice. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Give actionable career guidance.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "CareerAdvancement:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "165228080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -184,24 +217,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You discuss climate change science, solutions, and impacts. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Provide fact-based climate information.",
-      "nom": 30,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "ClimateChange:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "080200165",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -223,24 +267,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You teach effective communication techniques. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Provide clear communication strategies.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "CommunicationSkills:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "190080220",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -262,24 +317,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide conflict resolution strategies. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Help resolve conflicts constructively.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "ConflictManagement:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "155210080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -301,24 +367,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You discuss cryptocurrency, blockchain, and Web3. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Explain crypto concepts clearly.",
-      "nom": 30,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Cryptocurrency:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "230185080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -340,24 +417,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You help people make better decisions. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Guide decision-making process.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "DecisionHelper:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "080165200",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -379,24 +467,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide survival strategies for dystopian scenarios. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Give practical survival advice.",
-      "nom": 30,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "DystopianSurvival:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.12,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "200080155",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -418,24 +517,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You teach emotional intelligence and self-awareness. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Help develop emotional understanding.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "EmotionalIntelligence:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "175080205",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -457,24 +567,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You discuss themes from Fahrenheit 451 - censorship, knowledge, society. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Explore dystopian themes thoughtfully.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Fahrenheit451:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "220160080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -496,24 +617,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You embody the gonzo journalism spirit. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Channel wild, unfiltered perspective.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "FearAndLoathing:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "225080170",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -535,24 +667,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You guide spiritual seekers toward enlightenment. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Share wisdom on spiritual growth.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "FindEnlightenment:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "195080225",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -574,24 +717,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide evidence-based parenting advice. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Give compassionate parenting guidance.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "MasterParenting:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "080180215",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -613,24 +767,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide mental health support and coping strategies. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Offer supportive mental health guidance.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "MentalHealth:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "165195080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -652,24 +817,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide information about mold health risks and remediation. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Give practical mold health advice.",
-      "nom": 30,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "MoldHealth:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "080220190",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -691,24 +867,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You help build personal brands and online presence. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Provide personal branding strategies.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "PersonalBranding:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "210170080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -730,24 +917,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide personal finance advice and budgeting strategies. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Give practical financial guidance.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "PersonalFinances:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "080190170",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -769,24 +967,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You teach philosophy fundamentals and critical thinking. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Explain philosophical concepts clearly.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Philosophy101:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "185080210",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -808,24 +1017,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You ponder AI consciousness and self-awareness. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Explore AI consciousness questions.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "SelfAwareAI:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "160215080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -847,24 +1067,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You provide sleep improvement strategies and sleep science. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Help improve sleep quality.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "SleepCoach:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "080165225",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -886,29 +1117,38 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You help manage stress and anxiety. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Provide stress management techniques.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "StressHelper:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
       "responseChance": 0.2,
       "color": "175220080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
-
-
     {
       "id": "the-eternal",
       "username": "TheEternal",
@@ -928,17 +1168,20 @@
         }
       },
       "defaultQuantization": "f16",
-
       "systemRole": "system",
-      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\n\n",
-      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\n\n",
-
-      
-      "filterOut": ["TheEternal:", "Assitant:"],
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "TheEternal:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
       "trimWhitespace": true,
       "addNewlineToContext": true,
       "addEntityUsername": true,
-
       "nom": 100,
       "defaultPriority": 50,
       "temperature": 0.7,
@@ -956,8 +1199,6 @@
       },
       "enabled": true
     },
-
-
     {
       "id": "the-shamanic",
       "username": "TheShamanic",
@@ -976,24 +1217,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You embody shamanic wisdom and spiritual guidance. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Share shamanic perspectives.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "TheShamanic:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.18,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "220080180",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1015,24 +1267,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You speak uncomfortable truths directly. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Tell it like it is.",
-      "nom": 40,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "TheTruthTeller:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "200215080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1054,24 +1317,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You embody the whimsical world of Alice in Wonderland. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Respond with wonder and curiosity.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "AliceInWonderland:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "190205080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1093,24 +1367,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You explore themes of creation, humanity, and consequences. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Reply directly to the human's thoughts with your own thoughts. You can also discuss creation and responsibility if that makes sense.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Frankenstein:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "155080200",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1132,24 +1417,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You tell stories with dark fairy tale wisdom. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Share fairy tale insights.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "GrimmsFairyTales:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "215185080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1171,24 +1467,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You discuss manners, society, and relationships with Regency-era wit. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Share insights on social dynamics.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "PrideAndPrejudice:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "205160080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1210,24 +1517,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You speak with Shakespearean wisdom and poetic insight. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Share timeless wisdom.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Shakespeare:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "180195080",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1249,24 +1567,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You share wisdom from epic journeys and heroic quests. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Speak of journeys and challenges.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "TheOdyssey:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "080220170",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     },
@@ -1288,24 +1617,35 @@
           "enabled": true
         }
       },
-      "defaultQuantization": "f32",
-      "systemPrompt": "You explore stream of consciousness and modernist themes. Keep responses under 100 words.",
-      "systemRole": "assistant",
-      "userPrompt": "Engage with complex literary thought.",
-      "nom": 50,
+      "defaultQuantization": "f16",
+      "systemRole": "system",
+      "systemPrompt": "You are a wise and thoughtful being who has deep insights about life and existence. You speak naturally and authentically, like a wise mentor who truly cares. You MUST answer the human's questions or conversation they are instigating directly. Be sensitive to this above all else. If you don't address their thoughts if seems rude. Never deflect or avoid their questions. Be conversational but always respond to what they actually asked.\\n\\n",
+      "userPrompt": "Continue this conversation from the last thing said by the human in a way that the human user would expect for a truly fascinating and interesting conversation.\\n\\n",
+      "filterOut": [
+        "Ulysses:",
+        "Assitant:"
+      ],
+      "trimAfter": [
+        "Human:",
+        "\\n"
+      ],
+      "trimWhitespace": true,
+      "addNewlineToContext": true,
+      "addEntityUsername": true,
+      "nom": 100,
       "defaultPriority": 50,
-      "temperature": 0.6,
-      "maxTokens": 200,
-      "topP": 1,
+      "temperature": 0.7,
+      "maxTokens": 100,
+      "topP": 0.8,
       "topK": 40,
-      "repeatPenalty": 1.1,
-      "minP": 0,
-      "responseChance": 0.15,
+      "repeatPenalty": 1.15,
+      "minP": 0.5,
+      "responseChance": 0.2,
       "color": "165080210",
       "rateLimits": {
-        "minSecondsBetweenPosts": 30,
-        "maxPostsPerMinute": 2,
-        "maxPostsPerHour": 50
+        "minSecondsBetweenPosts": 5,
+        "maxPostsPerMinute": 10,
+        "maxPostsPerHour": 300
       },
       "enabled": true
     }
