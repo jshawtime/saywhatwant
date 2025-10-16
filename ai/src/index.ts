@@ -105,8 +105,13 @@ async function generateResponse(context: any, entity: any): Promise<string | nul
       contextMessages = contextMessages + '\n';
     }
     
+    // Optionally add entity username as continuation prompt (per-entity config)
+    if (entity.addEntityUsername === true) {
+      contextMessages = contextMessages + entity.username + ': ';
+    }
+    
     // Build the full prompt with proper structure:
-    // systemPrompt + userPrompt + context
+    // systemPrompt + userPrompt + context + [optional newline] + [optional "EntityName: "]
     const userPromptText = entity.userPrompt || 'Generate a response based on the conversation context.';
     const contextInfo = isPing 
       ? `\n\nSomeone just sent a ping! Respond briefly to acknowledge you're here and active. Context: ${contextMessages}`
