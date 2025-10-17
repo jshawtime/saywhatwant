@@ -50,7 +50,7 @@ function App() {
   // Auto-refresh KV every 10s and fetch PM2 logs on mount
   React.useEffect(() => {
     fetchKVMessages();
-    fetchPm2Logs(500); // Fetch 500 lines of PM2 logs initially
+    fetchPm2Logs(200); // Fetch last 200 lines for context
     const interval = setInterval(fetchKVMessages, 10000);
     return () => clearInterval(interval);
   }, [fetchKVMessages, fetchPm2Logs]);

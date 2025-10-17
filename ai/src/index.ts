@@ -456,7 +456,7 @@ async function runBot() {
         
         // Check for ping trigger (queue with highest priority)
         if (USE_QUEUE && queueService && analyzer.hasPingTrigger(messages)) {
-          console.log(chalk.yellow('[PING]'), 'Ping trigger requires entity in message botParams - skipping');
+          // Silent - ping requires entity
           continue; // Skip - pings need entity specified too
         }
       }
@@ -543,8 +543,11 @@ async function runWorker() {
           const updateSuccess = await kvClient.updateProcessedStatus(item.message.id, true);
           
           if (!updateSuccess) {
-            console.warn(chalk.yellow('[WORKER]'), `Failed to mark as processed - might reprocess on restart`);
+            console.error(chalk.red('[CRITICAL]'), `❌ Failed to mark ${item.message.id} as processed - WILL REPROCESS!`);
+            console.error(chalk.red('[CRITICAL]'), `This causes duplicate AI responses!`);
             // Continue anyway - we have a valid response to post
+          } else {
+            console.log(chalk.gray('[KV]'), `✅ Marked ${item.message.id} as processed`);
           }
           
           // Extract ais from botParams (AI identity override)
