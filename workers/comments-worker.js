@@ -577,9 +577,11 @@ async function handlePatchComment(request, env, messageId) {
     
     console.log('[Comments] ✅ Updated individual key:', messageId, '→', updates.botParams.processed);
     
-    // CRITICAL: Also update cache SYNCHRONOUSLY (not background)
-    // If cache isn't updated, GET will return stale data → duplicate responses
-    await updateCacheProcessedStatus(env, messageId, updates.botParams.processed);
+    // CRITICAL: Invalidate cache to force rebuild on next GET
+    // This ensures cache never shows stale processed status
+    const cacheKey = 'recent:comments';
+    await env.COMMENTS_KV.delete(cacheKey);
+    console.log('[Comments] Cache invalidated - will rebuild on next GET');
     
     return new Response(JSON.stringify(message), {
       status: 200,
