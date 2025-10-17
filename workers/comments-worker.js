@@ -542,31 +542,27 @@ async function handlePatchComment(request, env, messageId) {
       });
     }
     
-    // Get cache
-    const cacheKey = 'recent:comments';
-    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    // Extract timestamp from message ID (format: timestamp-randomstring)
+    const timestamp = messageId.split('-')[0];
     
-    if (!cachedData) {
+    // Construct individual KV key (bypasses cache race condition)
+    const key = `comment:${timestamp}:${messageId}`;
+    
+    console.log('[Comments] Looking up key:', key);
+    
+    // Get message directly from individual KV key
+    const messageData = await env.COMMENTS_KV.get(key);
+    
+    if (!messageData) {
+      console.error('[Comments] Message not found at key:', key);
       return new Response(JSON.stringify({ error: 'Message not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    const allComments = JSON.parse(cachedData);
-    
-    // Find the message
-    const messageIndex = allComments.findIndex(m => m.id === messageId);
-    
-    if (messageIndex === -1) {
-      return new Response(JSON.stringify({ error: 'Message not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Update the message
-    const message = allComments[messageIndex];
+    // Parse the message
+    const message = JSON.parse(messageData);
     
     // Initialize botParams if it doesn't exist
     if (!message.botParams) {
@@ -576,11 +572,15 @@ async function handlePatchComment(request, env, messageId) {
     // Update processed field
     message.botParams.processed = updates.botParams.processed;
     
-    // Save back to cache
-    allComments[messageIndex] = message;
-    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(allComments));
+    // Save back to individual KV key
+    await env.COMMENTS_KV.put(key, JSON.stringify(message));
     
-    console.log('[Comments] Updated message processed status:', messageId, '→', updates.botParams.processed);
+    console.log('[Comments] ✅ Updated individual key:', messageId, '→', updates.botParams.processed);
+    
+    // Also update cache in background (best effort, non-blocking)
+    updateCacheProcessedStatus(env, messageId, updates.botParams.processed).catch(err => {
+      console.warn('[Comments] Cache update failed (non-critical):', err.message);
+    });
     
     return new Response(JSON.stringify(message), {
       status: 200,
@@ -599,6 +599,28 @@ async function handlePatchComment(request, env, messageId) {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+  }
+}
+
+/**
+ * Update cache with processed status (background, best effort)
+ */
+async function updateCacheProcessedStatus(env, messageId, processed) {
+  const cacheKey = 'recent:comments';
+  const cachedData = await env.COMMENTS_KV.get(cacheKey);
+  
+  if (cachedData) {
+    const allComments = JSON.parse(cachedData);
+    const messageIndex = allComments.findIndex(m => m.id === messageId);
+    
+    if (messageIndex !== -1) {
+      if (!allComments[messageIndex].botParams) {
+        allComments[messageIndex].botParams = {};
+      }
+      allComments[messageIndex].botParams.processed = processed;
+      await env.COMMENTS_KV.put(cacheKey, JSON.stringify(allComments));
+      console.log('[Comments] Cache also updated for:', messageId);
+    }
   }
 }
 
