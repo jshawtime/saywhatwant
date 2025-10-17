@@ -4,6 +4,7 @@
  */
 
 import fetch from 'node-fetch';
+import chalk from 'chalk';
 import { Comment } from '../types.js';
 import { logger } from '../console-logger.js';
 import { CONFIG } from '../config.js';
@@ -157,30 +158,39 @@ export class KVClient {
    */
   public async updateProcessedStatus(messageId: string, processed: boolean): Promise<boolean> {
     try {
-      // Silent update
+      const url = `${this.apiUrl}/${messageId}`;
+      const payload = {
+        botParams: {
+          processed: processed
+        }
+      };
       
-      const response = await fetch(`${this.apiUrl}/${messageId}`, {
+      const ts = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      console.log(chalk.cyan(`[${ts}] [KV PATCH]`), `Updating ${messageId}`);
+      console.log(chalk.cyan(`[${ts}] [KV PATCH]`), `URL: ${url}`);
+      console.log(chalk.cyan(`[${ts}] [KV PATCH]`), `Payload:`, JSON.stringify(payload));
+      
+      const response = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          botParams: {
-            processed: processed
-          }
-        })
+        body: JSON.stringify(payload)
       });
       
+      const ts2 = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      console.log(chalk.cyan(`[${ts2}] [KV PATCH]`), `Response: ${response.status} ${response.statusText}`);
+      
       if (response.ok) {
-        // Silent success
+        const responseData = await response.text();
+        console.log(chalk.green(`[${ts2}] [KV PATCH]`), `✅ Success:`, responseData.substring(0, 100));
         return true;
       } else {
         const errorText = await response.text();
-        console.error('[KV] ❌ Failed to update:', response.status, errorText);
+        console.error(chalk.red(`[${ts2}] [KV PATCH]`), `❌ Failed:`, response.status, errorText);
         return false;
       }
     } catch (error: any) {
-      console.error('[KV] ❌ Error updating processed status:', error.message);
-      // Don't throw - this is a "best effort" update
-      // If it fails, worst case is message gets reprocessed on restart
+      const ts3 = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      console.error(chalk.red(`[${ts3}] [KV PATCH]`), `❌ Exception:`, error.message);
       return false;
     }
   }

@@ -19,6 +19,9 @@ import { QueueWebSocketServer } from './modules/websocketServer.js';
 import { EntityValidator } from './modules/entityValidator.js';
 import { getConfigOnce, getConfig } from './modules/configLoader.js';
 
+// Timestamp utility for logs
+const timestamp = () => new Date().toISOString().replace('T', ' ').substring(0, 19);
+
 // Load configuration FIRST for startup settings (polling, websocket, etc.)
 // Entity configs will be hot-reloaded on every message
 const startupConfig = getConfigOnce();
@@ -365,7 +368,7 @@ async function runBot() {
               continue;
             }
             
-            console.log(chalk.blue('[QUEUE]'), `New unprocessed message from ${message.username}: "${message.text.substring(0, 40)}..."`);
+            console.log(chalk.blue(`[${timestamp()}] [QUEUE]`), `New unprocessed message from ${message.username}: "${message.text.substring(0, 40)}..."`);
             
             const botParams = message.botParams;
             
@@ -441,7 +444,7 @@ async function runBot() {
             
             // Color-code priority for visibility
             const priorityColor = priority <= 9 ? chalk.magenta : chalk.cyan;
-            console.log(priorityColor('[QUEUE]'), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
+            console.log(priorityColor(`[${timestamp()}] [QUEUE]`), `Queued: ${message.username} → ${entity.username} (priority ${priority})`);
             queued++;
           }
           
@@ -519,7 +522,7 @@ async function runWorker() {
         queueWS.onClaimed(item.id, serverId);
       }
       
-      console.log(chalk.blue('[WORKER]'), `Processing: ${item.id} (priority ${item.priority})`);
+      console.log(chalk.blue(`[${timestamp()}] [WORKER]`), `Processing: ${item.id} (priority ${item.priority})`);
       
       try {
         // Build context object - include the triggering message at the end
@@ -539,15 +542,15 @@ async function runWorker() {
         
         if (response) {
           // LM Studio returned successfully! Mark message as processed immediately
-          console.log(chalk.green('[WORKER]'), `Got response from LM Studio - marking message as processed`);
+          console.log(chalk.green(`[${timestamp()}] [WORKER]`), `Got response from LM Studio - marking message as processed`);
           const updateSuccess = await kvClient.updateProcessedStatus(item.message.id, true);
           
           if (!updateSuccess) {
-            console.error(chalk.red('[CRITICAL]'), `❌ Failed to mark ${item.message.id} as processed - WILL REPROCESS!`);
-            console.error(chalk.red('[CRITICAL]'), `This causes duplicate AI responses!`);
+            console.error(chalk.red(`[${timestamp()}] [CRITICAL]`), `❌ Failed to mark ${item.message.id} as processed - WILL REPROCESS!`);
+            console.error(chalk.red(`[${timestamp()}] [CRITICAL]`), `This causes duplicate AI responses!`);
             // Continue anyway - we have a valid response to post
           } else {
-            console.log(chalk.gray('[KV]'), `✅ Marked ${item.message.id} as processed`);
+            console.log(chalk.gray(`[${timestamp()}] [KV]`), `✅ Marked ${item.message.id} as processed`);
           }
           
           // Extract ais from botParams (AI identity override)
@@ -568,7 +571,7 @@ async function runWorker() {
             queueWS.pushStats();  // Push updated stats
           }
           
-          console.log(chalk.green('[WORKER]'), `Completed: ${item.id}`);
+          console.log(chalk.green(`[${timestamp()}] [WORKER]`), `Completed: ${item.id}`);
         } else {
           // No response generated - mark as complete anyway
           await queueService.complete(item.id, true);
