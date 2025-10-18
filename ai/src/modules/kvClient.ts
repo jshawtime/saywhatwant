@@ -20,13 +20,9 @@ export interface PostResult {
  */
 export class KVClient {
   private apiUrl: string;
-  private lastFetchTime: number = 0;
-  private fetchCooldown: number; // Will be set from config
   
-  constructor(apiUrl: string = CONFIG.SWW_API.baseURL + CONFIG.SWW_API.endpoints.postComment, fetchCooldown?: number) {
+  constructor(apiUrl: string = CONFIG.SWW_API.baseURL + CONFIG.SWW_API.endpoints.postComment) {
     this.apiUrl = apiUrl;
-    // Use provided cooldown or default to 5000ms
-    this.fetchCooldown = fetchCooldown || 5000;
   }
   
   /**
@@ -35,14 +31,6 @@ export class KVClient {
    * @param after - Only fetch messages with timestamp > this value (for cursor-based polling)
    */
   public async fetchRecentComments(limit: number = 50, after?: number): Promise<Comment[]> {
-    const now = Date.now();
-    
-    // Rate limit fetches
-    if (now - this.lastFetchTime < this.fetchCooldown) {
-      logger.debug('Skipping fetch - too soon since last fetch');
-      return [];
-    }
-    
     try {
       // Build URL with optional after parameter for cursor-based polling
       let url = `${this.apiUrl}?limit=${limit}&domain=all&sort=timestamp&order=desc`;
@@ -58,7 +46,6 @@ export class KVClient {
       }
       
       const rawData = await response.json() as any;
-      this.lastFetchTime = now;
       
       // Handle both response formats:
       // - Without after: {comments: [...]}
@@ -222,9 +209,9 @@ export class KVClient {
 // Singleton instance
 let kvClientInstance: KVClient | null = null;
 
-export function getKVClient(fetchCooldown?: number): KVClient {
+export function getKVClient(): KVClient {
   if (!kvClientInstance) {
-    kvClientInstance = new KVClient(undefined, fetchCooldown);
+    kvClientInstance = new KVClient();
   }
   return kvClientInstance;
 }

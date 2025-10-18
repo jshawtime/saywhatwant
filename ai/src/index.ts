@@ -33,7 +33,7 @@ const POLLING_INTERVAL = startupConfig.botSettings?.pollingInterval || 30000;
 const entityManager = getEntityManager();
 const entityValidator = new EntityValidator(); // No EntityManager needed - reads fresh config
 const analyzer = getConversationAnalyzer();
-const kvClient = getKVClient(POLLING_INTERVAL); // Pass polling interval as fetch cooldown
+const kvClient = getKVClient(); // No cooldown - polling interval is sufficient rate control
 const WEBSOCKET_PORT = startupConfig.botSettings?.websocketPort || 4002;
 const USE_QUEUE = startupConfig.queueSettings?.enabled !== false;  // Default: enabled
 const USE_ROUTER = startupConfig.routerSettings?.enabled === true;  // Default: disabled
