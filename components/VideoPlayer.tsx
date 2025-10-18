@@ -385,7 +385,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
         <div 
           className="absolute inset-0 pointer-events-none z-10"
           style={{
-            backgroundColor: userColor,
+            backgroundColor: userColorRgb,  // RGB format required for valid CSS
             opacity: overlayOpacity,
             mixBlendMode: blendMode as any,
           }}
@@ -584,8 +584,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
                     className="w-4 h-4"
                     style={{ 
                       color: !isLoopMode 
-                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
-                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK)  // Inactive: 40% opacity (2 steps darker)
+                        ? userColorRgb  // Active: FULL color (100% brightness - highly visible)
+                        : getDarkerColor(userColorRgb, 0.6)  // Inactive: 60% (dimmer but still visible)
                     }}
                   />
                 </button>
@@ -600,8 +600,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
                     className="w-4 h-4"
                     style={{ 
                       color: isLoopMode 
-                        ? getDarkerColor(userColor, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
-                        : getDarkerColor(userColor, OPACITY_LEVELS.DARK)  // Inactive: 40% opacity (2 steps darker)
+                        ? userColorRgb  // Active: FULL color (100% brightness - highly visible)
+                        : getDarkerColor(userColorRgb, 0.6)  // Inactive: 60% (dimmer but still visible)
                     }}
                   />
                 </button>
