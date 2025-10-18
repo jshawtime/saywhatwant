@@ -10,7 +10,7 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 interface VideoPlayerProps {
   toggleVideo?: () => void;
   userColor: string;
-  userColorRgb: { r: number; g: number; b: number };
+  userColorRgb: string; // RGB format string e.g. "rgb(100, 200, 150)"
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userColorRgb }) => {
