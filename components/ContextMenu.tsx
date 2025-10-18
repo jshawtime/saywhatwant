@@ -51,11 +51,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [onClose]);
 
-  // Adjust position to keep menu on screen
+  // Adjust position to keep menu on screen (accounting for video drawer)
   useEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
-      const adjustedX = Math.min(x, window.innerWidth - rect.width - 10);
+      
+      // Get actual container bounds (accounts for video drawer)
+      const container = document.querySelector('.flex-1') || document.body;
+      const containerRect = container.getBoundingClientRect();
+      const viewportRight = containerRect.right;
+      
+      const adjustedX = Math.min(x, viewportRight - rect.width - 10);
       const adjustedY = Math.min(y, window.innerHeight - rect.height - 10);
       
       menuRef.current.style.left = `${Math.max(10, adjustedX)}px`;

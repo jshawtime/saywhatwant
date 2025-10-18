@@ -10,9 +10,10 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 interface VideoPlayerProps {
   toggleVideo?: () => void;
   userColor: string;
+  userColorRgb: { r: number; g: number; b: number };
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userColorRgb }) => {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoItem | null>(null);
   const [availableVideos, setAvailableVideos] = useState<VideoItem[]>([]);
@@ -407,8 +408,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
               <Settings 
                 className="w-4 h-4"
                 style={{ 
-                  color: showSettings ? userColor : getDarkerColor(userColor, 0.6),
-                  opacity: showSettings ? 1 : 0.8
+                  color: showSettings 
+                    ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
+                    : getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) // Inactive: 40% opacity
                 }}
               />
             </button>
@@ -424,14 +426,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
               <Share2 
                 className="w-4 h-4"
                 style={{ 
-                  color: userColor,
-                  opacity: 0.8
+                  color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) // 50% opacity for consistency
                 }}
               />
             </button>
           </div>
 
-          {/* TV Toggle (top right) - Same as main UI TV button */}
+          {/* TV Toggle (top right) - Match main UI TV button styling */}
           {toggleVideo && (
             <div className="absolute top-4 right-4 z-20">
               <button
@@ -442,7 +443,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
                 <Tv 
                   className="w-5 h-5"
                   style={{ 
-                    color: userColor // Use userColor directly, no fallbacks
+                    color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT), // Match main UI (60% opacity)
+                    opacity: 1 // Always visible when drawer is open
                   }}
                 />
               </button>
@@ -461,7 +463,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
               <div className="flex items-center gap-2 bg-black/40 rounded-full px-2 py-1">
                 <Sun 
                   className="w-4 h-4 flex-shrink-0"
-                  style={{ color: getDarkerColor(userColor, 0.6) }}
+                  style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) }} // 50% opacity
                 />
                 <input
                   type="range"
@@ -489,7 +491,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
                   <Palette 
                     className="w-4 h-4"
                     style={{ 
-                      color: showOverlay ? userColor : getDarkerColor(userColor, 0.3)
+                      color: showOverlay 
+                        ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
+                        : getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) // Inactive: 40% opacity
                     }}
                   />
                 </button>
@@ -525,12 +529,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
                 >
                   <Layers 
                     className="w-4 h-4"
-                    style={{ color: showOverlay ? getDarkerColor(userColor, 0.6) : getDarkerColor(userColor, 0.2) }}
+                    style={{ 
+                      color: showOverlay 
+                        ? getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) // Active: 50% opacity
+                        : getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) // Inactive: 40% opacity
+                    }}
                   />
                   <span 
                     className="text-xs" 
                     style={{ 
-                      color: showOverlay ? getDarkerColor(userColor, 0.8) : getDarkerColor(userColor, 0.3)
+                      color: showOverlay 
+                        ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) // Active: 60% opacity
+                        : getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) // Inactive: 40% opacity
                     }}
                   >
                     {blendMode}
@@ -549,7 +559,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor }) => 
                             : 'hover:bg-white/10'
                         }`}
                         style={{
-                          color: mode === blendMode ? userColor : getDarkerColor(userColor, 0.6)
+                          color: mode === blendMode 
+                            ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) // Selected: 60% opacity
+                            : getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) // Unselected: 40% opacity
                         }}
                       >
                         {mode}

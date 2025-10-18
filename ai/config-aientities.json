@@ -1,7 +1,7 @@
 {
   "version": "v0.1 - PHASE 1",
   "botSettings": {
-    "pollingInterval": 10000,
+    "pollingInterval": 3000,
     "websocketPort": 4002,
     "enableConsoleLogs": true
   },

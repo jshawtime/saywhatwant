@@ -52,19 +52,25 @@ export const FilterNotificationMenu: React.FC<FilterNotificationMenuProps> = ({
     };
   }, [onClose]);
 
-  // Adjust position to stay within viewport
+  // Adjust position to stay within viewport (accounting for video drawer)
   useEffect(() => {
     if (menuRef.current) {
       const menuWidth = menuRef.current.offsetWidth;
       const menuHeight = menuRef.current.offsetHeight;
-      const viewportWidth = window.innerWidth;
+      
+      // Get actual container bounds (not full viewport - accounts for video drawer)
+      const container = document.querySelector('.flex-1') || document.body;
+      const containerRect = container.getBoundingClientRect();
+      const viewportWidth = containerRect.width;
+      const viewportRight = containerRect.right;
       const viewportHeight = window.innerHeight;
 
       let adjustedX = x;
       let adjustedY = y;
 
-      if (x + menuWidth > viewportWidth - 10) {
-        adjustedX = viewportWidth - menuWidth - 10;
+      // Check if menu would overflow right edge of container
+      if (x + menuWidth > viewportRight - 10) {
+        adjustedX = viewportRight - menuWidth - 10;
       }
       if (y + menuHeight > viewportHeight - 10) {
         adjustedY = viewportHeight - menuHeight - 10;

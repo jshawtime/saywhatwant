@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
-import { getRandomColor, DEFAULT_COLOR } from '@/modules/colorSystem';
+import { getRandomColor, DEFAULT_COLOR, parseColorToRgb } from '@/modules/colorSystem';
 
 export default function Home() {
   // Video visible by default on first visit
@@ -64,6 +64,9 @@ export default function Home() {
     localStorage.setItem('sww-show-video', String(newState));
   };
 
+  // Convert userColor to RGB for VideoPlayer
+  const userColorRgb = parseColorToRgb(userColor);
+
   return (
     <main className="flex h-screen h-dvh bg-black relative overflow-hidden">
       {/* Left Side - Video Player (9:16 aspect ratio container) */}
@@ -75,7 +78,7 @@ export default function Home() {
           width: showVideo ? 'calc(100vh * 9 / 16)' : '0',
         }}
       >
-        {showVideo && <VideoPlayer toggleVideo={toggleVideo} userColor={userColor} />}
+        {showVideo && <VideoPlayer toggleVideo={toggleVideo} userColor={userColor} userColorRgb={userColorRgb} />}
       </div>
 
       {/* Right Side - Comments Stream */}
