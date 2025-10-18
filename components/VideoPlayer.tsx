@@ -25,7 +25,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
   const [blendMode, setBlendMode] = useState('hue');  // Default, will read from CSS if available
   const [showBlendMenu, setShowBlendMenu] = useState(false);
-  const [videoBrightness, setVideoBrightness] = useState(0.3); // 0.3 = 30% brightness
+  const [videoBrightness, setVideoBrightness] = useState(0.45); // 0.45 = 45% brightness (default)
   const [showSettings, setShowSettings] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
