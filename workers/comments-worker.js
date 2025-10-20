@@ -138,19 +138,41 @@ async function handleGetComments(env, url) {
       const cacheKey = 'recent:comments';
       const cachedData = await env.COMMENTS_KV.get(cacheKey);
       
-      let newMessages = [];
+      let allComments = [];
       
       if (cachedData) {
-        const allComments = JSON.parse(cachedData);
-        // Filter only messages after the timestamp
-        newMessages = allComments
-          .filter(c => c.timestamp > afterTimestamp)
-          .filter(c => !messageType || c['message-type'] === messageType) // Filter by type if specified
-          .sort((a, b) => b.timestamp - a.timestamp) // Newest first
-          .slice(0, limit);
+        allComments = JSON.parse(cachedData);
+        console.log(`[Comments] Cursor polling: using cache with ${allComments.length} comments`);
+      } else {
+        // Cache is empty (likely invalidated by PATCH) - rebuild from individual keys
+        console.log('[Comments] Cursor polling: cache empty, rebuilding from KV...');
+        const list = await env.COMMENTS_KV.list({ prefix: 'comment:', limit: 1000 });
         
-        console.log(`[Comments] Cursor polling: ${newMessages.length} new messages after ${afterTimestamp}`);
+        for (const key of list.keys) {
+          const commentData = await env.COMMENTS_KV.get(key.name);
+          if (commentData) {
+            allComments.push(JSON.parse(commentData));
+          }
+        }
+        
+        // Sort by timestamp (ascending)
+        allComments.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Update cache for future requests
+        if (allComments.length > 0) {
+          await updateCache(env, allComments);
+          console.log(`[Comments] Rebuilt cache with ${allComments.length} comments`);
+        }
       }
+      
+      // Filter only messages after the timestamp
+      const newMessages = allComments
+        .filter(c => c.timestamp > afterTimestamp)
+        .filter(c => !messageType || c['message-type'] === messageType) // Filter by type if specified
+        .sort((a, b) => b.timestamp - a.timestamp) // Newest first
+        .slice(0, limit);
+      
+      console.log(`[Comments] Cursor polling: ${newMessages.length} new messages after ${afterTimestamp}`);
       
       return new Response(JSON.stringify(newMessages), {
         status: 200,
