@@ -31,7 +31,6 @@
     "import-kv": "echo 'Open http://localhost:3000/import-kv-data.html to import the data'"
   },
   "dependencies": {
-    "@next/swc-linux-x64-gnu": "14.2.5",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
