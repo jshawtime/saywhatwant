@@ -29,7 +29,11 @@ export class QueueWebSocketServer {
   constructor(queueService: QueueService, port: number = 4002) {
     this.queueService = queueService;
     this.port = port;
-    this.wss = new WebSocketServer({ port });
+    // Bind to 0.0.0.0 to allow connections from other machines on the network
+    this.wss = new WebSocketServer({ 
+      host: '0.0.0.0',
+      port 
+    });
     this.setupHandlers();
   }
 

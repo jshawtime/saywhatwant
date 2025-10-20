@@ -8,7 +8,9 @@ import { Footer } from './components/Footer';
 import styles from './styles/terminal.module.css';
 
 function App() {
-  const { connected, queue, stats, logs, llmRequests, pm2Logs, deleteItem, clearQueue, fetchPm2Logs } = useWebSocket('ws://localhost:4002');
+  // Read WebSocket URL from environment or use localhost default
+  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:4002';
+  const { connected, queue, stats, logs, llmRequests, pm2Logs, deleteItem, clearQueue, fetchPm2Logs } = useWebSocket(wsUrl);
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
   const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
