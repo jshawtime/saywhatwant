@@ -6,6 +6,49 @@
 
 ---
 
+## ⚠️ CRITICAL RULE: NO BIAS ALLOWED
+
+**THE HYPOTHESIS MUST BE WRITTEN BEFORE THE TEST IS RUN**
+
+This is **NON-NEGOTIABLE** for maintaining scientific integrity:
+
+1. **Write hypothesis BEFORE test execution**
+   - Document what you expect to happen
+   - Explain technical reasoning for both outcomes
+   - Commit to git BEFORE running test
+
+2. **If you write hypothesis AFTER seeing results:**
+   - Your predictions will be biased by what actually happened
+   - You'll rationalize outcomes instead of predicting them
+   - The entire exercise becomes worthless
+   - You're lying to yourself about understanding the system
+
+3. **Why this matters:**
+   - Real prediction = you understand the system
+   - Post-hoc rationalization = you're fooling yourself
+   - Bias corrupts learning and prevents discovering surprises
+   - The value is in WRONG predictions teaching you something
+
+**WORKFLOW:**
+```
+1. Write hypothesis → 2. Commit to git → 3. Run test → 4. Document results
+```
+
+**NEVER:**
+```
+1. Run test → 2. Write hypothesis (CORRUPTED BY BIAS)
+```
+
+If you catch yourself writing hypothesis after seeing results:
+- **STOP**
+- Mark the test as "unscientific - results known before hypothesis"
+- Document what you learned anyway, but note the bias
+- Do the test again properly if needed
+
+**Test #3 violated this rule** - hypothesis was written after seeing 7/8 results. While the analysis is still valuable, the predictions were biased by knowing LM Studio serialized requests. Future tests MUST write hypothesis first.
+
+---
+
 ## Introduction
 
 This document establishes a **hypothesis-driven testing methodology** for SayWhatWant development. Instead of trial-and-error debugging, we formulate explicit hypotheses with technical predictions for both possible outcomes before running tests.
