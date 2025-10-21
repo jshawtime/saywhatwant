@@ -260,9 +260,101 @@ HYPOTHESESE BELOW IN ORDER OF NEWEST TO OLDEST
 
 ---
 
-## Completed Hypotheses
 
-_(Tests will be added here after completion with full analysis)_
+### Test #2: 6 Workers with Single Model (Parallel Queue, Serial LM Studio)
+**Timestamp:** October 21, 2025 - 7:05 AM Local Time
+
+
+**Test:** Send message from 4 different browser tabs in rapid succession (~2 seconds apart). Configuration:
+```json
+"maxConcurrentWorkers": 6  // Changed from 1
+"minSecondsBetweenPosts": 1
+```
+**Important:** All 4 messages will target the SAME model (tsc-ulysses-by-james-joyce@f16), which processes requests serially.
+
+**Hypothesis:** All 4 messages will receive AI replies and all replies will appear in the frontend. Overall completion time will be similar to Test #1 (no speed improvement), but reliability should remain unchanged.
+
+**If the hypothesis is TRUE, it is likely caused by:**
+
+1. **LM Studio serial processing negates worker parallelism**
+   - Model processes one request at a time regardless of worker count
+   - Worker 1 sends request → LM Studio busy
+   - Workers 2-6 queue behind Worker 1 at LM Studio level
+   - Net effect: Same as 1 worker for single-model scenarios
+   - **No speed improvement expected**
+
+2. **Queue system handles parallel claiming correctly**
+   - AsyncMutex prevents race conditions during claim operations
+   - Each worker claims different queue item atomically
+   - `queuedThisSession` Map prevents duplicate queueing across workers
+   - Workers don't interfere with each other's message IDs
+
+3. **Cache update handles concurrent PATCH operations**
+   - Multiple workers might PATCH different messages simultaneously
+   - `updateCacheProcessedStatus` function reads cache, modifies, writes back
+   - Cloudflare KV write operations are atomic per key
+   - Cache updates don't conflict even with parallel writes
+
+4. **Worker coordination overhead is minimal**
+   - 6 workers idle most of the time (waiting on LM Studio)
+   - Queue claiming is fast (<10ms) compared to LM Studio (~2-3 seconds)
+   - No significant overhead from having unused workers
+
+**If the hypothesis is FALSE (fewer than 4 replies appear OR significantly slower), it is likely caused by:**
+
+1. **Queue claiming race condition**
+   - Multiple workers try to claim same message simultaneously
+   - AsyncMutex might not prevent all edge cases
+   - Message could be marked as "claimed" but not actually processed
+   - Results in lost messages or duplicate processing
+
+2. **Cache update race condition under concurrent writes**
+   - Worker A reads cache, Worker B reads cache (same state)
+   - Worker A updates message 1 → writes cache
+   - Worker B updates message 2 → writes cache (overwrites A's update!)
+   - Cache loses one of the updates (last write wins)
+   - **This would be the smoking gun for cache issues**
+
+3. **Worker coordination overhead creates delays**
+   - 6 workers competing for queue access adds latency
+   - Lock contention on AsyncMutex slows down claiming
+   - Context switching between workers introduces delays
+   - Overall completion time noticeably longer than Test #1
+
+4. **Message ID confusion with parallel processing**
+   - Deep clone fix (from earlier) might not cover all edge cases
+   - Workers processing messages in parallel could swap message IDs
+   - PATCH operations update wrong message
+   - Similar to the bug we fixed, but surfacing under higher load
+
+5. **LM Studio connection limit**
+   - Multiple workers sending simultaneous requests
+   - LM Studio might reject connections or queue them poorly
+   - Request timeouts or failures under concurrent load
+   - Would see errors in PM2 logs about failed requests
+
+**Test Result/Analysis:**
+
+**What the outcome was:** _(Waiting for test execution)_
+
+**Why TRUE hypothesis was correct/incorrect:** _(Will analyze after test)_
+- LM Studio serialization impact:
+- Queue claiming behavior:
+- Cache concurrent updates:
+- Worker coordination overhead:
+
+**Why FALSE hypothesis was correct/incorrect:** _(Will analyze after test)_
+- Queue race conditions:
+- Cache race conditions (CRITICAL TO CHECK):
+- Coordination overhead:
+- Message ID confusion:
+- LM Studio connection handling:
+
+**Learnings captured:** _(Post-test analysis)_
+
+---
+
+
 
 -------------------------------------------
 
