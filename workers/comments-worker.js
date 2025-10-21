@@ -599,11 +599,18 @@ async function handlePatchComment(request, env, messageId) {
     
     console.log('[Comments] ✅ Updated individual key:', messageId, '→', updates.botParams.processed);
     
-    // CRITICAL: Invalidate cache to force rebuild on next GET
-    // This ensures cache never shows stale processed status
-    const cacheKey = 'recent:comments';
-    await env.COMMENTS_KV.delete(cacheKey);
-    console.log('[Comments] Cache invalidated - will rebuild on next GET');
+    // Update cache in-place (best effort, non-blocking)
+    // NOTE: We no longer delete the cache because:
+    // 1. Bot has persistent `processed` flag in individual keys
+    // 2. Deleting cache causes race condition where frontend gets 0 messages during rebuild
+    // 3. Cache showing `processed: false` briefly is harmless - bot's deduplication works from individual keys
+    // See: 130-CACHE-INVALIDATION-RETHINK.md
+    try {
+      await updateCacheProcessedStatus(env, messageId, updates.botParams.processed);
+    } catch (error) {
+      // Non-critical - cache update is best-effort
+      console.log('[Comments] Cache update failed (non-critical):', error.message);
+    }
     
     return new Response(JSON.stringify(message), {
       status: 200,
