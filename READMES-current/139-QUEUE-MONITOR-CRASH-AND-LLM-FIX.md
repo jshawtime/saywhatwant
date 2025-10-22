@@ -2,7 +2,8 @@
 
 **Date:** October 22, 2025  
 **Related READMEs:** 137-QUEUE-MONITOR-ON-10.0.0.100.md, 138-QUEUE-MONITOR-VERTICAL-LAYOUT.md  
-**Status:** ✅ COMPLETED
+**Status:** ✅ COMPLETED  
+**Final Resolution:** Duplicate PM2 processes + React hooks violations + CSS mapping issues
 
 ---
 
@@ -311,4 +312,240 @@ In browser console:
 4. **Field Validation:** Validate incoming WebSocket messages against expected schemas.
 
 5. **Performance:** Use React.memo() for expensive list renders (queue items, LLM requests).
+
+---
+
+## ADDITIONAL DASHBOARD FIXES (COMPLETED AFTER INITIAL FIXES)
+
+### Fix 5: CSS Not Connected - Complete Overhaul
+**Problem:** Editing `global.css` had no effect. Changes to colors/font sizes didn't appear in the dashboard.
+
+**Root Causes:**
+1. **Inline styles everywhere** - 100+ inline `style={{}}` objects with hardcoded hex colors bypassing CSS
+2. **CSS variables not used** - Beautiful variable system created but never referenced
+3. **Duplicate PM2 processes** - Two ai-bot processes running (one from old location, one from new), causing duplicate LLM requests
+4. **Wrong CSS classes** - Dashboard used `.pm2-title` but developer edited `.pm2-log-entry` (unused class)
+5. **Old CSS file conflict** - `terminal.module.css` had `:global(body) { background: #000000; }` overriding global.css
+
+**Solutions:**
+1. **Removed ALL inline styles** from App.tsx - Converted to CSS classes
+2. **Removed ALL unused CSS classes** - Deleted 600+ lines of orphaned styles  
+3. **Killed duplicate PM2 process** - `npx pm2 delete 0` (old location)
+4. **Created CSS class mapping doc** - Lists exactly which classes are used where
+5. **Removed terminal.module.css import** - Eliminated conflicting styles
+
+**Result:** CSS file went from 1172 lines to 488 lines of ONLY used classes. Every color and font size now controllable via `global.css`.
+
+### Fix 6: Copy Buttons Not Working
+**Problem:** Copy buttons didn't copy to clipboard. No visual feedback.
+
+**Root Cause:** `navigator.clipboard` API unavailable on HTTP (only works on HTTPS or localhost). Dashboard accessed via `http://10.0.0.100:5174` doesn't have clipboard access.
+
+**Solution:**
+```typescript
+// Fallback copy method for HTTP contexts
+const textArea = document.createElement('textarea');
+textArea.value = text;
+textArea.style.position = 'fixed';
+textArea.style.left = '-999999px';
+document.body.appendChild(textArea);
+textArea.select();
+document.execCommand('copy'); // Old-school but works on HTTP
+document.body.removeChild(textArea);
+```
+
+**Result:** ✅ All copy buttons now work and show "COPIED!" feedback for 3 seconds
+
+### Fix 7: Collapsible Sections Not Working
+**Problem:** Clicking chevrons did nothing. Sections wouldn't collapse/expand.
+
+**Root Cause:** `ResizableSection` component accepted `isCollapsed` and `onToggleCollapse` props, but App.tsx wasn't passing them.
+
+**Solution:** Added collapse state management to App.tsx:
+```typescript
+const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set());
+
+const toggleSection = (sectionId: string, collapsed: boolean) => {
+  setCollapsedSections(prev => {
+    const next = new Set(prev);
+    if (collapsed) next.add(sectionId);
+    else next.delete(sectionId);
+    return next;
+  });
+};
+
+// Then pass to each section:
+isCollapsed={collapsedSections.has('section-id')}
+onToggleCollapse={toggleSection}
+```
+
+**Result:** ✅ All 6 sections now collapse/expand on click
+
+### Fix 8: Collapsed State Not Persisting
+**Problem:** Refreshing the dashboard reset all collapsed/expanded states.
+
+**Solution:** Added localStorage persistence:
+```typescript
+// Load on mount
+const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(() => {
+  const saved = localStorage.getItem('collapsedSections');
+  if (saved) return new Set(JSON.parse(saved));
+  return new Set();
+});
+
+// Save on change
+React.useEffect(() => {
+  localStorage.setItem('collapsedSections', JSON.stringify(Array.from(collapsedSections)));
+}, [collapsedSections]);
+```
+
+**Result:** ✅ Collapse states persist across page refreshes
+
+### Fix 9: LLM Request Expand/Collapse Required Multiple Clicks
+**Problem:** Clicking an LLM request to expand it sometimes required 3 clicks before it would show.
+
+**Root Cause:** Used array index for tracking expanded state. When new LLM requests arrived and were prepended to the array, all indices shifted, causing state confusion.
+
+**Solution:** Changed from index-based to ID-based tracking:
+```typescript
+// OLD - Breaks when array changes
+const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
+const isExpanded = expandedRequests.has(idx);
+onClick={() => toggleRequest(idx)}
+
+// NEW - Stable across array changes
+const [expandedRequests, setExpandedRequests] = React.useState<Set<string>>(new Set());
+const uniqueKey = req.id || req.timestamp || `llm-${idx}`;
+const isExpanded = expandedRequests.has(uniqueKey);
+onClick={() => toggleRequest(uniqueKey)}
+```
+
+**Result:** ✅ Single click reliably expands/collapses LLM requests
+
+### Fix 10: React Hooks Error ("Rendered more hooks than previous render")
+**Problem:** Dashboard crashed with "Rendered more hooks than during the previous render" when new LLM requests arrived.
+
+**Root Cause:** Used `React.useMemo()` INSIDE the `.map()` loop, violating React's Rules of Hooks (hook count must be consistent).
+
+**Solution:** Moved processing outside the render loop:
+```typescript
+// Create ONE useMemo outside map (consistent hook count)
+const llmRequestsData = React.useMemo(() => {
+  return llmRequests.map((req, idx) => {
+    const timestamp = req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : 'No timestamp';
+    // ... process all data
+    return { uniqueKey, timestamp, model, entity, ... };
+  });
+}, [llmRequests]);
+
+// Then render using processed data (NO hooks in map)
+llmRequestsData.map((data) => { ... })
+```
+
+**Result:** ✅ No more hooks errors, timestamps stay static
+
+### Fix 11: Animations Causing Perceived Lag
+**Problem:** Font size/color changes appeared delayed or not to work. Dashboard felt sluggish.
+
+**Root Cause:** Multiple CSS transitions and animations:
+- `transition: all 3s ease-out` on expandable titles (3 second delay!)
+- `animation: highlightNew 3s` on new items
+- `animation: blink 1s infinite` on disconnected status
+- `transition: transform 0.2s` on chevrons
+- Multiple other `transition: all 0.2s` throughout
+
+**Solution:** Removed ALL animations and transitions from dashboard:
+```css
+/* BEFORE */
+.expandable-title {
+  transition: all 3s ease-out;  /* ← 3 SECOND DELAY! */
+}
+
+/* AFTER */
+.expandable-title {
+  /* No transitions - instant updates */
+}
+```
+
+**Result:** ✅ All CSS changes apply instantly, dashboard feels responsive
+
+### Fix 12: Duplicate PM2 Processes (THE ROOT CAUSE)
+**Problem:** Every LLM request appeared twice. Timestamps showed "No timestamp".
+
+**Root Cause Discovery:**
+```bash
+npx pm2 list
+# Showed TWO ai-bot processes:
+# ID 0: /Users/ms1281/Desktop/AI-Bot-Deploy/dist/index.js (OLD)
+# ID 1: /Users/ms1281/Desktop/hm-server-deployment/AI-Bot-Deploy/dist/index.js (NEW)
+```
+
+Both were:
+- Polling the same Cloudflare KV
+- Processing the same messages
+- Sending WebSocket messages to the dashboard
+- Running simultaneously (one had new code with id/timestamp, one had old code without)
+
+**Solution:**
+```bash
+npx pm2 delete 0  # Kill old process
+npx pm2 delete 1  # Kill new process
+npx pm2 start dist/index.js --name ai-bot  # Start ONE from correct location
+```
+
+**Result:** ✅ No more duplicates, timestamps work correctly, only one bot processing messages
+
+---
+
+## FINAL ARCHITECTURE
+
+### What's Working Now:
+1. ✅ **Vertical collapsible layout** - 6 sections, click to collapse, drag to resize
+2. ✅ **CSS fully connected** - All colors/sizes controlled by `global.css`
+3. ✅ **CSS hot-reload** - Changes appear within 1-2 seconds (usePolling: true)
+4. ✅ **Copy buttons** - All working with visual feedback (HTTP fallback method)
+5. ✅ **Collapse state persistence** - localStorage saves collapsed sections across refresh
+6. ✅ **LLM requests display** - With timestamps, entity, model info
+7. ✅ **No duplicates** - Only ONE PM2 process running
+8. ✅ **No crashes** - Safe property access throughout
+9. ✅ **No animations** - Instant response to all changes
+10. ✅ **Server badges** - Ollama (blue) vs LM Studio (orange) with IPs
+
+### Key Files:
+- **AI-Bot-Deploy/src/index.ts** - Adds id/timestamp to LLM requests
+- **Queue-Monitor-Deploy/src/App.tsx** - Safe rendering, error boundary, state management
+- **Queue-Monitor-Deploy/src/global.css** - Clean 488-line stylesheet
+- **Queue-Monitor-Deploy/src/components/ResizableSection.tsx** - Collapsible/resizable sections
+- **Queue-Monitor-Deploy/src/hooks/useWebSocket.ts** - Deduplication, debug logging
+
+### Deployment Repo Created:
+A separate git repository was created at `/Volumes/BOWIE/devrepo/SAYWHATWANTv1/hm-server-deployment/` containing:
+- AI-Bot-Deploy/ (195 files)
+- Queue-Monitor-Deploy/ (all source + scripts)
+- ollama-HM/ (96 Modelfiles + scripts)
+- Complete `.gitignore` (excludes node_modules, dist, logs)
+- Comprehensive README
+
+**Ready to push to private GitHub repo for cloud backup.**
+
+---
+
+## LESSONS LEARNED
+
+1. **Check PM2 list FIRST** - Multiple processes cause mysterious duplicates
+2. **Inline styles defeat CSS** - Use classes, not inline styles
+3. **CSS variables require CSS classes** - Can't apply to inline styles
+4. **React Rules of Hooks** - Never use hooks inside loops/conditionals
+5. **Array indices are unstable** - Use unique IDs for React keys
+6. **HTTP ≠ HTTPS** - Clipboard API requires secure context
+7. **Remove animations from dashboards** - They cause perceived lag
+8. **Hot-reload needs polling** - usePolling: true for remote/SSH editing
+9. **Delete unused CSS** - Makes debugging 10x easier
+10. **Document CSS class mapping** - Prevents editing wrong classes
+
+---
+
+**Status:** PRODUCTION READY ✅  
+**Queue Monitor URL:** http://10.0.0.100:5174  
+**All Systems Operational**
 
