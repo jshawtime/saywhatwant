@@ -28,6 +28,7 @@ export interface BotConfig {
   };
   queueSettings: {
     enabled: boolean;
+    maxConcurrentWorkers?: number;
     staleClaimTimeout: number;
     maxRetries: number;
     defaultPriority: number;

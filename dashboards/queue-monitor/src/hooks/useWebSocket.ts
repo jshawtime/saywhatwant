@@ -25,7 +25,7 @@ export function useWebSocket(url: string) {
   const [llmRequests, setLLMRequests] = useState<any[]>([]);
   const [pm2Logs, setPm2Logs] = useState<string>('');
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const MAX_LOGS = 100;  // Configurable: Keep last N log lines (shows ~20 message processing cycles)
   const MAX_LLM_REQUESTS = 50;  // Keep last 50 LLM requests
 
@@ -185,6 +185,10 @@ export function useWebSocket(url: string) {
   const fetchPm2Logs = useCallback((lines: number = 200) => {
     sendCommand('get_pm2_logs', { lines });
   }, [sendCommand]);
+  
+  const clearPm2Logs = useCallback(() => {
+    sendCommand('clear_pm2_logs');
+  }, [sendCommand]);
 
   return {
     connected,
@@ -195,6 +199,7 @@ export function useWebSocket(url: string) {
     pm2Logs,
     deleteItem,
     clearQueue,
-    fetchPm2Logs
+    fetchPm2Logs,
+    clearPm2Logs
   };
 }

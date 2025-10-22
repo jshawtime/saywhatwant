@@ -152,6 +152,25 @@ export class QueueWebSocketServer {
           }));
         }
         break;
+        
+      case 'clear_pm2_logs':
+        try {
+          // PM2 flush command clears log files
+          await execAsync('pm2 flush ai-bot');
+          console.log(chalk.magenta('[WebSocket]'), 'PM2 logs cleared');
+          _ws.send(JSON.stringify({
+            type: 'pm2_logs',
+            data: { logs: '[PM2 logs cleared successfully]' },
+            timestamp: Date.now()
+          }));
+        } catch (error: any) {
+          _ws.send(JSON.stringify({
+            type: 'pm2_logs',
+            data: { logs: `Error clearing PM2 logs: ${error.message}` },
+            timestamp: Date.now()
+          }));
+        }
+        break;
 
       default:
         console.warn(chalk.yellow('[WebSocket]'), 'Unknown command:', command.action);

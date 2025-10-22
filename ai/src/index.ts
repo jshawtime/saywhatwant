@@ -28,6 +28,7 @@ const startupConfig = getConfigOnce();
 
 // Read settings from config (these don't need hot-reload)
 const POLLING_INTERVAL = startupConfig.botSettings?.pollingInterval || 30000;
+const WORKER_COUNT = startupConfig.queueSettings?.maxConcurrentWorkers || 1;
 
 // Initialize modules (after config is loaded so we can pass polling interval)
 const entityManager = getEntityManager();
@@ -41,6 +42,7 @@ const QUEUE_MAX_RETRIES = startupConfig.queueSettings?.maxRetries || 3;
 
 console.log(chalk.blue('[CONFIG]'), `Polling interval: ${POLLING_INTERVAL/1000}s (from config)`);
 console.log(chalk.blue('[CONFIG]'), `WebSocket port: ${WEBSOCKET_PORT} (from config)`);
+console.log(chalk.blue('[CONFIG]'), `Concurrent workers: ${WORKER_COUNT}`);
 
 // Initialize queue service
 const queueService = USE_QUEUE ? new QueueService() : null;
@@ -239,11 +241,13 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
   
   // NEW: Override with ais parameter if provided (for isolated conversations)
   if (ais) {
+    console.log(chalk.magenta('[AIS DEBUG]'), `Received ais parameter: "${ais}"`);
     const [aisUsername, aisColor] = ais.split(':');
+    console.log(chalk.magenta('[AIS DEBUG]'), `Parsed username: "${aisUsername}", color: "${aisColor}"`);
     
     if (aisUsername) {
       usernameToUse = aisUsername;
-      // Silent
+      console.log(chalk.magenta('[AIS]'), `Username: ${entity.username} → ${aisUsername}`);
       if (queueWS) queueWS.sendLog(`[AIS] Username: ${entity.username} → ${aisUsername}`);
     }
     
@@ -255,11 +259,13 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
         if (queueWS) queueWS.sendLog(`[AIS] Random color: ${colorToUse}`);
       } else {
         colorToUse = aisColor;
-        // Silent
+        console.log(chalk.magenta('[AIS]'), `Color: ${entity.color} → ${aisColor}`);
         if (queueWS) queueWS.sendLog(`[AIS] Color: ${entity.color} → ${aisColor}`);
       }
     }
   }
+  
+  console.log(chalk.magenta('[POST DEBUG]'), `Final username: "${usernameToUse}", color: "${colorToUse}"`);
   
   const comment: Comment = {
     id: kvClient.generateId(),
@@ -271,8 +277,9 @@ async function postComment(text: string, entity: any, ais?: string): Promise<boo
     'message-type': 'AI',
   };
   
-  // DEBUG: Log exactly what we're posting
-  // Silent - debug logs removed for clean output
+  // DEBUG: Log EXACTLY what we're posting to KV
+  console.log(chalk.bgMagenta.white('[KV POST]'), 'Posting to KV:');
+  console.log(chalk.magenta(JSON.stringify(comment, null, 2)));
   
   const result = await kvClient.postComment(comment, CONFIG.DEV.dryRun);
   
@@ -408,11 +415,12 @@ async function runBot() {
             const contextForLLM = message.context || [];
             
             // Queue the message with GUARANTEED unique ID
+            // CRITICAL: Deep clone message to prevent reference sharing between queue items
             const queueItem = {
               id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               priority,
               timestamp: Date.now(),
-              message,
+              message: JSON.parse(JSON.stringify(message)),  // Deep clone to prevent mutation
               context: contextForLLM,  // Use (filtered) context with (overridden) size
               entity,
               model: modelToUse,  // Use overridden model if specified
@@ -497,13 +505,13 @@ async function runBot() {
  * Worker loop - processes items from queue
  * Runs in parallel with main polling loop
  */
-async function runWorker() {
+async function runWorker(workerId: string = 'worker-0') {
   if (!USE_QUEUE || !queueService) {
-    console.log(chalk.gray('[WORKER]'), 'Worker disabled - queue not in use');
+    console.log(chalk.gray(`[${workerId.toUpperCase()}]`), 'Worker disabled - queue not in use');
     return;
   }
   
-  console.log(chalk.green('[WORKER]'), 'Worker started - processing queue');
+  console.log(chalk.green(`[${workerId.toUpperCase()}]`), 'Started - processing queue');
   const serverId = '10.0.0.102';  // TODO: Get from config/env
   
   while (true) {
@@ -522,7 +530,7 @@ async function runWorker() {
         queueWS.onClaimed(item.id, serverId);
       }
       
-      console.log(chalk.blue(`[${timestamp()}] [WORKER]`), `Processing: ${item.id} (priority ${item.priority})`);
+      console.log(chalk.blue(`[${timestamp()}] [${workerId.toUpperCase()}]`), `Processing: ${item.id} (priority ${item.priority})`);
       
       try {
         // Build context object - include the triggering message at the end
@@ -541,27 +549,30 @@ async function runWorker() {
         const response = await generateResponse(context, item.entity);
         
         if (response) {
-          // LM Studio returned successfully! Mark message as processed immediately
-          console.log(chalk.green(`[${timestamp()}] [WORKER]`), `Got response from LM Studio - marking message as processed`);
+          // LM Studio returned successfully! Post response FIRST, then mark as processed
+          console.log(chalk.green(`[${timestamp()}] [${workerId.toUpperCase()}]`), `Got response from LM Studio - posting to KV first`);
+          
+          // Extract ais from botParams (AI identity override)
+          const aisOverride = item.message.botParams?.ais || undefined;
+          
+          // Log what we received
+          console.log(chalk.magenta('[AIS DEBUG]'), `Received from KV botParams.ais: "${aisOverride}"`);
+          
+          // Post with ais override (if present) - pass entity from queue item
+          await postComment(response, item.entity, aisOverride);
+          
+          // NOW mark as processed AFTER posting the response
+          console.log(chalk.green(`[${timestamp()}] [${workerId.toUpperCase()}]`), `Posted successfully - now marking as processed`);
           const updateSuccess = await kvClient.updateProcessedStatus(item.message.id, true);
           
           if (!updateSuccess) {
             console.error(chalk.red(`[${timestamp()}] [CRITICAL]`), `❌ Failed to mark ${item.message.id} as processed - WILL REPROCESS!`);
             console.error(chalk.red(`[${timestamp()}] [CRITICAL]`), `This causes duplicate AI responses!`);
-            // Continue anyway - we have a valid response to post
           } else {
             console.log(chalk.gray(`[${timestamp()}] [KV]`), `✅ Marked ${item.message.id} as processed`);
           }
           
-          // Extract ais from botParams (AI identity override)
-          const aisOverride = item.message.botParams?.ais || undefined;
-          
-          // Silent ais processing
-          
-          // Post with ais override (if present) - pass entity from queue item
-          await postComment(response, item.entity, aisOverride);
-          
-          // Mark as complete
+          // Mark as complete in queue
           await queueService.complete(item.id, true);
           
           // Record success and emit event
@@ -571,7 +582,7 @@ async function runWorker() {
             queueWS.pushStats();  // Push updated stats
           }
           
-          console.log(chalk.green(`[${timestamp()}] [WORKER]`), `Completed: ${item.id}`);
+          console.log(chalk.green(`[${timestamp()}] [${workerId.toUpperCase()}]`), `Completed: ${item.id}`);
         } else {
           // No response generated - mark as complete anyway
           await queueService.complete(item.id, true);
@@ -584,13 +595,13 @@ async function runWorker() {
         }
         
       } catch (error) {
-        console.error(chalk.red('[WORKER]'), `Failed to process ${item.id}:`, error);
+        console.error(chalk.red(`[${workerId.toUpperCase()}]`), `Failed to process ${item.id}:`, error);
         
         // Check retry limit
         if (item.attempts < item.maxRetries) {
           // Requeue (complete with false = requeue)
           await queueService.complete(item.id, false);
-          console.log(chalk.yellow('[WORKER]'), `Requeued: ${item.id} (attempt ${item.attempts}/${item.maxRetries})`);
+          console.log(chalk.yellow(`[${workerId.toUpperCase()}]`), `Requeued: ${item.id} (attempt ${item.attempts}/${item.maxRetries})`);
           
           // Don't emit completion - item is still in queue (with lower priority)
         } else {
@@ -603,12 +614,12 @@ async function runWorker() {
             queueWS.pushStats();
           }
           
-          console.log(chalk.red('[WORKER]'), `Max retries reached: ${item.id} - discarding`);
+          console.log(chalk.red(`[${workerId.toUpperCase()}]`), `Max retries reached: ${item.id} - discarding`);
         }
       }
       
     } catch (error) {
-      console.error(chalk.red('[WORKER]'), 'Worker error:', error);
+      console.error(chalk.red(`[${workerId.toUpperCase()}]`), 'Worker error:', error);
       await new Promise(resolve => setTimeout(resolve, 5000));  // Back off on error
     }
   }
@@ -640,16 +651,24 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Start the bot (both loops in parallel)
+// Create worker array
+const workers = Array.from({ length: WORKER_COUNT }, (_, i) => {
+  const workerId = `worker-${i}`;
+  return runWorker(workerId).catch(error => {
+    console.error(chalk.red('[FATAL]'), `${workerId} failed:`, error);
+    logger.error(`${workerId} fatal error:`, error);
+    // Don't exit - other workers can continue
+  });
+});
+
+console.log(chalk.blue('[STARTUP]'), `Starting bot with ${WORKER_COUNT} concurrent worker${WORKER_COUNT === 1 ? '' : 's'}`);
+
+// Start the bot and all workers in parallel
 Promise.all([
   runBot().catch(error => {
     console.error(chalk.red('[FATAL]'), 'Bot loop failed:', error);
     logger.error('Fatal error:', error);
     process.exit(1);
   }),
-  runWorker().catch(error => {
-    console.error(chalk.red('[FATAL]'), 'Worker loop failed:', error);
-    logger.error('Fatal error:', error);
-    process.exit(1);
-  })
+  ...workers
 ]);

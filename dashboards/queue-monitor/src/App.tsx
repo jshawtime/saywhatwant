@@ -10,7 +10,7 @@ import styles from './styles/terminal.module.css';
 function App() {
   // Read WebSocket URL from environment or use localhost default
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:4002';
-  const { connected, queue, stats, logs, llmRequests, pm2Logs, deleteItem, clearQueue, fetchPm2Logs } = useWebSocket(wsUrl);
+  const { connected, queue, stats, logs, llmRequests, pm2Logs, deleteItem, clearQueue, fetchPm2Logs, clearPm2Logs } = useWebSocket(wsUrl);
   const [lastUpdate, setLastUpdate] = React.useState(formatTime());
   const [kvMessages, setKvMessages] = React.useState<any[]>([]);
   const [expandedRequests, setExpandedRequests] = React.useState<Set<number>>(new Set());
@@ -287,6 +287,24 @@ function App() {
             <span>PM2 LOGS ({parsedPm2Logs.length})</span>
             <div style={{ display: 'flex', gap: '5px' }}>
               <button
+                onClick={() => {
+                  clearPm2Logs();
+                  // Auto-refresh after clearing to show the success message
+                  setTimeout(() => fetchPm2Logs(200), 500);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #FF00FF',
+                  color: '#FF00FF',
+                  padding: '2px 8px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontFamily: 'monospace'
+                }}
+              >
+                CLEAR
+              </button>
+              <button
                 onClick={() => fetchPm2Logs(200)}
                 style={{
                   background: 'transparent',
@@ -382,10 +400,16 @@ function App() {
                 const timestamp = req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
                 const model = req.modelName || 'unknown';
                 const entity = req.entityId || 'unknown';
+                const modelServer = req.modelServer || 'lmstudio';
                 const hasError = req.error || req.status === 'error' || req.status === 'failed';
                 const itemId = `llm-${idx}`;
                 const isCopied = copiedItems.has(itemId);
                 const isNew = idx === newLLMRequestIndex;
+                
+                // Color coding for different model servers
+                const serverColor = modelServer === 'ollama-hm' ? '#00AAFF' : '#FFAA00';
+                const serverBadge = modelServer === 'ollama-hm' ? 'OLLAMA' : 'LM STUDIO';
+                const serverBgColor = modelServer === 'ollama-hm' ? 'rgba(0, 170, 255, 0.2)' : 'rgba(255, 170, 0, 0.2)';
                 
                 return (
                   <div 
@@ -393,7 +417,8 @@ function App() {
                     className={styles.llmRequestItem}
                     style={{
                       animation: isNew ? 'highlightNew 3s ease-out' : undefined,
-                      backgroundColor: isNew ? 'rgba(255, 255, 255, 0.1)' : undefined
+                      backgroundColor: isNew ? serverBgColor : undefined,
+                      borderLeft: `3px solid ${serverColor}`
                     }}
                   >
                     <div 
@@ -405,11 +430,18 @@ function App() {
                       }}
                     >
                       <div className={styles.llmRequestSummary} style={{ 
-                        color: isNew ? '#FFFFFF' : (hasError ? '#FF0000' : '#FFAA00'),
+                        color: isNew ? '#FFFFFF' : (hasError ? '#FF0000' : serverColor),
                         fontWeight: isNew ? 'bold' : 'normal',
                         transition: 'all 3s ease-out'
                       }}>
-                        [{timestamp}] #{idx + 1} - {entity} | {model} {hasError && '❌ ERROR'}
+                        [{timestamp}] #{idx + 1} - <span style={{ 
+                          backgroundColor: serverColor, 
+                          color: '#000', 
+                          padding: '2px 6px', 
+                          borderRadius: '3px',
+                          fontWeight: 'bold',
+                          marginRight: '8px'
+                        }}>{serverBadge}</span> {entity} | {model} {hasError && '❌ ERROR'}
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <button
