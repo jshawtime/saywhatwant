@@ -132,36 +132,68 @@ async function handleGetComments(env, url) {
   if (after) {
     const afterTimestamp = parseInt(after);
     const messageType = params.get('type'); // 'human' or 'AI' - for channel-exclusive polling
+    const fresh = params.get('fresh'); // NEW: Fresh polling bypasses cache
     
     try {
-      // Get from cache first
-      const cacheKey = 'recent:comments';
-      const cachedData = await env.COMMENTS_KV.get(cacheKey);
-      
       let allComments = [];
       
-      if (cachedData) {
-        allComments = JSON.parse(cachedData);
-        console.log(`[Comments] Cursor polling: using cache with ${allComments.length} comments`);
-      } else {
-        // Cache is empty (likely invalidated by PATCH) - rebuild from individual keys
-        console.log('[Comments] Cursor polling: cache empty, rebuilding from KV...');
+      // If fresh=true, bypass cache and read from individual KV keys (real-time)
+      if (fresh === 'true') {
+        console.log('[Comments] Fresh polling: reading from individual KV keys');
+        
+        // List keys with comment: prefix
         const list = await env.COMMENTS_KV.list({ prefix: 'comment:', limit: 1000 });
         
+        // Fetch individual keys and filter by timestamp
         for (const key of list.keys) {
-          const commentData = await env.COMMENTS_KV.get(key.name);
-          if (commentData) {
-            allComments.push(JSON.parse(commentData));
+          // Extract timestamp from key name: "comment:timestamp:id"
+          const parts = key.name.split(':');
+          if (parts.length >= 2) {
+            const keyTimestamp = parseInt(parts[1]);
+            
+            // Only fetch if timestamp > after (optimization)
+            if (keyTimestamp > afterTimestamp) {
+              const data = await env.COMMENTS_KV.get(key.name);
+              if (data) {
+                try {
+                  allComments.push(JSON.parse(data));
+                } catch (parseError) {
+                  console.error('[Comments] Failed to parse:', key.name);
+                }
+              }
+            }
           }
         }
         
-        // Sort by timestamp (ascending)
-        allComments.sort((a, b) => a.timestamp - b.timestamp);
+        console.log(`[Comments] Fresh polling: found ${allComments.length} new messages`);
+      } else {
+        // Use cache (existing behavior for non-fresh requests)
+        const cacheKey = 'recent:comments';
+        const cachedData = await env.COMMENTS_KV.get(cacheKey);
         
-        // Update cache for future requests
-        if (allComments.length > 0) {
-          await updateCache(env, allComments);
-          console.log(`[Comments] Rebuilt cache with ${allComments.length} comments`);
+        if (cachedData) {
+          allComments = JSON.parse(cachedData);
+          console.log(`[Comments] Cursor polling: using cache with ${allComments.length} comments`);
+        } else {
+          // Cache is empty (likely invalidated by PATCH) - rebuild from individual keys
+          console.log('[Comments] Cursor polling: cache empty, rebuilding from KV...');
+          const list = await env.COMMENTS_KV.list({ prefix: 'comment:', limit: 1000 });
+          
+          for (const key of list.keys) {
+            const commentData = await env.COMMENTS_KV.get(key.name);
+            if (commentData) {
+              allComments.push(JSON.parse(commentData));
+            }
+          }
+          
+          // Sort by timestamp (ascending)
+          allComments.sort((a, b) => a.timestamp - b.timestamp);
+          
+          // Update cache for future requests
+          if (allComments.length > 0) {
+            await updateCache(env, allComments);
+            console.log(`[Comments] Rebuilt cache with ${allComments.length} comments`);
+          }
         }
       }
       
