@@ -141,26 +141,45 @@ async function handleGetComments(env, url) {
       if (fresh === 'true') {
         console.log('[Comments] Fresh polling: reading from individual KV keys');
         
-        // List keys with comment: prefix
-        const list = await env.COMMENTS_KV.list({ prefix: 'comment:', limit: 1000 });
+        // List ALL recent keys using cursor pagination
+        let cursor = undefined;
+        let keysToFetch = [];
         
-        // Fetch individual keys and filter by timestamp
-        for (const key of list.keys) {
-          // Extract timestamp from key name: "comment:timestamp:id"
-          const parts = key.name.split(':');
-          if (parts.length >= 2) {
-            const keyTimestamp = parseInt(parts[1]);
-            
-            // Only fetch if timestamp > after (optimization)
-            if (keyTimestamp > afterTimestamp) {
-              const data = await env.COMMENTS_KV.get(key.name);
-              if (data) {
-                try {
-                  allComments.push(JSON.parse(data));
-                } catch (parseError) {
-                  console.error('[Comments] Failed to parse:', key.name);
-                }
+        // Keep listing until we have enough keys or hit the end
+        do {
+          const list = await env.COMMENTS_KV.list({ 
+            prefix: 'comment:', 
+            limit: 1000,
+            cursor: cursor
+          });
+          
+          // Filter keys by timestamp (only fetch if timestamp > after)
+          for (const key of list.keys) {
+            const parts = key.name.split(':');
+            if (parts.length >= 2) {
+              const keyTimestamp = parseInt(parts[1]);
+              if (keyTimestamp > afterTimestamp) {
+                keysToFetch.push(key.name);
               }
+            }
+          }
+          
+          cursor = list.cursor;
+          
+          // Stop if we have enough keys or list is complete
+          if (list.list_complete || keysToFetch.length >= 500) {
+            break;
+          }
+        } while (cursor);
+        
+        // Fetch the filtered keys
+        for (const keyName of keysToFetch) {
+          const data = await env.COMMENTS_KV.get(keyName);
+          if (data) {
+            try {
+              allComments.push(JSON.parse(data));
+            } catch (parseError) {
+              console.error('[Comments] Failed to parse:', keyName);
             }
           }
         }
