@@ -109,27 +109,6 @@ export default {
       headers: corsHeaders 
     });
   },
-  
-  async scheduled(event, env, ctx) {
-    // Cron trigger - rebuild cache every minute (runs 20 times for 3-second intervals)
-    console.log('[Cron] Cache rebuild triggered');
-    
-    for (let i = 0; i < 20; i++) {
-      try {
-        await rebuildCacheFromKeys(env);
-        console.log(`[Cron] Rebuild ${i + 1}/20 complete`);
-      } catch (error) {
-        console.error(`[Cron] Rebuild ${i + 1}/20 failed:`, error);
-      }
-      
-      // Wait 3 seconds before next rebuild (except on last iteration)
-      if (i < 19) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-    }
-    
-    console.log('[Cron] All 20 rebuilds complete');
-  }
 };
 
 /**
@@ -517,12 +496,12 @@ async function handlePostComment(request, env) {
     console.log('[Worker POST] comment.color:', comment.color);
     console.log('[Worker POST] comment.id:', comment.id);
 
-    // Store in KV (individual key only - cache will be rebuilt by cron)
+    // Store in KV
     const key = `comment:${comment.timestamp}:${comment.id}`;
     await env.COMMENTS_KV.put(key, JSON.stringify(comment));
 
-    // Cache update removed - now handled by cron job every 3 seconds
-    // This eliminates race conditions and reduces cost
+    // Update recent comments cache
+    await addToCache(env, comment);
     
     // Update message counter (batched for efficiency)
     await updateMessageCounter(env);
@@ -620,9 +599,18 @@ async function handlePatchComment(request, env, messageId) {
     
     console.log('[Comments] ✅ Updated individual key:', messageId, '→', updates.botParams.processed);
     
-    // Cache update removed - now handled by cron job every 3 seconds
-    // The cron rebuild will pick up the updated processed status automatically
-    // No race conditions, no manual cache management
+    // Update cache in-place (best effort, non-blocking)
+    // NOTE: We no longer delete the cache because:
+    // 1. Bot has persistent `processed` flag in individual keys
+    // 2. Deleting cache causes race condition where frontend gets 0 messages during rebuild
+    // 3. Cache showing `processed: false` briefly is harmless - bot's deduplication works from individual keys
+    // See: 130-CACHE-INVALIDATION-RETHINK.md
+    try {
+      await updateCacheProcessedStatus(env, messageId, updates.botParams.processed);
+    } catch (error) {
+      // Non-critical - cache update is best-effort
+      console.log('[Comments] Cache update failed (non-critical):', error.message);
+    }
     
     return new Response(JSON.stringify(message), {
       status: 200,
@@ -776,51 +764,6 @@ async function updateCache(env, comments) {
   const recentComments = comments.slice(-CACHE_SIZE);
   
   await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments));
-}
-
-/**
- * Rebuild cache from individual KV keys
- * Called by cron trigger every 3 seconds
- * This is the ONLY function that writes to the cache (no race conditions)
- */
-async function rebuildCacheFromKeys(env) {
-  const cacheKey = 'recent:comments';
-  
-  try {
-    // List last 500 comment keys (sorted by key name which includes timestamp)
-    const list = await env.COMMENTS_KV.list({ 
-      prefix: 'comment:', 
-      limit: CACHE_SIZE 
-    });
-    
-    // Fetch each message from individual keys
-    const messages = [];
-    for (const key of list.keys) {
-      const data = await env.COMMENTS_KV.get(key.name);
-      if (data) {
-        try {
-          messages.push(JSON.parse(data));
-        } catch (parseError) {
-          console.error('[Cache Rebuild] Failed to parse message:', key.name);
-        }
-      }
-    }
-    
-    // Sort by timestamp descending (newest first)
-    messages.sort((a, b) => b.timestamp - a.timestamp);
-    
-    // Keep only last CACHE_SIZE messages
-    const recentMessages = messages.slice(0, CACHE_SIZE);
-    
-    // Write to cache (atomic operation)
-    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentMessages));
-    
-    // Success (silent unless error)
-    return recentMessages.length;
-  } catch (error) {
-    console.error('[Cache Rebuild] Failed:', error);
-    throw error; // Let cron handler catch and log
-  }
 }
 
 /**

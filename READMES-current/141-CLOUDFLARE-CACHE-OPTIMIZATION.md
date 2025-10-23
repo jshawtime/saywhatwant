@@ -1,18 +1,33 @@
 # Cloudflare KV Cache Optimization - 3-Second Rebuild
 
 **Date:** October 23, 2025  
-**Status:** ✅ IMPLEMENTED - READY TO DEPLOY  
-**Related:** 12-EFFICIENT-POLLING-STRATEGY.md, 130-CACHE-INVALIDATION-RETHINK.md
+**Status:** ❌ FAILED - DO NOT USE  
+**Related:** 142-FRESH-POLLING-REAL-TIME.md (REPLACEMENT), 12-EFFICIENT-POLLING-STRATEGY.md
 
-## Implementation Progress:
+## ⚠️ FAILURE NOTICE:
+
+This approach was **abandoned** after deployment testing revealed critical issues.
+
+**Why it failed:**
+1. Cloudflare Cron only supports minute-level granularity (not 3 seconds)
+2. Using `setTimeout()` loops in Workers violates execution time limits
+3. All cron executions showed "Error" status in dashboard
+4. POST requests failed silently (messages not saved to KV)
+5. System completely broken - had to rollback
+
+**Replacement:** See README-142-FRESH-POLLING-REAL-TIME.md for working solution.
+
+---
+
+## Original Implementation (DO NOT USE):
 
 ✅ **Step 1:** Added cron trigger to wrangler.toml  
 ✅ **Step 2:** Implemented `rebuildCacheFromKeys()` function  
 ✅ **Step 3:** Added `scheduled()` handler to export  
 ✅ **Step 4:** Removed cache update from POST (line 524-525)  
 ✅ **Step 5:** Removed cache update from PATCH (line 623-625)  
-
-**Next:** Deploy worker and test
+❌ **Step 6:** Deployed and tested - FAILED  
+✅ **Step 7:** Rolled back to working version
 
 ---
 
