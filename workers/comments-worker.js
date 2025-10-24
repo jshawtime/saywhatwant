@@ -615,13 +615,26 @@ async function handlePatchComment(request, env, messageId) {
       });
     }
     
-    // Extract timestamp from message ID (format: timestamp-randomstring)
-    const timestamp = messageId.split('-')[0];
+    // CRITICAL: We need to find the message by listing keys with the message ID
+    // because the timestamp in the ID might not match the actual timestamp field
+    // (frontend can have 1-2ms difference between ID generation and timestamp field)
     
-    // Construct individual KV key (bypasses cache race condition)
-    const key = `comment:${timestamp}:${messageId}`;
+    console.log('[Comments] Looking for message:', messageId);
     
-    console.log('[Comments] Looking up key:', key);
+    // List all keys with this message ID (should only be one)
+    const matchingKeys = await env.COMMENTS_KV.list({ prefix: `comment:` });
+    const targetKey = matchingKeys.keys.find(k => k.name.endsWith(`:${messageId}`));
+    
+    if (!targetKey) {
+      console.error('[Comments] Message not found with ID:', messageId);
+      return new Response(JSON.stringify({ error: 'Message not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const key = targetKey.name;
+    console.log('[Comments] Found key:', key);
     
     // Get message directly from individual KV key
     const messageData = await env.COMMENTS_KV.get(key);
