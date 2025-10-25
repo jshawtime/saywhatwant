@@ -538,6 +538,10 @@ async function handlePostComment(request, env) {
       // Bot control parameters (entity, priority, model, nom)
       ...(botParams && typeof botParams === 'object' && {
         botParams: botParams
+      }),
+      // Reply-to field for AI messages (links to original human message)
+      ...(body.replyTo && {
+        replyTo: body.replyTo
       })
     };
     
