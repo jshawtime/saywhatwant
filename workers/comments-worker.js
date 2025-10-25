@@ -1136,10 +1136,11 @@ async function handleCompleteMessage(request, env) {
     
     const message = JSON.parse(data);
     message.botParams.status = 'complete';
+    message.botParams.processed = true; // Backwards compatibility
     
     await env.COMMENTS_KV.put(key, JSON.stringify(message));
     
-    console.log('[Queue] ✅ Completed:', messageId);
+    console.log('[Queue] ✅ Completed:', messageId, '(status=complete, processed=true)');
     
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
