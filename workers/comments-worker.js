@@ -551,8 +551,8 @@ async function handlePostComment(request, env) {
     console.log('[Worker POST] comment.color:', comment.color);
     console.log('[Worker POST] comment.id:', comment.id);
 
-    // Store in KV
-    const key = `comment:${comment.timestamp}:${comment.id}`;
+    // Store in KV - use ONLY message ID for key (timestamp stays in message data)
+    const key = `comment:${comment.id}`;
     await env.COMMENTS_KV.put(key, JSON.stringify(comment));
 
     // Update recent comments cache
@@ -619,47 +619,11 @@ async function handlePatchComment(request, env, messageId) {
       });
     }
     
-    // CRITICAL: We need to find the message by listing keys with the message ID
-    // because the timestamp in the ID might not match the actual timestamp field
-    // (frontend can have 1-2ms difference between ID generation and timestamp field)
+    // Direct key access using ONLY message ID (instant, no pagination!)
+    const key = `comment:${messageId}`;
+    console.log('[Comments] PATCH key:', key);
     
-    console.log('[Comments] Looking for message:', messageId);
-    
-    // List ALL keys with cursor pagination (first 1000 not enough if >1000 messages)
-    let cursor = undefined;
-    let allKeys = [];
-    
-    do {
-      const listResult = await env.COMMENTS_KV.list({
-        prefix: 'comment:',
-        cursor: cursor,
-        limit: 1000
-      });
-      
-      allKeys.push(...listResult.keys);
-      cursor = listResult.cursor;
-      
-      // Stop if we found our message (optimization)
-      const found = listResult.keys.find(k => k.name.endsWith(`:${messageId}`));
-      if (found) {
-        break;
-      }
-    } while (cursor);
-    
-    const targetKey = allKeys.find(k => k.name.endsWith(`:${messageId}`));
-    
-    if (!targetKey) {
-      console.error('[Comments] Message not found with ID:', messageId);
-      return new Response(JSON.stringify({ error: 'Message not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    const key = targetKey.name;
-    console.log('[Comments] Found key:', key);
-    
-    // Get message directly from individual KV key
+    // Get message directly
     const messageData = await env.COMMENTS_KV.get(key);
     
     if (!messageData) {
