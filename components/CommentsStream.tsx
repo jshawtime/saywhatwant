@@ -907,6 +907,28 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.log(`[Regressive Polling] Reset to ${POLLING_MIN / 1000}s (activity detected)`);
     }
   }, []);
+  
+  // Listen for user activity to reset polling
+  useEffect(() => {
+    const handleActivity = () => {
+      resetPollingInterval();
+    };
+    
+    // Click anywhere in the app
+    document.addEventListener('click', handleActivity);
+    
+    // Scroll anywhere
+    document.addEventListener('scroll', handleActivity, { passive: true });
+    
+    // Focus any input
+    document.addEventListener('focus', handleActivity, true);
+    
+    return () => {
+      document.removeEventListener('click', handleActivity);
+      document.removeEventListener('scroll', handleActivity);
+      document.removeEventListener('focus', handleActivity, true);
+    };
+  }, [resetPollingInterval]);
 
   // Check for new comments - presence-based (only messages since page load)
   const checkForNewComments = useCallback(async () => {
@@ -934,13 +956,14 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         newComments = await response.json();
         console.log(`[Presence Polling] Response: ${newComments.length} messages`);
         
+        // Always update lastPollTimestamp (whether messages found or not)
+        // Use (now - 6 seconds) to allow for cache propagation delay
+        const nowMinus6s = Date.now() - 6000;
+        lastPollTimestamp.current = nowMinus6s;
+        console.log(`[Presence Polling] Updated lastPollTimestamp to ${new Date(nowMinus6s).toLocaleTimeString()} (now - 6s for cache safety)`);
+        
         if (newComments.length > 0) {
-          console.log(`[Presence Polling] Found ${newComments.length} new messages since last poll at ${new Date(lastPollTimestamp.current).toLocaleTimeString()}`);
-          
-          // Update lastPollTimestamp to latest message (for next poll efficiency)
-          const latestTimestamp = Math.max(...newComments.map(m => m.timestamp));
-          lastPollTimestamp.current = latestTimestamp;
-          console.log(`[Presence Polling] Updated lastPollTimestamp to ${new Date(latestTimestamp).toLocaleTimeString()}`);
+          console.log(`[Presence Polling] Found ${newComments.length} new messages`);
           
           // Reset polling interval (activity detected - new messages!)
           resetPollingInterval();
