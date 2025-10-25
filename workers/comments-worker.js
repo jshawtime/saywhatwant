@@ -103,6 +103,27 @@ export default {
     if (path === '/api/stats') {
       return await handleGetStats(env);
     }
+    
+    // NEW QUEUE SYSTEM ENDPOINTS
+    // GET /api/queue/pending - Fetch pending messages
+    if (path === '/api/queue/pending' && request.method === 'GET') {
+      return await handleGetPending(env, url);
+    }
+    
+    // POST /api/queue/claim - Atomic claim operation
+    if (path === '/api/queue/claim' && request.method === 'POST') {
+      return await handleClaimMessage(request, env);
+    }
+    
+    // POST /api/queue/complete - Mark message complete
+    if (path === '/api/queue/complete' && request.method === 'POST') {
+      return await handleCompleteMessage(request, env);
+    }
+    
+    // POST /api/queue/fail - Handle failure/retry
+    if (path === '/api/queue/fail' && request.method === 'POST') {
+      return await handleFailMessage(request, env);
+    }
 
     return new Response('Not found', { 
       status: 404, 
@@ -537,7 +558,16 @@ async function handlePostComment(request, env) {
       }),
       // Bot control parameters (entity, priority, model, nom)
       ...(botParams && typeof botParams === 'object' && {
-        botParams: botParams
+        botParams: {
+          ...botParams,
+          // NEW QUEUE SYSTEM: Add status field for state management
+          ...(botParams.entity && {
+            status: 'pending',
+            claimedBy: null,
+            claimedAt: null,
+            attempts: 0
+          })
+        }
       }),
       // Reply-to field for AI messages (links to original human message)
       ...(body.replyTo && {
@@ -916,6 +946,304 @@ async function handleGetStats(env) {
         ...corsHeaders,
         'Content-Type': 'application/json'
       }
+    });
+  }
+}
+
+/**
+ * NEW QUEUE SYSTEM HANDLERS
+ * Simple, reliable, KV-based queue with atomic state transitions
+ */
+
+/**
+ * GET /api/queue/pending
+ * Fetch messages with status='pending', sorted by priority (desc) then timestamp (asc)
+ */
+async function handleGetPending(env, url) {
+  try {
+    const params = url.searchParams;
+    const limit = parseInt(params.get('limit') || '10');
+    
+    console.log('[Queue] Fetching pending messages, limit:', limit);
+    
+    // List all comment keys
+    let allMessages = [];
+    let cursor = undefined;
+    
+    do {
+      const listResult = await env.COMMENTS_KV.list({
+        prefix: 'comment:',
+        limit: 1000,
+        cursor: cursor
+      });
+      
+      // Fetch each message
+      for (const key of listResult.keys) {
+        const data = await env.COMMENTS_KV.get(key.name);
+        if (data) {
+          try {
+            const message = JSON.parse(data);
+            // Only include messages with status='pending'
+            if (message.botParams?.status === 'pending' && message.botParams?.entity) {
+              allMessages.push(message);
+            }
+          } catch (e) {
+            console.error('[Queue] Failed to parse message:', key.name);
+          }
+        }
+      }
+      
+      cursor = listResult.cursor;
+      
+      // Stop if we have enough
+      if (allMessages.length >= limit * 2 || listResult.list_complete) {
+        break;
+      }
+    } while (cursor);
+    
+    // Sort by priority (high first), then timestamp (old first)
+    allMessages.sort((a, b) => {
+      const priorityA = a.botParams.priority || 50;
+      const priorityB = b.botParams.priority || 50;
+      
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA; // Higher priority first
+      }
+      return a.timestamp - b.timestamp; // Older first
+    });
+    
+    // Return top N
+    const pending = allMessages.slice(0, limit);
+    
+    console.log(`[Queue] Found ${allMessages.length} pending, returning top ${pending.length}`);
+    
+    return new Response(JSON.stringify(pending), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+  } catch (error) {
+    console.error('[Queue] Error fetching pending:', error);
+    return new Response(JSON.stringify({ error: 'Failed to fetch pending messages' }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+}
+
+/**
+ * POST /api/queue/claim
+ * Atomic claim: status pending → processing (with worker ID and timestamp)
+ */
+async function handleClaimMessage(request, env) {
+  try {
+    const body = await request.json();
+    const { messageId, workerId } = body;
+    
+    if (!messageId || !workerId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'messageId and workerId required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('[Queue] Claim attempt:', messageId, 'by', workerId);
+    
+    // Get message
+    const key = `comment:${messageId}`;
+    const data = await env.COMMENTS_KV.get(key);
+    
+    if (!data) {
+      console.log('[Queue] Message not found:', messageId);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Message not found' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const message = JSON.parse(data);
+    
+    // Check if already claimed/completed
+    if (message.botParams?.status !== 'pending') {
+      console.log('[Queue] Message not pending:', messageId, 'status:', message.botParams?.status);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `Message status is ${message.botParams?.status}, not pending` 
+      }), {
+        status: 409, // Conflict
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Atomic claim (update status)
+    message.botParams.status = 'processing';
+    message.botParams.claimedBy = workerId;
+    message.botParams.claimedAt = Date.now();
+    
+    await env.COMMENTS_KV.put(key, JSON.stringify(message));
+    
+    console.log('[Queue] ✅ Claimed:', messageId, 'by', workerId);
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: message 
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('[Queue] Claim error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+/**
+ * POST /api/queue/complete
+ * Mark message as complete (atomic update)
+ */
+async function handleCompleteMessage(request, env) {
+  try {
+    const body = await request.json();
+    const { messageId } = body;
+    
+    if (!messageId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'messageId required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('[Queue] Completing:', messageId);
+    
+    const key = `comment:${messageId}`;
+    const data = await env.COMMENTS_KV.get(key);
+    
+    if (!data) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Message not found' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const message = JSON.parse(data);
+    message.botParams.status = 'complete';
+    
+    await env.COMMENTS_KV.put(key, JSON.stringify(message));
+    
+    console.log('[Queue] ✅ Completed:', messageId);
+    
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('[Queue] Complete error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+/**
+ * POST /api/queue/fail
+ * Handle failure: increment attempts, return to pending or mark failed
+ */
+async function handleFailMessage(request, env) {
+  try {
+    const body = await request.json();
+    const { messageId, error } = body;
+    
+    if (!messageId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'messageId required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('[Queue] Failing:', messageId, 'reason:', error);
+    
+    const key = `comment:${messageId}`;
+    const data = await env.COMMENTS_KV.get(key);
+    
+    if (!data) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Message not found' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const message = JSON.parse(data);
+    message.botParams.attempts = (message.botParams.attempts || 0) + 1;
+    
+    const MAX_RETRIES = 3;
+    
+    if (message.botParams.attempts >= MAX_RETRIES) {
+      // Give up - mark as failed
+      message.botParams.status = 'failed';
+      console.log('[Queue] ❌ Max retries reached, marked failed:', messageId);
+    } else {
+      // Retry - return to pending
+      message.botParams.status = 'pending';
+      message.botParams.claimedBy = null;
+      message.botParams.claimedAt = null;
+      console.log('[Queue] ⚠️  Retry:', messageId, `attempt ${message.botParams.attempts}/${MAX_RETRIES}`);
+    }
+    
+    await env.COMMENTS_KV.put(key, JSON.stringify(message));
+    
+    return new Response(JSON.stringify({ 
+      success: true,
+      status: message.botParams.status,
+      attempts: message.botParams.attempts
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('[Queue] Fail handler error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 }
