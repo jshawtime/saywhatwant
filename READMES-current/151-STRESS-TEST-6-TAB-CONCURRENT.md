@@ -359,6 +359,68 @@ await queue(message);
 
 ---
 
-**Status:** Test #2 complete - 100% delivery, but wrong entity selection bug exposed  
-**Last Updated:** October 25, 2025 1:10 PM - Non-blocking PATCH successful, entity selection needs fix
+---
+
+## PM2 Verification Procedure
+
+**CRITICAL:** Always verify PM2 is actually running the latest code!
+
+### After Every PM2 Restart, Check:
+
+**1. Code Features Present:**
+```bash
+cd ~/Desktop/hm-server-deployment/AI-Bot-Deploy
+grep "Fire-and-forget PATCH" dist/index.js
+grep "replyTo:" dist/index.js
+```
+
+**Expected:** Both strings found = latest code ✅
+
+**2. Build Timestamp:**
+```bash
+ls -la dist/index.js
+```
+
+**Expected:** Build time within last few minutes ✅
+
+**3. PM2 Process Running:**
+```bash
+npx pm2 list
+```
+
+**Expected:** `ai-bot | online` with recent uptime ✅
+
+**4. Process PID and Command:**
+```bash
+PM2_PID=$(npx pm2 jlist | grep -o '"pid":[0-9]*' | head -1 | cut -d: -f2)
+ps -p $PM2_PID -o command=
+```
+
+**Expected:** Shows `node dist/index.js` with correct path ✅
+
+**5. Recent Activity in Logs:**
+```bash
+npx pm2 logs ai-bot --lines 20 --nostream | tail -10
+```
+
+**Expected:** See polling activity, queue activity, not just old errors ✅
+
+**If ANY check fails:** PM2 is not running latest code - restart failed!
+
+### Enhanced Restart Script
+
+The `PM2-kill-rebuild-and-start.sh` script now includes:
+- ✅ Code verification (checks for latest features)
+- ✅ Build timestamp display
+- ✅ Process PID verification
+- ✅ Command line verification
+- ✅ Recent log inspection
+- ✅ Comprehensive summary
+
+**Run script, then verify ALL checks pass before testing!**
+
+---
+
+**Status:** PM2 verification procedure documented  
+**Last Updated:** October 25, 2025 1:42 PM - Verification checks added to restart script
 
