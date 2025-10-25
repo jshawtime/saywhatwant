@@ -897,7 +897,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // CHANNEL-EXCLUSIVE: Only poll for active channel (human OR AI)
         // If mt=ALL, don't send type parameter (get everything)
         const typeParam = messageType === 'ALL' ? '' : `&type=${messageType}`;
-        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${lastPollTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}&fresh=true`;
+        // REMOVED fresh=true - using cache for speed (cache updated on every POST)
+        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${lastPollTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}`;
         console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(lastPollTimestamp.current).toLocaleTimeString()}`);
         console.log(`[Presence Polling] URL: ${pollUrl}`);
         
