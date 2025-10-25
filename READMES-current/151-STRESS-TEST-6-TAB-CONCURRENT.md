@@ -248,6 +248,117 @@ The KV key simplification (README-148) means PATCH now uses direct access `comme
 
 ---
 
-**Status:** Fix #1 implemented - await PM2 restart for Test #2  
-**Last Updated:** October 25, 2025 12:51 PM - 1s delay removed, ready to retest
+---
+
+## Fix #2: Non-Blocking Parallel PATCH
+
+**Problem:** Removing 1s delay completely breaks KV eventual consistency  
+**Root cause:** Cloudflare KV writes may not be immediately visible to reads (even direct access)  
+**Solution:** Keep 1s delay BUT make it non-blocking (fire-and-forget async)
+
+**Implementation:**
+```javascript
+// Fire-and-forget PATCH (non-blocking)
+(async () => {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  await kvClient.updateProcessedStatus(message.id, true);
+})(); // Don't await!
+
+// Queue immediately (don't block)
+await queue(message);
+```
+
+**Benefits:**
+- ✅ All messages queued instantly (no blocking)
+- ✅ PATCH still happens after 1s (KV consistency)
+- ✅ Parallel processing (6 messages = 6 parallel PATCHes)
+- ✅ Fast and reliable
+
+**File:** `AI-Bot-Deploy/src/index.ts` lines 486-492  
+**Built:** ✅ PM2 bot rebuilt with parallel PATCH  
+**Status:** Ready for Test #2
+
+---
+
+## Test #2 Results - October 25, 2025 1:04 PM
+
+### Messages Sent (Second Round)
+
+| Tab | Message | Time Sent |
+|-----|---------|-----------|
+| 1 | "1" | 1:04:08 PM |
+| 2 | "3" | 1:04:16 PM |
+| 3 | "3" | 1:04:29 PM |
+| 4 | "4" | 1:04:35 PM |
+| 5 | "5" | 1:04:39 PM |
+| 6 | "6" | 1:04:41 PM |
+
+### Results (Checked at 1:10 PM)
+
+| Tab | Reply Received | Entity | Response Time | Status |
+|-----|----------------|--------|---------------|--------|
+| 1 | ✅ EmotionalGuide | emotional-intelligence | 24s | SUCCESS |
+| 2 | ✅ Astrophysics101 | astrophysics | 317s (5+ min!) | WRONG ENTITY! |
+| 3 | ✅ EmotionalGuide | emotional-intelligence | 5s | SUCCESS |
+| 4 | ✅ Astrophysics101 | astrophysics | 26s | WRONG ENTITY! |
+| 5 | ✅ EmotionalGuide | emotional-intelligence | 27s | SUCCESS |
+| 6 | ✅ Astrophysics101 | astrophysics | 23s | WRONG ENTITY! |
+
+**Result: 6/6 replies received (100% delivery!) ✅**  
+**But: 3/6 wrong entity (50% accuracy) ❌**
+
+### Success!
+
+✅ **Non-blocking PATCH works!** All 6 messages processed  
+✅ **No blocking delay** - messages queued instantly  
+✅ **100% delivery rate**
+
+### New Issue Exposed
+
+❌ **Wrong entity selection:**
+- Tabs 2, 4, 6 got Astrophysics101 instead of EmotionalGuide
+- All tabs had `entity=emotional-intelligence` in URL
+- **Entity selection is using wrong botParams or random selection**
+
+---
+
+## Investigation Methodology
+
+### How to Cross-Correlate KV Messages
+
+**Dashboard KV section shows:**
+```
+#1 - {aiMessageId} [human → AI reply on KV: Xs]
+#2 - {humanMessageId}
+```
+
+**AI messages have `replyTo` field linking to human message ID.**
+
+**To investigate:**
+
+1. **Find human message by text:**
+   - Search KV for `"text": "1"` 
+   - Get message ID and timestamp
+   - Check `botParams.processed` value
+   - Check `botParams.entity` value
+
+2. **Find AI response:**
+   - Search for AI message with `replyTo: {humanMessageId}`
+   - Or search by timestamp (AI should be ~5-30s after human)
+   - Check entity/username
+
+3. **Match to frontend COPY ALL:**
+   - Human timestamp should match
+   - AI timestamp should match
+   - Verify entity is correct
+
+**Using Dashboard:**
+- AI messages show `[human → AI reply: Xs]` timing
+- Can quickly see which ones have replies
+- Can expand to see `replyTo` field and verify pairing
+
+---
+
+**Status:** Test #2 complete - 100% delivery, but wrong entity selection bug exposed  
+**Last Updated:** October 25, 2025 1:10 PM - Non-blocking PATCH successful, entity selection needs fix
 
