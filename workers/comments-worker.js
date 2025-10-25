@@ -34,7 +34,7 @@ const EXEMPT_DOMAINS = [
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
-const CACHE_SIZE = 500;       // Keep last 500 comments in cache (reduced from 5000 to avoid KV size limits)
+const CACHE_SIZE = 50;       // Keep last 50 comments in cache (development - small for fast updates)
 
 /**
  * Generate a random RGB color using sophisticated range-based generation
@@ -964,42 +964,26 @@ async function handleGetPending(env, url) {
     const params = url.searchParams;
     const limit = parseInt(params.get('limit') || '10');
     
-    console.log('[Queue] Fetching pending messages, limit:', limit);
+    console.log('[Queue] Fetching pending messages from cache, limit:', limit);
     
-    // List all comment keys
+    // Use cache for speed (has recent 500 messages)
+    const cacheKey = 'recent:comments';
+    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    
     let allMessages = [];
-    let cursor = undefined;
     
-    do {
-      const listResult = await env.COMMENTS_KV.list({
-        prefix: 'comment:',
-        limit: 1000,
-        cursor: cursor
-      });
-      
-      // Fetch each message
-      for (const key of listResult.keys) {
-        const data = await env.COMMENTS_KV.get(key.name);
-        if (data) {
-          try {
-            const message = JSON.parse(data);
-            // Only include messages with status='pending'
-            if (message.botParams?.status === 'pending' && message.botParams?.entity) {
-              allMessages.push(message);
-            }
-          } catch (e) {
-            console.error('[Queue] Failed to parse message:', key.name);
-          }
-        }
-      }
-      
-      cursor = listResult.cursor;
-      
-      // Stop if we have enough
-      if (allMessages.length >= limit * 2 || listResult.list_complete) {
-        break;
-      }
-    } while (cursor);
+    if (cachedData) {
+      const cached = JSON.parse(cachedData);
+      // Filter for pending messages
+      allMessages = cached.filter(m => 
+        m.botParams?.status === 'pending' && 
+        m.botParams?.entity &&
+        m['message-type'] === 'human'
+      );
+      console.log('[Queue] Scanned cache, found', allMessages.length, 'pending');
+    } else {
+      console.log('[Queue] Cache empty!');
+    }
     
     // Sort by priority (high first), then timestamp (old first)
     allMessages.sort((a, b) => {
