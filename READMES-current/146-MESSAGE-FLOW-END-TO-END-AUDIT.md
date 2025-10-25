@@ -642,3 +642,59 @@ Script on 10.0.0.100 now includes safety check:
 **Status:** Dual PM2 issue resolved - dev machine killed, script updated with safety check  
 **Last Updated:** October 23, 2025 22:37 - Dual PM2 discovered and eliminated
 
+---
+
+### FINAL FIX - October 25, 2025 02:45
+
+**ROOT CAUSE FOUND:** Worker PATCH handler missing cursor pagination!
+
+**The Problem:**
+```javascript
+// OLD CODE (BROKEN) - line 625
+const matchingKeys = await env.COMMENTS_KV.list({ prefix: `comment:` });
+// Only returns first 1000 keys!
+```
+
+With >1000 messages in KV, newer messages beyond first 1000 weren't found → 404 error!
+
+**The Fix:**
+```javascript
+// NEW CODE (FIXED) - lines 624-645
+let cursor = undefined;
+let allKeys = [];
+
+do {
+  const listResult = await env.COMMENTS_KV.list({
+    prefix: 'comment:',
+    cursor: cursor,
+    limit: 1000
+  });
+  
+  allKeys.push(...listResult.keys);
+  cursor = listResult.cursor;
+  
+  // Stop if we found our message (optimization)
+  const found = listResult.keys.find(k => k.name.endsWith(`:${messageId}`));
+  if (found) break;
+} while (cursor);
+
+const targetKey = allKeys.find(k => k.name.endsWith(`:${messageId}`));
+```
+
+**Confirmation - Using ONLY Message ID:**
+✅ Search uses `.endsWith(`:${messageId}`)` - NO timestamp extraction  
+✅ Works with ANY timestamp in key (1761385513857, 1761385513858, etc.)  
+✅ Cursor pagination gets ALL keys regardless of count  
+✅ Message ID is unique - only one match possible  
+
+**Test Result:**
+Message `1761385513857-ktg77ppwn` successfully marked `"processed": true` ✅
+
+**Files Modified:**
+1. `workers/comments-worker.js` lines 624-645 - Added cursor pagination to PATCH
+2. `AI-Bot-Deploy/src/modules/kvClient.ts` lines 174-178 - Added 404-as-success handling
+3. `PM2-kill-rebuild-and-start.sh` lines 9-16 - Added SSH remote kill of dev machine PM2
+
+**Status:** ✅ RESOLVED - All systems working correctly  
+**Last Updated:** October 25, 2025 02:47 - Cursor pagination fix deployed and verified
+

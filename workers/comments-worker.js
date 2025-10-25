@@ -621,9 +621,28 @@ async function handlePatchComment(request, env, messageId) {
     
     console.log('[Comments] Looking for message:', messageId);
     
-    // List all keys with this message ID (should only be one)
-    const matchingKeys = await env.COMMENTS_KV.list({ prefix: `comment:` });
-    const targetKey = matchingKeys.keys.find(k => k.name.endsWith(`:${messageId}`));
+    // List ALL keys with cursor pagination (first 1000 not enough if >1000 messages)
+    let cursor = undefined;
+    let allKeys = [];
+    
+    do {
+      const listResult = await env.COMMENTS_KV.list({
+        prefix: 'comment:',
+        cursor: cursor,
+        limit: 1000
+      });
+      
+      allKeys.push(...listResult.keys);
+      cursor = listResult.cursor;
+      
+      // Stop if we found our message (optimization)
+      const found = listResult.keys.find(k => k.name.endsWith(`:${messageId}`));
+      if (found) {
+        break;
+      }
+    } while (cursor);
+    
+    const targetKey = allKeys.find(k => k.name.endsWith(`:${messageId}`));
     
     if (!targetKey) {
       console.error('[Comments] Message not found with ID:', messageId);
