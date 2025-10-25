@@ -21,9 +21,12 @@ import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
 // Configuration constants
 const INITIAL_LOAD_COUNT = MESSAGE_SYSTEM_CONFIG.cloudInitialLoad; // ALWAYS 0 - presence-based
-const POLLING_INTERVAL = MESSAGE_SYSTEM_CONFIG.cloudPollingInterval; // 5000ms
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = MESSAGE_SYSTEM_CONFIG.cloudPollBatch;
+// Regressive polling config
+const POLLING_MIN = MESSAGE_SYSTEM_CONFIG.pollingIntervalMin;
+const POLLING_MAX = MESSAGE_SYSTEM_CONFIG.pollingIntervalMax;
+const POLLING_INCREMENT = MESSAGE_SYSTEM_CONFIG.pollingIntervalIncrement;
 const MAX_USERNAME_LENGTH = 16;
 const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
 const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
@@ -212,6 +215,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
   const lastPollTimestamp = useRef<number>(0); // Track latest message timestamp for efficient polling
+  const currentPollingInterval = useRef<number>(POLLING_MIN); // Regressive polling interval
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Regressive polling timeout handle
   
   // Message type scroll restoration (still needed for Humans/Entities toggle)
   // NOTE: This hook will be deprecated once we fully remove the old toggle system
@@ -886,6 +891,23 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [filterUsernames, filterWords, userColor]);
 
+  // Regressive polling: increase interval after each poll
+  const increasePollingInterval = useCallback(() => {
+    const current = currentPollingInterval.current;
+    const newInterval = Math.min(current + POLLING_INCREMENT, POLLING_MAX);
+    currentPollingInterval.current = newInterval;
+    console.log(`[Regressive Polling] Next poll in ${newInterval / 1000}s`);
+  }, []);
+  
+  // Reset polling interval to minimum (on activity)
+  const resetPollingInterval = useCallback(() => {
+    const wasSlowed = currentPollingInterval.current > POLLING_MIN;
+    currentPollingInterval.current = POLLING_MIN;
+    if (wasSlowed) {
+      console.log(`[Regressive Polling] Reset to ${POLLING_MIN / 1000}s (activity detected)`);
+    }
+  }, []);
+
   // Check for new comments - presence-based (only messages since page load)
   const checkForNewComments = useCallback(async () => {
       try {
@@ -919,6 +941,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           const latestTimestamp = Math.max(...newComments.map(m => m.timestamp));
           lastPollTimestamp.current = latestTimestamp;
           console.log(`[Presence Polling] Updated lastPollTimestamp to ${new Date(latestTimestamp).toLocaleTimeString()}`);
+          
+          // Reset polling interval (activity detected - new messages!)
+          resetPollingInterval();
           
           // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
           try {
@@ -979,10 +1004,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches, isFilterMode, matchesCurrentFilter]);
   
   // Use the modular polling system
+  // Regressive polling - dynamic interval that increases when inactive
   useCommentsPolling({
     checkForNewComments,
     isLoading,
-    pollingInterval: POLLING_INTERVAL,
+    currentPollingInterval,
+    increasePollingInterval,
     useLocalStorage: COMMENTS_CONFIG.useLocalStorage,
     storageKey: COMMENTS_STORAGE_KEY
   });
@@ -1053,6 +1080,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
     
     await submitComment(inputText, username, userColor, flashUsername, contextArray, aiStateParam, botParams);
+    
+    // Reset polling interval (user activity!)
+    resetPollingInterval();
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)

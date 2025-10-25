@@ -6,8 +6,12 @@
 export interface MessageSystemConfig {
   // Cloud/KV Settings
   cloudInitialLoad: number;      // ALWAYS 0 - no catch-up from KV
-  cloudPollingInterval: number;  // How often to poll for new messages (ms)
   cloudPollBatch: number;        // Max messages per poll
+  
+  // Regressive Polling (adaptive backoff)
+  pollingIntervalMin: number;       // Starting interval when active (ms)
+  pollingIntervalMax: number;       // Maximum interval when inactive (ms)
+  pollingIntervalIncrement: number; // Increase per poll (ms)
   
   // Display Settings  
   maxDisplayMessages: number;    // Max messages in DOM (memory protection)
@@ -27,8 +31,12 @@ export interface MessageSystemConfig {
 export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Cloud/KV Settings
   cloudInitialLoad: 0,          // NO catch-up - pure presence-based system
-  cloudPollingInterval: 5000,   // Poll every 5 seconds
   cloudPollBatch: 200,           // Max n per poll
+  
+  // Regressive Polling (adaptive backoff)
+  pollingIntervalMin: 5000,      // Start at 5 seconds when active
+  pollingIntervalMax: 100000,    // Max 100 seconds when inactive
+  pollingIntervalIncrement: 1000, // Increase 1 second per poll
   
   // Display Settings
   maxDisplayMessages: 1000,     // Show max n in DOM

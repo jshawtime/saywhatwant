@@ -228,17 +228,20 @@ export const useStorageListener = (
 export const useCommentsPolling = ({
   checkForNewComments,
   isLoading,
-  pollingInterval,
+  currentPollingInterval,
+  increasePollingInterval,
   useLocalStorage,
   storageKey
 }: {
   checkForNewComments: () => Promise<void>;
   isLoading: boolean;
-  pollingInterval: number;
+  currentPollingInterval: React.MutableRefObject<number>;
+  increasePollingInterval: () => void;
   useLocalStorage: boolean;
   storageKey: string;
 }) => {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(false);
   
   // Use storage listener for localStorage mode
   useStorageListener(
@@ -247,24 +250,35 @@ export const useCommentsPolling = ({
     useLocalStorage && !isLoading
   );
   
-  // Use polling for both modes
+  // Regressive polling with recursive setTimeout (dynamic interval)
   useEffect(() => {
-    if (!isLoading) {
-      // Start polling
-      pollingRef.current = setInterval(checkForNewComments, pollingInterval);
+    if (!isLoading && !isMountedRef.current) {
+      isMountedRef.current = true;
+      
+      const poll = async () => {
+        await checkForNewComments();
+        increasePollingInterval(); // Slow down for next poll
+        
+        // Schedule next poll with current interval
+        pollingRef.current = setTimeout(poll, currentPollingInterval.current);
+      };
+      
+      // Start first poll
+      pollingRef.current = setTimeout(poll, currentPollingInterval.current);
       
       return () => {
         if (pollingRef.current) {
-          clearInterval(pollingRef.current);
+          clearTimeout(pollingRef.current);
         }
+        isMountedRef.current = false;
       };
     }
-  }, [isLoading, checkForNewComments, pollingInterval]);
+  }, [isLoading, checkForNewComments, increasePollingInterval]);
   
   return {
     stopPolling: () => {
       if (pollingRef.current) {
-        clearInterval(pollingRef.current);
+        clearTimeout(pollingRef.current);
         pollingRef.current = null;
       }
     }
