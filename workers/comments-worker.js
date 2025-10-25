@@ -974,13 +974,22 @@ async function handleGetPending(env, url) {
     
     if (cachedData) {
       const cached = JSON.parse(cachedData);
-      // Filter for pending messages
-      allMessages = cached.filter(m => 
-        m.botParams?.status === 'pending' && 
-        m.botParams?.entity &&
-        m['message-type'] === 'human'
-      );
-      console.log('[Queue] Scanned cache, found', allMessages.length, 'pending');
+      
+      // IMPORTANT: Cache may be stale! Verify status from actual KV key
+      for (const msg of cached) {
+        if (msg.botParams?.entity && msg['message-type'] === 'human') {
+          // Read actual status from KV
+          const key = `comment:${msg.id}`;
+          const actualData = await env.COMMENTS_KV.get(key);
+          if (actualData) {
+            const actualMsg = JSON.parse(actualData);
+            if (actualMsg.botParams?.status === 'pending') {
+              allMessages.push(actualMsg); // Use actual data, not cache!
+            }
+          }
+        }
+      }
+      console.log('[Queue] Scanned cache, verified', allMessages.length, 'actually pending');
     } else {
       console.log('[Queue] Cache empty!');
     }
