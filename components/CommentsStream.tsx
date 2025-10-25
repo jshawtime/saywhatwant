@@ -211,6 +211,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const lastFetchTimeRef = useRef<number>(0); // Initialize to 0, set after mount
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
+  const lastPollTimestamp = useRef<number>(0); // Track latest message timestamp for efficient polling
   
   // Message type scroll restoration (still needed for Humans/Entities toggle)
   // NOTE: This hook will be deprecated once we fully remove the old toggle system
@@ -477,6 +478,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Set timestamps after mount to avoid hydration mismatch
     pageLoadTimestamp.current = Date.now();
+    lastPollTimestamp.current = Date.now(); // Initialize to page load time
     lastFetchTimeRef.current = Date.now();
     
     // Username is now loaded automatically by useUsernameEditor hook
@@ -895,8 +897,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // CHANNEL-EXCLUSIVE: Only poll for active channel (human OR AI)
         // If mt=ALL, don't send type parameter (get everything)
         const typeParam = messageType === 'ALL' ? '' : `&type=${messageType}`;
-        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${pageLoadTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}&fresh=true`;
-        console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
+        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${lastPollTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}&fresh=true`;
+        console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(lastPollTimestamp.current).toLocaleTimeString()}`);
         console.log(`[Presence Polling] URL: ${pollUrl}`);
         
         const response = await fetch(pollUrl);
@@ -910,7 +912,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         console.log(`[Presence Polling] Response: ${newComments.length} messages`);
         
         if (newComments.length > 0) {
-          console.log(`[Presence Polling] Found ${newComments.length} new messages since page load at ${new Date(pageLoadTimestamp.current).toLocaleTimeString()}`);
+          console.log(`[Presence Polling] Found ${newComments.length} new messages since last poll at ${new Date(lastPollTimestamp.current).toLocaleTimeString()}`);
+          
+          // Update lastPollTimestamp to latest message (for next poll efficiency)
+          const latestTimestamp = Math.max(...newComments.map(m => m.timestamp));
+          lastPollTimestamp.current = latestTimestamp;
+          console.log(`[Presence Polling] Updated lastPollTimestamp to ${new Date(latestTimestamp).toLocaleTimeString()}`);
           
           // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
           try {
