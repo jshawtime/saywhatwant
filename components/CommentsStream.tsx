@@ -960,10 +960,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Use (now - 6 seconds) to allow for cache propagation delay
         const nowMinus6s = Date.now() - 6000;
         lastPollTimestamp.current = nowMinus6s;
-        console.log(`[Presence Polling] Updated lastPollTimestamp to ${new Date(nowMinus6s).toLocaleTimeString()} (now - 6s for cache safety)`);
         
         if (newComments.length > 0) {
-          console.log(`[Presence Polling] Found ${newComments.length} new messages`);
+          console.log(`[Presence Polling] Found ${newComments.length} new messages (updated lastPoll to ${new Date(nowMinus6s).toLocaleTimeString()})`);
           
           // Reset polling interval (activity detected - new messages!)
           resetPollingInterval();
