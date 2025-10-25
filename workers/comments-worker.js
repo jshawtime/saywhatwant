@@ -821,8 +821,10 @@ async function addToCache(env, comment) {
       comments = comments.slice(-100);
     }
     
-    // Update cache
-    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments));
+    // Update cache with 3-second TTL (auto-expires for fresh data)
+    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments), {
+      expirationTtl: 3
+    });
   } catch (error) {
     console.error('[Comments] Failed to update cache:', error);
     // Try to at least save the new comment
@@ -844,7 +846,10 @@ async function updateCache(env, comments) {
   // Keep only the most recent comments
   const recentComments = comments.slice(-CACHE_SIZE);
   
-  await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments));
+  // 3-second TTL for auto-expiration
+  await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments), {
+    expirationTtl: 3
+  });
 }
 
 /**
@@ -978,9 +983,17 @@ async function handleGetPending(env, url) {
       // IMPORTANT: Cache may be stale! Verify status from actual KV key
       for (const msg of cached) {
         if (msg.botParams?.entity && msg['message-type'] === 'human') {
-          // Read actual status from KV
-          const key = `comment:${msg.id}`;
-          const actualData = await env.COMMENTS_KV.get(key);
+          // Try NEW key format first
+          let key = `comment:${msg.id}`;
+          let actualData = await env.COMMENTS_KV.get(key);
+          
+          // If not found, try OLD key format (backwards compatibility)
+          if (!actualData) {
+            const timestamp = msg.id.split('-')[0];
+            key = `comment:${timestamp}:${msg.id}`;
+            actualData = await env.COMMENTS_KV.get(key);
+          }
+          
           if (actualData) {
             const actualMsg = JSON.parse(actualData);
             if (actualMsg.botParams?.status === 'pending') {
