@@ -232,3 +232,41 @@ setTimeout(poll, currentPollingInterval.current);
 
 **This implements intelligent adaptive polling that conserves resources during inactivity while maintaining instant responsiveness during active conversations.**
 
+
+---
+
+## Activity Detection (Global Listeners)
+
+**Added smart activity detection** - any user interaction resets polling to 5s:
+
+**Triggers:**
+- ✅ Click anywhere in app
+- ✅ Scroll anywhere
+- ✅ Focus any input field
+- ✅ User posts message
+- ✅ New messages received
+
+**Implementation:**
+```typescript
+// Global event listeners
+useEffect(() => {
+  const handleActivity = () => resetPollingInterval();
+  
+  document.addEventListener('click', handleActivity);
+  document.addEventListener('scroll', handleActivity, { passive: true });
+  document.addEventListener('focus', handleActivity, true);
+  
+  return () => {
+    document.removeEventListener('click', handleActivity);
+    document.removeEventListener('scroll', handleActivity);
+    document.removeEventListener('focus', handleActivity, true);
+  };
+}, [resetPollingInterval]);
+```
+
+**Result:** App feels instantly responsive - any interaction = fast polling resumed!
+
+---
+
+**Date Updated:** October 25, 2025  
+**Status:** ✅ IMPLEMENTED with global activity detection
