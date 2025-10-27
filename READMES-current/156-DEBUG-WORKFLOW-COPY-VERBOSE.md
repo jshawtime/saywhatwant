@@ -88,6 +88,7 @@ curl "...api/comments?limit=50" | grep "1761535317016"
 **IMPORTANT: Before assuming cache issue, do the math!**
 
 **Cache Math:**
+CACHE_SIZE may change. The below example is a conceptual reference only. CACHE_SIZE n is the only way to accurately understand. Self healing should fix cache size issues anyway.
 - CACHE_SIZE = 200 messages
 - Each stress test: 6 human + 6 AI = 12 messages
 - Headroom: 200 - 12 = **188 messages of safety!**
@@ -104,10 +105,33 @@ curl "...api/comments?limit=50" | grep "1761535317016"
 - Message gets discovered and processed
 
 **So cache is almost NEVER the issue - it's:**
-1. Worker POST actually failed (check Worker logs)
-2. Frontend filter rejecting the response (color mismatch)
-3. Message posted but to wrong KV namespace (rare)
-4. Network timeout during POST
+1. **Worker POST failed** - Check response.status in PM2 logs
+2. **Frontend filter rejected it** - Color mismatch (most common!)
+3. **Message in KV but outside cache window** - Check with direct KV key lookup
+4. **Network timeout during POST** - Would show error in PM2 logs
+
+**How to investigate each:**
+
+**1. Check if POST succeeded:**
+```bash
+# PM2 logs now show:
+[POST] Posting AI: EmotionalGuide color:080203170 replyTo:1761569423412
+[POST] Worker confirmed: 1761569430123-abc123
+```
+If you see "Worker confirmed" → POST succeeded, message IS in KV!
+
+**2. Check for color mismatch:**
+```
+Filter expects: EmotionalGuide:080203170
+Bot posted with: EmotionalGuide:080229166  ← MISMATCH!
+```
+Filter rejects → message in KV but not displayed!
+
+**3. Check KV directly by messageId:**
+```bash
+curl "https://sww-comments.bootloaders.workers.dev/api/comments/[messageId]"
+```
+If found → it's in KV, just not in cache!
 
 **DON'T assume cache until you verify the math shows it's actually full!**
 
