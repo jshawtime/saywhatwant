@@ -85,6 +85,61 @@ curl "...api/comments?limit=50" | grep "1761535317016"
 
 **Diagnosis:** Worker POST failed or message fell out of cache
 
+**IMPORTANT: Before assuming cache issue, do the math!**
+
+**Cache Math:**
+- CACHE_SIZE = 200 messages
+- Each stress test: 6 human + 6 AI = 12 messages
+- Headroom: 200 - 12 = **188 messages of safety!**
+
+**Cache would only be an issue if:**
+- You post 100+ messages in rapid succession
+- Cache fills with 200 messages
+- Your message gets pushed out before frontend polls
+
+**But even then, it self-heals:**
+- Message exists in individual KV key with `status='pending'`
+- Next PM2 poll (3 seconds later) checks actual KV keys
+- Pending endpoint verifies status from KV, not cache
+- Message gets discovered and processed
+
+**So cache is almost NEVER the issue - it's:**
+1. Worker POST actually failed (check Worker logs)
+2. Frontend filter rejecting the response (color mismatch)
+3. Message posted but to wrong KV namespace (rare)
+4. Network timeout during POST
+
+**DON'T assume cache until you verify the math shows it's actually full!**
+
+---
+
+### Investigation Protocol (CRITICAL)
+
+**When a message doesn't appear:**
+
+1. **Gather evidence first** - Run all 3 diagnostic steps
+2. **Do the math** - Is cache actually full? (usually NO!)
+3. **Form hypothesis** - Based on evidence, not assumptions
+4. **CHECK WITH OWNER** - Present hypothesis and evidence
+5. **Wait for confirmation** - Don't implement fix until approved
+6. **Then fix** - Implement confirmed solution only
+
+**Example of WRONG approach:**
+```
+❌ "Message missing → must be cache → increase cache size"
+```
+
+**Example of RIGHT approach:**
+```
+✅ "Message missing → check PM2 (found/processed) → check KV (not found)
+   → PM2 posted it but not in KV
+   → Worker POST might have failed
+   → Check Worker logs for errors
+   → Present findings to owner before fixing"
+```
+
+**NEVER assume root cause without evidence and owner confirmation!**
+
 ---
 
 ### Issue: Wrong Entity Responded
