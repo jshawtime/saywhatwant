@@ -810,7 +810,10 @@ async function addToCache(env, comment) {
     // Add new comment
     comments.push(comment);
     
-    // Keep only the most recent comments
+    // Sort by timestamp (oldest to newest) to maintain correct order
+    comments.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Keep only the most recent comments (last N after sorting)
     if (comments.length > CACHE_SIZE) {
       comments = comments.slice(-CACHE_SIZE);
     }
