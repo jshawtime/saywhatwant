@@ -18,6 +18,15 @@
 2. Click "Copy ALL - verbose"
 3. Paste into text editor
 
+**IMPORTANT: Check if export has URL field!**
+```
+URL: https://saywhatwant.app/#u=Human:080195229+EmotionalGuide:186207080...
+```
+
+**If URL is missing:** Tab is using OLD cached code! Hard refresh that specific tab (Cmd+Shift+R) or close and reopen.
+
+**Known issue:** Chrome sometimes caches old code even after hard refresh. If 5/6 tabs show URL but 1/6 doesn't, that tab has stale code. Close it and open fresh.
+
 **You now have:**
 - **Message IDs** for exact lookup
 - **UTC timestamps** matching KV/PM2
@@ -252,7 +261,11 @@ Cache order: Oldest first
 - But this is an AI response (already posted), not a pending human message
 - No self-healing mechanism for missing AI responses in cache
 
-**Root cause:** Worker `addToCache()` silently failing during concurrent POSTs
+**Root cause:** Cache order was wrong! Worker was keeping oldest 111 messages instead of newest 200.
+
+**Fix:** Sort cache by timestamp before trimming - ensures newest messages always kept.
+
+**Success criteria:** 100% ONLY - no exceptions! 83% is NOT acceptable, 99% is NOT acceptable. Every message MUST get AI response or it's a bug that needs fixing.
 
 ---
 
