@@ -34,7 +34,7 @@ const EXEMPT_DOMAINS = [
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
-const CACHE_SIZE = 50;       // Keep last 50 comments in cache (sufficient for current volume)
+const CACHE_SIZE = 200;      // Keep last 200 comments in cache (handles burst traffic)
 
 /**
  * Generate a random RGB color using sophisticated range-based generation
@@ -729,9 +729,7 @@ async function updateCacheProcessedStatus(env, messageId, processed) {
         allComments[messageIndex].botParams = {};
       }
       allComments[messageIndex].botParams.processed = processed;
-      await env.COMMENTS_KV.put(cacheKey, JSON.stringify(allComments), {
-        expirationTtl: 5  // Auto-rebuild every 5 seconds for self-healing
-      });
+      await env.COMMENTS_KV.put(cacheKey, JSON.stringify(allComments));
       console.log('[Comments] Cache also updated for:', messageId);
     }
   }
@@ -803,30 +801,14 @@ async function addToCache(env, comment) {
       try {
         comments = JSON.parse(cachedData);
       } catch (parseError) {
-        console.error('[Comments] Failed to parse cache, rebuilding from KV:', parseError);
-        // If corrupt, rebuild from KV instead of starting fresh
-        comments = await rebuildCacheFromKV(env);
-        // Continue to add current comment to rebuilt cache
+        console.error('[Comments] Failed to parse cache, starting fresh:', parseError);
+        comments = []; // If corrupt, start fresh (rare edge case)
       }
-    } else {
-      // Cache is empty - rebuild from KV to ensure zero message loss!
-      console.log('[Cache] Empty during POST - rebuilding from KV');
-      comments = await rebuildCacheFromKV(env);
-      // Continue to add current comment to rebuilt cache
     }
+    // If cache empty, start with empty array (will build up from POSTs)
     
-    // Add new comment (might be duplicate if rebuild just included it)
+    // Add new comment
     comments.push(comment);
-    
-    // Deduplicate by message ID (in case rebuild already included this message)
-    const seen = new Set();
-    comments = comments.filter(msg => {
-      if (seen.has(msg.id)) {
-        return false; // Skip duplicate
-      }
-      seen.add(msg.id);
-      return true;
-    });
     
     // Sort by timestamp (oldest to newest) to maintain correct order
     comments.sort((a, b) => a.timestamp - b.timestamp);
@@ -843,10 +825,8 @@ async function addToCache(env, comment) {
       comments = comments.slice(-100);
     }
     
-    // Update cache with 5-second TTL for auto-healing
-    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments), {
-      expirationTtl: 5  // Auto-rebuild every 5 seconds for self-healing
-    });
+    // Update cache (no TTL - never expires, updated on every POST)
+    await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments));
   } catch (error) {
     console.error('[Comments] Failed to update cache:', error);
     // Don't throw - let the comment still be saved to main KV
@@ -862,64 +842,8 @@ async function updateCache(env, comments) {
   // Keep only the most recent comments
   const recentComments = comments.slice(-CACHE_SIZE);
   
-  // 5-second TTL for auto-healing
-  await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments), {
-    expirationTtl: 5  // Auto-rebuild every 5 seconds for self-healing
-  });
-}
-
-/**
- * Rebuild cache from individual KV keys
- * Used when cache is empty/corrupt to ensure zero message loss
- */
-async function rebuildCacheFromKV(env) {
-  console.log('[Cache] Rebuilding from KV keys...');
-  const messages = [];
-  let cursor = undefined;
-  
-  // Scan comment:* keys with cursor pagination
-  do {
-    const list = await env.COMMENTS_KV.list({ 
-      prefix: 'comment:', 
-      cursor,
-      limit: 1000
-    });
-    
-    // Fetch each key
-    for (const key of list.keys) {
-      const data = await env.COMMENTS_KV.get(key.name);
-      if (data) {
-        try {
-          messages.push(JSON.parse(data));
-        } catch (parseError) {
-          console.error('[Cache] Failed to parse key during rebuild:', key.name);
-        }
-      }
-    }
-    
-    cursor = list.cursor;
-    
-    // Stop when we have enough or reached the end
-    if (messages.length >= CACHE_SIZE || list.list_complete) {
-      break;
-    }
-    
-  } while (cursor);
-  
-  // Sort by timestamp (oldest to newest)
-  messages.sort((a, b) => a.timestamp - b.timestamp);
-  
-  // Keep only the most recent CACHE_SIZE messages
-  const recent = messages.slice(-CACHE_SIZE);
-  
-  console.log(`[Cache] Rebuilt with ${recent.length} messages from KV`);
-  
-  // Save to cache with 5-second TTL
-  await env.COMMENTS_KV.put('recent:comments', JSON.stringify(recent), {
-    expirationTtl: 5  // Auto-rebuild every 5 seconds for self-healing
-  });
-  
-  return recent;
+  // No TTL - cache never expires, updated on every POST
+  await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments));
 }
 
 /**

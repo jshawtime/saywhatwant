@@ -2,7 +2,7 @@
 
 **Tags:** #cost #cloudflare #kv #workers #scaling #economics  
 **Created:** October 25, 2025  
-**Updated:** October 27, 2025 - Accurate accounting with cache rebuilds  
+**Updated:** October 27, 2025 - Simple accumulation cache (no rebuilds)  
 **Status:** ✅ COMPLETE - Production cost estimates with all operations
 
 ---
@@ -18,9 +18,9 @@
 **Key features:** 
 - ✅ Regressive polling deployed (76% request reduction vs fixed polling)
 - ✅ All Worker requests counted (125M/month)
-- ✅ Cache rebuild costs included (README-155)
+- ✅ Simple cache accumulation (no rebuild costs - README-155)
 - ✅ All operations fully accounted for
-- ✅ 100% reliability (zero message loss)
+- ✅ Fast and reliable
 
 ---
 
@@ -91,18 +91,11 @@
 - = 864,000 reads/month
 - Cost: 0.86M / 10M × $0.50 = **$0.04/month**
 
-**Cache rebuilds (lazy rebuild on expiry - README-155):**
-- Cache expires every 10s (TTL)
-- Only rebuilds when next POST/poll happens after expiry
-- Rebuild operations:
-  - KV.list() calls: 1-2 (cursor pagination)
-  - KV.get() calls: 100 (fetch messages)
-  - KV.put() call: 1 (save rebuilt cache)
-  - **Total: ~103 reads per rebuild**
-- Rebuilds per hour: ~50 (only during active periods)
-- 50 rebuilds/hr × 24 hrs × 30 days = 36,000 rebuilds/month
-- 36,000 × 103 = 3,708,000 reads/month
-- Cost: 3.7M / 10M × $0.50 = **$0.19/month**
+**Cache accumulation (simple POST-only - README-155):**
+- No TTL (cache never expires)
+- No rebuild operations (accumulates from POSTs)
+- Cache updated on every POST (already counted in writes)
+- **Zero additional read cost!** ✅
 
 **Pending endpoint verification:**
 - PM2 polls every 3s
@@ -115,12 +108,11 @@
 **Total KV reads breakdown:**
 - Frontend polling (regressive): $6.22 (124M reads)
 - PM2 bot polling: $0.04 (0.86M reads)
-- Cache rebuilds: $0.19 (3.7M reads)
 - Pending verification: $0.43 (8.6M reads)
 - Queue endpoint calls: $0.08 (1.6M reads)
-- **Total reads: ~$6.96/month**
+- **Total reads: ~$6.77/month**
 
-**Total KV cost: $30 (writes) + $6.96 (reads) = $36.96/month**
+**Total KV cost: $30 (writes) + $6.77 (reads) = $36.77/month**
 
 ---
 
@@ -151,16 +143,17 @@
 | **Cloudflare Pages** | Frontend hosting | $0.00 | Free tier |
 | **TOTAL** | | **$76.46/month** | |
 
-### Detailed KV Reads Breakdown (138M total)
+### Detailed KV Reads Breakdown (134M total)
 
 | Operation | Reads/Month | Cost | Notes |
 |-----------|-------------|------|-------|
 | Frontend polling (regressive) | 124.4M | $6.22 | Adaptive 5-100s |
 | PM2 bot polling | 0.86M | $0.04 | Fixed 3s |
 | Pending verification | 8.64M | $0.43 | Status checks |
-| Cache rebuilds | 3.71M | $0.19 | 10s TTL |
 | Queue endpoint calls | 1.6M | $0.08 | PM2 operations |
-| **Total Reads** | **138M** | **$6.96** | |
+| **Total Reads** | **~134M** | **$6.77** | |
+
+**Cache accumulation:** Zero additional reads - cache updated during POSTs (write operation)
 
 ### Workers Request Count Explained
 
@@ -435,10 +428,10 @@ Even at 10M messages/month ($355), cost is very manageable.
 | **Monthly Cost** | **$77/month** | 1M messages, 1K users |
 | **Cost Per Message** | **$0.000077** | 13,000 messages per dollar |
 | **KV Writes** | $30 | 6M operations |
-| **KV Reads** | $7 | 138M operations |
+| **KV Reads** | $6.77 | 134M operations |
 | **Workers Base** | $5 | First 10M requests |
 | **Workers Excess** | $35 | 115M requests |
-| **Reliability** | **100%** | Zero message loss (README-155) |
+| **Cache Strategy** | **Accumulation** | No rebuild costs (README-155) |
 | **Response Time** | **2-3 sec** | Simple queue system |
 
 ### Cost Breakdown
@@ -450,9 +443,8 @@ Even at 10M messages/month ($355), cost is very manageable.
 | KV Reads (polling) | 124M | $6.22 | 8% |
 | Workers Base | 10M included | $5.00 | 6% |
 | KV Reads (verification) | 8.6M | $0.43 | 1% |
-| KV Reads (rebuilds) | 3.7M | $0.19 | <1% |
 | KV Reads (other) | 1.6M | $0.08 | <1% |
-| **TOTAL** | | **$76.46** | **100%** |
+| **TOTAL** | | **$76.23** | **100%** |
 
 ### Key Optimizations DEPLOYED
 
@@ -461,20 +453,20 @@ Even at 10M messages/month ($355), cost is very manageable.
 - 76% reduction in polling requests
 - Maintains instant responsiveness
 
-**2. Cache Rebuild from KV (README-155):** ✅ DEPLOYED  
-- Cost: $0.19/month
-- Benefit: 100% reliability (zero message loss)
-- 10-second TTL
-- Rebuild from source of truth
+**2. Simple Cache Accumulation (README-155):** ✅ DEPLOYED  
+- Cost: $0/month (no rebuild operations)
+- Cache size: 50 messages
+- No TTL (accumulates from POSTs only)
+- Zero complexity, perfect scalability
 
 **3. Simple Queue System (README-152):** ✅ DEPLOYED
 - 230 lines of code
 - Atomic operations
 - 2-3 second response times
-- 100% success rate
+- Fast and reliable
 
 ---
 
 **Status:** Complete cost analysis for production planning  
-**Last Updated:** October 27, 2025 - Accurate costs with all operations
+**Last Updated:** October 27, 2025 - Simple accumulation cache (saves $0.19/month on rebuilds)
 

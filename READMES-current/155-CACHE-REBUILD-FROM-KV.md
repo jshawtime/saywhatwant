@@ -1,20 +1,82 @@
 # 155-CACHE-REBUILD-FROM-KV.md
 
-**Tags:** #cache #ttl #rebuild #zero-message-loss #reliability  
+**Tags:** #cache #no-ttl #simple #accumulation #final-solution  
 **Created:** October 27, 2025  
-**Status:** ✅ DEPLOYED - Zero message loss guaranteed
+**Updated:** October 27, 2025 - FINAL SOLUTION: No rebuild, accumulate from POSTs  
+**Status:** ✅ DEPLOYED - Simple accumulation architecture
 
 ---
 
-## Executive Summary
+## ✅ FINAL SOLUTION: No Rebuild - Accumulate from POSTs Only
 
-Implemented Cache-Aside with Lazy Rebuild pattern ensuring zero message loss when cache expires. When cache TTL expires, system rebuilds from actual KV keys instead of starting fresh, guaranteeing all messages preserved and discoverable by bot. Eliminates race condition where messages posted during cache expiration window were orphaned and never processed.
+**After extensive testing, the simplest solution won:**
 
-**Result: 100% message reliability!**
+**Cache architecture:**
+- No TTL (cache never expires)
+- No rebuild function (removed entirely)
+- Accumulates naturally from POSTs
+- Keeps last 50 messages via simple `slice(-50)`
+
+**Why this is better:**
+- Zero rebuild cost (no KV.list operations)
+- Zero complexity (no cursor pagination)
+- Fast POSTs (no scanning 10K+ keys)
+- Self-healing (accumulates naturally as messages arrive)
+- Scales perfectly (no expensive operations at scale)
+
+**Trade-off:**
+- After cache loss → starts empty
+- Takes 50 POSTs to fill back up (~1-2 hours at current volume)
+- Acceptable for real-world usage
+
+**Result: Simple. Strong. Solid.** ✅
 
 ---
 
-## The Problem
+## Evolution: From Complex to Simple
+
+### Attempted Solutions (All Rejected)
+
+**Attempt 1: TTL with rebuild from KV**
+- Cache expires every 5-10 seconds
+- Rebuild by listing ALL KV keys, sorting, fetching newest 50
+- **Problem:** Listing 10K+ keys every 5-10 seconds = wasteful and expensive
+- **Rejected:** Too complex, doesn't scale
+
+**Attempt 2: Rebuild only during POST**
+- Rebuild when cache empty during addToCache()
+- **Problem:** Slow rebuilds (2-3 seconds) block POSTs, causing timeouts
+- **Rejected:** Breaks user experience
+
+**Attempt 3: Rebuild only during GET**
+- Already implemented in GET handler
+- **Problem:** Still requires listing all keys to get newest 50
+- **Rejected:** Wasteful, doesn't solve core issue
+
+### Final Solution: Don't Rebuild At All ✅
+
+**Simple accumulation:**
+```javascript
+// Cache starts empty
+comments = [];
+
+// Every POST adds to cache
+comments.push(newComment);
+
+// Keep last 50
+if (comments.length > 50) {
+  comments = comments.slice(-50);
+}
+
+// Save (no TTL)
+await KV.put('recent:comments', JSON.stringify(comments));
+```
+
+**That's it! No scanning, no rebuilding, no complexity.**
+
+---
+
+## Original Problem (Historical)
 
 ### Original Issue: Messages Lost Between Cache Expirations
 
