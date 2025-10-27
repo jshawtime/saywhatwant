@@ -5,6 +5,7 @@ interface TitleContextMenuProps {
   y: number;
   onClose: () => void;
   onCopyAll: () => void;
+  onCopyAllVerbose: () => void;
   onSaveAll: () => void;
 }
 
@@ -13,6 +14,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
   y,
   onClose,
   onCopyAll,
+  onCopyAllVerbose,
   onSaveAll,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -77,6 +79,18 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         aria-label="Copy all messages"
       >
         Copy ALL
+      </button>
+
+      {/* Copy All Verbose Button */}
+      <button
+        onClick={() => {
+          onCopyAllVerbose();
+          onClose();
+        }}
+        className="block w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+        aria-label="Copy all messages with debug info"
+      >
+        Copy ALL - verbose
       </button>
 
       {/* Save All Button */}

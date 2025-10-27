@@ -445,6 +445,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     handleBlock,
     handleTitleContextMenu,
     handleCopyAll,
+    handleCopyAllVerbose,
     handleSaveAll,
   } = useContextMenus({
     addNegativeWordFilter,
@@ -1250,6 +1251,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           y={titleContextMenu.y}
           onClose={() => setTitleContextMenu(null)}
           onCopyAll={handleCopyAll}
+          onCopyAllVerbose={handleCopyAllVerbose}
           onSaveAll={handleSaveAll}
         />
       )}

@@ -45,6 +45,7 @@ interface UseContextMenusReturn {
   // Title context menu handlers
   handleTitleContextMenu: (e: React.MouseEvent) => void;
   handleCopyAll: () => void;
+  handleCopyAllVerbose: () => void;
   handleSaveAll: () => void;
 }
 
@@ -217,6 +218,61 @@ export function useContextMenus(params: UseContextMenusParams): UseContextMenusR
     console.log(`[Title Context Menu] Copied ${filteredComments.length} messages to clipboard`);
   }, [filteredComments, domainConfigTitle]);
   
+  const handleCopyAllVerbose = useCallback(() => {
+    const header = `${'='.repeat(50)}
+SAY WHAT WANT - DEBUG EXPORT
+Exported: ${new Date().toLocaleString()}
+Total Messages: ${filteredComments.length}
+${'='.repeat(50)}
+
+`;
+
+    const messages = filteredComments.map(msg => {
+      const lines = [];
+      
+      // Header line with ID
+      lines.push(`${msg.username || 'Anonymous'} [${msg.id}]`);
+      
+      // Metadata
+      lines.push(`  Time: ${new Date(msg.timestamp).toLocaleString()}`);
+      lines.push(`  Color: ${msg.color || 'N/A'}`);
+      
+      // For human messages - show botParams
+      if (msg['message-type'] === 'human' && msg.botParams) {
+        if (msg.botParams.entity) lines.push(`  Entity: ${msg.botParams.entity}`);
+        if (msg.botParams.status) lines.push(`  Status: ${msg.botParams.status}`);
+        if (msg.botParams.priority !== undefined) lines.push(`  Priority: ${msg.botParams.priority}`);
+        if (msg.botParams.ais) lines.push(`  AIS: ${msg.botParams.ais}`);
+      }
+      
+      // For AI messages - show replyTo
+      if (msg['message-type'] === 'AI' && msg.replyTo) {
+        lines.push(`  ReplyTo: ${msg.replyTo}`);
+      }
+      
+      // Message text
+      lines.push(`  Text: ${msg.text}`);
+      lines.push(''); // Blank line between messages
+      
+      return lines.join('\n');
+    }).join('\n');
+
+    const fullText = header + messages + '\n' + '='.repeat(50);
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(fullText);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = fullText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    
+    console.log(`[Title Context Menu] Copied ${filteredComments.length} messages (verbose) to clipboard`);
+  }, [filteredComments]);
+  
   const handleSaveAll = useCallback(() => {
     const messages = filteredComments.map(comment => {
       const timestamp = new Date(comment.timestamp).toLocaleString();
@@ -255,6 +311,7 @@ export function useContextMenus(params: UseContextMenusParams): UseContextMenusR
     handleBlock,
     handleTitleContextMenu,
     handleCopyAll,
+    handleCopyAllVerbose,
     handleSaveAll,
   };
 }
