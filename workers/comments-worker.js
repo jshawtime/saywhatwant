@@ -797,16 +797,25 @@ async function addToCache(env, comment) {
     const cachedData = await env.COMMENTS_KV.get(cacheKey);
     
     let comments = [];
+    
     if (cachedData) {
+      // Cache exists - use it
       try {
         comments = JSON.parse(cachedData);
       } catch (parseError) {
-        console.error('[Comments] Failed to parse cache, resetting:', parseError);
-        comments = []; // Reset if corrupt
+        console.error('[Comments] Failed to parse cache, rebuilding from KV');
+        // Rebuild from KV instead of starting fresh (ensures no messages lost)
+        comments = await rebuildCacheFromKV(env);
+        return; // Rebuilt cache already includes all messages
       }
+    } else {
+      // Cache expired/empty - rebuild from KV keys (never start fresh!)
+      console.log('[Cache] Cache empty (TTL expired) - rebuilding from KV');
+      comments = await rebuildCacheFromKV(env);
+      return; // Rebuilt cache already saved
     }
     
-    // Add new comment
+    // Add new comment to existing cache
     comments.push(comment);
     
     // Keep only the most recent comments
@@ -821,20 +830,66 @@ async function addToCache(env, comment) {
       comments = comments.slice(-100);
     }
     
-    // Update cache with 3-second TTL (auto-expires for fresh data)
+    // Update cache with 10-second TTL
     await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments), {
-      expirationTtl: 3
+      expirationTtl: 10
     });
   } catch (error) {
     console.error('[Comments] Failed to update cache:', error);
-    // Try to at least save the new comment
-    try {
-      await env.COMMENTS_KV.put(cacheKey, JSON.stringify([comment]));
-    } catch (fallbackError) {
-      console.error('[Comments] Failed to save even single comment:', fallbackError);
-      // Don't throw - let the comment still be saved to main KV
-    }
+    // Don't throw - let the comment still be saved to main KV
   }
+}
+
+/**
+ * Rebuild cache from actual KV keys (when cache expired/empty)
+ * This ensures we never "lose" messages between cache expirations
+ */
+async function rebuildCacheFromKV(env) {
+  console.log('[Cache] Rebuilding from KV keys...');
+  const messages = [];
+  let cursor = null;
+  
+  // Scan comment:* keys to rebuild cache from source of truth
+  do {
+    const list = await env.COMMENTS_KV.list({ 
+      prefix: 'comment:', 
+      cursor,
+      limit: 100
+    });
+    
+    // Fetch each key
+    for (const key of list.keys) {
+      const data = await env.COMMENTS_KV.get(key.name);
+      if (data) {
+        try {
+          messages.push(JSON.parse(data));
+        } catch (e) {
+          console.error('[Cache] Failed to parse:', key.name);
+        }
+      }
+    }
+    
+    cursor = list.cursor;
+    
+    // Stop when we have enough or list is complete
+    if (messages.length >= CACHE_SIZE || list.list_complete) {
+      break;
+    }
+  } while (cursor);
+  
+  // Sort by timestamp (newest first), then keep latest CACHE_SIZE
+  messages.sort((a, b) => b.timestamp - a.timestamp);
+  const recentMessages = messages.slice(0, CACHE_SIZE);
+  
+  console.log(`[Cache] Rebuilt with ${recentMessages.length} messages from KV`);
+  
+  // Save rebuilt cache with TTL
+  const cacheKey = 'recent:comments';
+  await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentMessages), {
+    expirationTtl: 10  // 10 seconds TTL for rebuilt cache
+  });
+  
+  return recentMessages;
 }
 
 /**
@@ -846,9 +901,9 @@ async function updateCache(env, comments) {
   // Keep only the most recent comments
   const recentComments = comments.slice(-CACHE_SIZE);
   
-  // 3-second TTL for auto-expiration
+  // 10-second TTL for auto-expiration
   await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments), {
-    expirationTtl: 3
+    expirationTtl: 10
   });
 }
 
@@ -971,9 +1026,16 @@ async function handleGetPending(env, url) {
     
     console.log('[Queue] Fetching pending messages from cache, limit:', limit);
     
-    // Use cache for speed (has recent 500 messages)
+    // Use cache for speed (has recent 100 messages)
     const cacheKey = 'recent:comments';
-    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    let cachedData = await env.COMMENTS_KV.get(cacheKey);
+    
+    // If cache empty (TTL expired), rebuild from KV
+    if (!cachedData) {
+      console.log('[Queue] Cache empty - rebuilding from KV');
+      await rebuildCacheFromKV(env);
+      cachedData = await env.COMMENTS_KV.get(cacheKey);
+    }
     
     let allMessages = [];
     

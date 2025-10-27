@@ -2,7 +2,40 @@
 
 **Tags:** #debugging #copy-all #verbose #message-ids #diagnostics  
 **Created:** October 26, 2025  
-**Status:** 🔄 IN PROGRESS
+**Status:** ✅ COMPLETE - Deployed and working
+
+## Cache Rebuild Issue Found
+
+After initial implementation, discovered 3-second TTL causing messages to get orphaned between cache expirations. When cache expires, messages posted during that window were lost.
+
+**Solution:** Implemented Option 2 (Cache-Aside with Lazy Rebuild) - rebuild cache from actual KV keys when expired, never start fresh.
+
+### Cache Rebuild Implementation ✅
+
+**Added rebuildCacheFromKV function:**
+- Scans all `comment:*` keys using cursor pagination
+- Fetches up to CACHE_SIZE (100) messages
+- Sorts by timestamp (newest first)
+- Saves to cache with 10-second TTL
+- Returns messages for immediate use
+
+**Updated addToCache function:**
+- If cache exists → use it (fast path)
+- If cache empty → rebuild from KV (safety path)
+- If cache corrupt → rebuild from KV (recovery path)
+- Never starts with empty cache (zero message loss!)
+
+**Updated handleGetPending:**
+- Checks cache first
+- If cache empty → rebuild from KV
+- Then verifies each message's status from actual KV key
+- Returns only truly pending messages
+
+**TTL changed from 3 seconds → 10 seconds:**
+- Safer window for message posting
+- Less frequent rebuilds
+- Still fresh (max 10s old)
+- Industry standard
 
 ## Implementation Progress
 
