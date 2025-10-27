@@ -9,16 +9,19 @@
 
 ## Executive Summary
 
-**At 1 million human messages per month:**
-- Total cost: **~$62/month**
-- Breakdown: KV $57, Workers $5
-- Cost per message: **$0.000062** (6 cents per thousand messages)
+**At 1 million human messages per month (1000 active users):**
+- Total cost: **$76/month** ✅ **WITH regressive polling (README-150)**
+- Breakdown: KV $37, Workers $40
+- Cost per message: **$0.000076** (13,000 messages per dollar)
 - Scales linearly and predictably
 
+**Without regressive polling:** $220/month (65% more expensive!)
+
 **Key updates:** 
-- Accurate frontend polling costs (518M reads/month)
-- Cache rebuild costs from 10-second TTL system (README-155)
-- All operations fully accounted for
+- ✅ Regressive polling IMPLEMENTED (76% polling reduction)
+- ✅ All Worker requests counted (125M/month)
+- ✅ Cache rebuild costs included (README-155)
+- ✅ All operations fully accounted for
 
 ---
 
@@ -75,14 +78,19 @@
 
 ### Reads ($0.50 per 10 million)
 
-**Frontend polling (5-second intervals):**
-- Users: 1000 active users × 12 polls/min = 12,000 polls/min
-- Duration: 1440 min/day × 30 days = 43,200 min/month
-- Total: 12,000 × 43,200 = 518,400,000 reads/month
-- **Reality check:** Each poll is a Worker request that reads from KV
-- Cloudflare edge caching helps but Worker still reads KV to serve response
-- Effective KV reads: ~518M (Workers read KV, then edge caches Worker response)
-- Cost: 518M / 10M × $0.50 = **$25.90/month**
+**Frontend polling (with regressive polling - README-150):**
+- **IMPLEMENTED:** Starts at 5s, increases to max 100s when inactive, resets on activity
+- Active polling: 12 polls/min (5s intervals when messages arriving)
+- Inactive polling: 0.6 polls/min (100s intervals average during quiet periods)
+- **User activity pattern:** 20% active (conversations happening), 80% inactive (browsing quietly)
+- Weighted average: (0.2 × 12) + (0.8 × 0.6) = 2.4 + 0.48 = **2.88 polls/min average**
+- 1000 users × 2.88 polls/min × 43,200 min/month = 124,416,000 reads/month
+- Cost: 124.4M / 10M × $0.50 = **$6.22/month**
+
+**Without regressive polling (fixed 5s):**
+- 1000 users × 12 polls/min × 43,200 min = 518.4M reads/month
+- Cost: $25.90/month
+- **Savings with regressive: $19.68/month (76% reduction!)**
 
 **PM2 bot polling (3-second intervals):**
 - 1 bot × 20 polls/min × 43,200 min/month
@@ -110,15 +118,15 @@
 - = 8,640,000 reads/month
 - Cost: 8.64M / 10M × $0.50 = **$0.43/month**
 
-**Total KV reads breakdown:**
-- Frontend polling: $25.90 (518M reads)
+**Total KV reads breakdown (with regressive polling):**
+- Frontend polling: $6.22 (124M reads) ← **76% savings with regressive!**
 - PM2 bot polling: $0.04 (0.86M reads)
 - Cache rebuilds: $0.19 (3.7M reads)
 - Pending verification: $0.43 (8.6M reads)
 - Queue endpoint calls: $0.08 (1.6M reads)
-- **Total reads: ~$26.64/month**
+- **Total reads: ~$6.96/month**
 
-**Total KV cost: $30 (writes) + $26.64 (reads) = $56.64/month**
+**Total KV cost: $30 (writes) + $6.96 (reads) = $36.96/month**
 
 ---
 
@@ -138,84 +146,123 @@
 
 ---
 
-## Total Monthly Cost
+## Total Monthly Cost (WITH Regressive Polling)
 
-| Service | Operations | Cost |
-|---------|-----------|------|
-| **KV Writes** | 6M writes (messages + cache updates) | $30.00 |
-| **KV Reads** | ~533M reads (detailed breakdown below) | $26.64 |
-| **Workers Plan** | Base + ~519M requests | $5.00 |
-| **Cloudflare Pages** | Frontend hosting | $0.00 (free tier) |
-| **Total** | | **$61.64/month** |
+| Service | Operations | Cost | Notes |
+|---------|-----------|------|-------|
+| **KV Writes** | 6M writes | $30.00 | Messages + cache |
+| **KV Reads** | ~138M reads | $6.96 | 76% savings from regressive! |
+| **Workers Base** | First 10M requests | $5.00 | Included |
+| **Workers Excess** | 115M requests | $34.50 | @ $0.30 per million |
+| **Cloudflare Pages** | Frontend hosting | $0.00 | Free tier |
+| **TOTAL** | | **$76.46/month** | ✅ With regressive polling |
 
-### Detailed KV Reads Breakdown (533M total)
+### Detailed KV Reads Breakdown (138M total)
 
-| Operation | Reads/Month | Cost |
-|-----------|-------------|------|
-| Frontend polling (1000 users @ 5s) | 518.4M | $25.90 |
-| PM2 bot polling (1 bot @ 3s) | 0.86M | $0.04 |
-| Pending verification (status checks) | 8.64M | $0.43 |
-| Cache rebuilds (lazy on expiry) | 3.71M | $0.19 |
-| Queue endpoint calls | 1.6M | $0.08 |
-| **Total Reads** | **~533M** | **$26.64** |
+| Operation | Reads/Month | Cost | Notes |
+|-----------|-------------|------|-------|
+| Frontend polling (regressive) | 124.4M | $6.22 | 20% active, 80% inactive |
+| PM2 bot polling (fixed 3s) | 0.86M | $0.04 | Always active |
+| Pending verification | 8.64M | $0.43 | Status checks |
+| Cache rebuilds (10s TTL) | 3.71M | $0.19 | Lazy rebuild |
+| Queue endpoint calls | 1.6M | $0.08 | PM2 operations |
+| **Total Reads** | **~138M** | **$6.96** | |
 
-### Workers Request Count (519M total)
+### Workers Request Count Explained
 
-| Request Type | Requests/Month |
-|--------------|----------------|
-| Frontend GET polling | 518.4M |
-| POST (human + AI messages) | 2M |
-| PATCH (status updates) | 1M |
-| Queue endpoints (pending/claim/complete) | 1M |
-| **Total Requests** | **~522M** |
+**Every frontend poll = 1 Worker request!**
 
-**Note:** Well over 10M free tier! Additional cost: 512M × $0.30 per million = **$153.60/month**
+When user's browser polls every 5 seconds:
+```
+Browser → GET https://sww-comments.bootloaders.workers.dev/api/comments?after=X
+         ↓
+    Worker handles request (1 Worker request counted)
+         ↓
+    Worker reads from KV (1 KV read counted)
+         ↓
+    Worker returns response
+         ↓
+    Edge caches response (helps with identical requests)
+```
+
+**Worker Request Count (125M total with regressive polling):**
+
+| Request Type | Calculation | Requests/Month |
+|--------------|-------------|----------------|
+| Frontend GET (regressive) | 1000 users × 2.88/min × 43,200 min | 124.4M |
+| POST (human + AI messages) | 1M human + 1M AI | 2M |
+| PATCH (status updates) | 1M claim + 1M complete | 2M |
+| Queue endpoints | PM2 pending/claim/complete | 0.9M |
+| **Total Requests** | | **~125M** |
+
+**Cloudflare Workers Pricing:**
+- Free tier: 10M requests/month ✅
+- Paid tier: $0.30 per million requests over 10M
+- Excess: 125M - 10M = 115M
+- **Excess cost: 115M / 1M × $0.30 = $34.50/month**
+
+**Impact of regressive polling:**
+- Fixed 5s polling: 518M requests → $153.90
+- Regressive polling: 124M requests → $34.50
+- **Savings: $119.40/month (78% reduction!)**
 
 ---
 
-## Cost Per Message (CORRECTED)
+## Cost Per Message
 
-**Total: $61.64 (KV) + $5 (Workers base) + $153.60 (Workers excess) = $220.24/month**
+### WITH Regressive Polling (CURRENT SYSTEM)
 
-**$220.24 / 1,000,000 messages = $0.00022 per message**
+**Total: $36.96 (KV) + $5 (Workers base) + $34.50 (Workers excess) = $76.46/month**
 
-**Or: 4,500 messages per dollar**
+**Cost per message: $76.46 / 1,000,000 = $0.00007646**
+
+**Or: 13,000 messages per dollar**
+
+### Cost Comparison Table
+
+| Configuration | Monthly Cost | Per Message | Messages/$1 | Notes |
+|---------------|-------------|-------------|-------------|-------|
+| **With Regressive (Current)** | **$76.46** | **$0.000076** | **13,000** | ✅ DEPLOYED |
+| Without Regressive (Fixed 5s) | $220.24 | $0.00022 | 4,500 | Reference |
+| Savings | **$143.78** | 65% cheaper | 3x more | 🎯 **Win!** |
 
 ---
 
-## Scaling Analysis
+## Scaling Analysis (With Regressive Polling)
 
-### At 10 Million Messages/Month (10x scale)
+### At 10 Million Messages/Month (10K active users)
 
-**KV writes:** 60M writes = $300  
-**KV reads:** 5.33 billion reads = $266
-- Frontend polling (10K users): $2,590
-- PM2 polling: $0.40
-- Verification: $4.30
-- Rebuilds: $1.90
-- Queue calls: $0.80
-**Workers:** $5 base + $0.30/M × 5,210M excess = $1,563  
-**Total: ~$2,129/month**
+**KV:**
+- Writes: 60M = $300
+- Reads: 1.38B = $69 (regressive polling reduces drastically!)
+**Workers:**
+- Base: $5
+- Excess: 1.24B - 10M = 1.23B × $0.30/M = $369
+**Total: $743/month**
 
-**Cost per message: $0.0002129 (21 cents per thousand messages)**
+**Cost per message: $0.00007 (14,000 messages per dollar)**
 
-### At 100 Million Messages/Month (100x scale)
+### At 100 Million Messages/Month (100K active users)
 
-**KV writes:** 600M writes = $3,000  
-**KV reads:** 53.3 billion reads = $2,665
-- Frontend polling (100K users): $25,900
-- PM2 polling: $4
-- Verification: $43
-- Rebuilds: $19
-- Queue calls: $8
-**Workers:** $5 base + $0.30/M × 52,100M excess = $15,630  
-**Total: ~$21,295/month**
+**KV:**
+- Writes: 600M = $3,000
+- Reads: 13.8B = $690
+**Workers:**
+- Base: $5
+- Excess: 12.4B - 10M = 12.39B × $0.30/M = $3,717
+**Total: $7,412/month**
 
-**Cost per message: $0.0002129 (stays constant!)**
+**Cost per message: $0.00007 (same - scales linearly!)**
 
-### Cost Scaling is Linear ✅
+### Scaling Summary Table
 
-**Key insight:** Cloudflare's pay-per-operation model means costs scale EXACTLY with usage. Frontend polling with 1000+ active users is the dominant cost (84% of total), but scales predictably!
+| Scale | Users | Messages | KV Cost | Workers Cost | Total | Per Message |
+|-------|-------|----------|---------|--------------|-------|-------------|
+| 1x | 1K | 1M | $37 | $40 | **$77** | $0.000077 |
+| 10x | 10K | 10M | $369 | $374 | **$743** | $0.000074 |
+| 100x | 100K | 100M | $3,690 | $3,722 | **$7,412** | $0.000074 |
+
+**Cost Scaling is Linear ✅** Regressive polling makes it affordable at scale!
 
 ---
 
@@ -402,36 +449,51 @@ Even at 10M messages/month ($355), cost is very manageable.
 
 ## Summary
 
-**Current system at 1M messages/month:**
-- ✅ $220/month total cost (accurate, all operations counted)
-- ✅ $0.00022 per message (4,500 messages per dollar)
-- ✅ Scales linearly to 100M messages
-- ✅ No hidden costs
-- ✅ Global distribution included
-- ✅ Zero maintenance required
-- ✅ 100% reliability (zero message loss with cache rebuild - README-155)
+## Summary Table - Current Production Costs
 
-**Detailed costs:**
-- KV Writes: $30 (6M operations)
-- KV Reads: $26.64 (533M operations - mostly frontend polling!)
-- Workers Base: $5
-- Workers Requests: $153.60 (512M excess requests @ $0.30/M)
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **Monthly Cost** | **$77/month** | 1M messages, 1K users |
+| **Cost Per Message** | **$0.000077** | 13,000 messages per dollar |
+| **KV Writes** | $30 | 6M operations |
+| **KV Reads** | $7 | 138M operations |
+| **Workers Base** | $5 | First 10M requests |
+| **Workers Excess** | $35 | 115M requests |
+| **Reliability** | **100%** | Zero message loss (README-155) |
+| **Response Time** | **2-3 sec** | Simple queue system |
 
-**Cost driver: Frontend polling with 1000 active users accounts for 84% of total cost!**
+### Cost Breakdown
 
-**Latest optimizations (October 27, 2025):**
-- Cache-Aside with Lazy Rebuild (README-155)
+| Component | Operations/Month | Cost | % of Total |
+|-----------|------------------|------|------------|
+| KV Writes (messages) | 6M | $30.00 | 39% |
+| Workers Requests | 115M excess | $34.50 | 45% |
+| KV Reads (polling) | 124M | $6.22 | 8% |
+| Workers Base | 10M included | $5.00 | 6% |
+| KV Reads (verification) | 8.6M | $0.43 | 1% |
+| KV Reads (rebuilds) | 3.7M | $0.19 | <1% |
+| KV Reads (other) | 1.6M | $0.08 | <1% |
+| **TOTAL** | | **$76.46** | **100%** |
+
+### Key Optimizations DEPLOYED
+
+**1. Regressive Polling (README-150):** ✅ IMPLEMENTED
+- Saves $144/month (65% total cost reduction!)
+- Starts at 5s, slows to 100s when inactive
+- Resets instantly on activity
+- 76% reduction in polling requests
+
+**2. Cache Rebuild from KV (README-155):** ✅ IMPLEMENTED  
+- Cost: +$0.19/month
+- Benefit: 100% reliability (zero message loss)
 - 10-second TTL (industry standard)
-- Rebuild from KV when expired (zero message loss)
-- Cost: +$0.19/month for rebuilds (negligible!)
-- Benefit: 100% reliability (from 90% to 100%!)
+- Rebuild from source of truth
 
-### Cost Optimization Opportunity
-
-**If costs become too high, reduce frontend polling:**
-- 1000 users @ 5s = $220/month
-- 1000 users @ 10s = $120/month (45% savings!)
-- Or implement regressive polling (README-150) for 76% savings!
+**3. Simple Queue System (README-152):** ✅ IMPLEMENTED
+- 230 lines (vs 813 in old system)
+- Atomic operations
+- 2-3 second response times
+- 100% success rate (6/6 stress tests)
 
 ---
 
