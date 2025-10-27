@@ -19,12 +19,19 @@
 3. Paste into text editor
 
 **You now have:**
-- Message IDs for exact lookup
-- UTC timestamps matching KV/PM2
-- Entity selection
-- Color values
-- Status (pending/complete/failed)
-- ReplyTo links
+- **Message IDs** for exact lookup
+- **UTC timestamps** matching KV/PM2
+- **Entity** selection
+- **Color** values (human's color)
+- **AIS parameter** - shows what AI color/username the FILTER expects!
+- **Status** (pending/complete/failed)
+- **ReplyTo** links
+
+**CRITICAL:** The AIS field shows what your filter is looking for!
+```
+AIS: EmotionalGuide:080203170
+```
+This means the frontend will ONLY show AI responses with username "EmotionalGuide" AND color "080203170"!
 
 ### Step 2: Cross-Reference with PM2 Logs
 
