@@ -8,7 +8,16 @@
 
 ## Summary
 
-Queue Monitor dashboard for dev machine with WebSocket connection to PM2 bot, auto-refreshing PM2 logs every 3 seconds, displaying last ~100 Claimed/Completed messages with verbose details matching COPY ALL - verbose format. Messages persist until CLEAR button clicked or PM2 recected.
+Queue Monitor dashboard for dev machine with WebSocket connection to PM2 bot, auto-refreshing PM2 logs every 3 seconds, displaying last ~100 Claimed/Completed messages with verbose details matching COPY ALL - verbose format. Messages persist until CLEAR button clicked or PM2 restarted. Conversation logging restored - saves all filtered conversations to disk automatically.
+
+**All systems working as of October 27, 2025:**
+- ✅ WebSocket auto-refresh every 3s
+- ✅ PM2 logs persist (no dropping)
+- ✅ Message IDs pure (not parsed)
+- ✅ No console spam
+- ✅ Direction arrows (human → AI, AI → human)
+- ✅ Poll counter with minutes
+- ✅ Conversation logging to disk
 
 ---
 
@@ -30,12 +39,25 @@ Queue Monitor dashboard for dev machine with WebSocket connection to PM2 bot, au
 - **Newest first:** Most recent at top
 - **Poll counter:** Shows "POLLS between messages: N [~X mins]"
 
+### Conversation Logging
+- **Auto-save:** All filtered conversations saved to disk
+- **Location:** `AI-Bot-Deploy/conversation-logs/` (relative path, migrates cleanly)
+- **Filename:** `{AIUsername}{AIColor}{HumanUsername}{HumanColor}.txt`
+- **Example:** `EmotionalGuide080229166Human080188227.txt`
+- **Format:** Matches frontend "Save All" feature
+- **Trigger:** Any message with `ais` parameter in botParams
+
 ### Data Flow
 ```
 PM2 bot → WebSocket (500 lines every 3s) → Dashboard state → Parser → Display
 ```
 
 **500 lines** = enough to capture ~100 Claimed/Completed messages (each message ~5 lines)
+
+**Conversation logging:**
+```
+Message processed → Extract ais + construct humanUis → Save to {AI}{Human}.txt
+```
 
 ---
 
