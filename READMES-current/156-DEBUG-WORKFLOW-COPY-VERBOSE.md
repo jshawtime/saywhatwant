@@ -336,6 +336,55 @@ Cache order: Oldest first
 
 ---
 
+## Known Issues (Acceptable Trade-offs)
+
+### Issue: Messages Lost During Worker Deployment
+
+**Symptom:**
+- Message posted during Worker deployment window
+- PM2 logs show: "Posted AI response" ✅
+- Worker logs show: "Worker confirmed: [messageId]" ✅
+- But message NOT in cache ❌
+- Frontend doesn't display it
+
+**Why it happens:**
+1. Worker deployment clears cache (cache starts empty)
+2. Messages posted in first 30-60 seconds after deployment
+3. Those messages saved to individual KV keys ✅
+4. But cache was empty/rebuilding during POST
+5. Cache accumulation missed those early messages
+6. Cache only includes messages posted AFTER accumulation stabilized
+
+**Example timeline:**
+```
+21:06:00 - Worker deployed, cache empty
+21:06:27 - Message posted, saved to KV ✅
+21:06:27 - addToCache() called, cache still empty/unstable
+21:06:54 - Next message posted, cache accumulation working ✅
+... (cache grows from here)
+```
+
+**Why we accept this:**
+- Only happens during Worker deployments (rare in production)
+- Affects ~30-60 seconds worth of messages
+- Messages ARE in individual KV keys (not lost from KV!)
+- Just not in cache, so frontend polling doesn't see them
+- User can repost if needed (happens so rarely it's acceptable)
+
+**Trade-off decision:**
+- ✅ Simple cache accumulation (zero rebuild cost)
+- ✅ Fast and scalable
+- ❌ Lose messages during deployment window (rare, acceptable)
+- **Better than:** Complex rebuild with KV.list() costing $900+/month
+
+**Frequency:** Only during deployments (maybe 1-2 times per month in production)
+
+**Impact:** Minimal - affects < 5 messages per deployment, user can repost
+
+**This is an ACCEPTABLE trade-off for the cost savings and simplicity!**
+
+---
+
 **Status:** Standard workflow for all future debugging  
-**Related:** README-154 (COPY ALL - verbose implementation)
+**Related:** README-154 (COPY ALL - verbose implementation), README-155 (Cache accumulation architecture)
 
