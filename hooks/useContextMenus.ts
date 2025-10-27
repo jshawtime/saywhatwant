@@ -219,9 +219,12 @@ export function useContextMenus(params: UseContextMenusParams): UseContextMenusR
   }, [filteredComments, domainConfigTitle]);
   
   const handleCopyAllVerbose = useCallback(() => {
+    const currentUrl = window.location.href;
+    
     const header = `${'='.repeat(50)}
 SAY WHAT WANT - DEBUG EXPORT
-Exported: ${new Date().toLocaleString()}
+URL: ${currentUrl}
+Exported: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
 Total Messages: ${filteredComments.length}
 ${'='.repeat(50)}
 
@@ -233,8 +236,9 @@ ${'='.repeat(50)}
       // Header line with ID
       lines.push(`${msg.username || 'Anonymous'} [${msg.id}]`);
       
-      // Metadata
-      lines.push(`  Time: ${new Date(msg.timestamp).toLocaleString()}`);
+      // Metadata (UTC time to match KV/PM2)
+      const utcTime = new Date(msg.timestamp).toISOString().replace('T', ' ').substring(0, 19);
+      lines.push(`  Time: ${utcTime} UTC`);
       lines.push(`  Color: ${msg.color || 'N/A'}`);
       
       // For human messages - show botParams
