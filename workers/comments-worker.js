@@ -801,11 +801,19 @@ async function addToCache(env, comment) {
       try {
         comments = JSON.parse(cachedData);
       } catch (parseError) {
-        console.error('[Comments] Failed to parse cache, starting fresh:', parseError);
-        comments = []; // If corrupt, start fresh (rare edge case)
+        console.error('[Comments] Failed to parse cache, rebuilding from KV:', parseError);
+        // If corrupt, rebuild from KV instead of starting fresh
+        comments = await rebuildCacheFromKV(env);
+        // Don't add new comment yet - it's already included in rebuild
+        return;
       }
+    } else {
+      // Cache is empty - rebuild from KV to ensure zero message loss!
+      console.log('[Cache] Empty during POST - rebuilding from KV');
+      comments = await rebuildCacheFromKV(env);
+      // Don't add new comment yet - it's already included in rebuild
+      return;
     }
-    // If cache empty, start with empty array (will build up from POSTs)
     
     // Add new comment
     comments.push(comment);
@@ -844,6 +852,58 @@ async function updateCache(env, comments) {
   
   // No TTL - cache never expires, updated on every POST
   await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments));
+}
+
+/**
+ * Rebuild cache from individual KV keys
+ * Used when cache is empty/corrupt to ensure zero message loss
+ */
+async function rebuildCacheFromKV(env) {
+  console.log('[Cache] Rebuilding from KV keys...');
+  const messages = [];
+  let cursor = undefined;
+  
+  // Scan comment:* keys with cursor pagination
+  do {
+    const list = await env.COMMENTS_KV.list({ 
+      prefix: 'comment:', 
+      cursor,
+      limit: 1000
+    });
+    
+    // Fetch each key
+    for (const key of list.keys) {
+      const data = await env.COMMENTS_KV.get(key.name);
+      if (data) {
+        try {
+          messages.push(JSON.parse(data));
+        } catch (parseError) {
+          console.error('[Cache] Failed to parse key during rebuild:', key.name);
+        }
+      }
+    }
+    
+    cursor = list.cursor;
+    
+    // Stop when we have enough or reached the end
+    if (messages.length >= CACHE_SIZE || list.list_complete) {
+      break;
+    }
+    
+  } while (cursor);
+  
+  // Sort by timestamp (oldest to newest)
+  messages.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Keep only the most recent CACHE_SIZE messages
+  const recent = messages.slice(-CACHE_SIZE);
+  
+  console.log(`[Cache] Rebuilt with ${recent.length} messages from KV`);
+  
+  // Save to cache
+  await env.COMMENTS_KV.put('recent:comments', JSON.stringify(recent));
+  
+  return recent;
 }
 
 /**
