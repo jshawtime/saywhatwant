@@ -806,7 +806,7 @@ async function addToCache(env, comment) {
         console.error('[Comments] Failed to parse cache, rebuilding from KV');
         // Rebuild from KV instead of starting fresh (ensures no messages lost)
         comments = await rebuildCacheFromKV(env);
-        return; // Rebuilt cache already includes all messages
+        // Don't return! Still need to add the NEW comment!
       }
     } else {
       // Cache expired/empty - rebuild from KV keys (never start fresh!)
