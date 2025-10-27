@@ -295,27 +295,6 @@ async function handleGetComments(env, url) {
       comments = comments.filter(c => c['message-type'] === messageType);
     }
 
-    // Get ACTUAL total count from KV (not just cache size)
-    let actualTotal = comments.length;
-    try {
-      let kvCount = 0;
-      let cursor = undefined;
-      do {
-        const list = await env.COMMENTS_KV.list({ prefix: 'comment:', cursor, limit: 1000 });
-        kvCount += list.keys.length;
-        cursor = list.cursor;
-        if (!list.list_complete) {
-          // Keep counting if there are more keys
-        } else {
-          break;
-        }
-      } while (cursor);
-      actualTotal = kvCount;
-    } catch (countError) {
-      console.error('[Comments] Failed to count KV keys:', countError);
-      // Fallback to cache size
-    }
-
     // Apply pagination
     const start = Math.max(0, comments.length - offset - limit);
     const end = comments.length - offset;
@@ -323,7 +302,6 @@ async function handleGetComments(env, url) {
 
     const response = {
       comments: paginatedComments,
-      total: actualTotal, // Use actual KV count, not cache size
       hasMore: start > 0,
     };
 
@@ -890,27 +868,15 @@ async function updateMessageCounter(env) {
  */
 async function handleGetStats(env) {
   try {
-    // Use the same counting method as /api/comments (analytics uses this)
-    // Count ACTUAL KV keys to get true total
-    let totalMessages = 0;
-    let cursor = undefined;
+    // Return simple stats without expensive KV scanning
+    const cacheKey = 'recent:comments';
+    const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    const cacheSize = cachedData ? JSON.parse(cachedData).length : 0;
     
-    do {
-      const list = await env.COMMENTS_KV.list({ prefix: 'comment:', cursor, limit: 1000 });
-      totalMessages += list.keys.length;
-      cursor = list.cursor;
-      
-      if (!list.list_complete) {
-        // Keep counting if there are more keys
-      } else {
-        break;
-      }
-    } while (cursor);
-    
-    console.log('[Stats] Counted total KV messages:', totalMessages);
+    console.log('[Stats] Cache size:', cacheSize);
     
     return new Response(JSON.stringify({
-      totalMessages,
+      cacheSize: cacheSize,
       // Can add more stats here in the future
     }), {
       headers: {
