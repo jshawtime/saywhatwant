@@ -6,6 +6,10 @@ export interface BotParams {
   nom?: number | 'ALL'; // Context size override (number of messages or ALL)
   ais?: string;         // AI identity override: "username:color" or "username:random"
   processed?: boolean;  // Track if message has been processed by bot (persistent in KV)
+  status?: 'pending' | 'processing' | 'complete' | 'failed'; // Queue status (new queue system)
+  claimedBy?: string;   // Worker ID that claimed this message
+  claimedAt?: number;   // Timestamp when claimed
+  attempts?: number;    // Retry count
 }
 
 // Comment types - MUST match KV structure exactly
@@ -21,6 +25,7 @@ export interface Comment {
   misc: string;                   // Additional data, usually empty string (required in KV)
   context?: string[];             // Pre-formatted context messages from frontend
   botParams?: BotParams;          // Bot control parameters from URL (structured, type-safe)
+  replyTo?: string;               // For AI messages: ID of human message being replied to
 }
 
 export interface CommentsResponse {
