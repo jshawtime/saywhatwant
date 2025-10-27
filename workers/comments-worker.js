@@ -812,10 +812,10 @@ async function addToCache(env, comment) {
       // Cache expired/empty - rebuild from KV keys (never start fresh!)
       console.log('[Cache] Cache empty (TTL expired) - rebuilding from KV');
       comments = await rebuildCacheFromKV(env);
-      return; // Rebuilt cache already saved
+      // Don't return! We need to add the NEW comment too!
     }
     
-    // Add new comment to existing cache
+    // Add new comment to cache (whether existing or just rebuilt)
     comments.push(comment);
     
     // Keep only the most recent comments
