@@ -193,6 +193,69 @@ AI [ID]
 
 ---
 
+### Real Case Study: Message Missing After 6-Tab Stress Test
+
+**Date:** October 27, 2025 13:31 UTC
+
+**COPY ALL - verbose shows:**
+```
+Human [1761571872625-2qa6p4o4k]
+  Time: 2025-10-27 13:31:12 UTC
+  Color: 080195229
+  Entity: emotional-intelligence
+  AIS: EmotionalGuide:186207080  ← Filter expects this color!
+  Text: Why are socks colorful sometimes?
+```
+
+**Step 1: Check PM2 logs**
+```bash
+grep "1761571872625" ~/.pm2/logs/ai-bot-simple-out.log
+```
+
+**Results:**
+```
+[WORKER] Found 1 pending messages: 1761571872625-2qa6p4o4k ✅
+[WORKER] ✅ Claimed
+[PROCESS] Got response (133 chars) ✅
+[POST] Posting AI: EmotionalGuide color:186207080 ✅ Color matches!
+[POST] Worker confirmed: 1761571878343-oqdi9sg ✅ POST succeeded!
+[WORKER] ✅ Completed
+```
+
+**Step 2: Check KV cache (200 messages)**
+```bash
+curl ".../api/comments?limit=200" | python3 check_for_id.py
+```
+
+**Results:**
+```
+Total messages in cache: 111 (not 200!)
+AI response 1761571878343-oqdi9sg: NOT FOUND
+Cache order: Oldest first
+```
+
+**Step 3: Analysis**
+
+**What we know:**
+1. ✅ PM2 processed message successfully
+2. ✅ Worker accepted POST (returned ID)
+3. ✅ Color matches filter expectations
+4. ❌ AI response NOT in cache at all
+5. ❌ Cache only has 111 messages (should have 200)
+6. ❌ Waited 5+ minutes - did NOT self-heal
+
+**Diagnosis:** Worker's `addToCache()` function failed to add the AI response to cache! The message was saved to its individual KV key but cache wasn't updated.
+
+**Why self-healing didn't work:**
+- Self-healing assumes message is in individual KV key with `status='pending'`
+- PM2 would re-discover it on next poll
+- But this is an AI response (already posted), not a pending human message
+- No self-healing mechanism for missing AI responses in cache
+
+**Root cause:** Worker `addToCache()` silently failing during concurrent POSTs
+
+---
+
 ## Benefits
 
 **Debugging time:**
