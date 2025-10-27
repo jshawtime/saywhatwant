@@ -34,7 +34,7 @@ const EXEMPT_DOMAINS = [
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
-const CACHE_SIZE = 200;      // Keep last 200 comments in cache (handles burst traffic)
+const CACHE_SIZE = 50;       // Keep last 50 comments in cache (sufficient for current volume)
 
 /**
  * Generate a random RGB color using sophisticated range-based generation
@@ -215,25 +215,10 @@ async function handleGetComments(env, url) {
           allComments = JSON.parse(cachedData);
           console.log(`[Comments] Cursor polling: using cache with ${allComments.length} comments`);
         } else {
-          // Cache is empty (likely invalidated by PATCH) - rebuild from individual keys
-          console.log('[Comments] Cursor polling: cache empty, rebuilding from KV...');
-          const list = await env.COMMENTS_KV.list({ prefix: 'comment:', limit: 1000 });
-          
-          for (const key of list.keys) {
-            const commentData = await env.COMMENTS_KV.get(key.name);
-            if (commentData) {
-              allComments.push(JSON.parse(commentData));
-            }
-          }
-          
-          // Sort by timestamp (ascending)
-          allComments.sort((a, b) => a.timestamp - b.timestamp);
-          
-          // Update cache for future requests
-          if (allComments.length > 0) {
-            await updateCache(env, allComments);
-            console.log(`[Comments] Rebuilt cache with ${allComments.length} comments`);
-          }
+          // Cache empty - return empty array
+          // Cache will accumulate naturally from POSTs (no expensive rebuild!)
+          console.log('[Comments] Cursor polling: cache empty, returning empty (will accumulate from POSTs)');
+          allComments = [];
         }
       }
       
@@ -805,7 +790,7 @@ async function addToCache(env, comment) {
         comments = []; // If corrupt, start fresh (rare edge case)
       }
     }
-    // If cache empty, start with empty array (will build up from POSTs)
+    // If cache empty, start with empty array - will accumulate naturally from POSTs
     
     // Add new comment
     comments.push(comment);
@@ -821,11 +806,11 @@ async function addToCache(env, comment) {
     // Check size before writing (KV has 25MB limit per value)
     const cacheString = JSON.stringify(comments);
     if (cacheString.length > 20000000) { // 20MB safety limit
-      console.warn('[Comments] Cache too large, reducing to last 100 comments');
-      comments = comments.slice(-100);
+      console.warn('[Comments] Cache too large, reducing to last 50 comments');
+      comments = comments.slice(-50);
     }
     
-    // Update cache (no TTL - never expires, updated on every POST)
+    // Update cache (no TTL - cache persists, updated on every POST)
     await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments));
   } catch (error) {
     console.error('[Comments] Failed to update cache:', error);

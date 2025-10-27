@@ -2,8 +2,50 @@
 
 **Tags:** #cost #cloudflare #kv #workers #scaling #economics  
 **Created:** October 25, 2025  
-**Updated:** October 27, 2025 - Simple accumulation cache (no rebuilds)  
+**Updated:** October 27, 2025 - ACTUAL COSTS from production bill  
 **Status:** ✅ COMPLETE - Production cost estimates with all operations
+
+---
+
+## 🔴 CRITICAL WARNING: Actual Bill Was $915/Month!
+
+**Real bill (Sep 27 - Oct 26, 2025):**
+- KV List Operations: **182,670,712** (182.67M)
+- First 1M: FREE
+- Billable: 181.67M
+- Cost: 181.67M / 1M × $5.00 = **$915.00**
+
+**Root cause:** `fresh=true` polling using KV.list() to scan all messages was deployed in production, causing catastrophic costs.
+
+**Fix deployed:** October 27, 2025 - Removed all KV.list() from polling, use simple cache accumulation only.
+
+**Expected next bill:** ~$37 (KV) + $40 (Workers) = **$77/month** ✅
+
+---
+
+## Cloudflare KV Actual Pricing (from production bill)
+
+**Read Operations:**
+- First 10M: **FREE** (included)
+- After 10M: **$0.50 per 10 million**
+
+**Write Operations:**
+- First 1M: **FREE** (included)  
+- After 1M: **$5.00 per million**
+
+**List Operations:** 🔴 **DANGER - EXPENSIVE!**
+- First 1M: **FREE** (included)
+- After 1M: **$5.00 per million**
+- **10x more expensive than reads!**
+- **NEVER use KV.list() in polling or high-frequency operations!**
+
+**Delete Operations:**
+- First 1M: **FREE**
+- After 1M: **$5.00 per million**
+
+**Storage:**
+- First 1 GB: **FREE**
+- After 1 GB: **$0.50 per GB/month**
 
 ---
 
