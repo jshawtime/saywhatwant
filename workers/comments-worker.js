@@ -830,9 +830,9 @@ async function addToCache(env, comment) {
       comments = comments.slice(-100);
     }
     
-    // Update cache with 10-second TTL
+    // Update cache with 60-second TTL
     await env.COMMENTS_KV.put(cacheKey, JSON.stringify(comments), {
-      expirationTtl: 10
+      expirationTtl: 60
     });
   } catch (error) {
     console.error('[Comments] Failed to update cache:', error);
@@ -886,7 +886,7 @@ async function rebuildCacheFromKV(env) {
   // Save rebuilt cache with TTL
   const cacheKey = 'recent:comments';
   await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentMessages), {
-    expirationTtl: 10  // 10 seconds TTL for rebuilt cache
+    expirationTtl: 60  // 60 seconds TTL for rebuilt cache (safer)
   });
   
   return recentMessages;
@@ -901,9 +901,9 @@ async function updateCache(env, comments) {
   // Keep only the most recent comments
   const recentComments = comments.slice(-CACHE_SIZE);
   
-  // 10-second TTL for auto-expiration
+  // 60-second TTL for auto-expiration
   await env.COMMENTS_KV.put(cacheKey, JSON.stringify(recentComments), {
-    expirationTtl: 10
+    expirationTtl: 60
   });
 }
 
