@@ -174,8 +174,14 @@ cache = cache.slice(-50); // Keep last 50
 **At 1 million human messages per month (1000 active users):**
 - Total cost: **$138.40/month** (raw costs, no free tier deductions)
 - Breakdown: KV Writes $50, KV Reads $50.90, Workers $37.50
-- Cost per message: **$0.000138** (7,250 messages per dollar)
+- **Cost per human message: $0.000138** (includes AI reply in cost)
+- **7,250 conversations per dollar**
 - **Easy scaling:** Just multiply operations by rate per million
+
+**Note on Per-Message Cost:**
+- 1M human messages = 2M total messages in system (1M human + 1M AI replies)
+- Cost divided by human messages (shows cost per complete interaction)
+- **$0.000138 = cost for 1 question + 1 AI answer**
 
 **Key optimizations deployed:** 
 - ✅ Dashboard heartbeat (README-159): 99% read reduction (100 → 1 reads/poll)
@@ -195,9 +201,12 @@ cache = cache.slice(-50); // Keep last 50
 ### Assumptions
 
 **Traffic:**
-- 1,000,000 human messages/month
-- 1,000,000 AI responses/month (1:1 ratio)
-- **Total: 2,000,000 messages/month**
+- **1,000,000 human messages/month** (what we measure against)
+- 1,000,000 AI responses/month (1:1 ratio, generated automatically)
+- **Total: 2,000,000 messages in system**
+
+**Important:** All per-message costs are per **human message** (includes AI reply in cost).  
+This measures: "How much does it cost to answer one user question?"
 
 **Activity distribution:**
 - 30 days/month
@@ -398,17 +407,19 @@ Browser → GET https://sww-comments.bootloaders.workers.dev/api/comments?after=
 
 ### Scaling Summary Table (UPDATED - After Optimizations)
 
-| Scale | Users | Messages | KV Writes | KV Reads | Workers | Total | Per Message |
-|-------|-------|----------|-----------|----------|---------|-------|-------------|
-| 1x | 1K | 1M | $50 | $51 | $38 | **$139** | $0.000139 |
-| 10x | 10K | 10M | $500 | $510 | $375 | **$1,385** | $0.000139 |
-| 100x | 100K | 100M | $5,000 | $5,100 | $3,750 | **$13,850** | $0.000139 |
+| Scale | Users | Human Msgs | Total Msgs | KV Writes | KV Reads | Workers | Total Cost | Per Human Msg |
+|-------|-------|------------|------------|-----------|----------|---------|------------|---------------|
+| 1x | 1K | 1M | 2M | $50 | $51 | $38 | **$139** | **$0.000139** |
+| 10x | 10K | 10M | 20M | $500 | $510 | $375 | **$1,385** | **$0.000139** |
+| 100x | 100K | 100M | 200M | $5,000 | $5,100 | $3,750 | **$13,850** | **$0.000139** |
 
 **Simple Scaling Formula:**
-- **Writes:** Messages × 10 / 1M × $5 = KV write cost
-- **Reads:** Users × 2.31 polls/min × 43,200 / 1M × $0.50 = Frontend read cost
-- **Workers:** Total requests / 1M × $0.30 = Worker cost
-- **Per message cost stays constant: ~$0.000139**
+- **Writes:** Human messages × 10 ops/msg × $5/M = KV write cost
+- **Reads:** Users × 2.31 polls/min × 43,200 min/month × $0.50/M = Frontend read cost
+- **Workers:** Total requests × $0.30/M = Worker cost
+- **Per human message cost stays constant: ~$0.000139 (includes AI reply)**
+
+**Remember:** Each human message generates 1 AI reply (2 total messages), but cost is per human message for easy ROI calculations.
 
 ---
 
@@ -599,12 +610,14 @@ Even at 10M messages/month ($355), cost is very manageable.
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **Monthly Cost** | **$138.40/month** | 1M messages, 1K users |
-| **Cost Per Message** | **$0.000138** | 7,250 messages per dollar |
+| **Monthly Cost** | **$138.40/month** | 1M human messages, 1K users |
+| **Per Human Message** | **$0.000138** | Includes AI reply (question + answer) |
+| **Conversations/Dollar** | **7,250** | Complete interactions |
 | **KV Writes** | $50.00 | 10M ops @ $5.00/M |
 | **KV Reads** | $50.90 | 101.8M ops @ $0.50/M |
 | **Workers** | $37.50 | 125M requests @ $0.30/M |
 | **Pages** | $0.00 | Free |
+| **Total Messages** | **2M** | 1M human + 1M AI replies |
 | **Cache Strategy** | **Accumulation** | No rebuild costs (README-155) |
 | **Response Time** | **2-3 sec** | Simple queue system |
 | **Optimizations** | **2 deployed** | README-159 (heartbeat), README-160 (terminal skip) |
