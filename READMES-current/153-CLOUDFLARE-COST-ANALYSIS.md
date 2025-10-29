@@ -421,7 +421,16 @@ Browser → GET https://sww-comments.bootloaders.workers.dev/api/comments?after=
 
 **Remember:** Each human message generates 1 AI reply (2 total messages), but cost is per human message for easy ROI calculations.
 
+
+
+
+
+
+
 ---
+# BELOW IS WHERE LANDED AS OF 29TH OCTOBER 2025
+Server costs are covered with 0.5% conversion to a $10 model purchase. Not including marketing costs.
+
 
 ## Durable Objects vs Current KV Architecture
 
@@ -442,6 +451,15 @@ Browser → GET https://sww-comments.bootloaders.workers.dev/api/comments?after=
 **Note:** Msgs/User/Mo shows average messages per user per month (helps visualize scale)
 
 ---
+
+
+
+
+
+
+
+
+
 
 ### Why Durable Objects is Cheaper
 
