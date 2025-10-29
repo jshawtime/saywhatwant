@@ -1098,37 +1098,245 @@ Bot falls back to verifying all messages (expensive but reliable).
 - [x] Design optimization (skip completed/failed)
 - [x] Analyze edge cases
 - [x] Create testing plan
-- [x] **Implement code changes** (added 8 lines to skip terminal states)
-- [x] **Deploy to Cloudflare** (Version ID: 2d2ec131-b5c7-46b1-9dd8-ce7e234d7c2d)
-- [ ] **Monitor and verify** (watch KV metrics for 30 minutes)
-- [ ] **Update README with results** (after verification period)
+- [x] **Implement code changes** (skip logic + cache updates)
+- [x] **Deploy to Cloudflare** (Version 18ea618b-7fa1-45de-a072-c38f063d74a6)
+- [x] **Debug initial deployment** (found 2 critical issues)
+- [ ] **Monitor results** (waiting for messages to process)
+- [ ] **Verify 93% reduction** (after cache updates)
 
 ---
 
-## 🚀 Deployment Complete
+## 🚀 Implementation Complete
 
-**Deployed:** October 29, 2025  
-**Worker Version:** 2d2ec131-b5c7-46b1-9dd8-ce7e234d7c2d  
-**Changes:** Added terminal state skip in `handleGetPending` (lines 970-976)
+**Final Deployment:** October 29, 2025  
+**Worker Version:** 18ea618b-7fa1-45de-a072-c38f063d74a6  
+**Status:** ✅ All fixes deployed, waiting for optimization to kick in
 
-**Code Added:**
+---
+
+## 🐛 Issues Found During Initial Deployment
+
+### Issue #1: Cache Never Updated When Status Changed
+
+**Problem:**
+- Bot marked messages as 'complete' in individual KV keys ✅
+- Cache (`recent:comments`) was NEVER updated ❌
+- Cache forever showed `status='pending'` (stale)
+- Our skip logic checked cache, saw 'pending', verified all 26 messages
+
+**Evidence:**
+```bash
+$ curl https://sww-comments.bootloaders.workers.dev/api/comments?limit=100
+# All 26 human messages showed: status='pending'
+# Even messages from hours ago that were completed!
+```
+
+**PM2 Logs Showed:**
+```
+[POLL 15] [KVr:27 KVw:0] Fetching pending messages...
+```
+Still 27 reads because all 26 messages appeared pending in cache.
+
+**Root Cause:**
+Three functions updated individual keys but forgot cache:
+
+1. **`handleCompleteMessage`** (lines 1171-1176)
+   - Updated: `comment:${messageId}` key with `status='complete'`
+   - Forgot: `recent:comments` cache update
+
+2. **`handleClaimMessage`** (lines 1108-1113)
+   - Updated: `comment:${messageId}` key with `status='processing'`
+   - Forgot: `recent:comments` cache update
+
+3. **`handleFailMessage`** (lines 1273-1285)
+   - Updated: `comment:${messageId}` key with `status='failed'` or `'pending'`
+   - Forgot: `recent:comments` cache update
+
+**The Fix:**
+Added cache update logic to all 3 functions:
+
 ```javascript
-// Skip verification for terminal states - they never change
-const cacheStatus = msg.botParams?.status;
-if (cacheStatus === 'completed' || cacheStatus === 'failed') {
-  continue; // 93% cost reduction by skipping finished operations
+// In handleCompleteMessage (after line 1175):
+try {
+  const cacheKey = 'recent:comments';
+  const cachedData = await env.COMMENTS_KV.get(cacheKey);
+  if (cachedData) {
+    const cached = JSON.parse(cachedData);
+    const index = cached.findIndex(c => c.id === messageId);
+    if (index >= 0) {
+      cached[index].botParams.status = 'complete';
+      cached[index].botParams.processed = true;
+      await env.COMMENTS_KV.put(cacheKey, JSON.stringify(cached));
+      console.log('[Queue] Cache updated for:', messageId);
+    }
+  }
+} catch (cacheError) {
+  console.log('[Queue] Cache update failed (non-critical)');
 }
 ```
 
-**Expected Results (Next 30 Minutes):**
-- KV reads should drop from ~500/min to ~40/min
-- Hot reads should stay ~97% (same keys accessed)
-- PM2 bot should still process new messages normally
+Same pattern added to `handleClaimMessage` and `handleFailMessage`.
+
+---
+
+### Issue #2: Status Value Typo
+
+**Problem:**
+- Skip logic checked for: `cacheStatus === 'completed'` (with 'd')
+- Actual status value: `'complete'` (no 'd')
+- **They never matched!**
+
+**Evidence:**
+```javascript
+// Line 1172 in handleCompleteMessage:
+message.botParams.status = 'complete';  // ← NO 'D'
+
+// Line 977 in optimization (original):
+if (cacheStatus === 'completed' || ...) // ← WITH 'D' (WRONG)
+```
+
+**The Fix:**
+```javascript
+// Line 977 (fixed):
+if (cacheStatus === 'complete' || cacheStatus === 'failed') // ← NO 'D' (CORRECT)
+```
+
+---
+
+## 🎯 How Optimization Works Now
+
+### Message Lifecycle:
+
+**1. Message Posted:**
+```
+Individual key: status='pending'
+Cache: status='pending'
+→ Next poll: verify (might be stale)
+```
+
+**2. Bot Claims:**
+```
+Individual key: status='processing' ✅
+Cache: status='processing' ✅ (NOW UPDATED)
+→ Next poll: verify (still processing)
+```
+
+**3. Bot Completes:**
+```
+Individual key: status='complete' ✅
+Cache: status='complete' ✅ (NOW UPDATED)
+→ Next poll: SKIP ✅ (terminal state)
+```
+
+**4. Bot Fails (Max Retries):**
+```
+Individual key: status='failed' ✅
+Cache: status='failed' ✅ (NOW UPDATED)
+→ Next poll: SKIP ✅ (terminal state)
+```
+
+---
+
+## 📊 Expected Behavior After Fix
+
+### Immediately After Deployment:
+```
+PM2 Logs: [POLL 1] [KVr:27 KVw:0] Fetching pending messages...
+```
+- Still 27 reads
+- All 26 messages still show 'pending' in cache (stale from before)
+- Optimization not active yet (cache needs to update)
+
+### After First Message Processed:
+```
+PM2 Logs: [POLL 2] [KVr:2 KVw:0] Fetching pending messages...
+```
+- 2 reads (1 cache + 1 verify)
+- 25 messages now show 'complete' → skipped
+- 1 message shows 'pending' → verified
+- **Optimization active!** ✅
+
+### Steady State (All Messages Completed):
+```
+PM2 Logs: [POLL 50] [KVr:1 KVw:0] Fetching pending messages...
+```
+- 1 read (cache only)
+- All 26 messages show 'complete' → all skipped
+- 0 verifications needed
+- **Maximum optimization!** ✅
+
+---
+
+## 🔧 Files Modified (Final)
+
+**1. `workers/comments-worker.js`**
+
+**Lines 970-981:** Skip terminal states in `handleGetPending`
+```javascript
+// Skip verification for terminal states
+const cacheStatus = msg.botParams?.status;
+if (cacheStatus === 'complete' || cacheStatus === 'failed') {
+  continue; // Terminal state - skip expensive verification
+}
+```
+
+**Lines 1177-1194:** Update cache in `handleCompleteMessage`
+```javascript
+// Update cache when marking complete
+const cached = JSON.parse(await env.COMMENTS_KV.get('recent:comments'));
+cached[index].botParams.status = 'complete';
+await env.COMMENTS_KV.put('recent:comments', JSON.stringify(cached));
+```
+
+**Lines 1115-1132:** Update cache in `handleClaimMessage`
+```javascript
+// Update cache when claiming
+cached[index].botParams.status = 'processing';
+await env.COMMENTS_KV.put('recent:comments', JSON.stringify(cached));
+```
+
+**Lines 1287-1305:** Update cache in `handleFailMessage`
+```javascript
+// Update cache when failing/retrying
+cached[index].botParams.status = 'failed'; // or 'pending' if retrying
+await env.COMMENTS_KV.put('recent:comments', JSON.stringify(cached));
+```
+
+**2. `hm-server-deployment/AI-Bot-Deploy/src/index-simple.ts`**
+
+**Lines 76-83:** Parse and display KV stats
+```typescript
+const kvStats = data.kvStats || { reads: 0, writes: 0 };
+console.log(
+  chalk.gray(`[${timestamp()}] [POLL ${emptyPollCount}]`),
+  chalk.cyan(`[KVr:${kvStats.reads} KVw:${kvStats.writes}]`),
+  'Fetching pending messages...'
+);
+```
+
+---
+
+## ⏰ Timeline to Full Optimization
+
+**Now:** Cache has 26 'pending' messages (stale from before fix)
+- Reads: 1 cache + 26 verify = 27 reads/poll
+
+**After 1 message processed:** Cache has 25 'complete' + 1 'pending'
+- Reads: 1 cache + 1 verify = 2 reads/poll
+- **93% reduction achieved!** ✅
+
+**After all 26 processed:** Cache has 26 'complete' + 0 'pending'
+- Reads: 1 cache + 0 verify = 1 read/poll
+- **96% reduction achieved!** ✅
 
 **Monitoring:**
-- Watch Cloudflare KV metrics graph
-- Check PM2 logs for normal processing
-- Verify bot still responds to new messages
+Watch PM2 logs for `[KVr:X]` to drop from 27 → 2 → 1 as messages process.
+
+---
+
+**Deployed:** Version 18ea618b-7fa1-45de-a072-c38f063d74a6  
+**Status:** Optimization ready - will activate as messages process  
+**Expected:** 540 reads/min → 40 reads/min (93% reduction)
 
 ---
 
