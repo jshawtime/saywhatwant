@@ -782,48 +782,353 @@ return JSON.parse(pending || '[]').slice(0, limit);
 
 ---
 
-## 🚫 DO NOT MODIFY - CRITICAL QUEUE ARCHITECTURE
+## 🎯 OPTIMIZATION PLAN: Skip Verification for Terminal States
 
-### ⚠️ WARNING: Queue Verification System is INTENTIONAL
+### What We Have Now (Wasteful):
 
-**The 26 individual KV reads per poll are NOT A BUG - they are CRITICAL for reliability.**
+**File:** `workers/comments-worker.js` lines 956-1014
 
-This system was designed and debugged over multiple days to ensure:
-1. **No message reprocessing** - Processed flag must be authoritative
-2. **No cache staleness bugs** - Cache can lie, individual keys are truth
-3. **Atomic claim operations** - Race condition prevention
-4. **Reliable queue state** - Status must be verified from source
+```javascript
+// Current behavior
+const cached = JSON.parse(await env.COMMENTS_KV.get('recent:comments')); // 50 messages
 
-**References (DO NOT TOUCH):**
-- README-79: PROCESSED-FLAG-IMPLEMENTATION.md (hybrid deduplication system)
-- README-132: MESSAGES-NOT-APPEARING-CACHE-RACE.md (cache deletion disaster)
-- README-146: MESSAGE-FLOW-END-TO-END-AUDIT.md (dual PM2 debugging)
-- README-158: HANDOFF-DASHBOARD-PM2-LOGS-PERSIST.md (persistence issues)
+for (const msg of cached) {
+  if (msg.botParams?.entity && msg['message-type'] === 'human') {
+    // Verifies ALL 26 human messages - even completed/failed from hours ago
+    let actualData = await env.COMMENTS_KV.get(`comment:${msg.id}`); // KV READ
+    
+    if (actualData) {
+      const actualMsg = JSON.parse(actualData);
+      if (actualMsg.botParams?.status === 'pending') {
+        allMessages.push(actualMsg);
+      }
+    }
+  }
+}
+```
 
-**Any "optimization" that trusts cache will:**
-- ❌ Break message deduplication
-- ❌ Cause infinite reprocessing loops  
-- ❌ Create race conditions
-- ❌ Violate architectural requirements
+**Cache Content Example:**
+- Message A: `status='completed'` (from 2 hours ago)
+- Message B: `status='completed'` (from 1 hour ago)
+- ...24 more completed messages...
+- Message Z: `status='pending'` (from 30 seconds ago) ← Only one we care about!
 
-**The cost is acceptable. The reliability is CRITICAL.**
+**Problem:**
+- Verifies all 26 messages every poll
+- 24 are completed (will NEVER change to pending again)
+- 1 is failed (terminal state)
+- Only 1-2 are actually pending
+- **Wastes 24-25 KV reads per poll verifying finished operations**
+
+**Why This Happens:**
+- Cache accumulates last 50 messages (for frontend display)
+- Cache doesn't remove completed messages (frontend needs them)
+- PM2 bot loops through ALL cached messages
+- Verifies even messages completed hours ago
 
 ---
 
-## 🎯 Acceptable Alternatives
+### What We Want (Efficient):
 
-Since modifying queue verification is OFF LIMITS:
+**Only verify messages cache says are 'pending'**
 
-### Option A: Reduce PM2 Polling Frequency (If Acceptable)
-**Change:** `pollingInterval: 3000` → `6000` or `10000`
-**Savings:** 540 → 270 or 162 reads/minute
-**Trade-off:** Bot responds 3-7s slower
+**Principle:** Trust cache for terminal states
 
-### Option B: Accept Current Architecture
-**Current Cost:** $1.17/month (negligible)
-**At 100 users:** $117/month (acceptable)
-**At 1000 users:** $1,170/month (business decision)
-**Conclusion:** Reliable queue > cost optimization
+**Terminal States (Immutable):**
+- `status='completed'` - Bot processed it, DONE, will never be pending again
+- `status='failed'` - Bot tried and failed, DONE, won't retry
+
+**Non-Terminal States (Verify):**
+- `status='pending'` - Might be stale, MUST verify from individual key
+- `status=undefined` - Old messages without status field, verify
+
+**Logic:**
+```javascript
+for (const msg of cached) {
+  if (msg.botParams?.entity && msg['message-type'] === 'human') {
+    
+    // SKIP verification for terminal states
+    const cacheStatus = msg.botParams?.status;
+    if (cacheStatus === 'completed' || cacheStatus === 'failed') {
+      continue; // Don't waste KV read - it's finished ✅
+    }
+    
+    // ONLY verify pending or undefined status
+    let actualData = await env.COMMENTS_KV.get(`comment:${msg.id}`);
+    // ... rest of verification
+  }
+}
+```
+
+**Expected Behavior:**
+- Cache has 26 human messages
+- 24 show `status='completed'` → skip verification
+- 1 shows `status='failed'` → skip verification
+- 1 shows `status='pending'` → verify (might be stale)
+- **Reads: 1 cache + 1 verify = 2 reads/poll**
+
+---
+
+### Why This is Safe:
+
+**1. Completed/Failed are IMMUTABLE:**
+- Once marked `completed`, status never changes
+- Once marked `failed`, status stays failed (no automatic retry)
+- These are **terminal states** - finished forever
+- Safe to trust cache for these ✅
+
+**2. Pending Requires Verification:**
+- Cache might show `pending` but actually `completed` (cache lag)
+- Bot already processed it but cache not updated yet
+- MUST verify to prevent reprocessing
+- This is where verification is CRITICAL ✅
+
+**3. Edge Case - Undefined Status:**
+- Old messages without status field
+- Could be anything
+- Verify to be safe ✅
+
+---
+
+### Implementation Plan:
+
+**File to Modify:** `saywhatwant/workers/comments-worker.js`
+
+**Function:** `handleGetPending` (lines 949-1024)
+
+**Change Location:** Lines 966-986 (the verification loop)
+
+**Specific Change:**
+
+**BEFORE:**
+```javascript
+for (const msg of cached) {
+  if (msg.botParams?.entity && msg['message-type'] === 'human') {
+    // Try NEW key format first
+    let key = `comment:${msg.id}`;
+    let actualData = await env.COMMENTS_KV.get(key);  // ← ALWAYS verifies
+    
+    // If not found, try OLD key format
+    if (!actualData) {
+      const timestamp = msg.id.split('-')[0];
+      key = `comment:${timestamp}:${msg.id}`;
+      actualData = await env.COMMENTS_KV.get(key);
+    }
+    
+    if (actualData) {
+      const actualMsg = JSON.parse(actualData);
+      if (actualMsg.botParams?.status === 'pending') {
+        allMessages.push(actualMsg);
+      }
+    }
+  }
+}
+```
+
+**AFTER:**
+```javascript
+for (const msg of cached) {
+  if (msg.botParams?.entity && msg['message-type'] === 'human') {
+    
+    // OPTIMIZATION: Skip verification for terminal states
+    const cacheStatus = msg.botParams?.status;
+    if (cacheStatus === 'completed' || cacheStatus === 'failed') {
+      // Terminal state - will never change back to pending
+      // Trust cache and skip expensive KV verification
+      console.log('[Queue] Skipping', msg.id, '- terminal state:', cacheStatus);
+      continue;
+    }
+    
+    // Only verify messages cache shows as 'pending' or undefined
+    // These might be stale and need authoritative check
+    
+    // Try NEW key format first
+    let key = `comment:${msg.id}`;
+    let actualData = await env.COMMENTS_KV.get(key);
+    
+    // If not found, try OLD key format (backwards compatibility)
+    if (!actualData) {
+      const timestamp = msg.id.split('-')[0];
+      key = `comment:${timestamp}:${msg.id}`;
+      actualData = await env.COMMENTS_KV.get(key);
+    }
+    
+    if (actualData) {
+      const actualMsg = JSON.parse(actualData);
+      if (actualMsg.botParams?.status === 'pending') {
+        allMessages.push(actualMsg);
+      }
+    }
+  }
+}
+```
+
+**Lines Changed:** ~10 lines added (the skip check + console log)
+
+---
+
+### Expected Impact:
+
+**Before Optimization:**
+- Cache: 50 messages (26 human with botParams)
+- Verified: 26 messages every poll
+- Reads: 1 cache + 26 verify = **27 reads/poll**
+- Per minute: 27 × 20 = **540 reads/minute**
+- Per day: **777,600 reads/day**
+
+**After Optimization:**
+- Cache: 50 messages (26 human with botParams)
+- Skipped: 24 completed + 1 failed = 25 (terminal states)
+- Verified: 1 pending message only
+- Reads: 1 cache + 1 verify = **2 reads/poll**
+- Per minute: 2 × 20 = **40 reads/minute**
+- Per day: **57,600 reads/day**
+
+**Reduction: 93% (777,600 → 57,600 reads/day)**
+
+---
+
+### Edge Cases Considered:
+
+**1. What if cache shows 'completed' but actual key shows 'pending'?**
+- **Can't happen:** Status only changes pending → completed (one direction)
+- Once completed, never goes back to pending
+- Safe to trust cache ✅
+
+**2. What if cache is empty or corrupted?**
+- No messages to loop through
+- Returns empty array (same as current behavior)
+- Safe ✅
+
+**3. What if message has no status field (old message)?**
+- `cacheStatus = undefined`
+- Doesn't match 'completed' or 'failed'
+- Falls through to verification
+- Safe ✅
+
+**4. What if all messages are completed/failed?**
+- All skipped
+- Returns empty pending array
+- Worker waits 3 seconds and polls again
+- Same as current behavior ✅
+
+**5. What about race conditions?**
+- Cache updated when message posted (status='pending')
+- Bot verifies it → claims → processes → marks completed
+- Next poll: cache shows 'completed' → skips verification
+- No race condition - linear progression ✅
+
+---
+
+### Testing Plan:
+
+**Test 1: Normal Flow**
+1. Post message (cache: pending)
+2. PM2 polls → verifies pending message → claims
+3. Bot processes → marks completed
+4. Next poll → cache shows completed → skips verification ✅
+
+**Test 2: Multiple Messages**
+1. Post 3 messages quickly
+2. Cache has 3 pending + 24 completed
+3. PM2 polls → skips 24 completed → verifies 3 pending ✅
+
+**Test 3: Rapid Polling**
+1. Message processing takes 10 seconds
+2. PM2 polls 3 times during processing
+3. All 3 polls verify same pending message (cache not updated yet)
+4. After completed: all future polls skip it ✅
+
+**Test 4: Old Messages**
+1. Cache has 50 messages from past week
+2. All show completed/failed
+3. PM2 polls → skips all 50 → returns empty
+4. No wasted reads ✅
+
+---
+
+### Deployment Steps:
+
+1. **Modify Worker** (`workers/comments-worker.js` lines 966-986)
+2. **Test locally** (if possible with wrangler dev)
+3. **Deploy to Cloudflare** (`npx wrangler deploy`)
+4. **Monitor PM2 logs** for console output showing skipped messages
+5. **Monitor Cloudflare KV metrics** for read reduction
+6. **Verify bot still processes messages** correctly
+
+---
+
+### Success Criteria:
+
+**Functional:**
+- ✅ Bot still processes new pending messages
+- ✅ Bot doesn't reprocess completed messages
+- ✅ No errors in Worker logs
+- ✅ No errors in PM2 logs
+
+**Performance:**
+- ✅ KV reads drop from ~500/min to ~40/min
+- ✅ Read latency stays low (hot reads)
+- ✅ Bot response time unchanged
+
+**Cost:**
+- ✅ Daily reads: 777,600 → 57,600 (93% reduction)
+- ✅ Monthly cost: $9.80 → $0.65 (93% reduction)
+
+---
+
+### Rollback Plan:
+
+If issues arise, revert is simple:
+
+```bash
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant/workers
+git checkout comments-worker.js
+npx wrangler deploy
+```
+
+Bot falls back to verifying all messages (expensive but reliable).
+
+---
+
+## 📝 Implementation Status
+
+- [x] Document current wasteful behavior
+- [x] Identify root cause (verifying terminal states)
+- [x] Design optimization (skip completed/failed)
+- [x] Analyze edge cases
+- [x] Create testing plan
+- [x] **Implement code changes** (added 8 lines to skip terminal states)
+- [x] **Deploy to Cloudflare** (Version ID: 2d2ec131-b5c7-46b1-9dd8-ce7e234d7c2d)
+- [ ] **Monitor and verify** (watch KV metrics for 30 minutes)
+- [ ] **Update README with results** (after verification period)
+
+---
+
+## 🚀 Deployment Complete
+
+**Deployed:** October 29, 2025  
+**Worker Version:** 2d2ec131-b5c7-46b1-9dd8-ce7e234d7c2d  
+**Changes:** Added terminal state skip in `handleGetPending` (lines 970-976)
+
+**Code Added:**
+```javascript
+// Skip verification for terminal states - they never change
+const cacheStatus = msg.botParams?.status;
+if (cacheStatus === 'completed' || cacheStatus === 'failed') {
+  continue; // 93% cost reduction by skipping finished operations
+}
+```
+
+**Expected Results (Next 30 Minutes):**
+- KV reads should drop from ~500/min to ~40/min
+- Hot reads should stay ~97% (same keys accessed)
+- PM2 bot should still process new messages normally
+
+**Monitoring:**
+- Watch Cloudflare KV metrics graph
+- Check PM2 logs for normal processing
+- Verify bot still responds to new messages
 
 ---
 

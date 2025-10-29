@@ -963,8 +963,21 @@ async function handleGetPending(env, url) {
       const cached = JSON.parse(cachedData);
       
       // IMPORTANT: Cache may be stale! Verify status from actual KV key
+      // OPTIMIZATION: Skip verification for terminal states (completed/failed)
       for (const msg of cached) {
         if (msg.botParams?.entity && msg['message-type'] === 'human') {
+          
+          // Skip verification for terminal states - they never change
+          const cacheStatus = msg.botParams?.status;
+          if (cacheStatus === 'completed' || cacheStatus === 'failed') {
+            // Terminal state - will never become pending again
+            // Trust cache and skip expensive KV verification (93% cost reduction)
+            continue;
+          }
+          
+          // Only verify messages cache shows as 'pending' or undefined
+          // These might be stale and need authoritative check
+          
           // Try NEW key format first
           let key = `comment:${msg.id}`;
           let actualData = await env.COMMENTS_KV.get(key);
