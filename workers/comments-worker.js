@@ -953,9 +953,14 @@ async function handleGetPending(env, url) {
     
     console.log('[Queue] Fetching pending messages from cache, limit:', limit);
     
+    // Track KV operations for monitoring
+    let kvReads = 0;
+    let kvWrites = 0;
+    
     // Use cache for speed (has recent 100 messages)
     const cacheKey = 'recent:comments';
     const cachedData = await env.COMMENTS_KV.get(cacheKey);
+    kvReads++; // Cache read
     
     let allMessages = [];
     
@@ -969,7 +974,7 @@ async function handleGetPending(env, url) {
           
           // Skip verification for terminal states - they never change
           const cacheStatus = msg.botParams?.status;
-          if (cacheStatus === 'completed' || cacheStatus === 'failed') {
+          if (cacheStatus === 'complete' || cacheStatus === 'failed') {
             // Terminal state - will never become pending again
             // Trust cache and skip expensive KV verification (93% cost reduction)
             continue;
@@ -981,12 +986,14 @@ async function handleGetPending(env, url) {
           // Try NEW key format first
           let key = `comment:${msg.id}`;
           let actualData = await env.COMMENTS_KV.get(key);
+          kvReads++; // Track read operation
           
           // If not found, try OLD key format (backwards compatibility)
           if (!actualData) {
             const timestamp = msg.id.split('-')[0];
             key = `comment:${timestamp}:${msg.id}`;
             actualData = await env.COMMENTS_KV.get(key);
+            kvReads++; // Track second read attempt
           }
           
           if (actualData) {
@@ -1017,8 +1024,18 @@ async function handleGetPending(env, url) {
     const pending = allMessages.slice(0, limit);
     
     console.log(`[Queue] Found ${allMessages.length} pending, returning top ${pending.length}`);
+    console.log(`[Queue] KV operations: ${kvReads} reads, ${kvWrites} writes`);
     
-    return new Response(JSON.stringify(pending), {
+    // Return pending messages with KV operation metadata
+    const response = {
+      pending: pending,
+      kvStats: {
+        reads: kvReads,
+        writes: kvWrites
+      }
+    };
+    
+    return new Response(JSON.stringify(response), {
       status: 200,
       headers: {
         ...corsHeaders,
@@ -1095,6 +1112,25 @@ async function handleClaimMessage(request, env) {
     
     await env.COMMENTS_KV.put(key, JSON.stringify(message));
     
+    // Update cache so status is current
+    try {
+      const cacheKey = 'recent:comments';
+      const cachedData = await env.COMMENTS_KV.get(cacheKey);
+      if (cachedData) {
+        const cached = JSON.parse(cachedData);
+        const index = cached.findIndex(c => c.id === messageId);
+        if (index >= 0) {
+          cached[index].botParams.status = 'processing';
+          cached[index].botParams.claimedBy = workerId;
+          cached[index].botParams.claimedAt = Date.now();
+          await env.COMMENTS_KV.put(cacheKey, JSON.stringify(cached));
+        }
+      }
+    } catch (cacheError) {
+      // Non-critical
+      console.log('[Queue] Cache update failed (non-critical)');
+    }
+    
     console.log('[Queue] ✅ Claimed:', messageId, 'by', workerId);
     
     return new Response(JSON.stringify({ 
@@ -1156,6 +1192,25 @@ async function handleCompleteMessage(request, env) {
     message.botParams.processed = true; // Backwards compatibility
     
     await env.COMMENTS_KV.put(key, JSON.stringify(message));
+    
+    // Update cache so optimization can skip this message on next poll
+    try {
+      const cacheKey = 'recent:comments';
+      const cachedData = await env.COMMENTS_KV.get(cacheKey);
+      if (cachedData) {
+        const cached = JSON.parse(cachedData);
+        const index = cached.findIndex(c => c.id === messageId);
+        if (index >= 0) {
+          cached[index].botParams.status = 'complete';
+          cached[index].botParams.processed = true;
+          await env.COMMENTS_KV.put(cacheKey, JSON.stringify(cached));
+          console.log('[Queue] Cache updated for:', messageId);
+        }
+      }
+    } catch (cacheError) {
+      // Non-critical - individual key is source of truth
+      console.log('[Queue] Cache update failed (non-critical):', cacheError.message);
+    }
     
     console.log('[Queue] ✅ Completed:', messageId, '(status=complete, processed=true)');
     
@@ -1228,6 +1283,26 @@ async function handleFailMessage(request, env) {
     }
     
     await env.COMMENTS_KV.put(key, JSON.stringify(message));
+    
+    // Update cache to reflect new status
+    try {
+      const cacheKey = 'recent:comments';
+      const cachedData = await env.COMMENTS_KV.get(cacheKey);
+      if (cachedData) {
+        const cached = JSON.parse(cachedData);
+        const index = cached.findIndex(c => c.id === messageId);
+        if (index >= 0) {
+          cached[index].botParams.status = message.botParams.status;
+          cached[index].botParams.attempts = message.botParams.attempts;
+          cached[index].botParams.claimedBy = message.botParams.claimedBy;
+          cached[index].botParams.claimedAt = message.botParams.claimedAt;
+          await env.COMMENTS_KV.put(cacheKey, JSON.stringify(cached));
+        }
+      }
+    } catch (cacheError) {
+      // Non-critical
+      console.log('[Queue] Cache update failed (non-critical)');
+    }
     
     return new Response(JSON.stringify({ 
       success: true,
