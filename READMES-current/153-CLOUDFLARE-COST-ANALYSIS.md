@@ -172,18 +172,21 @@ cache = cache.slice(-50); // Keep last 50
 ## Executive Summary (UPDATED - October 29, 2025)
 
 **At 1 million human messages per month (1000 active users):**
-- Total cost: **$142.70/month**
-- Breakdown: KV Reads $58.20, KV Writes $45, Workers $39.50
-- Cost per message: **$0.000143** (7,000 messages per dollar)
-- Scales linearly and predictably
+- Total cost: **$138.40/month** (raw costs, no free tier deductions)
+- Breakdown: KV Writes $50, KV Reads $50.90, Workers $37.50
+- Cost per message: **$0.000138** (7,250 messages per dollar)
+- **Easy scaling:** Just multiply operations by rate per million
 
 **Key optimizations deployed:** 
-- ✅ Dashboard heartbeat (README-159): 82-99% read reduction
-- ✅ PM2 terminal state skip (README-160): 93% read reduction
-- ✅ Regressive polling (README-150): 76% request reduction vs fixed polling
+- ✅ Dashboard heartbeat (README-159): 99% read reduction (100 → 1 reads/poll)
+- ✅ PM2 terminal state skip (README-160): 93% read reduction (27 → 2 reads/poll)
+- ✅ Regressive 2s increment (README-150): 20% read reduction (2.88 → 2.31 polls/min)
 - ✅ Simple cache accumulation (README-155): No rebuild costs
-- ✅ PM2 + Dashboard now within 10M free reads tier
 - ✅ Fast and reliable (2-3 second response times)
+
+**Scaling Math:**
+- **10x users:** 10K users × 99.8M reads = 998M reads × $0.50/M = $499 (read cost)
+- **100x users:** 100K users × 99.8M reads = 9.98B reads × $0.50/M = $4,990 (read cost)
 
 ---
 
@@ -238,9 +241,7 @@ cache = cache.slice(-50); // Keep last 50
 
 **Monthly writes:**
 - 1M messages × 10 writes = 10,000,000 writes
-- Included: 1M (free)
-- Billable: 9M
-- Cost: 9M / 1M × $5 = **$45/month**
+- Cost: 10M / 1M × $5 = **$50/month**
 
 ### Reads ($0.50 per million, after 10M included)
 
@@ -252,23 +253,19 @@ cache = cache.slice(-50); // Keep last 50
 - **User activity pattern:** 15% active, 85% inactive (faster to steady state)
 - Weighted average: (0.15 × 12) + (0.85 × 0.6) = **2.31 polls/min average**
 - 1000 users × 2.31 polls/min × 43,200 min/month = 99,792,000 reads/month
-- Included free: 10M
-- Billable: 89.8M
-- Cost: 89.8M / 1M × $0.50 = **$44.90/month**
+- Cost: 99.8M / 1M × $0.50 = **$49.90/month**
 
 **PM2 bot polling - OPTIMIZED (README-160):**
 - **After terminal state optimization:** 2 reads/poll (was 27)
 - 1 bot × 20 polls/min × 43,200 min/month = 864,000 polls
 - Each poll: 1 cache read + ~1 pending verification = **2 reads**
 - = 1,728,000 reads/month
-- Already covered in 10M included ✅
-- Cost: **$0.00/month** (within free tier)
+- Cost: 1.7M / 1M × $0.50 = **$0.86/month**
 
 **Dashboard polling - OPTIMIZED (README-159):**
 - **After heartbeat optimization:** 1 read/poll (heartbeat only, no full fetch)
 - 6 polls/min × 43,200 min/month = 259,200 reads/month
-- Already covered in 10M included ✅
-- Cost: **$0.00/month** (within free tier)
+- Cost: 0.26M / 1M × $0.50 = **$0.13/month**
 
 **Cache accumulation (simple POST-only - README-155):**
 - No TTL (cache never expires)
@@ -281,9 +278,7 @@ cache = cache.slice(-50); // Keep last 50
 - PM2 bot polling: 1.7M
 - Dashboard polling: 0.26M
 - **Total: ~101.8M reads/month**
-- Included: 10M (free)
-- Billable: 91.8M
-- **Cost: 91.8M / 1M × $0.50 = $45.90/month**
+- **Cost: 101.8M / 1M × $0.50 = $50.90/month**
 
 ---
 
@@ -305,29 +300,30 @@ cache = cache.slice(-50); // Keep last 50
 
 ## Total Monthly Cost (UPDATED - October 29, 2025)
 
-| Service | Operations | Cost | Notes |
-|---------|-----------|------|-------|
-| **KV Writes** | 10M writes | $45.00 | Messages + cache + heartbeat + status |
-| **KV Reads** | 126.4M reads | $58.20 | Optimized (90% reduction from before) |
-| **Workers Base** | First 10M requests | $5.00 | Included in plan |
-| **Workers Excess** | 115M requests | $34.50 | @ $0.30 per million |
-| **Cloudflare Pages** | Frontend hosting | $0.00 | Included |
-| **TOTAL** | | **$142.70/month** | At 1M messages/month |
+**Note:** All costs shown as raw per-million rates (ignoring free tier allowances) for easy scaling calculations.
+
+| Service | Operations | Cost | Rate |
+|---------|-----------|------|------|
+| **KV Writes** | 10M writes | $50.00 | $5.00 per million |
+| **KV Reads** | 101.8M reads | $50.90 | $0.50 per million |
+| **Workers** | 125M requests | $37.50 | $0.30 per million |
+| **Cloudflare Pages** | Frontend hosting | $0.00 | Free |
+| **TOTAL** | | **$138.40/month** | At 1M messages/month |
 
 ### Detailed KV Reads Breakdown (126.4M total - OPTIMIZED)
 
-| Operation | Reads/Month | Cost | Notes |
-|-----------|-------------|------|-------|
-| Frontend polling (README-150) | 99.8M | $44.90 | 2s increment (20% reduction) |
-| PM2 bot polling (README-160) | 1.7M | $0.00 | 2 reads/poll (within 10M free) |
-| Dashboard (README-159) | 0.26M | $0.00 | Heartbeat only (within 10M free) |
-| **Total Reads** | **101.8M** | **$45.90** | 3 optimizations combined |
+| Operation | Reads/Month | Cost | Rate |
+|-----------|-------------|------|------|
+| Frontend polling (README-150) | 99.8M | $49.90 | @ $0.50/M |
+| PM2 bot polling (README-160) | 1.7M | $0.86 | @ $0.50/M |
+| Dashboard (README-159) | 0.26M | $0.13 | @ $0.50/M |
+| **Total Reads** | **101.8M** | **$50.90** | **$0.50 per million** |
 
 **Optimizations deployed:**
-- README-159: Dashboard heartbeat (99% reduction on dashboard)
-- README-160: PM2 terminal state skip (93% reduction on PM2)
-- README-150: Regressive 2s increment (20% reduction on frontend)
-- **Combined: 90%+ overall reduction vs unoptimized baseline** ✅
+- README-159: Dashboard heartbeat (99% reduction: 100 → 1 reads/poll)
+- README-160: PM2 terminal state skip (93% reduction: 27 → 2 reads/poll)
+- README-150: Regressive 2s increment (20% reduction: 2.88 → 2.31 polls/min)
+- **For scaling:** Multiply operations by $0.50/M (reads) or $5/M (writes)
 
 ### Workers Request Count Explained
 
@@ -404,12 +400,15 @@ Browser → GET https://sww-comments.bootloaders.workers.dev/api/comments?after=
 
 | Scale | Users | Messages | KV Writes | KV Reads | Workers | Total | Per Message |
 |-------|-------|----------|-----------|----------|---------|-------|-------------|
-| 1x | 1K | 1M | $45 | $46 | $40 | **$131** | $0.000131 |
-| 10x | 10K | 10M | $450 | $460 | $395 | **$1,305** | $0.000131 |
-| 100x | 100K | 100M | $4,500 | $4,600 | $3,735 | **$12,835** | $0.000128 |
+| 1x | 1K | 1M | $50 | $51 | $38 | **$139** | $0.000139 |
+| 10x | 10K | 10M | $500 | $510 | $375 | **$1,385** | $0.000139 |
+| 100x | 100K | 100M | $5,000 | $5,100 | $3,750 | **$13,850** | $0.000139 |
 
-**Cost scales linearly - all optimizations keep PM2+Dashboard reads free!**
-**2s polling increment saves $12/month vs 1s increment** ✅
+**Simple Scaling Formula:**
+- **Writes:** Messages × 10 / 1M × $5 = KV write cost
+- **Reads:** Users × 2.31 polls/min × 43,200 / 1M × $0.50 = Frontend read cost
+- **Workers:** Total requests / 1M × $0.30 = Worker cost
+- **Per message cost stays constant: ~$0.000139**
 
 ---
 
@@ -600,32 +599,34 @@ Even at 10M messages/month ($355), cost is very manageable.
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **Monthly Cost** | **$130.40/month** | 1M messages, 1K users, paid tier |
-| **Cost Per Message** | **$0.000130** | 7,700 messages per dollar |
-| **KV Writes** | $45.00 | 10M operations (heartbeat + cache updates) |
-| **KV Reads** | $45.90 | 101.8M operations (3 optimizations: 90% reduction) |
-| **Workers Base** | $5.00 | First 10M requests included |
-| **Workers Excess** | $34.50 | 115M requests @ $0.30/M |
+| **Monthly Cost** | **$138.40/month** | 1M messages, 1K users |
+| **Cost Per Message** | **$0.000138** | 7,250 messages per dollar |
+| **KV Writes** | $50.00 | 10M ops @ $5.00/M |
+| **KV Reads** | $50.90 | 101.8M ops @ $0.50/M |
+| **Workers** | $37.50 | 125M requests @ $0.30/M |
+| **Pages** | $0.00 | Free |
 | **Cache Strategy** | **Accumulation** | No rebuild costs (README-155) |
 | **Response Time** | **2-3 sec** | Simple queue system |
 | **Optimizations** | **2 deployed** | README-159 (heartbeat), README-160 (terminal skip) |
 
 ### Cost Breakdown (After Optimizations)
 
-| Component | Operations/Month | Cost | % of Total |
-|-----------|------------------|------|------------|
-| **KV Writes** (messages + cache + heartbeat) | 10M | $45.00 | 35% |
-| **KV Reads** (frontend polling) | 99.8M | $44.90 | 34% |
-| **Workers Excess** | 115M requests | $34.50 | 26% |
-| **Workers Base** | 10M included | $5.00 | 4% |
-| **KV Reads** (PM2 + Dashboard) | 2M | $0.00 | 0% (within 10M free) |
-| **TOTAL** | | **$130.40** | **100%** |
+| Component | Operations/Month | Cost | Rate |
+|-----------|------------------|------|------|
+| **KV Writes** | 10M | $50.00 | $5.00/M |
+| **KV Reads** | 101.8M | $50.90 | $0.50/M |
+| **Workers** | 125M | $37.50 | $0.30/M |
+| **TOTAL** | | **$138.40** | |
+
+**For Easy Scaling:**
+- KV Writes: Operations (millions) × $5.00
+- KV Reads: Operations (millions) × $0.50  
+- Workers: Requests (millions) × $0.30
 
 **Optimizations Deployed:**
-- README-159: Dashboard heartbeat (99% reduction) ✅
-- README-160: PM2 terminal state skip (93% reduction) ✅
-- README-150: Regressive polling 2s increment (20% reduction) ✅
-- **Combined: PM2+Dashboard within free tier, Frontend 20% cheaper** ✅
+- README-159: Dashboard heartbeat (99% reduction: 100 → 1 reads/poll)
+- README-160: PM2 terminal state skip (93% reduction: 27 → 2 reads/poll)
+- README-150: Regressive 2s increment (20% reduction: 124M → 100M reads)
 
 ### Key Optimizations DEPLOYED
 
@@ -650,6 +651,7 @@ Even at 10M messages/month ($355), cost is very manageable.
 
 **Status:** Complete cost analysis for production planning  
 **Last Updated:** October 29, 2025 - After 3 optimizations (README-150, 159, 160)  
-**Current Cost:** $130.40/month at 1M messages (1K users) on Cloudflare Paid tier  
-**Optimizations:** 2s polling increment saves additional $12/month
+**Current Cost:** $138.40/month at 1M messages (1K users)  
+**Note:** All costs shown as raw per-million rates (no free tier deductions) for easy scaling  
+**Scaling:** Multiply operations by rate: Writes $5/M, Reads $0.50/M, Workers $0.30/M
 
