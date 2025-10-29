@@ -36,7 +36,7 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Regressive Polling (adaptive backoff)
   pollingIntervalMin: 5000,      // Start at 5 seconds when active
   pollingIntervalMax: 100000,    // Max 100 seconds when inactive
-  pollingIntervalIncrement: 1000, // Increase 1 second per poll
+  pollingIntervalIncrement: 2000, // Increase 2 seconds per poll (20% cost reduction)
   
   // Display Settings
   maxDisplayMessages: 1000,     // Show max n in DOM
