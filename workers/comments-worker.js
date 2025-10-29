@@ -163,56 +163,10 @@ async function handleGetComments(env, url) {
     try {
       let allComments = [];
       
-      // If fresh=true, bypass cache and read from individual KV keys (real-time)
-      if (fresh === 'true') {
-        console.log('[Comments] Fresh polling: reading from individual KV keys');
-        
-        // List ALL recent keys using cursor pagination
-        let cursor = undefined;
-        let keysToFetch = [];
-        
-        // Keep listing until we have enough keys or hit the end
-        do {
-          const list = await env.COMMENTS_KV.list({ 
-            prefix: 'comment:', 
-            limit: 1000,
-            cursor: cursor
-          });
-          
-          // Filter keys by timestamp (only fetch if timestamp > after)
-          for (const key of list.keys) {
-            const parts = key.name.split(':');
-            if (parts.length >= 2) {
-              const keyTimestamp = parseInt(parts[1]);
-              if (keyTimestamp > afterTimestamp) {
-                keysToFetch.push(key.name);
-              }
-            }
-          }
-          
-          cursor = list.cursor;
-          
-          // Stop if we have enough keys or list is complete
-          if (list.list_complete || keysToFetch.length >= 500) {
-            break;
-          }
-        } while (cursor);
-        
-        // Fetch the filtered keys
-        for (const keyName of keysToFetch) {
-          const data = await env.COMMENTS_KV.get(keyName);
-          if (data) {
-            try {
-              allComments.push(JSON.parse(data));
-            } catch (parseError) {
-              console.error('[Comments] Failed to parse:', keyName);
-            }
-          }
-        }
-        
-        console.log(`[Comments] Fresh polling: found ${allComments.length} new messages`);
-      } else {
-        // Use cache (existing behavior for non-fresh requests)
+      // REMOVED fresh=true path - always use cache (updated on every POST)
+      // This prevents expensive KV.list() operations even if old cached frontends send fresh=true
+      {
+        // Always use cache for efficiency
         const cacheKey = 'recent:comments';
         const cachedData = await env.COMMENTS_KV.get(cacheKey);
         
