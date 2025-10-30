@@ -252,28 +252,39 @@ export const useCommentsPolling = ({
   
   // Regressive polling with recursive setTimeout (dynamic interval)
   useEffect(() => {
-    if (!isLoading && !isMountedRef.current) {
-      isMountedRef.current = true;
-      
-      const poll = async () => {
-        await checkForNewComments();
-        increasePollingInterval(); // Slow down for next poll
-        
-        // Schedule next poll with current interval
-        pollingRef.current = setTimeout(poll, currentPollingInterval.current);
-      };
-      
-      // Start first poll
-      pollingRef.current = setTimeout(poll, currentPollingInterval.current);
-      
-      return () => {
-        if (pollingRef.current) {
-          clearTimeout(pollingRef.current);
-        }
-        isMountedRef.current = false;
-      };
+    // CRITICAL: Always clear any existing polling loop before starting new one
+    // This prevents orphaned loops when component re-renders
+    if (pollingRef.current) {
+      clearTimeout(pollingRef.current);
+      pollingRef.current = null;
     }
-  }, [isLoading, checkForNewComments, increasePollingInterval]);
+    
+    if (isLoading || isMountedRef.current) {
+      return; // Don't start if loading or already mounted
+    }
+    
+    isMountedRef.current = true;
+    
+    const poll = async () => {
+      await checkForNewComments();
+      increasePollingInterval(); // Slow down for next poll
+      
+      // Schedule next poll with current interval
+      pollingRef.current = setTimeout(poll, currentPollingInterval.current);
+    };
+    
+    // Start first poll
+    pollingRef.current = setTimeout(poll, currentPollingInterval.current);
+    
+    return () => {
+      // Cleanup on unmount
+      if (pollingRef.current) {
+        clearTimeout(pollingRef.current);
+        pollingRef.current = null;
+      }
+      isMountedRef.current = false;
+    };
+  }, []); // Empty array - run once on mount, cleanup on unmount only
   
   return {
     stopPolling: () => {
