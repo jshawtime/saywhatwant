@@ -156,7 +156,7 @@ export function useScrollPositionMemory(params: UseScrollPositionMemoryParams): 
         // User scrolled up - save current position
         const roundedPosition = Math.round(scrollTop);
         if (positions.current[currentView] !== roundedPosition) {
-          console.log(`[ScrollMemory] Saving ${currentView} position: ${roundedPosition} (scrollHeight: ${scrollHeight}, distFromBottom: ${distanceFromBottom})`);
+          // Silent save - excessive logging causes React errors
           positions.current[currentView] = roundedPosition;
           savePositions(positions.current);
         }
