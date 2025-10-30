@@ -9,7 +9,8 @@ export default function Home() {
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
   // Color: server has no value, client sets in useLayoutEffect (100% client-side)
-  const [userColor, setUserColor] = useState('');
+  // CRITICAL: Start with valid DEFAULT_COLOR to prevent hydration errors
+  const [userColor, setUserColor] = useState(DEFAULT_COLOR);
 
   // Load video preference from localStorage
   useEffect(() => {

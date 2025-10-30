@@ -5,7 +5,7 @@
  * Shows helpful guidance to user
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyledFilterIcon } from '@/components/UIElements';
 
 interface EmptyStateProps {
@@ -15,8 +15,9 @@ interface EmptyStateProps {
   onToggleFilter: () => void;
 }
 
-// Build timestamp - generated at build time for deployment verification
-const BUILD_TIMESTAMP = new Date().toISOString();
+// Build timestamp - set at build time
+// Using environment variable to avoid hydration issues
+const BUILD_TIMESTAMP = process.env.NEXT_PUBLIC_BUILD_TIME || 'unknown';
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   searchTerm,

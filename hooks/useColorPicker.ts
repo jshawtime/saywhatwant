@@ -22,7 +22,8 @@ interface UseColorPickerReturn {
 
 export function useColorPicker(initialColor?: string): UseColorPickerReturn {
   // Server has no value, client sets in useLayoutEffect (100% client-side)
-  const [userColor, setUserColor] = useState('');
+  // CRITICAL: Start with valid DEFAULT_COLOR to prevent hydration errors
+  const [userColor, setUserColor] = useState(DEFAULT_COLOR);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [randomizedColors, setRandomizedColors] = useState<string[]>([]);
   

@@ -260,10 +260,12 @@ export const useCommentsPolling = ({
     }
     
     if (isLoading || isMountedRef.current) {
+      console.log('[CommentsPolling] Waiting for initial load to complete...', { isLoading, isMounted: isMountedRef.current });
       return; // Don't start if loading or already mounted
     }
     
     isMountedRef.current = true;
+    console.log('[CommentsPolling] Starting polling loop with interval:', currentPollingInterval.current);
     
     const poll = async () => {
       await checkForNewComments();
@@ -284,7 +286,7 @@ export const useCommentsPolling = ({
       }
       isMountedRef.current = false;
     };
-  }, []); // Empty array - run once on mount, cleanup on unmount only
+  }, [isLoading]); // CRITICAL FIX: Re-run when isLoading changes from true to false!
   
   return {
     stopPolling: () => {

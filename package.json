@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "lsof -ti:3000,3001 | xargs kill -9 2>/dev/null; PORT=3000 next dev",
-    "build": "next build",
+    "build": "NEXT_PUBLIC_BUILD_TIME=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\") next build",
     "start": "next start",
     "lint": "next lint",
     "export": "next export",
