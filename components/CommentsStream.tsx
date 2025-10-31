@@ -972,7 +972,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             pending.forEach(messageId => {
               // Check if message is in the newComments or already in allComments
               const foundInNew = newComments.find((c: Comment) => c.id === messageId);
-              const foundInAll = allComments.find(c => c.id === messageId);
+              const foundInAll = initialMessages.find(c => c.id === messageId); // ✅ Check UNFILTERED messages (fixes timing race)
               
               if (foundInNew || foundInAll) {
                 // Found! Remove from pending

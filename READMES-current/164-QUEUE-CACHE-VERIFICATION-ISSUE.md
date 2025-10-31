@@ -556,3 +556,178 @@ async function handleAddToCache(request, env) {
 **Stress Test:** 29/29 (100%) with 3 automatic heals  
 **Combined Tests:** 45/45 (100%) across all scenarios  
 **Production Status:** Self-healing system active and working perfectly
+
+---
+
+## Issue: Poll Timing Race Causes False Negatives
+
+**Discovered:** October 31, 2025 20:34 UTC  
+**Test:** 29-tab stress test, message `1761942652187-vj3k31k4z`
+
+### The Problem
+
+**Self-healing failed to detect a message that was successfully posted:**
+
+**Browser console logs:**
+```
+[CommentSubmission] Server acknowledged: 1761942652187-vj3k31k4z
+[Self-Heal] Added to pending verification: 1761942652187-vj3k31k4z
+[Presence Polling] Polling for ALL messages after 1:30:52 PM
+[Presence Polling] URL: ...after=1761942652901&limit=200
+[Presence Polling] Response: 3 messages
+```
+
+**Timeline:**
+1. **20:30:52.187** - User POSTs message (timestamp: `1761942652187`)
+2. **20:30:52.???** - Worker saves message
+3. **20:30:52.901** - Frontend sets `lastPoll = 1761942652901`
+4. **Next poll** - Asks for messages `after=1761942652901`
+5. **Message excluded** - `1761942652187 < 1761942652901` (714ms difference!)
+
+**Result:** Message exists in Worker cache but excluded from poll query due to timestamp race.
+
+### Root Cause
+
+**The `lastPoll` query uses `after=X` which can exclude messages with timestamps slightly before `lastPoll`:**
+
+```javascript
+// Current self-healing logic
+const newComments = await fetchNewComments(); // Uses after=lastPoll
+pending.forEach(messageId => {
+  const found = newComments.find(c => c.id === messageId); // ❌ Only checks NEW comments
+  if (!found) triggerHeal(); // FALSE POSITIVE - message exists but excluded!
+});
+```
+
+**Why this happens:**
+- Network latency between POST and poll
+- Worker assigns timestamp before frontend sets `lastPoll`
+- Clock skew between client and server
+- Race window: typically < 1 second but enough to miss messages
+
+**Impact:**
+- Self-healing triggers unnecessary heal endpoint calls
+- Message IS in `allComments` (added optimistically on POST)
+- But self-healing doesn't check `allComments`, only `newComments`
+
+### The Solution
+
+**Check BOTH `newComments` AND `allComments` before triggering heal:**
+
+```javascript
+// Fixed self-healing logic
+const newComments = await fetchNewComments(); // Uses after=lastPoll
+pending.forEach(messageId => {
+  const foundInNew = newComments.find(c => c.id === messageId);
+  const foundInAll = allComments.find(c => c.id === messageId); // ✅ Check existing state
+  
+  if (foundInNew || foundInAll) {
+    // Found! Remove from pending
+  } else {
+    // Not found anywhere, NOW trigger heal
+  }
+});
+```
+
+**Why this works:**
+1. Message posted optimistically → added to `allComments` immediately
+2. Poll excludes message due to timing → not in `newComments`
+3. **But message IS in `allComments`** → found, removed from pending
+4. No unnecessary heal triggered ✅
+
+### Implementation Plan
+
+**File:** `saywhatwant/components/CommentsStream.tsx`
+
+**Current code (~line 215):**
+```typescript
+pending.forEach(messageId => {
+  const foundInNew = newComments.find((c: Comment) => c.id === messageId);
+  const foundInAll = allComments.find(c => c.id === messageId);
+  
+  if (foundInNew || foundInAll) {
+    // Found! Remove from pending
+    console.log('[Self-Heal] ✅ Message found in cache:', messageId);
+  } else {
+    // Not found, trigger self-heal
+    console.log('[Self-Heal] Message missing from cache, triggering heal:', messageId);
+    remaining.push(messageId);
+    
+    // Trigger self-heal endpoint
+    fetch(`${COMMENTS_CONFIG.apiUrl.replace('/comments', '/admin/add-to-cache')}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId })
+    });
+  }
+});
+```
+
+**Wait... this IS already checking both!** Let me verify the actual implementation...
+
+**Actual issue:** The code already checks `allComments` BUT `allComments` is the **filtered** list, not the full list!
+
+```typescript
+// allComments is AFTER filtering!
+const allComments = useMemo(() => {
+  return comments.filter(/* filter logic */);
+}, [comments, filters]);
+```
+
+**Real fix needed:** Check the **unfiltered** `comments` array:
+
+```typescript
+pending.forEach(messageId => {
+  const foundInNew = newComments.find((c: Comment) => c.id === messageId);
+  const foundInAll = comments.find(c => c.id === messageId); // ✅ Use comments, not allComments
+  
+  if (foundInNew || foundInAll) {
+    // Found!
+  } else {
+    // Trigger heal
+  }
+});
+```
+
+### Benefits
+
+✅ **No extra API calls** - `comments` already in memory  
+✅ **No extra costs** - just checking existing array  
+✅ **Fixes timing race** - doesn't rely on `after=` query  
+✅ **Simple** - one line change  
+✅ **Eliminates false positives** - only heals truly missing messages  
+
+### Expected Impact
+
+**Before fix:**
+- Timing races trigger unnecessary heal calls
+- Heal endpoint called even though message exists
+- Extra Worker overhead (minor, but unnecessary)
+
+**After fix:**
+- Only trigger heal when message truly missing
+- Handles timing races gracefully
+- Clean, efficient self-healing
+
+### Implementation
+
+**File:** `saywhatwant/components/CommentsStream.tsx` (line 975)
+
+**Changed:**
+```typescript
+const foundInAll = allComments.find(c => c.id === messageId); // ❌ Filtered array
+```
+
+**To:**
+```typescript
+const foundInAll = initialMessages.find(c => c.id === messageId); // ✅ Unfiltered array
+```
+
+**Why:** `allComments` is post-filter (from IndexedDB hook), but `initialMessages` contains ALL messages including the optimistically-added ones. This ensures timing races don't trigger false positives.
+
+---
+
+**Status:** ✅ FIXED - October 31, 2025  
+**Next:** Deploy to production and verify in next stress test
+
+---
