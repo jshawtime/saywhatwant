@@ -34,7 +34,7 @@ const EXEMPT_DOMAINS = [
 ];
 const MAX_COMMENT_LENGTH = 1000;
 const MAX_USERNAME_LENGTH = 16;  // Match frontend limit
-const CACHE_SIZE = 50;       // Keep last 50 comments in cache (sufficient for current volume)
+const CACHE_SIZE = 200;       // Keep last 200 comments in cache (increased from 50 for better coverage)
 
 /**
  * Generate a random RGB color using sophisticated range-based generation
