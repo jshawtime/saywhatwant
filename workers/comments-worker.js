@@ -129,6 +129,11 @@ export default {
     if (path === '/api/queue/fail' && request.method === 'POST') {
       return await handleFailMessage(request, env);
     }
+    
+    // POST /api/admin/add-to-cache - Self-healing: add missing message to cache
+    if (path === '/api/admin/add-to-cache' && request.method === 'POST') {
+      return await handleAddToCache(request, env);
+    }
 
     return new Response('Not found', { 
       status: 404, 
@@ -1299,6 +1304,69 @@ async function handleFailMessage(request, env) {
     
   } catch (error) {
     console.error('[Queue] Fail handler error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+/**
+ * POST /api/admin/add-to-cache
+ * Self-healing endpoint: Adds a missing message to cache from its individual KV key
+ * Triggered by frontend when polling doesn't find an acknowledged message
+ */
+async function handleAddToCache(request, env) {
+  try {
+    const body = await request.json();
+    const { messageId } = body;
+    
+    if (!messageId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'messageId required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('[Cache] Self-heal request for:', messageId);
+    
+    // Get message from individual KV key
+    const key = `comment:${messageId}`;
+    const data = await env.COMMENTS_KV.get(key);
+    
+    if (!data) {
+      console.log('[Cache] Message not found in KV:', messageId);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Message not found in KV' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Add to cache using existing function
+    const message = JSON.parse(data);
+    await addToCache(env, message);
+    
+    console.log('[Cache] ✅ Self-healed, added message to cache:', messageId);
+    
+    return new Response(JSON.stringify({ 
+      success: true,
+      message: 'Message added to cache'
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('[Cache] Self-heal error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message 
