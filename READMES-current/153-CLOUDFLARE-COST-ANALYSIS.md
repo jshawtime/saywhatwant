@@ -429,7 +429,10 @@ Browser → GET https://sww-comments.bootloaders.workers.dev/api/comments?after=
 
 ---
 # BELOW IS WHERE LANDED AS OF 29TH OCTOBER 2025
-Server costs are covered with 0.5% conversion to a $10 model purchase. Not including marketing costs.
+Server costs are covered with 
+0.5% conversion 
+to a $10 model purchase. 
+Not including marketing costs.
 
 
 ## Durable Objects vs Current KV Architecture
