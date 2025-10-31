@@ -911,12 +911,13 @@ async function handleGetPending(env, url) {
     let kvReads = 0;
     let kvWrites = 0;
     
-    // Use cache for speed (has recent 100 messages)
+    // Use cache for speed (has recent 200 messages)
     const cacheKey = 'recent:comments';
     const cachedData = await env.COMMENTS_KV.get(cacheKey);
     kvReads++; // Cache read
     
     let allMessages = [];
+    let cacheNeedsUpdate = false; // Track if we fixed any staleness
     
     if (cachedData) {
       const cached = JSON.parse(cachedData);
@@ -934,7 +935,7 @@ async function handleGetPending(env, url) {
             continue;
           }
           
-          // Only verify messages cache shows as 'pending' or undefined
+          // Only verify messages cache shows as 'pending', 'processing', or undefined
           // These might be stale and need authoritative check
           
           // Try NEW key format first
@@ -952,12 +953,41 @@ async function handleGetPending(env, url) {
           
           if (actualData) {
             const actualMsg = JSON.parse(actualData);
-            if (actualMsg.botParams?.status === 'pending') {
+            const actualStatus = actualMsg.botParams?.status;
+            
+            // SELF-HEALING: If cache is stale, fix it in-memory
+            if (cacheStatus !== actualStatus) {
+              console.log(`[Queue] Self-heal detected: ${msg.id} cache=${cacheStatus} actual=${actualStatus}`);
+              
+              // Find and update cache entry in-memory
+              const index = cached.findIndex(c => c.id === msg.id);
+              if (index >= 0) {
+                cached[index].botParams.status = actualStatus;
+                cached[index].botParams.processed = (actualStatus === 'complete' || actualStatus === 'failed');
+                cacheNeedsUpdate = true;
+              }
+            }
+            
+            // Add to pending list if actually pending
+            if (actualStatus === 'pending') {
               allMessages.push(actualMsg); // Use actual data, not cache!
             }
           }
         }
       }
+      
+      // Write updated cache if we fixed any staleness
+      if (cacheNeedsUpdate) {
+        try {
+          await env.COMMENTS_KV.put(cacheKey, JSON.stringify(cached));
+          kvWrites++;
+          console.log('[Queue] ✅ Cache self-healed, wrote updated cache');
+        } catch (error) {
+          console.error('[Queue] ⚠️  Self-heal write failed (will retry next poll):', error.message);
+          // Non-critical - will retry on next poll
+        }
+      }
+      
       console.log('[Queue] Scanned cache, verified', allMessages.length, 'actually pending');
     } else {
       console.log('[Queue] Cache empty!');
