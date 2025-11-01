@@ -1,5 +1,25 @@
 # 171: Frontend DO Migration Fix
 
+## Status: ✅ COMPLETED
+
+**Deployed:** 2025-11-01
+
+### What Was Fixed
+- Removed KV-era self-healing logic from frontend
+- Removed `/api/admin/add-to-cache` endpoint calls (404 errors gone)
+- Removed `pendingMessages` localStorage tracking
+- Removed obsolete `processed` field from `botParams`
+
+### Files Modified
+1. `modules/commentSubmission.ts` - Removed pending message tracking (lines 200-209)
+2. `components/CommentsStream.tsx` - Removed self-heal verification in polling loop (lines 970-1017)
+3. `components/CommentsStream.tsx` - Removed `processed = false` assignment (lines 1092-1096)
+
+### Result
+Frontend now cleanly interacts with Durable Objects worker with no unnecessary self-healing or cache management logic.
+
+---
+
 ## Problem Statement
 
 After migrating backend to Durable Objects, the frontend is still using KV-era self-healing logic:

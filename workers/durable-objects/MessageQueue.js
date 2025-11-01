@@ -136,16 +136,19 @@ export class MessageQueue {
   }
 
   /**
-   * GET /api/comments?since=timestamp - Get messages since timestamp
+   * GET /api/comments?after=timestamp&since=timestamp - Get messages after timestamp
+   * Supports both 'after' (frontend) and 'since' (legacy) parameters
    */
   async getMessages(url) {
     const messages = await this.loadMessages();
-    const since = parseInt(url.searchParams.get('since') || '0');
     
-    // Filter messages newer than 'since'
-    const filtered = messages.filter(m => m.timestamp > since);
+    // Support both 'after' (new) and 'since' (legacy) parameters
+    const after = parseInt(url.searchParams.get('after') || url.searchParams.get('since') || '0');
+    
+    // Filter messages newer than 'after'
+    const filtered = messages.filter(m => m.timestamp > after);
 
-    console.log('[MessageQueue] GET messages since', since, '→', filtered.length, 'results');
+    console.log('[MessageQueue] GET messages after', after, '→', filtered.length, 'results');
 
     return this.jsonResponse(filtered);
   }
