@@ -107,8 +107,9 @@ export class MessageQueue {
       replyTo: body.replyTo || null,
       botParams: {
         status: messageType === 'human' ? 'pending' : 'complete',
-        priority: body.priority || 5,
+        priority: body.botParams?.priority || body.priority || 5,
         entity,
+        ais: body.botParams?.ais || null,  // CRITICAL: Preserve ais (AI username:color override)
         claimedBy: null,
         claimedAt: null,
         completedAt: messageType === 'AI' ? timestamp : null
