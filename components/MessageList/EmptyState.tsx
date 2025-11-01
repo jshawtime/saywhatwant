@@ -32,6 +32,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           <>
             <div style={{ fontSize: '28px', marginBottom: '20px' }}>
               SAY WHAT YOU WANT...
+              <br />
+              IMPORTANT!! bookmark this page to save your conversations
             </div>
             <div style={{ fontSize: '11px', opacity: 0.5, marginTop: '10px' }}>
               Build: {BUILD_TIMESTAMP}
