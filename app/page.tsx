@@ -3,14 +3,34 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 import CommentsStream from '@/components/CommentsStream';
+import { MobileBlockScreen } from '@/components/MobileBlockScreen';
 import { getRandomColor, DEFAULT_COLOR, nineDigitToRgb } from '@/modules/colorSystem';
 
 export default function Home() {
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
   // Video visible by default on first visit
   const [showVideo, setShowVideo] = useState(true);
   // Color: server has no value, client sets in useLayoutEffect (100% client-side)
   // CRITICAL: Start with valid DEFAULT_COLOR to prevent hydration errors
   const [userColor, setUserColor] = useState(DEFAULT_COLOR);
+
+  // Detect mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      setIsMobile(width < 1024 || isTouch);
+    };
+    
+    checkMobile();
+    setMounted(true);
+    
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load video preference from localStorage
   useEffect(() => {
@@ -67,6 +87,12 @@ export default function Home() {
 
   // Convert userColor to RGB string for VideoPlayer
   const userColorRgb = nineDigitToRgb(userColor);
+
+  // Show mobile block if not mounted yet (prevent hydration mismatch)
+  if (!mounted) return null;
+  
+  // Show mobile block screen on mobile devices
+  if (isMobile) return <MobileBlockScreen />;
 
   return (
     <main className="flex h-screen h-dvh bg-black relative overflow-hidden">
