@@ -79,8 +79,9 @@ export class MessageQueue {
     const body = await request.json();
     const messages = await this.loadMessages();
 
-    // Generate clean message ID (pure random, no timestamp)
-    const id = this.generateId();
+    // Use frontend's ID if provided, otherwise generate new one
+    // Frontend sends short ID format (no timestamp) for optimistic updates
+    const id = body.id || this.generateId();
     const timestamp = Date.now();
 
     // Determine if this is a human or AI message

@@ -1,8 +1,9 @@
 # 171: Frontend DO Migration Fix
 
-## Status: ✅ COMPLETED
+## Status: ✅ COMPLETED & VERIFIED
 
-**Deployed:** 2025-11-01
+**Deployed:** 2025-11-01  
+**Final Verification:** 2025-11-01 23:20 UTC
 
 ### What Was Fixed
 
@@ -18,18 +19,96 @@
 - Result: User saw their own human message echoed back immediately after posting
 - Fixed by supporting both parameters in DO worker's `getMessages()` method
 
+**Phase 3: Fix AIS (AI Identity) Parameter Preservation** ⭐ CRITICAL FIX
+- **Issue**: AI responses appearing with default config color instead of URL-specified color
+- **Root Cause**: DO Worker was not preserving the `ais` field from `botParams` when storing messages
+- **Impact**: Filtered conversations (e.g., `ais=FourAgreements:080150203`) were broken
+- **Fix**: Modified `workers/durable-objects/MessageQueue.js` line 112 to preserve `ais` field
+- **Config Cleanup**: Removed ALL fallback colors from `config-aientities.json` (34 entries)
+  - Forces explicit color definition via `ais` parameter
+  - Fail loudly rather than silently falling back to defaults
+  - Makes debugging easier - no hidden fallbacks masking issues
+
 ### Files Modified
 1. `modules/commentSubmission.ts` - Removed pending message tracking
 2. `components/CommentsStream.tsx` - Removed self-heal verification in polling loop (50 lines)
 3. `components/CommentsStream.tsx` - Removed `processed = false` assignment
 4. `workers/durable-objects/MessageQueue.js` - Fixed query parameter handling (line 146)
+5. `workers/durable-objects/MessageQueue.js` - Preserve `ais` field in `botParams` (line 112)
+6. `hm-server-deployment/AI-Bot-Deploy/config-aientities.json` - Removed all fallback colors
 
-### Result
+### Result - System Fully Working ✅
 Frontend now cleanly interacts with Durable Objects worker:
 - No 404 errors ✅
 - No self-heal spam ✅
 - No duplicate messages ✅
 - Clean polling with correct timestamp filtering ✅
+- Correct AI identity (username + color) preservation ✅
+- No fallback color masking bugs ✅
+
+### Verification Test (2025-11-01 23:20 UTC)
+
+**Test URL:**
+```
+https://saywhatwant.app/#u=Human:203217080+FourAgreements:080150203&filteractive=true&mt=ALL&uis=Human:203217080&ais=FourAgreements:080150203&priority=5&entity=the-four-agreements
+```
+
+**PM2 Logs:**
+```
+[POLL 88] Found 1 pending
+[CLAIMED] Human:obmhu1bcpk:203217080 | the-four-agreements | "Hello"
+[OLLAMA] the-four-agreements-f16 → generating...
+[OLLAMA] ✓ 6 chars in 0.2s
+[POSTED] hkvb5cgt3o | FourAgreements:080150203 → Human:obmhu1bcpk | "Hello"
+[COMPLETE] Human:obmhu1bcpk:203217080 | hkvb5cgt3o FourAgreements:080150203 (0.5s total)
+```
+
+**Frontend Debug Export:**
+```
+FourAgreements [hkvb5cgt3o]
+  Time: 2025-11-01 23:19:48 UTC
+  Color: 080150203  ← CORRECT! (URL-specified blue, not default yellow)
+  ReplyTo: obmhu1bcpk
+  Text: Hello
+```
+
+**Analysis:**
+- ✅ Bot correctly reads `ais=FourAgreements:080150203` from `botParams`
+- ✅ Posts AI response with exact color `080150203` (blue)
+- ✅ PM2 logs show correct color in `[POSTED]` and `[COMPLETE]` lines
+- ✅ Frontend receives and displays AI message with correct color
+- ✅ No fallback to default config color (which was `200215080` yellow)
+- ✅ End-to-end flow working perfectly in 0.5 seconds
+
+### Before vs After
+
+**BEFORE (Phase 3 Fix):**
+```
+URL: ais=FourAgreements:080150203
+DO Storage: botParams: { entity, priority, status } ← ais field LOST
+PM2 Bot: Uses default config color 200215080 (yellow)
+Frontend: Shows AI message in WRONG color
+```
+
+**AFTER (Phase 3 Fix):**
+```
+URL: ais=FourAgreements:080150203
+DO Storage: botParams: { entity, priority, status, ais: "FourAgreements:080150203" } ← ais field PRESERVED
+PM2 Bot: Extracts ais, uses color 080150203 (blue)
+Frontend: Shows AI message in CORRECT color
+```
+
+### Current System State
+
+The DO-based message system is now **production-ready** with:
+1. **Strong consistency** - No race conditions, no cache sync issues
+2. **Fast processing** - 0.2-2.0s Ollama generation, 0.5s total end-to-end
+3. **Correct identity preservation** - AI username + color maintained in filtered conversations
+4. **Clean architecture** - No legacy KV self-healing, no fallback masking
+5. **Clear logging** - Concise PM2 logs with username:color tracing
+6. **Message-type filtering** - `mt=ALL` correctly shows both human and AI messages
+
+Ready for 30-tab stress test to verify scalability and reliability.
 
 ---
 
