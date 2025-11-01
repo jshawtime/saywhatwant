@@ -83,7 +83,8 @@ export const MobileBlockScreen: React.FC = () => {
               color: 'white',
               border: 'none',
               cursor: 'pointer',
-              minWidth: '200px'
+              minWidth: '200px',
+              width: '100%'
             }}
           >
             {copiedSite ? 'Copied!' : 'Copy HigherMind.ai'}
@@ -97,10 +98,11 @@ export const MobileBlockScreen: React.FC = () => {
               color: 'white',
               border: 'none',
               cursor: 'pointer',
-              minWidth: '200px'
+              minWidth: '200px',
+              width: '100%'
             }}
           >
-            {copiedUrl ? 'Copied!' : 'Continue the AI Conversation'}
+            {copiedUrl ? 'Copied!' : 'Continue the AI Conversation on Desktop'}
           </button>
         </div>
 
