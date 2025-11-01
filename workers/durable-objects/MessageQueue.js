@@ -86,13 +86,14 @@ export class MessageQueue {
     // Determine if this is a human or AI message
     const messageType = body['message-type'] || body.messageType || 'human';
     
-    // Extract entity from domain or body
+    // Extract entity - prioritize botParams.entity over domain extraction
     let entity = 'default';
-    if (body.domain) {
+    if (body.botParams?.entity) {
+      entity = body.botParams.entity;
+    } else if (body.domain) {
       const match = body.domain.match(/^([^.]+)\./);
       if (match) entity = match[1];
     }
-    if (body.entity) entity = body.entity;
 
     // Create message object
     const message = {
