@@ -4,12 +4,12 @@
  */
 
 export const COMMENTS_CONFIG = {
-  // PRODUCTION MODE - Using Cloudflare KV
+  // PRODUCTION MODE - Using Cloudflare Durable Objects
   useLocalStorage: false, // KEEP THIS FALSE - Production mode
   
-  // Cloud API endpoint (uses environment variable or fallback)
-  // Production: https://sww-comments.bootloaders.workers.dev/api/comments
-  apiUrl: process.env.NEXT_PUBLIC_COMMENTS_API || 'https://sww-comments.bootloaders.workers.dev/api/comments',
+  // Cloud API endpoint - Durable Objects Worker
+  // Production: https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments
+  apiUrl: process.env.NEXT_PUBLIC_COMMENTS_API || 'https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments',
   
   // Polling interval in milliseconds
   pollingInterval: 5000,

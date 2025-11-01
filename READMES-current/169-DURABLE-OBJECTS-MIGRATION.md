@@ -1,7 +1,39 @@
 # 169: Durable Objects Migration
 
 **Date**: 2025-11-01  
-**Status**: PLANNING - No code yet
+**Status**: PHASE 2 COMPLETE - Worker deployed, PM2 bot ready, frontend next
+
+---
+
+## ✅ Progress Update
+
+### Phase 1: Deploy DO Worker ✅ COMPLETE
+- **Worker URL**: `https://saywhatwant-do-worker.bootloaders.workers.dev`
+- All endpoints tested and working:
+  - ✅ POST `/api/comments` - Message storage (clean ID format)
+  - ✅ GET `/api/comments?since=X` - Retrieve messages
+  - ✅ GET `/api/queue/pending` - PM2 polling
+  - ✅ POST `/api/queue/claim` - Claim message
+  - ✅ POST `/api/queue/complete` - Mark complete
+- **Stress test**: 14 messages posted, all stored correctly
+- **State transitions**: `pending → processing → complete` verified
+
+### Phase 2: Rewrite PM2 Bot ✅ COMPLETE
+- **New bot**: `AI-Bot-Deploy/src/index-do-simple.ts`
+- Compiled successfully, ready to run
+- **Start script**: `./start-do-bot.sh`
+- **Code reduction**: ~70% less code (no self-healing needed)
+- Uses new DO endpoint: `https://saywhatwant-do-worker.bootloaders.workers.dev`
+
+### Phase 3: Update Frontend 🔄 NEXT
+- Update `API_URL` in `CommentsStream.tsx`
+- Test polling and message display
+- Verify no regressions
+
+### Phase 4: Stress Test & Cutover
+- Run 30-tab stress test
+- Verify 30/30 success rate
+- Deploy to production
 
 ---
 
