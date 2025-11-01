@@ -103,7 +103,7 @@ export class MessageQueue {
       username: body.username,
       color: body.color,
       domain: body.domain || 'saywhatwant.app',
-      messageType,
+      'message-type': messageType,  // Keep hyphenated format for frontend compatibility
       replyTo: body.replyTo || null,
       botParams: {
         status: messageType === 'human' ? 'pending' : 'complete',
@@ -162,7 +162,7 @@ export class MessageQueue {
 
     // Filter for pending human messages
     const pending = messages.filter(m => 
-      m.messageType === 'human' && 
+      m['message-type'] === 'human' && 
       m.botParams.status === 'pending'
     );
 
