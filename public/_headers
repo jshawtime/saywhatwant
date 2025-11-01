@@ -1,0 +1,69 @@
+# Cloudflare Pages Cache Control Headers
+# https://developers.cloudflare.com/pages/platform/headers/
+
+# Default: Cache static assets for 1 week
+/*
+  Cache-Control: public, max-age=604800
+
+# HTML files: NO browser cache (always get latest build)
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Root path: NO browser cache
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Next.js hashed files: Long cache (immutable)
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# JavaScript files: Moderate cache
+/*.js
+  Cache-Control: public, max-age=604800
+
+# CSS files: Moderate cache
+/*.css
+  Cache-Control: public, max-age=604800
+
+# Images: Long cache
+/*.jpg
+  Cache-Control: public, max-age=2592000
+/*.jpeg
+  Cache-Control: public, max-age=2592000
+/*.png
+  Cache-Control: public, max-age=2592000
+/*.gif
+  Cache-Control: public, max-age=2592000
+/*.webp
+  Cache-Control: public, max-age=2592000
+/*.svg
+  Cache-Control: public, max-age=2592000
+
+# Fonts: Long cache
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+/*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+/*.otf
+  Cache-Control: public, max-age=31536000, immutable
+
+# Audio files: Long cache
+/*.mp3
+  Cache-Control: public, max-age=2592000
+
+# JSON files: Short cache
+/*.json
+  Cache-Control: public, max-age=3600
+
+# CORS headers for all files
+/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
+
