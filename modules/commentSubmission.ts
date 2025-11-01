@@ -197,16 +197,7 @@ export function useCommentSubmission(
           // Server acknowledged - optimistic version is canonical
           console.log('[CommentSubmission] Server acknowledged:', savedComment.id);
           
-          // Add to pendingMessages for self-healing verification
-          try {
-            const pendingStr = localStorage.getItem('pendingMessages');
-            const pending: string[] = pendingStr ? JSON.parse(pendingStr) : [];
-            pending.push(savedComment.id);
-            localStorage.setItem('pendingMessages', JSON.stringify(pending));
-            console.log('[Self-Heal] Added to pending verification:', savedComment.id);
-          } catch (err) {
-            console.warn('[Self-Heal] Failed to add to pending:', err);
-          }
+          // Note: Durable Objects provide strong consistency, no self-healing needed
         }).catch(err => {
           console.error('[CommentSubmission] Error posting to cloud:', err);
           // Remove optimistic comment on error

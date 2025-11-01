@@ -967,54 +967,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const nowMinus6s = Date.now() - 6000;
         lastPollTimestamp.current = nowMinus6s;
         
-        // Self-healing: Check if any pending messages are now in cache
-        try {
-          const pendingStr = localStorage.getItem('pendingMessages');
-          if (pendingStr) {
-            const pending: string[] = JSON.parse(pendingStr);
-            const remaining: string[] = [];
-            
-            pending.forEach(messageId => {
-              // Check if message is in the newComments or already in allComments
-              const foundInNew = newComments.find((c: Comment) => c.id === messageId);
-              const foundInAll = initialMessages.find(c => c.id === messageId); // ✅ Check UNFILTERED messages (fixes timing race)
-              
-              if (foundInNew || foundInAll) {
-                // Found! Remove from pending
-                console.log('[Self-Heal] ✅ Message found in cache:', messageId);
-              } else {
-                // Not found, trigger self-heal
-                console.log('[Self-Heal] Message missing from cache, triggering heal:', messageId);
-                remaining.push(messageId);
-                
-                // Trigger self-heal endpoint
-                fetch(`${COMMENTS_CONFIG.apiUrl.replace('/comments', '/admin/add-to-cache')}`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ messageId })
-                }).then(res => {
-                  if (res.ok) {
-                    console.log('[Self-Heal] ✅ Cache heal successful for:', messageId);
-                  } else {
-                    console.error('[Self-Heal] ⚠️ Cache heal failed for:', messageId);
-                  }
-                }).catch(err => {
-                  console.error('[Self-Heal] ⚠️ Cache heal error:', err);
-                });
-              }
-            });
-            
-            // Update pending list (remove found messages)
-            if (remaining.length !== pending.length) {
-              localStorage.setItem('pendingMessages', JSON.stringify(remaining));
-              if (remaining.length === 0) {
-                console.log('[Self-Heal] All pending messages found, clearing pending list');
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('[Self-Heal] Error checking pending messages:', err);
-        }
+        // Note: Durable Objects provide strong consistency, no self-healing needed
         
         if (newComments.length > 0) {
           console.log(`[Presence Polling] Found ${newComments.length} new messages (updated lastPoll to ${new Date(nowMinus6s).toLocaleTimeString()})`);
@@ -1136,11 +1089,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       if (aiStateParam) params.ais = aiStateParam;
       // Note: nom is used above to slice context, don't send to bot
       
-      // Set processed = false for new bot messages
-      if (Object.keys(params).length > 0) {
-        params.processed = false;
-        console.log('[CommentsStream] Setting processed=false in botParams:', params);
-      }
+      // Note: 'processed' field removed - obsolete with Durable Objects
       
       return Object.keys(params).length > 0 ? params : undefined;
     })();
