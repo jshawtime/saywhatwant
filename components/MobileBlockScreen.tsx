@@ -84,8 +84,7 @@ export const MobileBlockScreen: React.FC = () => {
               border: 'none',
               cursor: 'pointer',
               minWidth: '200px',
-              width: '100%',
-              height: '60px'
+              width: '100%'
             }}
           >
             {copiedSite ? 'Copied!' : 'Copy HigherMind.ai'}
@@ -101,7 +100,7 @@ export const MobileBlockScreen: React.FC = () => {
               cursor: 'pointer',
               minWidth: '200px',
               width: '100%',
-              height: '60px'
+              minHeight: '80px'
             }}
           >
             {copiedUrl ? 'Copied!' : 'Continue the AI Conversation on Desktop'}
