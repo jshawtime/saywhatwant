@@ -5,18 +5,31 @@
 **Deployed:** 2025-11-01
 
 ### What Was Fixed
+
+**Phase 1: Remove KV Self-Healing Logic**
 - Removed KV-era self-healing logic from frontend
 - Removed `/api/admin/add-to-cache` endpoint calls (404 errors gone)
 - Removed `pendingMessages` localStorage tracking
 - Removed obsolete `processed` field from `botParams`
 
+**Phase 2: Fix Query Parameter Mismatch**
+- Frontend was using `?after=` but DO worker expected `?since=`
+- This caused worker to ignore the timestamp and return **ALL messages** on every poll
+- Result: User saw their own human message echoed back immediately after posting
+- Fixed by supporting both parameters in DO worker's `getMessages()` method
+
 ### Files Modified
-1. `modules/commentSubmission.ts` - Removed pending message tracking (lines 200-209)
-2. `components/CommentsStream.tsx` - Removed self-heal verification in polling loop (lines 970-1017)
-3. `components/CommentsStream.tsx` - Removed `processed = false` assignment (lines 1092-1096)
+1. `modules/commentSubmission.ts` - Removed pending message tracking
+2. `components/CommentsStream.tsx` - Removed self-heal verification in polling loop (50 lines)
+3. `components/CommentsStream.tsx` - Removed `processed = false` assignment
+4. `workers/durable-objects/MessageQueue.js` - Fixed query parameter handling (line 146)
 
 ### Result
-Frontend now cleanly interacts with Durable Objects worker with no unnecessary self-healing or cache management logic.
+Frontend now cleanly interacts with Durable Objects worker:
+- No 404 errors ✅
+- No self-heal spam ✅
+- No duplicate messages ✅
+- Clean polling with correct timestamp filtering ✅
 
 ---
 
