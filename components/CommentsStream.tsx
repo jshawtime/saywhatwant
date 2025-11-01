@@ -494,6 +494,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
     
     // Color is now loaded automatically by useColorPicker hook (checks localStorage first)
+    
+    // Focus message input on mount (not username)
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   }, []);
 
   // Video share events are now handled by useVideoSharing hook
