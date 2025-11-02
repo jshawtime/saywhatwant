@@ -106,6 +106,7 @@ export class MessageQueue {
       domain: body.domain || 'saywhatwant.app',
       'message-type': messageType,  // Keep hyphenated format for frontend compatibility
       replyTo: body.replyTo || null,
+      context: body.context || null,  // Pre-formatted conversation history from frontend
       botParams: {
         status: messageType === 'human' ? 'pending' : 'complete',
         priority: body.botParams?.priority || body.priority || 5,
