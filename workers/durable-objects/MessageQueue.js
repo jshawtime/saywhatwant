@@ -160,7 +160,7 @@ export class MessageQueue {
    */
   async getPending(url) {
     const messages = await this.loadMessages();
-    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const limit = parseInt(url.searchParams.get('limit') || '999999'); // No limit by default
 
     // Filter for pending human messages
     const pending = messages.filter(m => 
@@ -175,7 +175,7 @@ export class MessageQueue {
       return a.timestamp - b.timestamp;
     });
 
-    // Return top N
+    // Return top N (or all if limit is huge)
     const result = pending.slice(0, limit);
 
     console.log('[MessageQueue] GET pending:', result.length, 'of', pending.length, 'total');
