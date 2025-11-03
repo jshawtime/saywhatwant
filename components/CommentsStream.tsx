@@ -935,9 +935,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Focus any input (capture phase to catch all focuses)
     document.addEventListener('focus', handleActivity, true);
     
+    // Keystrokes (typing in message input, username, etc.)
+    document.addEventListener('keydown', handleActivity);
+    
     return () => {
       document.removeEventListener('click', handleActivity);
       document.removeEventListener('focus', handleActivity, true);
+      document.removeEventListener('keydown', handleActivity);
     };
   }, []);
 
@@ -976,9 +980,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         
         if (newComments.length > 0) {
           console.log(`[Presence Polling] Found ${newComments.length} new messages (updated lastPoll to ${new Date(nowMinus6s).toLocaleTimeString()})`);
-          
-          // Update activity time (new messages = user likely engaged)
-          lastActivityTime.current = Date.now();
           
           // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
           try {
