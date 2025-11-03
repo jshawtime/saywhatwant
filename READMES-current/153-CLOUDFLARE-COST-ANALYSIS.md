@@ -8,18 +8,18 @@
 
 ## 🎯 KEY METRIC: Breakeven Conversion
 
-**Cost per human message:** $0.000053
+**Cost per human message:** $0.000044
 
 **Messages per $10 product sale:**
 ```
-$10 / $0.000053 = 188,679 messages
+$10 / $0.000044 = 227,272 messages
 ```
 
 **What this means:**
-- You can serve **188,679 messages** for every $10 product sale to break even
+- You can serve **227,272 messages** for every $10 product sale to break even
 - Conversion rate needed depends on messages-per-user (unknown currently)
-- If users average 1,000 messages: need 0.53% conversion
-- If users average 10,000 messages: need 5.3% conversion
+- If users average 1,000 messages: need 0.44% conversion
+- If users average 10,000 messages: need 4.4% conversion
 - **Bottom line: Costs are SO LOW that you have massive margin for free users and marketing**
 
 ---
@@ -27,9 +27,9 @@ $10 / $0.000053 = 188,679 messages
 ## Executive Summary
 
 **At 1 million human messages per month (1000 active users):**
-- **Total cost: $53.14/month** (pure per-million rates, no free tier)
-- **Cost per human message: $0.000053** (includes AI reply)
-- **18,800 conversations per dollar**
+- **Total cost: $43.86/month** (pure per-million rates, no free tier)
+- **Cost per human message: $0.000044** (includes AI reply)
+- **22,800 conversations per dollar**
 - **Simple scaling:** Multiply operations by rate per million
 
 **System Architecture:**
@@ -91,9 +91,9 @@ $10 / $0.000053 = 188,679 messages
 - ~7.7 messages/second peak (10x)
 
 **User Behavior:**
-- Frontend polls: 5s initial → 100s max (regressive)
+- Frontend polls: 3s active (30s window) → 5s idle start → 1000s max (regressive)
 - PM2 bot polls: Every 3 seconds
-- Average: 2.31 frontend polls/min per user
+- Average: 1.85 frontend polls/min per user (with new aggressive idle backoff)
 
 ---
 
@@ -112,8 +112,8 @@ $10 / $0.000053 = 188,679 messages
 - **Total: 2 DO requests per message**
 
 **Frontend Polling:**
-- 1000 users × 2.31 polls/min × 43,200 min/month = 99,792,000 requests
-- **Total: 99.8M DO requests**
+- 1000 users × 1.85 polls/min × 43,200 min/month = 79,920,000 requests
+- **Total: 79.9M DO requests**
 
 **PM2 Bot Polling:**
 - 1 bot × 20 polls/min × 43,200 min/month = 864,000 requests
@@ -122,10 +122,10 @@ $10 / $0.000053 = 188,679 messages
 **Total DO Requests:**
 - Message POSTs: 2M
 - Status operations: 2M
-- Frontend polling: 99.8M
+- Frontend polling: 79.9M
 - PM2 polling: 0.86M
-- **Total: 104.66M DO requests/month**
-- **Cost: 104.66M / 1M × $0.15 = $15.70/month**
+- **Total: 84.76M DO requests/month**
+- **Cost: 84.76M / 1M × $0.15 = $12.71/month**
 
 ### DO Storage Operations ($1.00 per million)
 
@@ -147,8 +147,8 @@ $10 / $0.000053 = 188,679 messages
 - Per request: 0.01s × 0.125 GB = 0.00125 GB-seconds
 
 **Total Duration:**
-- 104.66M requests × 0.00125 GB-s = 130,825 GB-seconds
-- **Cost: 0.13M / 1M × $12.50 = $1.64/month**
+- 84.76M requests × 0.00125 GB-s = 105,950 GB-seconds
+- **Cost: 0.106M / 1M × $12.50 = $1.32/month**
 
 ### DO Storage ($0.20 per GB-month)
 
@@ -157,11 +157,11 @@ $10 / $0.000053 = 188,679 messages
 - **Cost: 2 GB × $0.20 = $0.40/month**
 
 **Total Durable Objects Cost:**
-- Requests: $15.70
+- Requests: $12.71
 - Storage ops: $4.00
-- Compute: $1.64
+- Compute: $1.32
 - Storage: $0.40
-- **Total: $21.74/month**
+- **Total: $18.43/month**
 
 ---
 
@@ -170,9 +170,9 @@ $10 / $0.000053 = 188,679 messages
 ### Worker Requests ($0.30 per million)
 
 **Frontend API Calls:**
-- 99.8M GET requests (polling)
+- 79.9M GET requests (polling)
 - 2M POST requests (messages)
-- **Total: 101.8M requests**
+- **Total: 81.9M requests**
 
 **PM2 API Calls:**
 - 0.86M GET /pending requests
@@ -181,8 +181,8 @@ $10 / $0.000053 = 188,679 messages
 - **Total: 2.86M requests**
 
 **Total Worker Requests:**
-- 104.66M requests/month
-- **Cost: 104.66M / 1M × $0.30 = $31.40/month**
+- 84.76M requests/month
+- **Cost: 84.76M / 1M × $0.30 = $25.43/month**
 
 ---
 
@@ -191,19 +191,19 @@ $10 / $0.000053 = 188,679 messages
 | Service | Operations | Cost | Rate |
 |---------|-----------|------|------|
 | **Durable Objects** | | | |
-| - DO Requests | 104.66M | $15.70 | $0.15/M |
+| - DO Requests | 84.76M | $12.71 | $0.15/M |
 | - Storage Ops | 4M | $4.00 | $1.00/M |
-| - Compute Duration | 0.13M GB-s | $1.64 | $12.50/M |
+| - Compute Duration | 0.106M GB-s | $1.32 | $12.50/M |
 | - Storage | 2 GB | $0.40 | $0.20/GB |
-| **Workers** | 104.66M | $31.40 | $0.30/M |
+| **Workers** | 84.76M | $25.43 | $0.30/M |
 | **Pages** | Frontend | $0.00 | Free |
-| **TOTAL** | | **$53.14/month** | |
+| **TOTAL** | | **$43.86/month** | |
 
 ### Cost Per Message
 
-**Total: $53.14 / 1,000,000 = $0.000053 per human message**
+**Total: $43.86 / 1,000,000 = $0.000044 per human message**
 
-**Or: 18,800 conversations per dollar**
+**Or: 22,800 conversations per dollar**
 
 ---
 
@@ -212,21 +212,21 @@ $10 / $0.000053 = 188,679 messages
 ### Simple Scaling Formula
 
 **Per 1M human messages:**
-- DO Requests: 104.66M × $0.15/M = $15.70
+- DO Requests: 84.76M × $0.15/M = $12.71
 - DO Storage Ops: 4M × $1.00/M = $4.00
-- DO Compute: 0.13M GB-s × $12.50/M = $1.64
+- DO Compute: 0.106M GB-s × $12.50/M = $1.32
 - DO Storage: 2 GB × $0.20 = $0.40
-- Workers: 104.66M × $0.30/M = $31.40
-- **Total: $53.14 per 1M human messages**
+- Workers: 84.76M × $0.30/M = $25.43
+- **Total: $43.86 per 1M human messages**
 
 ### Scaling Table
 
 | Scale | Users | Human Msgs | Total Msgs | DO Cost | Workers | Total Cost | Per Human Msg |
 |-------|-------|------------|------------|---------|---------|------------|---------------|
-| 1x | 1K | 1M | 2M | $21.74 | $31.40 | **$53.14** | **$0.000053** |
-| 10x | 10K | 10M | 20M | $217.40 | $314.00 | **$531.40** | **$0.000053** |
-| 100x | 100K | 100M | 200M | $2,174.00 | $3,140.00 | **$5,314.00** | **$0.000053** |
-| 1000x | 1M | 1B | 2B | $21,740.00 | $31,400.00 | **$53,140.00** | **$0.000053** |
+| 1x | 1K | 1M | 2M | $18.43 | $25.43 | **$43.86** | **$0.000044** |
+| 10x | 10K | 10M | 20M | $184.30 | $254.30 | **$438.60** | **$0.000044** |
+| 100x | 100K | 100M | 200M | $1,843.00 | $2,543.00 | **$4,386.00** | **$0.000044** |
+| 1000x | 1M | 1B | 2B | $18,430.00 | $25,430.00 | **$43,860.00** | **$0.000044** |
 
 **Perfect linear scaling - cost per message stays constant!**
 
@@ -243,8 +243,8 @@ $10 / $0.000053 = 188,679 messages
 - Complex self-healing required
 
 **Durable Objects:**
-- Cost: $53.14/month at 1M messages
-- **62% cheaper** ($85 savings)
+- Cost: $43.86/month at 1M messages
+- **68% cheaper** ($94.54 savings)
 - No race conditions (atomic operations)
 - No cache corruption
 - Strongly consistent
@@ -300,8 +300,8 @@ $10 / $0.000053 = 188,679 messages
 - 1,000 users
 - 0.5% conversion = 5 purchases/month
 - 5 × $10 = $50/month revenue
-- Cost: $53.14/month
-- **Profit: -$3.14/month** (break-even at 0.53% conversion)
+- Cost: $43.86/month
+- **Profit: $6.14/month** (12% margin)
 
 ### Scenario B: $10 Model Purchase (1% conversion)
 
@@ -309,8 +309,8 @@ $10 / $0.000053 = 188,679 messages
 - 1,000 users
 - 1% conversion = 10 purchases/month
 - 10 × $10 = $100/month revenue
-- Cost: $53.14/month
-- **Profit: $46.86/month** (88% margin)
+- Cost: $43.86/month
+- **Profit: $56.14/month** (56% margin)
 
 ### Scenario C: Scale to 10M messages
 
@@ -318,8 +318,8 @@ $10 / $0.000053 = 188,679 messages
 - 10,000 users
 - 1% conversion = 100 purchases/month
 - 100 × $10 = $1,000/month revenue
-- Cost: $531.40/month
-- **Profit: $468.60/month** (88% margin)
+- Cost: $438.60/month
+- **Profit: $561.40/month** (56% margin)
 
 ---
 
@@ -334,8 +334,8 @@ $10 / $0.000053 = 188,679 messages
 - CDN: $20-50/month
 - **Total: $165-420/month minimum**
 
-**vs Durable Objects: $53.14/month**
-**Savings: $110-370/month (68-88% cheaper)**
+**vs Durable Objects: $43.86/month**
+**Savings: $120-380/month (73-90% cheaper)**
 
 ### Firebase Realtime Database
 
@@ -344,8 +344,8 @@ $10 / $0.000053 = 188,679 messages
 - Writes: $1/GB uploaded
 - Estimated: $80-120/month
 
-**vs Durable Objects: $53.14/month**
-**Savings: $27-67/month (34-56% cheaper)**
+**vs Durable Objects: $43.86/month**
+**Savings: $36-76/month (45-63% cheaper)**
 
 ---
 
@@ -370,14 +370,14 @@ $10 / $0.000053 = 188,679 messages
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **Monthly Cost** | **$53.14/month** | 1M human messages, 1K users |
-| **Per Human Message** | **$0.000053** | Includes AI reply |
-| **Conversations/Dollar** | **18,800** | Complete interactions |
-| **DO Requests** | $15.70 | 104.66M @ $0.15/M |
+| **Monthly Cost** | **$43.86/month** | 1M human messages, 1K users |
+| **Per Human Message** | **$0.000044** | Includes AI reply |
+| **Conversations/Dollar** | **22,800** | Complete interactions |
+| **DO Requests** | $12.71 | 84.76M @ $0.15/M |
 | **DO Storage Ops** | $4.00 | 4M @ $1.00/M |
-| **DO Compute** | $1.64 | 0.13M GB-s @ $12.50/M |
+| **DO Compute** | $1.32 | 0.106M GB-s @ $12.50/M |
 | **DO Storage** | $0.40 | 2 GB @ $0.20/GB |
-| **Workers** | $31.40 | 104.66M @ $0.30/M |
+| **Workers** | $25.43 | 84.76M @ $0.30/M |
 | **Pages** | $0.00 | Free |
 | **Architecture** | **Durable Objects** | Atomic, consistent, fast |
 | **Success Rate** | **100%** | 30/30, 60/60 stress tests |
@@ -387,16 +387,16 @@ $10 / $0.000053 = 188,679 messages
 ### For Easy Scaling
 
 **Per 1M human messages:**
-- DO Requests: 104.66M × $0.15
+- DO Requests: 84.76M × $0.15
 - DO Storage Ops: 4M × $1.00
-- DO Compute: 0.13M GB-s × $12.50
+- DO Compute: 0.106M GB-s × $12.50
 - DO Storage: 2 GB × $0.20
-- Workers: 104.66M × $0.30
-- **Total: $53.14**
+- Workers: 84.76M × $0.30
+- **Total: $43.86**
 
 **Multiply by scale factor:**
-- 10M messages: 10 × $53.14 = $531.40
-- 100M messages: 100 × $53.14 = $5,314.00
+- 10M messages: 10 × $43.86 = $438.60
+- 100M messages: 100 × $43.86 = $4,386.00
 
 ---
 
