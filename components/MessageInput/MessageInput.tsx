@@ -119,7 +119,7 @@ interface MessageInputProps {
  *   userColorRgb={userColorRgb}
  *   isSubmitting={isSubmitting}
  *   error={error}
- *   maxLength={201}
+ *   maxLength={240}
  *   onInputChange={setInputText}
  *   onSubmit={handleSubmit}
  *   inputRef={inputRef}

@@ -21,7 +21,7 @@ import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 
 // Configuration constants
 const INITIAL_LOAD_COUNT = MESSAGE_SYSTEM_CONFIG.cloudInitialLoad; // ALWAYS 0 - presence-based
-const MAX_COMMENT_LENGTH = 201;
+const MAX_COMMENT_LENGTH = 240;
 const POLL_BATCH_LIMIT = MESSAGE_SYSTEM_CONFIG.cloudPollBatch;
 // Simplified polling config (active/idle only)
 const POLLING_ACTIVE = MESSAGE_SYSTEM_CONFIG.pollingIntervalActive;

@@ -25,7 +25,7 @@
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
 | `id` | string | Unique identifier | `"1726800123456-xyz789abc"` |
-| `text` | string | Message content (max 201 chars) | `"Hello world"` |
+| `text` | string | Message content (max 240 chars) | `"Hello world"` |
 | `timestamp` | number | Unix timestamp in ms | `1726800123456` |
 | `username` | string | User's display name (max 16 chars) | `"god"` |
 | `color` | string | User's chosen RGB color | `"rgb(185, 142, 40)"` |
@@ -87,7 +87,7 @@
 
 ## Storage Statistics
 
-- **Max Comment Length**: 201 characters
+- **Max Comment Length**: 240 characters
 - **Max Username Length**: 16 characters
 - **Cache Size**: Last 1000 comments
 - **KV List Limit**: 1000 keys per request

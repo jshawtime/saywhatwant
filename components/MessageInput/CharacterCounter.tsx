@@ -32,7 +32,7 @@ interface CharacterCounterProps {
  * @example
  * <CharacterCounter
  *   current={50}
- *   max={201}
+ *   max={240}
  *   userColor="rgb(255, 165, 0)"
  * />
  */

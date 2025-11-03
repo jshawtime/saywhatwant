@@ -38,7 +38,7 @@ Complete audit of message flow from user posting a message through AI response a
 
 **Potential Issues:**
 - [ ] Empty message submitted
-- [ ] Message too long (>201 chars)
+- [ ] Message too long (>240 chars)
 - [ ] Network offline
 - [x] **Timestamp mismatch** (ID timestamp ≠ message timestamp) - FIXED in 145
 
