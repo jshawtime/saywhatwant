@@ -922,29 +922,6 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     return cappedInterval;
   }, []);
   
-  // Listen for user activity to update lastActivityTime
-  useEffect(() => {
-    const handleActivity = () => {
-      lastActivityTime.current = Date.now();
-      console.log('[Activity] User activity detected, polling will be fast for 30s');
-    };
-    
-    // Click anywhere in the app
-    document.addEventListener('click', handleActivity);
-    
-    // Focus any input (capture phase to catch all focuses)
-    document.addEventListener('focus', handleActivity, true);
-    
-    // Keystrokes (typing in message input, username, etc.)
-    document.addEventListener('keydown', handleActivity);
-    
-    return () => {
-      document.removeEventListener('click', handleActivity);
-      document.removeEventListener('focus', handleActivity, true);
-      document.removeEventListener('keydown', handleActivity);
-    };
-  }, []);
-
   // Check for new comments - presence-based (only messages since page load)
   const checkForNewComments = useCallback(async () => {
       try {
@@ -1040,14 +1017,42 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches, isFilterMode, matchesCurrentFilter]);
   
   // Use the modular polling system
-  // Simplified polling - active (3s) vs idle (regressive 5s → 300s)
-  useCommentsPolling({
+  // Simplified polling - active (3s) vs idle (regressive 5s → 1000s)
+  const { interruptAndReschedule } = useCommentsPolling({
     checkForNewComments,
     isLoading,
     getPollingInterval,
     useLocalStorage: COMMENTS_CONFIG.useLocalStorage,
     storageKey: COMMENTS_STORAGE_KEY
   });
+
+  // Listen for user activity to update lastActivityTime and interrupt polling
+  useEffect(() => {
+    const handleActivity = () => {
+      lastActivityTime.current = Date.now();
+      console.log('[Activity] User activity detected, polling will be fast for 30s');
+      
+      // Interrupt current poll and reschedule immediately at fast rate
+      if (interruptAndReschedule) {
+        interruptAndReschedule();
+      }
+    };
+    
+    // Click anywhere in the app
+    document.addEventListener('click', handleActivity);
+    
+    // Focus any input (capture phase to catch all focuses)
+    document.addEventListener('focus', handleActivity, true);
+    
+    // Keystrokes (typing in message input, username, etc.)
+    document.addEventListener('keydown', handleActivity);
+    
+    return () => {
+      document.removeEventListener('click', handleActivity);
+      document.removeEventListener('focus', handleActivity, true);
+      document.removeEventListener('keydown', handleActivity);
+    };
+  }, [interruptAndReschedule]);
 
   // Handle comment submission (using the new submission system)
   const handleSubmit = async (e: React.FormEvent) => {

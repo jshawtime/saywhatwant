@@ -240,6 +240,7 @@ export const useCommentsPolling = ({
 }) => {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(false);
+  const pollFunctionRef = useRef<(() => Promise<void>) | null>(null);
   
   // Use storage listener for localStorage mode
   useStorageListener(
@@ -277,6 +278,9 @@ export const useCommentsPolling = ({
       pollingRef.current = setTimeout(poll, nextInterval);
     };
     
+    // Store poll function reference for interrupt capability
+    pollFunctionRef.current = poll;
+    
     // Start first poll
     pollingRef.current = setTimeout(poll, initialInterval);
     
@@ -287,6 +291,7 @@ export const useCommentsPolling = ({
         pollingRef.current = null;
       }
       isMountedRef.current = false;
+      pollFunctionRef.current = null;
     };
   }, [isLoading]); // CRITICAL FIX: Re-run when isLoading changes from true to false!
   
@@ -295,6 +300,20 @@ export const useCommentsPolling = ({
       if (pollingRef.current) {
         clearTimeout(pollingRef.current);
         pollingRef.current = null;
+      }
+    },
+    // NEW: Interrupt current poll and reschedule immediately
+    interruptAndReschedule: () => {
+      // Cancel current timeout
+      if (pollingRef.current) {
+        clearTimeout(pollingRef.current);
+        pollingRef.current = null;
+      }
+      
+      // Immediately poll and reschedule
+      if (pollFunctionRef.current) {
+        console.log('[Polling] Activity detected - interrupting and rescheduling immediately');
+        pollFunctionRef.current();
       }
     }
   };
