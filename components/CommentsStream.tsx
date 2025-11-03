@@ -218,6 +218,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
   const lastPollTimestamp = useRef<number>(0); // Track latest message timestamp for efficient polling
   const lastActivityTime = useRef<number>(Date.now()); // Track last user activity for active/idle polling
+  const idlePollCount = useRef<number>(0); // Track number of idle polls for regressive backoff
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Polling timeout handle
   
   // Message type scroll restoration (still needed for Humans/Entities toggle)
@@ -906,13 +907,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     // Active: Recent activity (last 30s) - user is engaged
     if (timeSinceActivity < ACTIVE_WINDOW) {
+      idlePollCount.current = 0;  // Reset idle counter
       return POLLING_ACTIVE;  // 3s polling
     }
     
-    // Idle: Regressive backoff (5s → 300s)
-    const idleSeconds = (timeSinceActivity - ACTIVE_WINDOW) / 1000;
-    const regressiveInterval = POLLING_MIN + (idleSeconds * POLLING_INCREMENT);
-    return Math.min(regressiveInterval, POLLING_MAX);
+    // Idle: Regressive backoff (5s → 1000s)
+    // Calculate interval based on poll count, not elapsed time
+    const interval = POLLING_MIN + (idlePollCount.current * POLLING_INCREMENT);
+    const cappedInterval = Math.min(interval, POLLING_MAX);
+    
+    // Increment counter for next poll
+    idlePollCount.current++;
+    
+    return cappedInterval;
   }, []);
   
   // Listen for user activity to update lastActivityTime

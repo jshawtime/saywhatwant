@@ -38,8 +38,8 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Simplified Polling (active/idle only)
   pollingIntervalActive: 3000,   // 3s when active (user engaged)
   pollingIntervalMin: 5000,      // 5s idle start (regressive beginning)
-  pollingIntervalMax: 300000,    // Max 300 seconds (5 minutes) when inactive
-  pollingIntervalIncrement: 2000, // Increase 2 seconds per poll
+  pollingIntervalMax: 1000000,   // Max 1000 seconds (~16.7 minutes) when inactive
+  pollingIntervalIncrement: 5000, // Increase 5 seconds per poll (reaches max faster)
   activeWindow: 30000,           // 30s activity window
   
   // Display Settings
