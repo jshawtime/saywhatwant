@@ -508,27 +508,59 @@ useEffect(() => {
 
 ## Edge Cases & Expected Behavior
 
-### Case 1: User Reading History (Scrolling Only)
+### Case 1: User Opens App, No Interaction
+**Behavior:** Active polling (3s) for 30 seconds from mount  
+**Rationale:** Opening the app initializes `lastActivityTime` to mount time  
+**Timeline:**
+```
+0:00  App opens → lastActivityTime = Date.now()
+0:03  Poll #1 (active: 3s)
+0:06  Poll #2 (active: 6s)
+...
+0:27  Poll #9 (active: 27s)
+0:30  Poll #10 (active: 30s) ← Last active poll
+0:33  Poll #11 (idle: 5s interval)
+0:38  Poll #12 (idle: 7s interval)
+...
+```
+**Why This Makes Sense:**
+- User intent: If someone opens the app, they're probably going to interact
+- Better UX: Fresh content appears quickly
+- Cost is minimal: 10 polls × 3s = 30 seconds
+- Self-correcting: If they really are AFK, regressive kicks in at 30s
+- Most common case: User opens → reads → clicks → sends message (all within 30s)
+
+**Alternative Approach (Not Recommended):**
+- Could initialize `lastActivityTime = 0` instead of `Date.now()`
+- Would start in idle immediately
+- Saves polling if user opens and leaves
+- BUT: Worse UX if user is actually engaged
+
+**Verdict:** ✅ Correct - opening = activity (current behavior is optimal)
+
+---
+
+### Case 2: User Reading History (Scrolling Only)
 **Behavior:** Polling slows down after 30s  
 **Rationale:** User reading old messages, not waiting for new ones  
 **Verdict:** ✅ Correct - saves polling cost
 
-### Case 2: User Typing (Focus Active)
+### Case 3: User Typing (Focus Active)
 **Behavior:** Polling stays at 3s while typing  
 **Rationale:** Focus event triggers activity  
 **Verdict:** ✅ Correct - user engaged
 
-### Case 3: AI Reply Takes 40s
+### Case 4: AI Reply Takes 40s
 **Behavior:** 10 fast polls (30s), then 5s poll at 35s, 7s poll at 42s  
 **Rationale:** Reply caught within 12s of arriving  
 **Verdict:** ✅ Acceptable - rare case, still works
 
-### Case 4: User Clicks Repeatedly
+### Case 5: User Clicks Repeatedly
 **Behavior:** Activity timer keeps resetting, stays at 3s  
 **Rationale:** User clearly engaged  
 **Verdict:** ✅ Correct - desired behavior
 
-### Case 5: User AFK (Away From Keyboard)
+### Case 6: User AFK (Away From Keyboard)
 **Behavior:** Regressive kicks in at 30s, slows to 5 mins  
 **Rationale:** No activity detected  
 **Verdict:** ✅ Perfect - maximum cost savings
