@@ -228,15 +228,13 @@ export const useStorageListener = (
 export const useCommentsPolling = ({
   checkForNewComments,
   isLoading,
-  currentPollingInterval,
-  increasePollingInterval,
+  getPollingInterval,
   useLocalStorage,
   storageKey
 }: {
   checkForNewComments: () => Promise<void>;
   isLoading: boolean;
-  currentPollingInterval: React.MutableRefObject<number>;
-  increasePollingInterval: () => void;
+  getPollingInterval: () => number;
   useLocalStorage: boolean;
   storageKey: string;
 }) => {
@@ -250,7 +248,7 @@ export const useCommentsPolling = ({
     useLocalStorage && !isLoading
   );
   
-  // Regressive polling with recursive setTimeout (dynamic interval)
+  // Simplified polling with dynamic interval calculation
   useEffect(() => {
     // CRITICAL: Always clear any existing polling loop before starting new one
     // This prevents orphaned loops when component re-renders
@@ -265,18 +263,22 @@ export const useCommentsPolling = ({
     }
     
     isMountedRef.current = true;
-    console.log('[CommentsPolling] Starting polling loop with interval:', currentPollingInterval.current);
+    const initialInterval = getPollingInterval();
+    console.log('[CommentsPolling] Starting polling loop with interval:', initialInterval);
     
     const poll = async () => {
       await checkForNewComments();
-      increasePollingInterval(); // Slow down for next poll
       
-      // Schedule next poll with current interval
-      pollingRef.current = setTimeout(poll, currentPollingInterval.current);
+      // Calculate next interval dynamically
+      const nextInterval = getPollingInterval();
+      console.log(`[Polling] Next poll in ${nextInterval / 1000}s`);
+      
+      // Schedule next poll
+      pollingRef.current = setTimeout(poll, nextInterval);
     };
     
     // Start first poll
-    pollingRef.current = setTimeout(poll, currentPollingInterval.current);
+    pollingRef.current = setTimeout(poll, initialInterval);
     
     return () => {
       // Cleanup on unmount

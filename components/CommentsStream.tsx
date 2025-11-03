@@ -23,10 +23,12 @@ import { MESSAGE_SYSTEM_CONFIG } from '@/config/message-system';
 const INITIAL_LOAD_COUNT = MESSAGE_SYSTEM_CONFIG.cloudInitialLoad; // ALWAYS 0 - presence-based
 const MAX_COMMENT_LENGTH = 201;
 const POLL_BATCH_LIMIT = MESSAGE_SYSTEM_CONFIG.cloudPollBatch;
-// Regressive polling config
+// Simplified polling config (active/idle only)
+const POLLING_ACTIVE = MESSAGE_SYSTEM_CONFIG.pollingIntervalActive;
 const POLLING_MIN = MESSAGE_SYSTEM_CONFIG.pollingIntervalMin;
 const POLLING_MAX = MESSAGE_SYSTEM_CONFIG.pollingIntervalMax;
 const POLLING_INCREMENT = MESSAGE_SYSTEM_CONFIG.pollingIntervalIncrement;
+const ACTIVE_WINDOW = MESSAGE_SYSTEM_CONFIG.activeWindow;
 const MAX_USERNAME_LENGTH = 16;
 const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
 const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
@@ -215,8 +217,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const pageLoadTimestamp = useRef<number>(0); // Initialize to 0, set after mount
   const lastPollTimestamp = useRef<number>(0); // Track latest message timestamp for efficient polling
-  const currentPollingInterval = useRef<number>(POLLING_MIN); // Regressive polling interval
-  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Regressive polling timeout handle
+  const lastActivityTime = useRef<number>(Date.now()); // Track last user activity for active/idle polling
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Polling timeout handle
   
   // Message type scroll restoration (still needed for Humans/Entities toggle)
   // NOTE: This hook will be deprecated once we fully remove the old toggle system
@@ -897,44 +899,40 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     }
   }, [filterUsernames, filterWords, userColor]);
 
-  // Regressive polling: increase interval after each poll
-  const increasePollingInterval = useCallback(() => {
-    const current = currentPollingInterval.current;
-    const newInterval = Math.min(current + POLLING_INCREMENT, POLLING_MAX);
-    currentPollingInterval.current = newInterval;
-    console.log(`[Regressive Polling] Next poll in ${newInterval / 1000}s`);
-  }, []);
-  
-  // Reset polling interval to minimum (on activity)
-  const resetPollingInterval = useCallback(() => {
-    const wasSlowed = currentPollingInterval.current > POLLING_MIN;
-    currentPollingInterval.current = POLLING_MIN;
-    if (wasSlowed) {
-      console.log(`[Regressive Polling] Reset to ${POLLING_MIN / 1000}s (activity detected)`);
+  // Calculate polling interval based on time since last activity (pure function)
+  const getPollingInterval = useCallback((): number => {
+    const now = Date.now();
+    const timeSinceActivity = now - lastActivityTime.current;
+    
+    // Active: Recent activity (last 30s) - user is engaged
+    if (timeSinceActivity < ACTIVE_WINDOW) {
+      return POLLING_ACTIVE;  // 3s polling
     }
+    
+    // Idle: Regressive backoff (5s → 300s)
+    const idleSeconds = (timeSinceActivity - ACTIVE_WINDOW) / 1000;
+    const regressiveInterval = POLLING_MIN + (idleSeconds * POLLING_INCREMENT);
+    return Math.min(regressiveInterval, POLLING_MAX);
   }, []);
   
-  // Listen for user activity to reset polling
+  // Listen for user activity to update lastActivityTime
   useEffect(() => {
     const handleActivity = () => {
-      resetPollingInterval();
+      lastActivityTime.current = Date.now();
+      console.log('[Activity] User activity detected, polling will be fast for 30s');
     };
     
     // Click anywhere in the app
     document.addEventListener('click', handleActivity);
     
-    // Scroll anywhere
-    document.addEventListener('scroll', handleActivity, { passive: true });
-    
-    // Focus any input
+    // Focus any input (capture phase to catch all focuses)
     document.addEventListener('focus', handleActivity, true);
     
     return () => {
       document.removeEventListener('click', handleActivity);
-      document.removeEventListener('scroll', handleActivity);
       document.removeEventListener('focus', handleActivity, true);
     };
-  }, [resetPollingInterval]);
+  }, []);
 
   // Check for new comments - presence-based (only messages since page load)
   const checkForNewComments = useCallback(async () => {
@@ -972,8 +970,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         if (newComments.length > 0) {
           console.log(`[Presence Polling] Found ${newComments.length} new messages (updated lastPoll to ${new Date(nowMinus6s).toLocaleTimeString()})`);
           
-          // Reset polling interval (activity detected - new messages!)
-          resetPollingInterval();
+          // Update activity time (new messages = user likely engaged)
+          lastActivityTime.current = Date.now();
           
           // Save new messages to IndexedDB (PRESENCE-BASED: Store your history)
           try {
@@ -1034,12 +1032,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches, isFilterMode, matchesCurrentFilter]);
   
   // Use the modular polling system
-  // Regressive polling - dynamic interval that increases when inactive
+  // Simplified polling - active (3s) vs idle (regressive 5s → 300s)
   useCommentsPolling({
     checkForNewComments,
     isLoading,
-    currentPollingInterval,
-    increasePollingInterval,
+    getPollingInterval,
     useLocalStorage: COMMENTS_CONFIG.useLocalStorage,
     storageKey: COMMENTS_STORAGE_KEY
   });
@@ -1107,8 +1104,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     await submitComment(inputText, username, userColor, flashUsername, contextArray, aiStateParam, botParams);
     
-    // Reset polling interval (user activity!)
-    resetPollingInterval();
+    // Update activity time (user sent a message!)
+    lastActivityTime.current = Date.now();
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)
