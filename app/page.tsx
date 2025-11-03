@@ -17,19 +17,17 @@ export default function Home() {
   // CRITICAL: Start with valid DEFAULT_COLOR to prevent hydration errors
   const [userColor, setUserColor] = useState(DEFAULT_COLOR);
 
-  // Detect mobile devices
+  // Detect mobile devices (touch-only, no width check)
   useEffect(() => {
     const checkMobile = () => {
-      const width = window.innerWidth;
       const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      setIsMobile(width < 1024 || isTouch);
+      setIsMobile(isTouch);
     };
     
     checkMobile();
     setMounted(true);
     
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    // No resize listener needed (touch capability doesn't change)
   }, []);
 
   // Load video preference from localStorage
