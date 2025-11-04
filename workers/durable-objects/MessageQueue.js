@@ -1,15 +1,17 @@
 /**
  * MessageQueue Durable Object
  * 
- * Single-threaded message queue with in-memory state and automatic persistence.
- * Handles all message operations: POST, GET, claim, complete.
+ * Per-conversation storage model (like conversation-logs)
+ * Each conversation stored in separate key with 300-message rolling window
+ * 
+ * Key format: conv:{humanUsername}:{humanColor}:{aiUsername}:{aiColor}
+ * Example: conv:Human:080150227:TheEternal:080175220
  */
 
 export class MessageQueue {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.messages = null; // Lazy loaded from storage
   }
 
   /**
@@ -63,23 +65,10 @@ export class MessageQueue {
   }
 
   /**
-   * Load messages from storage (lazy loaded, cached in memory)
+   * Build conversation key from username:color pairs
    */
-  async loadMessages() {
-    if (this.messages === null) {
-      this.messages = await this.state.storage.get('messages') || [];
-      console.log('[MessageQueue] 💾 STORAGE READ -', this.messages.length, 'messages loaded');
-    } else {
-      console.log('[MessageQueue] ⚡ CACHE HIT -', this.messages.length, 'messages (no storage read)');
-    }
-    return this.messages;
-  }
-
-  /**
-   * Save messages to storage
-   */
-  async saveMessages() {
-    await this.state.storage.put('messages', this.messages);
+  getConversationKey(humanUsername, humanColor, aiUsername, aiColor) {
+    return `conv:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}`;
   }
 
   /**
@@ -87,17 +76,12 @@ export class MessageQueue {
    */
   async postMessage(request) {
     const body = await request.json();
-    const messages = await this.loadMessages();
 
-    // Use frontend's ID if provided, otherwise generate new one
-    // Frontend sends short ID format (no timestamp) for optimistic updates
     const id = body.id || this.generateId();
     const timestamp = Date.now();
-
-    // Determine if this is a human or AI message
     const messageType = body['message-type'] || body.messageType || 'human';
     
-    // Extract entity - prioritize botParams.entity over domain extraction
+    // Extract entity
     let entity = 'default';
     if (body.botParams?.entity) {
       entity = body.botParams.entity;
@@ -105,6 +89,25 @@ export class MessageQueue {
       const match = body.domain.match(/^([^.]+)\./);
       if (match) entity = match[1];
     }
+
+    // Determine AI username/color from botParams.ais
+    const ais = body.botParams?.ais;
+    let aiUsername = entity;
+    let aiColor = 'default';
+    
+    if (ais) {
+      const [aisUser, aisCol] = ais.split(':');
+      if (aisUser) aiUsername = aisUser;
+      if (aisCol) aiColor = aisCol;
+    }
+
+    // Build conversation key
+    const conversationKey = this.getConversationKey(
+      body.username,
+      body.color,
+      aiUsername,
+      aiColor
+    );
 
     // Create message object
     const message = {
@@ -114,54 +117,60 @@ export class MessageQueue {
       username: body.username,
       color: body.color,
       domain: body.domain || 'saywhatwant.app',
-      'message-type': messageType,  // Keep hyphenated format for frontend compatibility
+      'message-type': messageType,
       replyTo: body.replyTo || null,
-      // Note: context NOT stored (rebuilt server-side to avoid redundancy)
       botParams: {
         status: messageType === 'human' ? 'pending' : 'complete',
         priority: body.botParams?.priority || body.priority || 5,
         entity,
-        ais: body.botParams?.ais || null,  // CRITICAL: Preserve ais (AI username:color override)
+        ais: body.botParams?.ais || null,
         claimedBy: null,
         claimedAt: null,
         completedAt: messageType === 'AI' ? timestamp : null
       }
     };
 
-    // Add to front of array
-    messages.unshift(message);
+    // Get existing conversation
+    const conversation = await this.state.storage.get(conversationKey) || [];
 
-    // Keep only last 50 messages (128KB DO storage limit)
-    if (messages.length > 50) {
-      messages.length = 50;
+    // Add message to front (newest first)
+    conversation.unshift(message);
+
+    // Keep only last 300 messages (rolling window)
+    if (conversation.length > 300) {
+      conversation.length = 300;
     }
 
-    // Save to storage
-    await this.saveMessages();
+    // Save conversation
+    await this.state.storage.put(conversationKey, conversation);
 
-    console.log('[MessageQueue] Posted message:', id, messageType);
+    console.log('[MessageQueue] Posted to', conversationKey, '→', conversation.length, 'messages total');
 
-    return this.jsonResponse({ 
-      id, 
-      timestamp,
-      status: 'success' 
-    });
+    return this.jsonResponse({ id, timestamp, status: 'success' });
   }
 
   /**
-   * GET /api/comments?after=timestamp&since=timestamp - Get messages after timestamp
-   * Supports both 'after' (frontend) and 'since' (legacy) parameters
+   * GET /api/comments?after=timestamp - Get messages after timestamp
+   * Returns messages from ALL conversations
    */
   async getMessages(url) {
-    const messages = await this.loadMessages();
-    
-    // Support both 'after' (new) and 'since' (legacy) parameters
     const after = parseInt(url.searchParams.get('after') || url.searchParams.get('since') || '0');
     
+    // Get all conversation keys
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    // Load all conversations in parallel
+    const conversations = await Promise.all(
+      Array.from(keys.keys()).map(key => this.state.storage.get(key))
+    );
+    
+    // Flatten to all messages
+    const allMessages = conversations.flat().filter(m => m !== null);
+    
     // Filter messages newer than 'after'
-    const filtered = messages.filter(m => m.timestamp > after);
+    const filtered = allMessages.filter(m => m.timestamp > after);
 
-    console.log('[MessageQueue] GET messages after', after, '→', filtered.length, 'results');
+    console.log('[MessageQueue] GET messages after', after, '→', filtered.length, 'results from', keys.keys().size, 'conversations');
 
     return this.jsonResponse(filtered);
   }
@@ -170,11 +179,21 @@ export class MessageQueue {
    * GET /api/queue/pending - Get pending messages for bot
    */
   async getPending(url) {
-    const messages = await this.loadMessages();
-    const limit = parseInt(url.searchParams.get('limit') || '999999'); // No limit by default
-
+    const limit = parseInt(url.searchParams.get('limit') || '999999');
+    
+    // Get all conversation keys
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    // Load all conversations in parallel
+    const conversations = await Promise.all(
+      Array.from(keys.keys()).map(key => this.state.storage.get(key))
+    );
+    
+    // Flatten to all messages
+    const allMessages = conversations.flat().filter(m => m !== null);
+    
     // Filter for pending human messages
-    const pending = messages.filter(m => 
+    const pending = allMessages.filter(m => 
       m['message-type'] === 'human' && 
       m.botParams.status === 'pending'
     );
@@ -186,17 +205,13 @@ export class MessageQueue {
       return a.timestamp - b.timestamp;
     });
 
-    // Return top N (or all if limit is huge)
     const result = pending.slice(0, limit);
 
-    console.log('[MessageQueue] GET pending:', result.length, 'of', pending.length, 'total');
+    console.log('[MessageQueue] GET pending:', result.length, 'of', pending.length, 'total from', keys.keys().size, 'conversations');
 
     return this.jsonResponse({
       pending: result,
-      kvStats: {
-        reads: 1,  // For compatibility with PM2 bot logs
-        writes: 0
-      }
+      kvStats: { reads: keys.keys().size, writes: 0 }
     });
   }
 
@@ -205,39 +220,42 @@ export class MessageQueue {
    */
   async claimMessage(request) {
     const { messageId, workerId } = await request.json();
-    const messages = await this.loadMessages();
-
-    // Find message
-    const message = messages.find(m => m.id === messageId);
     
-    if (!message) {
-      return this.jsonResponse({ 
-        success: false, 
-        error: 'Message not found' 
-      }, 404);
+    // Get all conversation keys
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    // Find message in conversations
+    for (const key of keys.keys()) {
+      const conversation = await this.state.storage.get(key);
+      if (!conversation) continue;
+      
+      const messageIndex = conversation.findIndex(m => m.id === messageId);
+      
+      if (messageIndex !== -1) {
+        const message = conversation[messageIndex];
+        
+        if (message.botParams.status !== 'pending') {
+          return this.jsonResponse({
+            success: false,
+            error: `Message status is ${message.botParams.status}, not pending`
+          }, 409);
+        }
+        
+        // Update message
+        message.botParams.status = 'processing';
+        message.botParams.claimedBy = workerId;
+        message.botParams.claimedAt = Date.now();
+        
+        // Save conversation back
+        await this.state.storage.put(key, conversation);
+        
+        console.log('[MessageQueue] Claimed:', messageId, 'from', key);
+        
+        return this.jsonResponse({ success: true, message });
+      }
     }
-
-    // Verify it's pending
-    if (message.botParams.status !== 'pending') {
-      return this.jsonResponse({
-        success: false,
-        error: `Message status is ${message.botParams.status}, not pending`
-      }, 409);
-    }
-
-    // Claim it
-    message.botParams.status = 'processing';
-    message.botParams.claimedBy = workerId;
-    message.botParams.claimedAt = Date.now();
-
-    await this.saveMessages();
-
-    console.log('[MessageQueue] Claimed:', messageId, 'by', workerId);
-
-    return this.jsonResponse({ 
-      success: true, 
-      message 
-    });
+    
+    return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
   }
 
   /**
@@ -245,37 +263,41 @@ export class MessageQueue {
    */
   async completeMessage(request) {
     const { messageId } = await request.json();
-    const messages = await this.loadMessages();
-
-    // Find message
-    const message = messages.find(m => m.id === messageId);
     
-    if (!message) {
-      return this.jsonResponse({ 
-        success: false, 
-        error: 'Message not found' 
-      }, 404);
+    // Get all conversation keys
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    // Find message in conversations
+    for (const key of keys.keys()) {
+      const conversation = await this.state.storage.get(key);
+      if (!conversation) continue;
+      
+      const messageIndex = conversation.findIndex(m => m.id === messageId);
+      
+      if (messageIndex !== -1) {
+        const message = conversation[messageIndex];
+        
+        if (message.botParams.status !== 'processing') {
+          return this.jsonResponse({
+            success: false,
+            error: `Message status is ${message.botParams.status}, not processing`
+          }, 409);
+        }
+        
+        // Update message
+        message.botParams.status = 'complete';
+        message.botParams.completedAt = Date.now();
+        
+        // Save conversation back
+        await this.state.storage.put(key, conversation);
+        
+        console.log('[MessageQueue] Completed:', messageId, 'in', key);
+        
+        return this.jsonResponse({ success: true });
+      }
     }
-
-    // Verify it's processing
-    if (message.botParams.status !== 'processing') {
-      return this.jsonResponse({
-        success: false,
-        error: `Message status is ${message.botParams.status}, not processing`
-      }, 409);
-    }
-
-    // Complete it
-    message.botParams.status = 'complete';
-    message.botParams.completedAt = Date.now();
-
-    await this.saveMessages();
-
-    console.log('[MessageQueue] Completed:', messageId);
-
-    return this.jsonResponse({ 
-      success: true 
-    });
+    
+    return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
   }
 
   /**
@@ -289,38 +311,47 @@ export class MessageQueue {
     const aiColor = url.searchParams.get('aiColor');
     const limit = parseInt(url.searchParams.get('limit') || '100');
     
-    const messages = await this.loadMessages();
+    // Build conversation key
+    const conversationKey = this.getConversationKey(
+      humanUsername,
+      humanColor,
+      aiUsername,
+      aiColor
+    );
     
-    // Filter to ONLY this conversation
-    const conversationMessages = messages.filter(m => {
-      const isHuman = m.username === humanUsername && m.color === humanColor;
-      const isAI = m.username === aiUsername && m.color === aiColor;
-      return isHuman || isAI;
-    });
+    // Get conversation (1 read!)
+    const conversation = await this.state.storage.get(conversationKey) || [];
     
-    // Sort by timestamp (oldest first)
-    conversationMessages.sort((a, b) => a.timestamp - b.timestamp);
+    // Sort by timestamp (oldest first) - should already be sorted but ensure it
+    conversation.sort((a, b) => a.timestamp - b.timestamp);
     
-    // Return last N messages (most recent conversation window)
-    const result = conversationMessages.slice(-limit);
+    // Return last N messages
+    const result = conversation.slice(-limit);
     
-    console.log('[MessageQueue] GET conversation:', result.length, 'of', conversationMessages.length, 'total for', humanUsername, '+', aiUsername);
+    console.log('[MessageQueue] GET conversation', conversationKey, '→', result.length, 'of', conversation.length, 'total');
     
     return this.jsonResponse(result);
   }
 
   /**
-   * POST /api/admin/purge - Emergency purge of all messages
+   * POST /api/admin/purge - Emergency purge of all conversations
    */
   async purgeStorage() {
-    this.messages = [];
-    await this.state.storage.put('messages', []);
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
     
-    console.log('[MessageQueue] PURGED all messages');
+    // Delete all conversation keys
+    const deletePromises = Array.from(keys.keys()).map(key => 
+      this.state.storage.delete(key)
+    );
+    await Promise.all(deletePromises);
+    
+    const count = keys.keys().size;
+    
+    console.log('[MessageQueue] PURGED', count, 'conversations');
     
     return this.jsonResponse({ 
       success: true,
-      message: 'All messages purged'
+      message: `Purged ${count} conversations`
     });
   }
 
