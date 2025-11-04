@@ -51,6 +51,10 @@ export class MessageQueue {
         return await this.purgeStorage();
       }
 
+      if (path === '/api/conversation' && request.method === 'GET') {
+        return await this.getConversation(url);
+      }
+
       return this.jsonResponse({ error: 'Not found' }, 404);
     } catch (error) {
       console.error('[MessageQueue] Error:', error);
@@ -110,7 +114,7 @@ export class MessageQueue {
       domain: body.domain || 'saywhatwant.app',
       'message-type': messageType,  // Keep hyphenated format for frontend compatibility
       replyTo: body.replyTo || null,
-      context: body.context || null,  // Pre-formatted conversation history from frontend
+      // Note: context NOT stored (rebuilt server-side to avoid redundancy)
       botParams: {
         status: messageType === 'human' ? 'pending' : 'complete',
         priority: body.botParams?.priority || body.priority || 5,
@@ -270,6 +274,37 @@ export class MessageQueue {
     return this.jsonResponse({ 
       success: true 
     });
+  }
+
+  /**
+   * GET /api/conversation - Get messages for a specific conversation
+   * Query params: humanUsername, humanColor, aiUsername, aiColor, limit
+   */
+  async getConversation(url) {
+    const humanUsername = url.searchParams.get('humanUsername');
+    const humanColor = url.searchParams.get('humanColor');
+    const aiUsername = url.searchParams.get('aiUsername');
+    const aiColor = url.searchParams.get('aiColor');
+    const limit = parseInt(url.searchParams.get('limit') || '100');
+    
+    const messages = await this.loadMessages();
+    
+    // Filter to ONLY this conversation
+    const conversationMessages = messages.filter(m => {
+      const isHuman = m.username === humanUsername && m.color === humanColor;
+      const isAI = m.username === aiUsername && m.color === aiColor;
+      return isHuman || isAI;
+    });
+    
+    // Sort by timestamp (oldest first)
+    conversationMessages.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Return last N messages (most recent conversation window)
+    const result = conversationMessages.slice(-limit);
+    
+    console.log('[MessageQueue] GET conversation:', result.length, 'of', conversationMessages.length, 'total for', humanUsername, '+', aiUsername);
+    
+    return this.jsonResponse(result);
   }
 
   /**
