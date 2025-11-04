@@ -47,6 +47,10 @@ export class MessageQueue {
         return await this.completeMessage(request);
       }
 
+      if (path === '/api/admin/purge' && request.method === 'POST') {
+        return await this.purgeStorage();
+      }
+
       return this.jsonResponse({ error: 'Not found' }, 404);
     } catch (error) {
       console.error('[MessageQueue] Error:', error);
@@ -121,9 +125,9 @@ export class MessageQueue {
     // Add to front of array
     messages.unshift(message);
 
-    // Keep only last 200 messages
-    if (messages.length > 200) {
-      messages.length = 200;
+    // Keep only last 50 messages (128KB DO storage limit)
+    if (messages.length > 50) {
+      messages.length = 50;
     }
 
     // Save to storage
@@ -265,6 +269,21 @@ export class MessageQueue {
 
     return this.jsonResponse({ 
       success: true 
+    });
+  }
+
+  /**
+   * POST /api/admin/purge - Emergency purge of all messages
+   */
+  async purgeStorage() {
+    this.messages = [];
+    await this.state.storage.put('messages', []);
+    
+    console.log('[MessageQueue] PURGED all messages');
+    
+    return this.jsonResponse({ 
+      success: true,
+      message: 'All messages purged'
     });
   }
 
