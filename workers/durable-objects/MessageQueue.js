@@ -133,13 +133,14 @@ export class MessageQueue {
     // Get existing conversation
     const conversation = await this.state.storage.get(conversationKey) || [];
 
-    // Add message to front (newest first)
-    conversation.unshift(message);
+  // Add message to front (newest first)
+  conversation.unshift(message);
 
-    // Keep only last 300 messages (rolling window)
-    if (conversation.length > 300) {
-      conversation.length = 300;
-    }
+  // Keep only last 150 messages (rolling window)
+  // Supports nom=100 with 50% safety margin
+  if (conversation.length > 150) {
+    conversation.length = 150;
+  }
 
     // Save conversation
     await this.state.storage.put(conversationKey, conversation);

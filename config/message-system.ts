@@ -21,6 +21,7 @@ export interface MessageSystemConfig {
   // Storage Settings
   maxIndexedDBMessages: number;  // Max messages in IndexedDB (disk protection)
   indexedDBCleanupThreshold: number; // When to trigger cleanup
+  maxConversationMessages: number; // Max messages per conversation in DO (rolling window)
   
   // Absence Detection
   absenceThreshold: number;      // Seconds before showing "missed messages" indicator
@@ -48,6 +49,7 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Storage Settings
   maxIndexedDBMessages: 100000,  // Store max nk messages
   indexedDBCleanupThreshold: 12000, // Cleanup at nk
+  maxConversationMessages: 150,  // Max messages per conversation in DO (supports nom=100 with margin)
   
   // Absence Detection
   absenceThreshold: 60,         // n seconds away = show indicator

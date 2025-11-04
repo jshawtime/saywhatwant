@@ -1,4 +1,4 @@
-# 179: DO Per-Conversation Storage - 300-Message Rolling Window
+# 179: DO Per-Conversation Storage - 150-Message Rolling Window
 
 ## Status: ✅ DEPLOYED - READY FOR FRONTEND TESTING
 
@@ -11,8 +11,8 @@
 ## Executive Summary
 
 **Problem:** DO stores all messages in single array → 50-message limit → breaks context  
-**Solution:** Store each CONVERSATION as separate key with 300-message rolling window  
-**Impact:** Unlimited conversations, 300 messages per conversation, full context preserved, ZERO cost increase  
+**Solution:** Store each CONVERSATION as separate key with 150-message rolling window  
+**Impact:** Unlimited conversations, 150 messages per conversation (supports nom=100), ZERO cost increase  
 
 ---
 
@@ -63,21 +63,22 @@
 }
 ```
 
-**Limit per conversation:** 300 messages (rolling window)  
+**Limit per conversation:** 150 messages (rolling window)  
 **Total conversations:** Unlimited
 
 **Real-world data:**
 - 120-message conversation = **11 KB**
 - Average: **91 bytes per message**
-- 300 messages × 91 bytes = **27 KB** (well under 128KB limit)
-- Safety margin: **3x** (can handle longer messages)
+- 150 messages × 91 bytes = **13.6 KB** (well under 128KB limit)
+- Safety margin: **9x** (can handle much longer messages)
 
 **Benefits:**
 - ✅ Unlimited conversations (each gets own key)
-- ✅ 300 messages per conversation (rolling window)
-- ✅ Full context preserved (nom=100 uses last 100 of 300)
+- ✅ 150 messages per conversation (supports nom=100 with 50% margin)
+- ✅ Full context preserved (nom=100 uses last 100 of 150)
 - ✅ **ZERO cost increase** (still 1 read per conversation fetch)
 - ✅ Same pattern as conversation-logs (proven design)
+- ✅ Configurable via MESSAGE_SYSTEM_CONFIG.maxConversationMessages
 
 ---
 
@@ -172,9 +173,10 @@ async postMessage(request) {
   // Add message to front
   conversation.unshift(message);
   
-  // Keep only last 300 messages (rolling window)
-  if (conversation.length > 300) {
-    conversation.length = 300;
+  // Keep only last 150 messages (rolling window)
+  // Supports nom=100 with 50% safety margin
+  if (conversation.length > 150) {
+    conversation.length = 150;
   }
   
   // Save conversation
@@ -329,9 +331,9 @@ async purgeStorage() {
 - **Broken:** Your 170-message conversation only gets 2 slots
 
 **After (per-conversation keys):**
-- 1 read fetches ONE conversation (up to 300 messages)
-- Limit: 300 messages per conversation, unlimited conversations
-- **Working:** Your 170-message conversation gets full 300-message window
+- 1 read fetches ONE conversation (up to 150 messages)
+- Limit: 150 messages per conversation, unlimited conversations
+- **Working:** Your 170-message conversation gets full 150-message window (last 150)
 
 **Cost Comparison:**
 
@@ -358,8 +360,8 @@ async purgeStorage() {
 
 **Benefit:**
 - ✅ Unlimited conversations
-- ✅ 300 messages per conversation (vs 2 messages currently)
-- ✅ Full context preserved (ctx:170 instead of ctx:1)
+- ✅ 150 messages per conversation (vs 2 messages currently)
+- ✅ Full context preserved (ctx:100 for nom=100, ctx:150 max)
 - ✅ Conversations never break
 
 **Conclusion:** Absolutely worth it. Tiny cost increase fixes critical broken functionality.
@@ -404,12 +406,12 @@ Verify no limit, no errors, context still correct.
 
 ## Success Criteria
 
-- ✅ Can store 300 messages per conversation
-- ✅ PM2 context count matches actual conversation length (ctx:100+ for long conversations)
+- ✅ Can store 150 messages per conversation
+- ✅ PM2 context count matches actual conversation length (ctx:26 verified, scales to ctx:100+)
 - ✅ No 128KB errors
 - ✅ Storage operations: 1 read per conversation fetch (no cost increase)
 - ✅ Multiple concurrent conversations work correctly
-- ✅ Rolling window deletes oldest messages when > 300
+- ✅ Rolling window deletes oldest messages when > 150
 
 ---
 
@@ -420,11 +422,16 @@ Verify no limit, no errors, context still correct.
 - Average: 91 bytes per message
 
 **Safety calculation:**
-- 300 messages × 91 bytes = 27.3 KB
+- 150 messages × 91 bytes = 13.6 KB
 - 128 KB limit ÷ 91 bytes = ~1,400 messages max
-- **Safety margin: 4.6x** (can handle much longer messages)
+- **Safety margin: 9.4x** (can handle much longer messages)
 
-**Conclusion:** 300-message window is conservative and safe.
+**Conclusion:** 150-message window is optimal for nom=100 with excellent safety margin.
+
+**Configuration:**
+- Defined in `config/message-system.ts` as `maxConversationMessages: 150`
+- Hardcoded in DO worker (JavaScript can't import TypeScript config)
+- Change both places if adjusting limit
 
 ---
 
