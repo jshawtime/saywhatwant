@@ -151,24 +151,25 @@ export class MessageQueue {
   // Add message to front (newest first)
   conversation.unshift(message);
 
-  // Keep only last 150 messages (rolling window)
-  // CRITICAL: Never delete messages with status 'processing' (PM2 is still working on them)
+  // Keep only last 150 COMPLETED messages (rolling window)
+  // CRITICAL: Never delete pending or processing messages (they're still active)
+  // Result: Conversation can temporarily exceed 150 if many messages are pending/processing
   if (conversation.length > 150) {
-    // Separate processing and completed messages
-    const processingMessages = conversation.filter(m => 
-      m.botParams?.status === 'processing'
+    // Separate by status
+    const activeMessages = conversation.filter(m => 
+      m.botParams?.status === 'pending' || m.botParams?.status === 'processing'
     );
-    const otherMessages = conversation.filter(m => 
-      m.botParams?.status !== 'processing'
+    const completedMessages = conversation.filter(m => 
+      m.botParams?.status === 'complete'
     );
     
-    // Keep all processing messages + last 150 other messages
-    if (otherMessages.length > 150) {
-      otherMessages.length = 150;
+    // Keep ALL active messages (protected) + last 150 completed messages
+    if (completedMessages.length > 150) {
+      completedMessages.length = 150;
     }
     
-    // Combine: processing first (to protect them), then others
-    conversation = [...processingMessages, ...otherMessages];
+    // Combine: active first (protected), then completed (rolling window)
+    conversation = [...activeMessages, ...completedMessages];
   }
 
     // Save conversation
