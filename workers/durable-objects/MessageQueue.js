@@ -68,7 +68,9 @@ export class MessageQueue {
   async loadMessages() {
     if (this.messages === null) {
       this.messages = await this.state.storage.get('messages') || [];
-      console.log('[MessageQueue] Loaded', this.messages.length, 'messages from storage');
+      console.log('[MessageQueue] 💾 STORAGE READ -', this.messages.length, 'messages loaded');
+    } else {
+      console.log('[MessageQueue] ⚡ CACHE HIT -', this.messages.length, 'messages (no storage read)');
     }
     return this.messages;
   }
