@@ -500,6 +500,68 @@ FourAgreements [def456uvw]
 
 ---
 
+## UPDATED: Multi-Turn Message Format (Nov 4, 2025)
+
+### New Context Format
+
+**As of Nov 4, 2025, context is sent as structured messages array:**
+
+```json
+{
+  "model": "the-eternal-f16",
+  "messages": [
+    {"role": "system", "content": "You are a wise being..."},
+    {"role": "user", "content": "Hello"},
+    {"role": "assistant", "content": "Hi there"},
+    {"role": "user", "content": "How are you?"},
+    {"role": "assistant", "content": "I'm well"},
+    {"role": "user", "content": "What is reality?"}
+  ],
+  "temperature": 0.7,
+  "max_tokens": 200,
+  "top_p": 0.9,
+  "top_k": 100,
+  "repeat_penalty": 1.25,
+  "min_p": 0.5
+}
+```
+
+**Key changes:**
+- Each conversation turn is separate message object
+- Proper role mapping: human → `user`, AI → `assistant`
+- Clean content (no "Username:" prefixes)
+- Matches training data format
+- All Ollama parameters included
+
+### Testing the New Format
+
+**Post test message:**
+```bash
+curl -X POST https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Test multi-turn format",
+    "username": "Tester",
+    "color": "100150200",
+    "message-type": "human",
+    "botParams": {
+      "entity": "the-eternal",
+      "priority": 5,
+      "ais": "TheEternal:200100150"
+    }
+  }'
+```
+
+**Expected in [OLLAMA-all] log:**
+- System message first
+- Each conversation turn as separate object
+- Roles correctly assigned
+- All parameters present
+
+**Related:** README 181 (Multi-turn format migration)
+
+---
+
 ## Debugging Workflow
 
 ### When Something Doesn't Work
