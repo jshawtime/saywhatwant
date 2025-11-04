@@ -180,7 +180,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({
       onScroll={handleScroll}
     >
       {/* Load More Button at Top */}
-      {hasMore && (
+      {hasMore && loadMoreCount > 0 && (
         <LoadMoreButton
           isLoading={isLoadingMore}
           messageCount={Math.min(loadMoreCount, 999)} // Cap display at reasonable number
