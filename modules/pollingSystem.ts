@@ -241,6 +241,7 @@ export const useCommentsPolling = ({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(false);
   const pollFunctionRef = useRef<(() => Promise<void>) | null>(null);
+  const isPollingRef = useRef(false); // CRITICAL: Prevent concurrent polls
   
   // Use storage listener for localStorage mode
   useStorageListener(
@@ -268,7 +269,19 @@ export const useCommentsPolling = ({
     console.log('[CommentsPolling] Starting polling loop with interval:', initialInterval);
     
     const poll = async () => {
-      await checkForNewComments();
+      // CRITICAL: Prevent concurrent polls (race condition fix)
+      if (isPollingRef.current) {
+        console.log('[Polling] ⚠️  Skipping poll - previous poll still in progress');
+        return;
+      }
+      
+      isPollingRef.current = true;
+      
+      try {
+        await checkForNewComments();
+      } finally {
+        isPollingRef.current = false;
+      }
       
       // Calculate next interval dynamically
       const nextInterval = getPollingInterval();
