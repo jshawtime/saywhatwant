@@ -36,11 +36,11 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   cloudPollBatch: 200,           // Max n per poll
   
   // Simplified Polling (active/idle only)
-  pollingIntervalActive: 4000,   // 4s when active (user engaged)
+  pollingIntervalActive: 5000,   // 5s when active (user engaged)
   pollingIntervalMin: 5000,      // 5s idle start (regressive beginning)
   pollingIntervalMax: 3000000,   // Max 3000 seconds (~50 minutes) when inactive
   pollingIntervalIncrement: 10000, // Increase 10 seconds per poll (more aggressive backoff)
-  activeWindow: 20000,           // 20s activity window (5 polls at 4s each)
+  activeWindow: 30000,           // 30s activity window (6 polls at 5s each)
   
   // Display Settings
   maxDisplayMessages: 1000,     // Show max n in DOM
