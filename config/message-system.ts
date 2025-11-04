@@ -49,7 +49,7 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   // Storage Settings
   maxIndexedDBMessages: 100000,  // Store max nk messages
   indexedDBCleanupThreshold: 12000, // Cleanup at nk
-  maxConversationMessages: 150,  // Max messages per conversation in DO (supports nom=100 with margin)
+  maxConversationMessages: 150,  // 1 message for human + 1 message for AI = 2 messages. Max messages per conversation in DO (supports nom=100 with margin)
   
   // Absence Detection
   absenceThreshold: 60,         // n seconds away = show indicator

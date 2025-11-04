@@ -53,6 +53,10 @@ export class MessageQueue {
         return await this.purgeStorage();
       }
 
+      if (path === '/api/admin/list-keys' && request.method === 'GET') {
+        return await this.listKeys();
+      }
+
       if (path === '/api/conversation' && request.method === 'GET') {
         return await this.getConversation(url);
       }
@@ -362,6 +366,22 @@ export class MessageQueue {
     console.log('[MessageQueue] GET conversation', conversationKey, '→', result.length, 'of', conversation.length, 'total');
     
     return this.jsonResponse(result);
+  }
+
+  /**
+   * GET /api/admin/list-keys - List all conversation keys
+   */
+  async listKeys() {
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    const keyList = Array.from(keys.keys());
+    
+    console.log('[MessageQueue] Listed', keyList.length, 'conversation keys');
+    
+    return this.jsonResponse({ 
+      keys: keyList,
+      count: keyList.length
+    });
   }
 
   /**
