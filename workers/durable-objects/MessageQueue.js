@@ -90,21 +90,36 @@ export class MessageQueue {
       if (match) entity = match[1];
     }
 
-    // Determine AI username/color from botParams.ais
-    const ais = body.botParams?.ais;
-    let aiUsername = entity;
-    let aiColor = 'default';
+    // Determine conversation participants
+    let humanUsername, humanColor, aiUsername, aiColor;
     
-    if (ais) {
-      const [aisUser, aisCol] = ais.split(':');
-      if (aisUser) aiUsername = aisUser;
-      if (aisCol) aiColor = aisCol;
+    if (messageType === 'human') {
+      // Human message: use body username/color
+      humanUsername = body.username;
+      humanColor = body.color;
+      
+      // Get AI from botParams.ais
+      const ais = body.botParams?.ais;
+      aiUsername = entity;
+      aiColor = 'default';
+      
+      if (ais) {
+        const [aisUser, aisCol] = ais.split(':');
+        if (aisUser) aiUsername = aisUser;
+        if (aisCol) aiColor = aisCol;
+      }
+    } else {
+      // AI message: use botParams.humanUsername/humanColor
+      humanUsername = body.botParams?.humanUsername || 'unknown';
+      humanColor = body.botParams?.humanColor || 'unknown';
+      aiUsername = body.username;
+      aiColor = body.color;
     }
 
     // Build conversation key
     const conversationKey = this.getConversationKey(
-      body.username,
-      body.color,
+      humanUsername,
+      humanColor,
       aiUsername,
       aiColor
     );
@@ -131,15 +146,29 @@ export class MessageQueue {
     };
 
     // Get existing conversation
-    const conversation = await this.state.storage.get(conversationKey) || [];
+    let conversation = await this.state.storage.get(conversationKey) || [];
 
   // Add message to front (newest first)
   conversation.unshift(message);
 
   // Keep only last 150 messages (rolling window)
-  // Supports nom=100 with 50% safety margin
+  // CRITICAL: Never delete messages with status 'processing' (PM2 is still working on them)
   if (conversation.length > 150) {
-    conversation.length = 150;
+    // Separate processing and completed messages
+    const processingMessages = conversation.filter(m => 
+      m.botParams?.status === 'processing'
+    );
+    const otherMessages = conversation.filter(m => 
+      m.botParams?.status !== 'processing'
+    );
+    
+    // Keep all processing messages + last 150 other messages
+    if (otherMessages.length > 150) {
+      otherMessages.length = 150;
+    }
+    
+    // Combine: processing first (to protect them), then others
+    conversation = [...processingMessages, ...otherMessages];
   }
 
     // Save conversation
