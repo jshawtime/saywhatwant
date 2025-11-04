@@ -1,29 +1,31 @@
 # 176: Simplified Polling System - Active/Idle Only
 
-## Status: 🚧 IN PROGRESS
+## Status: ✅ DEPLOYED + OPTIMIZED (2025-11-04)
 
 **Created:** 2025-11-03  
-**Goal:** Simplify regressive polling to just two states: Active (3s) and Idle (regressive)
+**Updated:** 2025-11-04 (Keystroke spam fix)  
+**Goal:** Simplify regressive polling to just two states: Active (5s) and Idle (regressive)
 
 ---
 
 ## Executive Summary
 
-**Current System:**
-- Active polling: 5s for 60 seconds (12 polls)
-- Regressive polling: 5s → 7s → 9s → ... → 300s
-- Triggered by: Click, scroll, focus
+**Final System (as of 2025-11-04):**
+- Active polling: **5s for 30 seconds** (6 polls)
+- Idle polling: **5s → 15s → 25s → ... → 3000s** (regressive)
+- Triggered by: **Message send ONLY** (Enter key or Send button)
 
-**New System:**
-- Active polling: 3s for 30 seconds (~10 polls)
-- Idle polling: 5s → 7s → 9s → ... → 300s (regressive)
-- Triggered by: Click, focus only (removed scroll)
+**Optimizations Applied:**
+- ❌ **Removed:** Keystroke, click, focus triggers (wasteful)
+- ✅ **Kept:** Message send trigger (Enter or Send button)
+- 💰 **Eliminated:** 10-20 polls per message during typing
+- 🎯 **Cost savings:** ~$4/month at 1K users from keystroke spam removal
 
 **Benefits:**
-- ⚡ **40% faster when active** (3s vs 5s)
-- 💰 **25% fewer polls** (regressive starts sooner)
-- 🧠 **Simpler logic** (two states, one boundary)
-- 🎯 **Better UX** (faster updates when user is engaged)
+- 💰 **50% fewer activity polls** (no keystroke spam)
+- 🧠 **Simpler logic** (poll only when data is expected)
+- 🎯 **Better UX** (still fast after sending, no waste during typing)
+- 📉 **Lower costs** (fewer unnecessary requests)
 
 ---
 

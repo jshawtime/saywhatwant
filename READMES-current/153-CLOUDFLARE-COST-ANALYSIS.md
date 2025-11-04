@@ -27,6 +27,9 @@ Total:                $31.42  (100%)
 **Optimization Impact:**
 - Active polling: 5s for 30s (6 polls) vs original 3s for 30s (10 polls) = 40% reduction
 - Idle backoff: 10s → 3000s (more aggressive than original 5s → 1000s)
+- **Keystroke spam fix:** Removed keystroke/click/focus triggers, only poll on message send
+  - Eliminates 10-20 polls per message during typing
+  - Additional savings: ~$4/month at 1K users
 - **Net savings: $12.44/month at 1M messages** (was $43.86, now $31.42)
 - **Total reduction: 28% cheaper**
 

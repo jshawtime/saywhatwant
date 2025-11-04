@@ -1026,33 +1026,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     storageKey: COMMENTS_STORAGE_KEY
   });
 
-  // Listen for user activity to update lastActivityTime and interrupt polling
-  useEffect(() => {
-    const handleActivity = () => {
-      lastActivityTime.current = Date.now();
-      console.log('[Activity] User activity detected, polling will be fast for 30s');
-      
-      // Interrupt current poll and reschedule immediately at fast rate
-      if (interruptAndReschedule) {
-        interruptAndReschedule();
-      }
-    };
-    
-    // Click anywhere in the app
-    document.addEventListener('click', handleActivity);
-    
-    // Focus any input (capture phase to catch all focuses)
-    document.addEventListener('focus', handleActivity, true);
-    
-    // Keystrokes (typing in message input, username, etc.)
-    document.addEventListener('keydown', handleActivity);
-    
-    return () => {
-      document.removeEventListener('click', handleActivity);
-      document.removeEventListener('focus', handleActivity, true);
-      document.removeEventListener('keydown', handleActivity);
-    };
-  }, [interruptAndReschedule]);
+  // NOTE: Activity detection removed - polling only resets when message is SENT
+  // This eliminates wasteful polls during typing/clicking (10-20 polls per message)
+  // Activity is now triggered ONLY in handleSubmit() when user sends a message
 
   // Handle comment submission (using the new submission system)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1117,8 +1093,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     
     await submitComment(inputText, username, userColor, flashUsername, contextArray, aiStateParam, botParams);
     
-    // Update activity time (user sent a message!)
+    // Update activity time and reset polling (user sent a message!)
     lastActivityTime.current = Date.now();
+    if (interruptAndReschedule) {
+      interruptAndReschedule();
+      console.log('[Activity] Message sent - reset to fast polling for 30s');
+    }
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)
