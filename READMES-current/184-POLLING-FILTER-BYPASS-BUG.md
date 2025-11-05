@@ -1,11 +1,21 @@
 # 184: Polling Filter Bypass Bug - New Messages Ignore Active Filters
 
-## Status: ⏸️ ON HOLD - Unable to Reproduce
+## Status: ⏸️ ON HOLD - Unable to Reproduce Consistently
 
 **Created:** 2025-11-05  
 **Priority:** HIGH (Core filtering broken)  
 **Issue:** Polling adds ALL new messages to display, bypassing active filters  
 **Note:** Bug observed once but could not be reproduced in subsequent tests. Waiting for recurrence.
+
+**Additional Context from User:**
+- User confirmed they had username set to "Human" with same color as the Frankenstein conversation
+- The bug showed them THEIR OWN message from different filtered conversation
+- This confirms the bug: even when username:color matches, it shouldn't show messages from DIFFERENT filtered conversations
+- The filter was: `u=Benji:180080225+Phil:220225080` (2-person filter)
+- User's message was: `Human:080168202` (not in filter list)
+- Message still appeared → filter bypass confirmed
+- **Critical point:** Even if user had changed to `Human:080168202`, it STILL shouldn't appear because that username:color is NOT in the Benji+Phil filter list
+- This proves polling is adding messages WITHOUT checking the filter criteria
 
 ---
 
