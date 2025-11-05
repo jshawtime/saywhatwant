@@ -85,14 +85,9 @@ export class MessageQueue {
     const timestamp = Date.now();
     const messageType = body['message-type'] || body.messageType || 'human';
     
-    // Extract entity
-    let entity = 'default';
-    if (body.botParams?.entity) {
-      entity = body.botParams.entity;
-    } else if (body.domain) {
-      const match = body.domain.match(/^([^.]+)\./);
-      if (match) entity = match[1];
-    }
+    // Extract entity - ONLY if explicitly provided in URL
+    // Don't default to domain name - that causes human posts to get queued for bots
+    const entity = body.botParams?.entity || null;
 
     // Determine conversation participants
     let humanUsername, humanColor, aiUsername, aiColor;
@@ -102,15 +97,21 @@ export class MessageQueue {
       humanUsername = body.username;
       humanColor = body.color;
       
-      // Get AI from botParams.ais
-      const ais = body.botParams?.ais;
-      aiUsername = entity;
-      aiColor = 'default';
-      
-      if (ais) {
-        const [aisUser, aisCol] = ais.split(':');
-        if (aisUser) aiUsername = aisUser;
-        if (aisCol) aiColor = aisCol;
+      if (entity) {
+        // Message for AI entity
+        const ais = body.botParams?.ais;
+        aiUsername = entity;
+        aiColor = 'default';
+        
+        if (ais) {
+          const [aisUser, aisCol] = ais.split(':');
+          if (aisUser) aiUsername = aisUser;
+          if (aisCol) aiColor = aisCol;
+        }
+      } else {
+        // Platform post (no entity) - use special identifier
+        aiUsername = 'platform';
+        aiColor = 'platform';
       }
     } else {
       // AI message: use botParams.humanUsername/humanColor
@@ -138,15 +139,18 @@ export class MessageQueue {
       domain: body.domain || 'saywhatwant.app',
       'message-type': messageType,
       replyTo: body.replyTo || null,
-      botParams: {
-        status: messageType === 'human' ? 'pending' : 'complete',
-        priority: body.botParams?.priority || body.priority || 5,
-        entity,
-        ais: body.botParams?.ais || null,
-        claimedBy: null,
-        claimedAt: null,
-        completedAt: messageType === 'AI' ? timestamp : null
-      }
+      // Only include botParams if entity is explicitly provided
+      ...(entity && {
+        botParams: {
+          status: messageType === 'human' ? 'pending' : 'complete',
+          priority: body.botParams?.priority || body.priority || 5,
+          entity,
+          ais: body.botParams?.ais || null,
+          claimedBy: null,
+          claimedAt: null,
+          completedAt: messageType === 'AI' ? timestamp : null
+        }
+      })
     };
 
     // Get existing conversation
@@ -159,12 +163,12 @@ export class MessageQueue {
   // CRITICAL: Never delete pending or processing messages (they're still active)
   // Result: Conversation can temporarily exceed 150 if many messages are pending/processing
   if (conversation.length > 150) {
-    // Separate by status
+    // Separate by status (messages without botParams are considered complete)
     const activeMessages = conversation.filter(m => 
-      m.botParams?.status === 'pending' || m.botParams?.status === 'processing'
+      m.botParams && (m.botParams.status === 'pending' || m.botParams.status === 'processing')
     );
     const completedMessages = conversation.filter(m => 
-      m.botParams?.status === 'complete'
+      !m.botParams || m.botParams.status === 'complete'
     );
     
     // Keep ALL active messages (protected) + last 150 completed messages
@@ -227,25 +231,38 @@ export class MessageQueue {
     // Flatten to all messages
     const allMessages = conversations.flat().filter(m => m !== null);
     
-    // Filter for pending human messages
-    const pending = allMessages.filter(m => 
+    // Separate into two categories:
+    // 1. Messages WITH entity (for bot processing)
+    const forBot = allMessages.filter(m => 
       m['message-type'] === 'human' && 
-      m.botParams.status === 'pending'
+      m.botParams?.status === 'pending' &&
+      m.botParams?.entity  // Must have entity
+    );
+    
+    // 2. Messages WITHOUT entity (for logging only)
+    const platformOnly = allMessages.filter(m =>
+      m['message-type'] === 'human' &&
+      !m.botParams?.entity  // No entity = just human posting to platform
     );
 
-    // Sort by priority (desc) then timestamp (asc)
-    pending.sort((a, b) => {
+    // Sort bot messages by priority (desc) then timestamp (asc)
+    forBot.sort((a, b) => {
       const priorityDiff = (b.botParams.priority || 5) - (a.botParams.priority || 5);
       if (priorityDiff !== 0) return priorityDiff;
       return a.timestamp - b.timestamp;
     });
+    
+    // Sort platform-only by timestamp (newest first for logging)
+    platformOnly.sort((a, b) => b.timestamp - a.timestamp);
 
-    const result = pending.slice(0, limit);
+    const pendingForBot = forBot.slice(0, limit);
+    const platformMessages = platformOnly.slice(0, 10); // Last 10 platform posts
 
-    console.log('[MessageQueue] GET pending:', result.length, 'of', pending.length, 'total from', keys.keys().size, 'conversations');
+    console.log('[MessageQueue] GET pending:', pendingForBot.length, 'bot +', platformMessages.length, 'platform from', keys.keys().size, 'conversations');
 
     return this.jsonResponse({
-      pending: result,
+      pending: pendingForBot,
+      platformOnly: platformMessages,
       kvStats: { reads: keys.keys().size, writes: 0 }
     });
   }
