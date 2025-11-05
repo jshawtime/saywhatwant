@@ -1,8 +1,9 @@
 # 182: Message Type Independent Toggles - From Radio to Checkboxes
 
-## Status: 🚧 READY FOR IMPLEMENTATION
+## Status: ✅ DEPLOYED - Working in production
 
 **Created:** 2025-11-04  
+**Deployed:** 2025-11-04 20:58 UTC  
 **Priority:** UX Improvement  
 **Issue:** Message type buttons force one-or-the-other selection, can't view both or neither
 
@@ -317,7 +318,62 @@ EmptyState already handles this - just ensure it displays appropriate message fo
 
 ---
 
-**Last Updated:** 2025-11-04 20:55 UTC  
+## Implementation Complete
+
+**Files modified (6 total):**
+
+1. **MessageTypeToggle.tsx** (117 lines)
+   - Changed from radio button logic to independent toggle logic
+   - `toggleHuman()` and `toggleAI()` functions with smart state transitions
+   - Visual feedback: `isHumanActive` and `isAIActive` derived from activeChannel
+   - Titles updated: "Hide/Show human messages"
+
+2. **AppHeader.tsx** (2 lines)
+   - Updated type: `activeChannel: 'human' | 'AI' | 'ALL' | null`
+   - Updated callback: `onChannelChange: (channel: ...) => void`
+
+3. **useSimpleFilters.ts** (25 lines)
+   - Updated `setMessageType` to accept null
+   - Added special handling: `if (type === null)` removes mt from URL
+   - Keeps localStorage in sync
+
+4. **url-filter-simple.ts** (10 lines)
+   - Updated `FilterState.messageType` type to allow null
+   - Updated `parseURL()` to default null to 'ALL' (both ON by default)
+   - Updated `buildURL()` to skip mt parameter when null
+
+5. **useScrollPositionMemory.ts** (5 lines)
+   - Updated `getViewKey()` function signature
+   - Handles null by defaulting to 'ALL' for scroll key
+
+6. **useIndexedDBFiltering.ts** (10 lines)
+   - Updated `buildCriteria()` to handle null
+   - When null: returns empty criteria (shows nothing → EmptyState)
+   - When ALL: sets `messageTypes: ['human', 'AI']`
+
+**Toggle logic transitions:**
+```
+State: [Human:ON, AI:ON]  Click Human → [Human:OFF, AI:ON]  (mt=ALL → mt=AI)
+State: [Human:ON, AI:OFF] Click Human → [Human:OFF, AI:OFF] (mt=human → null)
+State: [Human:OFF, AI:ON] Click Human → [Human:ON, AI:ON]  (mt=AI → mt=ALL)
+State: [Human:OFF, AI:OFF] Click Human → [Human:ON, AI:OFF] (null → mt=human)
+
+(Same transitions for AI button)
+```
+
+**Default behavior:**
+- Fresh page load with no URL → `mt=ALL` (both ON)
+- URL with `#mt=ALL` → Both buttons highlighted
+- URL with no mt parameter → Defaults to ALL, both highlighted
+- Explicitly set to null → URL has no mt → EmptyState
+
+**Build:** Successful (0 errors)  
+**Deployment:** Auto-deployed to Cloudflare Pages  
+**Git commit:** b1a0ebf  
+
+---
+
+**Last Updated:** 2025-11-04 21:00 UTC  
 **Author:** Claude (Anthropic) - AI Engineering Agent  
 **Related:** README 20 (mt toggle bug), README 97 (URL system)
 

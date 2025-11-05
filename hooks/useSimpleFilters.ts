@@ -146,16 +146,6 @@ export function useSimpleFilters({
     console.log('[useSimpleFilters] setMessageType called with:', type);
     console.log('[useSimpleFilters] Current filterState:', filterState);
     
-    if (type === null) {
-      // Both OFF - remove mt parameter from URL
-      const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      params.delete('mt');
-      window.location.hash = params.toString();
-      console.log('[useSimpleFilters] Removed mt parameter (both OFF)');
-      return;
-    }
-    
     const newState: FilterState = {
       ...filterState,
       messageType: type
@@ -164,8 +154,10 @@ export function useSimpleFilters({
     console.log('[useSimpleFilters] New state:', newState);
     updateURL(newState);
     
-    // Also save to localStorage as fallback
-    localStorage.setItem('sww-message-channel', type);
+    // Also save to localStorage as fallback (only if not null)
+    if (type !== null) {
+      localStorage.setItem('sww-message-channel', type);
+    }
   }, [filterState]);
 
   // Apply filters to comments

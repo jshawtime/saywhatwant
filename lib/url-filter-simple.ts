@@ -127,9 +127,15 @@ export function parseURL(): FilterState {
     }
   }
   
-  // If no mt parameter found, default to 'ALL' (both ON)
-  if (state.messageType === null) {
-    state.messageType = 'ALL';
+  // If no mt parameter found on initial page load, default to 'ALL'
+  // But respect explicit null (both OFF) from setMessageType
+  if (state.messageType === null && typeof window !== 'undefined') {
+    const hasAnyParams = window.location.hash.length > 1;
+    // Only default to 'ALL' if this is a fresh load with no params
+    // If there ARE params but no mt, it means user explicitly removed it (both OFF)
+    if (!hasAnyParams) {
+      state.messageType = 'ALL';
+    }
   }
 
   return state;
@@ -169,9 +175,8 @@ export function buildURL(state: FilterState): string {
     params.push(`filteractive=${state.filterActive}`);
   }
 
-  // ALWAYS add messageType to prevent state conflicts
-  // (Removing it causes React to re-parse before state updates)
-  // Only add mt parameter if not null (both OFF = no parameter)
+  // Add messageType parameter (unless both OFF)
+  // null = both OFF = no mt parameter in URL
   if (state.messageType !== null) {
     params.push(`mt=${state.messageType}`);
   }
