@@ -26,7 +26,7 @@ interface ScrollPositions {
 
 interface UseScrollPositionMemoryParams {
   streamRef: React.RefObject<HTMLDivElement>;
-  activeChannel: 'human' | 'AI' | 'ALL';
+  activeChannel: 'human' | 'AI' | 'ALL' | null;
   isFilterActive: boolean;
   isNearBottom: boolean;
   filteredCommentsLength: number;
@@ -37,13 +37,15 @@ interface UseScrollPositionMemoryParams {
  * Get view key for current state
  */
 function getViewKey(
-  messageType: 'human' | 'AI' | 'ALL',
+  messageType: 'human' | 'AI' | 'ALL' | null,
   isFilterActive: boolean
 ): keyof ScrollPositions {
   if (isFilterActive) {
     return 'filter-active';
   }
-  return `mt=${messageType}` as keyof ScrollPositions;
+  // If null, use 'ALL' as default for scroll position key
+  const type = messageType || 'ALL';
+  return `mt=${type}` as keyof ScrollPositions;
 }
 
 /**

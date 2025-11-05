@@ -1,8 +1,8 @@
 /**
  * MessageTypeToggle Component
  * 
- * Exclusive toggle switch between Human and AI channels (Ham Radio concept)
- * User can only view ONE channel at a time - forces focus and engagement
+ * Independent toggle buttons for Human and AI message types
+ * User can view both, one, or neither
  */
 
 import React from 'react';
@@ -12,9 +12,9 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface MessageTypeToggleProps {
   /**
-   * Currently active channel ('human', 'AI', or 'ALL')
+   * Currently active channel ('human', 'AI', 'ALL', or null for neither)
    */
-  activeChannel: 'human' | 'AI' | 'ALL';
+  activeChannel: 'human' | 'AI' | 'ALL' | null;
   
   /**
    * User's color in RGB format for styling
@@ -24,22 +24,21 @@ interface MessageTypeToggleProps {
   /**
    * Callback when channel changes
    */
-  onChannelChange: (channel: 'human' | 'AI' | 'ALL') => void;
+  onChannelChange: (channel: 'human' | 'AI' | 'ALL' | null) => void;
 }
 
 /**
  * MessageTypeToggle Component
  * 
- * Slider toggle switch that allows user to select ONE message channel:
- * - Human: Regular user messages
- * - AI: AI-generated entity messages
- * 
- * **Ham Radio Concept**: Tune to ONE frequency at a time.
- * Want both? Open two tabs! Each tab contributes to shared IndexedDB.
+ * Independent toggle buttons allowing flexible viewing:
+ * - Both ON: View all messages (mt=ALL)
+ * - Human only: View human messages (mt=human)
+ * - AI only: View AI messages (mt=AI)  
+ * - Neither: EmptyState (no mt parameter)
  * 
  * @example
  * <MessageTypeToggle
- *   activeChannel="human"
+ *   activeChannel="ALL"
  *   userColorRgb="rgb(255, 165, 0)"
  *   onChannelChange={(channel) => setMessageType(channel)}
  * />
@@ -49,31 +48,58 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
   userColorRgb,
   onChannelChange
 }) => {
-  // When activeChannel is 'ALL', show as neither fully active
-  const isHumanActive = activeChannel === 'human';
-  const isAIActive = activeChannel === 'AI';
-  const isALLActive = activeChannel === 'ALL';
+  // Derive individual button states from activeChannel
+  const isHumanActive = activeChannel === 'human' || activeChannel === 'ALL';
+  const isAIActive = activeChannel === 'AI' || activeChannel === 'ALL';
   
-  // Debug: Log the active channel on mount and changes
-  React.useEffect(() => {
-    console.log('[MessageTypeToggle] Active channel:', activeChannel, 'isHumanActive:', isHumanActive);
-  }, [activeChannel, isHumanActive]);
+  // Independent toggle handlers
+  const toggleHuman = () => {
+    if (isHumanActive && isAIActive) {
+      // Both ON → turn off Human → AI only
+      onChannelChange('AI');
+    } else if (isHumanActive && !isAIActive) {
+      // Human only → turn off Human → neither
+      onChannelChange(null);
+    } else if (!isHumanActive && isAIActive) {
+      // AI only → turn on Human → both
+      onChannelChange('ALL');
+    } else {
+      // Neither → turn on Human → Human only
+      onChannelChange('human');
+    }
+  };
+  
+  const toggleAI = () => {
+    if (isHumanActive && isAIActive) {
+      // Both ON → turn off AI → Human only
+      onChannelChange('human');
+    } else if (!isHumanActive && isAIActive) {
+      // AI only → turn off AI → neither
+      onChannelChange(null);
+    } else if (isHumanActive && !isAIActive) {
+      // Human only → turn on AI → both
+      onChannelChange('ALL');
+    } else {
+      // Neither → turn on AI → AI only
+      onChannelChange('AI');
+    }
+  };
   
   return (
     <div className="flex items-center gap-1.5">
       {/* Human Icon Button */}
       <button
-        onClick={() => onChannelChange('human')}
+        onClick={toggleHuman}
         className={`p-2 rounded-full transition-all ${
-          (isHumanActive || isALLActive) ? 'bg-black/40' : 'hover:bg-black/20'
+          isHumanActive ? 'bg-black/40' : 'hover:bg-black/20'
         }`}
-        title={isHumanActive ? "Viewing Human channel" : isALLActive ? "Viewing All channels" : "Switch to Human channel"}
+        title={isHumanActive ? "Hide human messages" : "Show human messages"}
       >
         <Users 
           className="w-3.5 h-3.5"
           style={{ 
             color: getDarkerColor(userColorRgb, 
-              (isHumanActive || isALLActive) ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
+              isHumanActive ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
             )
           }}
         />
@@ -81,17 +107,17 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
       
       {/* AI Icon Button */}
       <button
-        onClick={() => onChannelChange('AI')}
+        onClick={toggleAI}
         className={`p-2 rounded-full transition-all ${
-          (isAIActive || isALLActive) ? 'bg-black/40' : 'hover:bg-black/20'
+          isAIActive ? 'bg-black/40' : 'hover:bg-black/20'
         }`}
-        title={isAIActive ? "Viewing AI channel" : isALLActive ? "Viewing All channels" : "Switch to AI channel"}
+        title={isAIActive ? "Hide AI messages" : "Show AI messages"}
       >
         <Sparkles 
           className="w-3.5 h-3.5"
           style={{ 
             color: getDarkerColor(userColorRgb, 
-              (isAIActive || isALLActive) ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
+              isAIActive ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
             )
           }}
         />

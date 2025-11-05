@@ -13,7 +13,7 @@ export interface FilterState {
   words: string[];
   negativeWords: string[];
   filterActive: boolean;
-  messageType: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
+  messageType: 'human' | 'AI' | 'ALL' | null;  // Channel type: human, AI, both, or neither
   uis?: string;  // User initial state: username:color or username:random
   ais?: string;  // AI initial state: username:color or username:random (overrides entity default for privacy)
   
@@ -29,12 +29,12 @@ export interface FilterState {
  */
 export function parseURL(): FilterState {
   if (typeof window === 'undefined') {
-    return { users: [], words: [], negativeWords: [], filterActive: false, messageType: 'human' };
+    return { users: [], words: [], negativeWords: [], filterActive: false, messageType: 'ALL' };
   }
 
   const hash = window.location.hash.slice(1);
   if (!hash) {
-    return { users: [], words: [], negativeWords: [], filterActive: false, messageType: 'human' };
+    return { users: [], words: [], negativeWords: [], filterActive: false, messageType: 'ALL' };
   }
 
   const state: FilterState = {
@@ -42,7 +42,7 @@ export function parseURL(): FilterState {
     words: [],
     negativeWords: [],
     filterActive: false,
-    messageType: 'human'  // Default to human channel
+    messageType: null  // Default to null (will be set from URL or default to ALL)
   };
 
   // Parse each parameter
@@ -126,6 +126,11 @@ export function parseURL(): FilterState {
         break;
     }
   }
+  
+  // If no mt parameter found, default to 'ALL' (both ON)
+  if (state.messageType === null) {
+    state.messageType = 'ALL';
+  }
 
   return state;
 }
@@ -166,7 +171,10 @@ export function buildURL(state: FilterState): string {
 
   // ALWAYS add messageType to prevent state conflicts
   // (Removing it causes React to re-parse before state updates)
-  params.push(`mt=${state.messageType}`);
+  // Only add mt parameter if not null (both OFF = no parameter)
+  if (state.messageType !== null) {
+    params.push(`mt=${state.messageType}`);
+  }
   
   // Add uis if present (user initial state)
   if (state.uis) {

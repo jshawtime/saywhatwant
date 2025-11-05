@@ -142,9 +142,19 @@ export function useSimpleFilters({
     updateURL(newState);
   }, [filterState.messageType]);
   
-  const setMessageType = useCallback((type: 'human' | 'AI' | 'ALL') => {
+  const setMessageType = useCallback((type: 'human' | 'AI' | 'ALL' | null) => {
     console.log('[useSimpleFilters] setMessageType called with:', type);
     console.log('[useSimpleFilters] Current filterState:', filterState);
+    
+    if (type === null) {
+      // Both OFF - remove mt parameter from URL
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      params.delete('mt');
+      window.location.hash = params.toString();
+      console.log('[useSimpleFilters] Removed mt parameter (both OFF)');
+      return;
+    }
     
     const newState: FilterState = {
       ...filterState,

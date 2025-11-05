@@ -25,7 +25,7 @@ interface UseIndexedDBFilteringParams {
   dateTimeFilter?: any;
   domainFilterEnabled: boolean;
   currentDomain: string;
-  activeChannel: 'human' | 'AI' | 'ALL';  // Channel type: human, AI, or both
+  activeChannel: 'human' | 'AI' | 'ALL' | null;  // Channel type: human, AI, or both
   
   // Configuration
   maxDisplayMessages: number;
@@ -91,8 +91,11 @@ export function useIndexedDBFiltering(
     // ✅ CHECK IF FILTERS ARE ENABLED FIRST
     if (!params.isFilterEnabled) {
       // Filters are OFF - only apply channel filter (always required)
-      // Handle 'ALL' to show both human and AI messages
-      if (params.activeChannel === 'ALL') {
+      // Handle different channel states
+      if (params.activeChannel === null) {
+        // Both OFF - return empty criteria (show nothing, triggers EmptyState)
+        return {};
+      } else if (params.activeChannel === 'ALL') {
         criteria.messageTypes = ['human', 'AI'];
       } else {
         criteria.messageTypes = [params.activeChannel];
@@ -138,8 +141,11 @@ export function useIndexedDBFiltering(
     }
     
     // Message type filter (channel selection)
-    // Handle 'ALL' to show both human and AI messages
-    if (params.activeChannel === 'ALL') {
+    // Handle different channel states
+    if (params.activeChannel === null) {
+      // Both OFF - don't set messageTypes (show nothing)
+      // Will trigger EmptyState
+    } else if (params.activeChannel === 'ALL') {
       criteria.messageTypes = ['human', 'AI'];  // Show both channels
     } else {
       criteria.messageTypes = [params.activeChannel];  // Show single channel
