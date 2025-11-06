@@ -196,12 +196,25 @@ export function useContextMenus(params: UseContextMenusParams): UseContextMenusR
   }, []);
   
   const handleCopyAll = useCallback(() => {
+    if (filteredComments.length === 0) return;
+    
+    // Get first message timestamp for header
+    const firstTimestamp = new Date(filteredComments[0].timestamp).toLocaleString();
+    
+    // Detect AI entity name (if any)
+    const aiMessage = filteredComments.find(c => c['message-type'] === 'AI');
+    const aiName = aiMessage?.username || null;
+    
+    // Build header (compact format matching backend logs)
+    const header = aiName 
+      ? `HigherMind.ai conversation with ${aiName} that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`
+      : `HigherMind.ai conversation that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`;
+    
+    // Format messages (compact - no timestamps)
     const messages = filteredComments.map(comment => {
-      const timestamp = new Date(comment.timestamp).toLocaleString();
-      return `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
+      return `${comment.username || 'anonymous'}: ${comment.text}`;
     }).join('\n\n');
     
-    const header = `Say What Want - ${domainConfigTitle}\nExported: ${new Date().toLocaleString()}\nTotal Messages: ${filteredComments.length}\n${'='.repeat(50)}\n\n`;
     const fullText = header + messages;
     
     if (navigator.clipboard) {
@@ -215,8 +228,8 @@ export function useContextMenus(params: UseContextMenusParams): UseContextMenusR
       document.body.removeChild(textarea);
     }
     
-    console.log(`[Title Context Menu] Copied ${filteredComments.length} messages to clipboard`);
-  }, [filteredComments, domainConfigTitle]);
+    console.log(`[Title Context Menu] Copied ${filteredComments.length} messages to clipboard (compact)`);
+  }, [filteredComments]);
   
   const handleCopyAllVerbose = useCallback(() => {
     const currentUrl = window.location.href;
@@ -278,12 +291,25 @@ ${'='.repeat(50)}
   }, [filteredComments]);
   
   const handleSaveAll = useCallback(() => {
+    if (filteredComments.length === 0) return;
+    
+    // Get first message timestamp for header
+    const firstTimestamp = new Date(filteredComments[0].timestamp).toLocaleString();
+    
+    // Detect AI entity name (if any)
+    const aiMessage = filteredComments.find(c => c['message-type'] === 'AI');
+    const aiName = aiMessage?.username || null;
+    
+    // Build header (compact format matching backend logs)
+    const header = aiName 
+      ? `HigherMind.ai conversation with ${aiName} that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`
+      : `HigherMind.ai conversation that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`;
+    
+    // Format messages (compact - no timestamps)
     const messages = filteredComments.map(comment => {
-      const timestamp = new Date(comment.timestamp).toLocaleString();
-      return `${comment.username || 'anonymous'} (${timestamp}):\n${comment.text}`;
+      return `${comment.username || 'anonymous'}: ${comment.text}`;
     }).join('\n\n');
     
-    const header = `Say What Want - ${domainConfigTitle}\nExported: ${new Date().toLocaleString()}\nTotal Messages: ${filteredComments.length}\n${'='.repeat(50)}\n\n`;
     const fullText = header + messages;
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
