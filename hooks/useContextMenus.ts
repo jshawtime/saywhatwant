@@ -201,14 +201,26 @@ export function useContextMenus(params: UseContextMenusParams): UseContextMenusR
     // Get first message timestamp for header
     const firstTimestamp = new Date(filteredComments[0].timestamp).toLocaleString();
     
-    // Detect AI entity name (if any)
+    // Detect participants (human and AI)
+    const humanMessage = filteredComments.find(c => c['message-type'] === 'human');
     const aiMessage = filteredComments.find(c => c['message-type'] === 'AI');
-    const aiName = aiMessage?.username || null;
     
-    // Build header (compact format matching backend logs)
-    const header = aiName 
-      ? `HigherMind.ai conversation with ${aiName} that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`
-      : `HigherMind.ai conversation that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`;
+    const humanName = humanMessage?.username || 'Human';
+    const humanColor = humanMessage?.color || 'unknown';
+    const aiName = aiMessage?.username || null;
+    const aiColor = aiMessage?.color || 'unknown';
+    
+    // Build header with participant info
+    let header = aiName 
+      ? `HigherMind.ai conversation with ${aiName} that began on ${firstTimestamp}\n`
+      : `HigherMind.ai conversation that began on ${firstTimestamp}\n`;
+    
+    header += `${'='.repeat(50)}\n`;
+    header += `Human: ${humanName}:${humanColor}\n`;
+    if (aiName) {
+      header += `AI: ${aiName}:${aiColor}\n`;
+    }
+    header += `${'='.repeat(50)}\n\n`;
     
     // Format messages (compact - no timestamps)
     const messages = filteredComments.map(comment => {
@@ -296,14 +308,26 @@ ${'='.repeat(50)}
     // Get first message timestamp for header
     const firstTimestamp = new Date(filteredComments[0].timestamp).toLocaleString();
     
-    // Detect AI entity name (if any)
+    // Detect participants (human and AI)
+    const humanMessage = filteredComments.find(c => c['message-type'] === 'human');
     const aiMessage = filteredComments.find(c => c['message-type'] === 'AI');
-    const aiName = aiMessage?.username || null;
     
-    // Build header (compact format matching backend logs)
-    const header = aiName 
-      ? `HigherMind.ai conversation with ${aiName} that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`
-      : `HigherMind.ai conversation that began on ${firstTimestamp}\n${'='.repeat(50)}\n\n`;
+    const humanName = humanMessage?.username || 'Human';
+    const humanColor = humanMessage?.color || 'unknown';
+    const aiName = aiMessage?.username || null;
+    const aiColor = aiMessage?.color || 'unknown';
+    
+    // Build header with participant info
+    let header = aiName 
+      ? `HigherMind.ai conversation with ${aiName} that began on ${firstTimestamp}\n`
+      : `HigherMind.ai conversation that began on ${firstTimestamp}\n`;
+    
+    header += `${'='.repeat(50)}\n`;
+    header += `Human: ${humanName}:${humanColor}\n`;
+    if (aiName) {
+      header += `AI: ${aiName}:${aiColor}\n`;
+    }
+    header += `${'='.repeat(50)}\n\n`;
     
     // Format messages (compact - no timestamps)
     const messages = filteredComments.map(comment => {
@@ -312,8 +336,11 @@ ${'='.repeat(50)}
     
     const fullText = header + messages;
     
+    // Build filename with participants and timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const filename = `saywhatwant_${domainConfigTitle.toLowerCase().replace(/\s+/g, '_')}_${timestamp}.txt`;
+    const filename = aiName
+      ? `${aiName}${aiColor}${humanName}${humanColor}_${timestamp}.txt`
+      : `${humanName}${humanColor}_${timestamp}.txt`;
     
     const blob = new Blob([fullText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
