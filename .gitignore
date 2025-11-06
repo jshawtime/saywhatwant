@@ -57,3 +57,4 @@ public/sww-videos/*.mov# Trigger rebuild Wed Sep 24 09:07:16 PDT 2025
 playwright-report/
 test-results/
 logs/
+# Trigger deploy
