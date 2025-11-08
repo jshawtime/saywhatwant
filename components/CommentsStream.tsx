@@ -156,6 +156,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   // State management - initial messages from IndexedDB
   const [initialMessages, setInitialMessages] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
+  const [eqScore, setEqScore] = useState<number>(() => {
+    // Load from localStorage on mount
+    return parseInt(localStorage.getItem('sww-eq-score') || '0');
+  });
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
@@ -968,6 +972,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 console.log('[SimpleIndexedDB] First message saved:', newComments[0]);
               }
             }
+            
+            // Check for eqScore in new messages and save to localStorage
+            newComments.forEach(msg => {
+              if (msg['message-type'] === 'human' && msg.eqScore !== undefined) {
+                localStorage.setItem('sww-eq-score', msg.eqScore.toString());
+                setEqScore(msg.eqScore);  // Trigger re-render with new score
+                console.log(`[EQ-SCORE] Updated localStorage: ${msg.eqScore}`);
+              }
+            });
           } catch (err) {
             console.warn('[SimpleIndexedDB] Failed to save polled messages:', err);
           }
@@ -1147,13 +1160,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onSelectColor={selectColor}
         showVideo={showVideo}
         onToggleVideo={toggleVideo}
-        eqScore={React.useMemo(() => {
-          // Get EQ score from latest human message (reactive to filteredComments)
-          const latestHuman = filteredComments
-            .filter(c => c['message-type'] === 'human')
-            .sort((a, b) => b.timestamp - a.timestamp)[0];
-          return latestHuman?.eqScore || 0;
-        }, [filteredComments])}
+        eqScore={eqScore}
         filterUsernames={mergedUserFilters}
             filterWords={filterWords}
             negativeFilterWords={negativeFilterWords}
