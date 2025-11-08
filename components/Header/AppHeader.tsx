@@ -50,9 +50,8 @@ interface AppHeaderProps {
   showVideo: boolean;
   onToggleVideo?: () => void;
   
-  // Message Counts
-  displayedCount: number;
-  globalCount: number;
+  // EQ Score
+  eqScore: number;
   
   // Filters
   filterUsernames: UsernameFilter[];
@@ -155,9 +154,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   showVideo,
   onToggleVideo,
   
-  // Message Counts
-  displayedCount,
-  globalCount,
+  // EQ Score
+  eqScore,
   
   // Filters
   filterUsernames,
@@ -263,8 +261,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             showColorPicker={showColorPicker}
             randomizedColors={randomizedColors}
             maxUsernameLength={maxUsernameLength}
-            displayedCount={displayedCount}
-            globalCount={globalCount}
+            eqScore={eqScore}
             onUsernameChange={onUsernameChange}
             onUsernameFocus={onUsernameFocus}
             onUsernameTab={onUsernameTab}

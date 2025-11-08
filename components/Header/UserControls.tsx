@@ -54,14 +54,9 @@ interface UserControlsProps {
   maxUsernameLength: number;
   
   /**
-   * Number of messages in current window
+   * EQ Score from latest human message (0-100)
    */
-  displayedCount: number;
-  
-  /**
-   * Global message count
-   */
-  globalCount: number;
+  eqScore: number;
   
   /**
    * Callback when username changes
@@ -140,8 +135,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
   showColorPicker,
   randomizedColors,
   maxUsernameLength,
-  displayedCount,
-  globalCount,
+  eqScore,
   onUsernameChange,
   onUsernameFocus,
   onUsernameTab,
@@ -172,35 +166,18 @@ export const UserControls: React.FC<UserControlsProps> = ({
   
   return (
     <div className="flex items-center gap-2">
-      {/* Messages Window Count */}
-      {displayedCount > 0 && (
-        <span 
-          className="mr-2 opacity-60" 
-          style={{ 
-            color: userColorRgb,
-            fontSize: '20px',  // 150% larger (was 13.8px)
-            fontWeight: 700
-          }}
-          title="Messages in current window"
-        >
-          {formatNumber(displayedCount)}
-        </span>
-      )}
-      
-      {/* Global Message Counter */}
-      {globalCount > 0 && (
-        <span 
-          className="mr-2 opacity-60" 
-          style={{ 
-            color: userColorRgb,
-            fontSize: '20px',  // 150% larger (was 13.8px)
-            fontWeight: 700
-          }}
-          title="Total global messages"
-        >
-          {formatNumber(globalCount)}
-        </span>
-      )}
+      {/* EQ Score (Emotional Intelligence) */}
+      <span 
+        className="mr-2 opacity-60" 
+        style={{ 
+          color: userColorRgb,
+          fontSize: '20px',
+          fontWeight: 700
+        }}
+        title="Emotional Intelligence Score (0-100)"
+      >
+        {eqScore}
+      </span>
       
       {/* Username Input with Color Picker */}
       <div 

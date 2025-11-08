@@ -1147,8 +1147,15 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onSelectColor={selectColor}
         showVideo={showVideo}
         onToggleVideo={toggleVideo}
-        displayedCount={displayedComments.length}
-        globalCount={messageCount}
+        eqScore={
+          // Get EQ score from latest human message
+          (() => {
+            const latestHuman = filteredComments
+              .filter(c => c['message-type'] === 'human')
+              .sort((a, b) => b.timestamp - a.timestamp)[0];
+            return latestHuman?.eqScore || 0;
+          })()
+        }
         filterUsernames={mergedUserFilters}
             filterWords={filterWords}
             negativeFilterWords={negativeFilterWords}

@@ -36,6 +36,11 @@ export class MessageQueue {
           return await this.getMessages(url);
         }
       }
+      
+      // PATCH /api/comments/:id - Update message fields (e.g., eqScore)
+      if (path.startsWith('/api/comments/') && request.method === 'PATCH') {
+        return await this.patchMessage(request, path);
+      }
 
       if (path === '/api/queue/pending' && request.method === 'GET') {
         return await this.getPending(url);
@@ -346,6 +351,43 @@ export class MessageQueue {
         console.log('[MessageQueue] Completed:', messageId, 'in', key);
         
         return this.jsonResponse({ success: true });
+      }
+    }
+    
+    return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
+  }
+  
+  /**
+   * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
+   */
+  async patchMessage(request, path) {
+    const messageId = path.split('/').pop();  // Extract ID from path
+    const body = await request.json();
+    
+    // Get all conversation keys
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    // Find message in conversations
+    for (const key of keys.keys()) {
+      const conversation = await this.state.storage.get(key);
+      if (!conversation) continue;
+      
+      const messageIndex = conversation.findIndex(m => m.id === messageId);
+      
+      if (messageIndex !== -1) {
+        // Update message fields
+        const message = conversation[messageIndex];
+        
+        // Update eqScore if provided
+        if (body.eqScore !== undefined) {
+          message.eqScore = body.eqScore;
+          console.log('[MessageQueue] Updated eqScore:', messageId, '→', body.eqScore);
+        }
+        
+        // Save conversation back
+        await this.state.storage.put(key, conversation);
+        
+        return this.jsonResponse({ success: true, message });
       }
     }
     
