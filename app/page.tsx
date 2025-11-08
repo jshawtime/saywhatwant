@@ -83,8 +83,8 @@ export default function Home() {
     localStorage.setItem('sww-show-video', String(newState));
   };
 
-  // Convert userColor to RGB string for VideoPlayer
-  const userColorRgb = nineDigitToRgb(userColor);
+  // Convert userColor to RGB string - recalculates when userColor changes
+  const userColorRgb = React.useMemo(() => nineDigitToRgb(userColor), [userColor]);
 
   // Show mobile block if not mounted yet (prevent hydration mismatch)
   if (!mounted) return null;
