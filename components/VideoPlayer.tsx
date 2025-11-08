@@ -39,6 +39,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
     'hard-light', 'soft-light', 'difference', 'exclusion',
     'hue', 'saturation', 'color', 'luminosity'
   ];
+  
+  // Force re-render when userColor changes (ensures overlay updates)
+  const [, forceUpdate] = useState({});
+  useEffect(() => {
+    forceUpdate({});  // Trigger re-render when color changes
+  }, [userColorRgb]);
 
   // Fetch manifest and initialize videos
   useEffect(() => {
