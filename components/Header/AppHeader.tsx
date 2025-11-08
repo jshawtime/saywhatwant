@@ -278,8 +278,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
         {/* Filter Bar and Search Bar - Shared Row */}
         <div className="flex items-center gap-3">
-          {/* Filter Bar (2/3 width) */}
-          <div className="flex-[2]">
+          {/* Filter Bar (flexible width) */}
+          <div className="flex-1">
             <FilterBar 
               filterUsernames={filterUsernames}
               filterWords={filterWords}
@@ -297,8 +297,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             />
           </div>
 
-          {/* Search Bar (1/3 width) */}
-          <div className="flex-[1]">
+          {/* Search Bar (fixed width matching username) */}
+          <div style={{ width: 'calc(15ch + 65px)' }}>
             <SearchBar
               searchTerm={searchTerm}
               userColor={userColor}

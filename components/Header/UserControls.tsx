@@ -175,8 +175,12 @@ export const UserControls: React.FC<UserControlsProps> = ({
       {/* Messages Window Count */}
       {displayedCount > 0 && (
         <span 
-          className="text-xs mr-2 opacity-60" 
-          style={{ color: userColorRgb }}
+          className="mr-2 opacity-60" 
+          style={{ 
+            color: userColorRgb,
+            fontSize: '20.7px',  // 150% larger (was 13.8px)
+            fontWeight: 500
+          }}
           title="Messages in current window"
         >
           {formatNumber(displayedCount)}
@@ -186,8 +190,12 @@ export const UserControls: React.FC<UserControlsProps> = ({
       {/* Global Message Counter */}
       {globalCount > 0 && (
         <span 
-          className="text-xs mr-2 opacity-60" 
-          style={{ color: userColorRgb }}
+          className="mr-2 opacity-60" 
+          style={{ 
+            color: userColorRgb,
+            fontSize: '20.7px',  // 150% larger (was 13.8px)
+            fontWeight: 500
+          }}
           title="Total global messages"
         >
           {formatNumber(globalCount)}
