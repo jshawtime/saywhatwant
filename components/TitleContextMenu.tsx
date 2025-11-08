@@ -1,8 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { getDarkerColor } from '@/modules/colorSystem';
+import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface TitleContextMenuProps {
   x: number;
   y: number;
+  userColorRgb: string;
   onClose: () => void;
   onCopyAll: () => void;
   onCopyAllVerbose: () => void;
@@ -12,6 +15,7 @@ interface TitleContextMenuProps {
 export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
   x,
   y,
+  userColorRgb,
   onClose,
   onCopyAll,
   onCopyAllVerbose,
@@ -75,7 +79,8 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           onCopyAll();
           onClose();
         }}
-        className="block w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+        className="block w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all"
+        style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) }}
         aria-label="Copy all messages"
       >
         Copy ALL
@@ -87,7 +92,8 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           onCopyAllVerbose();
           onClose();
         }}
-        className="block w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+        className="block w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all"
+        style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) }}
         aria-label="Copy all messages with debug info"
       >
         Copy ALL - verbose
@@ -99,7 +105,8 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           onSaveAll();
           onClose();
         }}
-        className="block w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+        className="block w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all"
+        style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) }}
         aria-label="Save all messages"
       >
         Save ALL

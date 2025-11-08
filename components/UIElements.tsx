@@ -104,8 +104,8 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
 }) => {
   const baseColor = userColor;
   const textColor = value ? baseColor : getDarkerColor(baseColor, OPACITY_LEVELS.DARK);
-  const borderColor = value ? getDarkerColor(baseColor, OPACITY_LEVELS.MEDIUM) : 'rgba(255,255,255,0.1)';
-  const placeholderColor = getDarkerColor(baseColor, OPACITY_LEVELS.DARK); // 40% opacity - one level lighter
+  const borderColor = getDarkerColor(baseColor, OPACITY_LEVELS.DARK);  // Always userColor, no fallback
+  const placeholderColor = getDarkerColor(baseColor, OPACITY_LEVELS.DARK);
   
   return (
     <input
@@ -150,6 +150,7 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
 }) => {
   const baseColor = userColor;
   const textColor = getDarkerColor(baseColor, OPACITY_LEVELS.LIGHT); // 60% opacity
+  const borderColor = getDarkerColor(baseColor, OPACITY_LEVELS.DARK);  // Always userColor
   
   return (
     <input
@@ -165,10 +166,10 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
       }}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none focus:border-white/30 placeholder-white/40 transition-all duration-300 touch-manipulation ${
+      className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none placeholder-white/40 transition-all duration-300 touch-manipulation ${
         usernameFlash 
-          ? 'border-cyan-400 animate-pulse shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
-          : 'border-white/10'
+          ? 'animate-pulse shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
+          : ''
       }`}
       maxLength={maxLength}
       style={{ 
@@ -176,7 +177,8 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
         maxWidth: '100%',
         boxSizing: 'border-box',
         fontSize: '16px', // Prevent zoom on mobile
-        color: textColor
+        color: textColor,
+        borderColor: usernameFlash ? 'rgb(34, 211, 238)' : borderColor  // Cyan when flashing, userColor otherwise
       }}
     />
   );

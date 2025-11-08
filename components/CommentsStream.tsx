@@ -1246,6 +1246,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         <TitleContextMenu
           x={titleContextMenu.x}
           y={titleContextMenu.y}
+          userColorRgb={userColorRgb}
           onClose={() => setTitleContextMenu(null)}
           onCopyAll={handleCopyAll}
           onCopyAllVerbose={handleCopyAllVerbose}

@@ -251,13 +251,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             placeholder="Say what you want..."
-            className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:border-white/30 min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
+            className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border rounded-lg resize-none focus:outline-none min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
             style={{
               ['--placeholder-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKER),
               ['--scrollbar-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
               ['--scrollbar-bg' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST),
               color: userColorRgb,
               backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST * 0.5),
+              borderColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK),  // userColor, no fallback
               ...getInputCursorStyle(inputText),
             } as React.CSSProperties}
             maxLength={maxLength}
