@@ -103,7 +103,7 @@ export default function Home() {
           width: showVideo ? 'calc(100vh * 9 / 16)' : '0',
         }}
       >
-        {showVideo && <VideoPlayer toggleVideo={toggleVideo} userColor={userColor} userColorRgb={userColorRgb} />}
+        {showVideo && <VideoPlayer key={userColorRgb} toggleVideo={toggleVideo} userColor={userColor} userColorRgb={userColorRgb} />}
       </div>
 
       {/* Right Side - Comments Stream */}
