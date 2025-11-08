@@ -250,32 +250,39 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           />
         </div>
 
-        {/* Filter Bar */}
-        <FilterBar 
-          filterUsernames={filterUsernames}
-          filterWords={filterWords}
-          negativeFilterWords={negativeFilterWords}
-          isFilterEnabled={isFilterEnabled}
-          hasActiveFilters={hasActiveFilters}
-          userColor={userColorRgb}
-          dateTimeFilter={dateTimeFilter}
-          onToggleFilter={onToggleFilter}
-          onRemoveUsernameFilter={onRemoveUsernameFilter}
-          onRemoveWordFilter={onRemoveWordFilter}
-          onRemoveNegativeFilter={onRemoveNegativeFilter}
-          onClearDateTimeFilter={onClearDateTimeFilter}
-          getDarkerColor={getDarkerColor}
-        />
+        {/* Filter Bar and Search Bar - Shared Row */}
+        <div className="flex items-center gap-3">
+          {/* Filter Bar (2/3 width) */}
+          <div className="flex-[2]">
+            <FilterBar 
+              filterUsernames={filterUsernames}
+              filterWords={filterWords}
+              negativeFilterWords={negativeFilterWords}
+              isFilterEnabled={isFilterEnabled}
+              hasActiveFilters={hasActiveFilters}
+              userColor={userColorRgb}
+              dateTimeFilter={dateTimeFilter}
+              onToggleFilter={onToggleFilter}
+              onRemoveUsernameFilter={onRemoveUsernameFilter}
+              onRemoveWordFilter={onRemoveWordFilter}
+              onRemoveNegativeFilter={onRemoveNegativeFilter}
+              onClearDateTimeFilter={onClearDateTimeFilter}
+              getDarkerColor={getDarkerColor}
+            />
+          </div>
 
-        {/* Search Bar */}
-        <SearchBar
-          searchTerm={searchTerm}
-          userColor={userColor}
-          userColorRgb={userColorRgb}
-          onSearchChange={onSearchChange}
-          onClearSearch={onClearSearch}
-          placeholder="Search..."
-        />
+          {/* Search Bar (1/3 width) */}
+          <div className="flex-[1]">
+            <SearchBar
+              searchTerm={searchTerm}
+              userColor={userColor}
+              userColorRgb={userColorRgb}
+              onSearchChange={onSearchChange}
+              onClearSearch={onClearSearch}
+              placeholder="Search..."
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
