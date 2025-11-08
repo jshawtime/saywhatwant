@@ -6,6 +6,7 @@
 export interface FilterUser {
   username: string;
   color: string;
+  messageType?: 'human' | 'AI';  // Track if filter is for human or AI username
 }
 
 export interface FilterState {
