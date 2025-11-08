@@ -80,6 +80,7 @@ interface AppHeaderProps {
   onCopyAll: () => void;
   onCopyAllVerbose: () => void;
   onSaveAll: () => void;
+  titleContextMenu: { x: number; y: number } | null;
   setTitleContextMenu: (menu: { x: number; y: number } | null) => void;
 }
 
@@ -127,6 +128,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onCopyAll,
   onCopyAllVerbose,
   onSaveAll,
+  titleContextMenu,
   setTitleContextMenu,
   
   // Message Type Channel
@@ -193,14 +195,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Spacer */}
           <div className="w-3" />
           
-          {/* Download Icon - Opens export menu */}
+          {/* Download Icon - Toggles export menu */}
           <button
             onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setTitleContextMenu({ 
-                x: rect.left, 
-                y: rect.bottom + 5 
-              });
+              if (titleContextMenu) {
+                // Menu is open - close it
+                setTitleContextMenu(null);
+              } else {
+                // Menu is closed - open it
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTitleContextMenu({ 
+                  x: rect.left, 
+                  y: rect.bottom + 5 
+                });
+              }
             }}
             className="p-2 rounded-full transition-all hover:bg-black/40"
             title="Export conversation"

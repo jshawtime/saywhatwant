@@ -82,7 +82,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-          fontSize: '16.1px'  // 15% larger (was 14px from text-sm)
+          fontSize: '12.9px'  // Smaller than body text (was 16.1px, now 20% smaller)
         }}
         aria-label="Copy all messages"
       >
@@ -98,7 +98,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-          fontSize: '16.1px'  // 15% larger (was 14px from text-sm)
+          fontSize: '12.9px'  // Smaller than body text (was 16.1px, now 20% smaller)
         }}
         aria-label="Copy all messages with debug info"
       >
@@ -114,7 +114,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-          fontSize: '16.1px'  // 15% larger (was 14px from text-sm)
+          fontSize: '12.9px'  // Smaller than body text (was 16.1px, now 20% smaller)
         }}
         aria-label="Save all messages"
       >

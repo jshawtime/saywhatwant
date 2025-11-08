@@ -1171,6 +1171,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onCopyAll={handleCopyAll}
         onCopyAllVerbose={handleCopyAllVerbose}
         onSaveAll={handleSaveAll}
+        titleContextMenu={titleContextMenu}
         setTitleContextMenu={setTitleContextMenu}
       />
 

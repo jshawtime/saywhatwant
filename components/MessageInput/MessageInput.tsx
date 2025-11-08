@@ -253,11 +253,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             placeholder="Say what you want..."
             className="w-full px-4 pt-7 pb-3 pr-12 bg-white/5 border rounded-lg resize-none focus:outline-none min-h-[64px] max-h-[138px] custom-scrollbar touch-manipulation box-border"
             style={{
-              ['--placeholder-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKER),
+              ['--placeholder-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM),  // One level off full bright
               ['--scrollbar-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
               ['--scrollbar-bg' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST),
-              fontSize: '16.1px',  // 15% larger (was 14px from text-sm)
-              color: userColorRgb,
+              fontSize: '17.7px',  // 10% larger than message text (16.1 * 1.10)
+              color: userColorRgb,  // Full bright for typed text
               backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST * 0.5),
               borderColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK),  // userColor, no fallback
               ...getInputCursorStyle(inputText),

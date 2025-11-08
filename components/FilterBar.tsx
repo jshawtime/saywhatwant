@@ -209,7 +209,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         {getSoundIcon(setting.sound)}
                       </span>
                     )}
-                    <span className="text-xs font-medium" style={{ color: filter.color }}>
+                    <span style={{ fontSize: '13.8px', fontWeight: 500, color: filter.color }}>
                       {filter.username}
                     </span>
                     <button
@@ -221,7 +221,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       style={{ color: filter.color }}
                       tabIndex={-1}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </button>
                   </span>
                 );
@@ -253,7 +253,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         {getSoundIcon(setting.sound)}
                       </span>
                     )}
-                    <span className="text-xs" style={{ color: userColor }}>
+                    <span style={{ fontSize: '13.8px', color: userColor }}>
                       {word}
                     </span>
                     <button
@@ -265,7 +265,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       style={{ color: userColor }}
                       tabIndex={-1}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </button>
                   </span>
                 );
