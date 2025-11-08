@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Download, Share2 } from 'lucide-react';
+import { Download, Share2, Tv } from 'lucide-react';
 import DomainFilter from '@/components/DomainFilter';
 import FilterBar from '@/components/FilterBar';
 import { SearchBar } from '@/components/Search/SearchBar';
@@ -231,9 +231,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             />
           </button>
           
+          {/* Small gap separator */}
+          <div className="w-2" />
+          
+          {/* TV Toggle */}
+          {onToggleVideo && (
+            <button
+              onClick={onToggleVideo}
+              className="p-2 rounded-full transition-all hover:bg-black/40"
+              style={{ 
+                color: showVideo 
+                  ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT)
+                  : getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK),
+                opacity: showVideo ? 1 : 0.5
+              }}
+              title={showVideo ? 'Hide video' : 'Show video'}
+            >
+              <Tv className="w-6 h-6" />
+            </button>
+          )}
+          
           </div>
           
-          {/* User Controls */}
+          {/* User Controls (anchored right) */}
           <UserControls
             username={username}
             userColor={userColor}
@@ -245,14 +265,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             maxUsernameLength={maxUsernameLength}
             displayedCount={displayedCount}
             globalCount={globalCount}
-            showVideo={showVideo}
             onUsernameChange={onUsernameChange}
             onUsernameFocus={onUsernameFocus}
             onUsernameTab={onUsernameTab}
             onClearUsername={onClearUsername}
             onToggleColorPicker={onToggleColorPicker}
             onSelectColor={onSelectColor}
-            onToggleVideo={onToggleVideo}
             usernameRef={usernameRef}
             colorPickerRef={colorPickerRef}
           />

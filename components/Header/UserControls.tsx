@@ -6,7 +6,6 @@
  */
 
 import React from 'react';
-import { Tv } from 'lucide-react';
 import { StyledUserIcon, StyledUsernameInput, StyledClearIcon } from '@/components/UIElements';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 import { getDarkerColor } from '@/modules/colorSystem';
@@ -65,11 +64,6 @@ interface UserControlsProps {
   globalCount: number;
   
   /**
-   * Whether video is currently shown
-   */
-  showVideo: boolean;
-  
-  /**
    * Callback when username changes
    */
   onUsernameChange: (username: string) => void;
@@ -98,11 +92,6 @@ interface UserControlsProps {
    * Callback when color is selected
    */
   onSelectColor: (color: string) => void;
-  
-  /**
-   * Callback to toggle video (optional)
-   */
-  onToggleVideo?: () => void;
   
   /**
    * Ref for username input element
@@ -153,14 +142,12 @@ export const UserControls: React.FC<UserControlsProps> = ({
   maxUsernameLength,
   displayedCount,
   globalCount,
-  showVideo,
   onUsernameChange,
   onUsernameFocus,
   onUsernameTab,
   onClearUsername,
   onToggleColorPicker,
   onSelectColor,
-  onToggleVideo,
   usernameRef,
   colorPickerRef
 }) => {
@@ -261,23 +248,6 @@ export const UserControls: React.FC<UserControlsProps> = ({
         )}
       </div>
       
-      {/* TV Toggle */}
-      {onToggleVideo && (
-        <button
-          onClick={onToggleVideo}
-          className="p-2 hover:opacity-80 transition-opacity"
-          style={{ 
-            color: showVideo 
-              ? getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT)  // 60% opacity when active
-              : userColor,  // Full color when off
-            opacity: showVideo ? 1 : OPACITY_LEVELS.MEDIUM  // 50% opacity when off
-          }}
-          title={showVideo ? 'Hide video' : 'Show video'}
-          tabIndex={-1}
-        >
-          <Tv className="w-6 h-6" />
-        </button>
-      )}
     </div>
   );
 };
