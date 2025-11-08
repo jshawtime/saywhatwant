@@ -157,8 +157,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [initialMessages, setInitialMessages] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
   const [eqScore, setEqScore] = useState<number>(() => {
-    // Load from localStorage on mount
-    return parseInt(localStorage.getItem('sww-eq-score') || '0');
+    // Load from sessionStorage on mount (per-tab isolation)
+    return parseInt(sessionStorage.getItem('sww-eq-score') || '0');
   });
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -973,12 +973,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
               }
             }
             
-            // Check for eqScore in new messages and save to localStorage
+            // Check for eqScore in new messages and save to sessionStorage
             newComments.forEach(msg => {
               if (msg['message-type'] === 'human' && msg.eqScore !== undefined) {
-                localStorage.setItem('sww-eq-score', msg.eqScore.toString());
+                sessionStorage.setItem('sww-eq-score', msg.eqScore.toString());
                 setEqScore(msg.eqScore);  // Trigger re-render with new score
-                console.log(`[EQ-SCORE] Updated localStorage: ${msg.eqScore}`);
+                console.log(`[EQ-SCORE] Updated sessionStorage: ${msg.eqScore}`);
               }
             });
           } catch (err) {
