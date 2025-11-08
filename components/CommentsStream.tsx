@@ -1147,15 +1147,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onSelectColor={selectColor}
         showVideo={showVideo}
         onToggleVideo={toggleVideo}
-        eqScore={
-          // Get EQ score from latest human message
-          (() => {
-            const latestHuman = filteredComments
-              .filter(c => c['message-type'] === 'human')
-              .sort((a, b) => b.timestamp - a.timestamp)[0];
-            return latestHuman?.eqScore || 0;
-          })()
-        }
+        eqScore={React.useMemo(() => {
+          // Get EQ score from latest human message (reactive to filteredComments)
+          const latestHuman = filteredComments
+            .filter(c => c['message-type'] === 'human')
+            .sort((a, b) => b.timestamp - a.timestamp)[0];
+          return latestHuman?.eqScore || 0;
+        }, [filteredComments])}
         filterUsernames={mergedUserFilters}
             filterWords={filterWords}
             negativeFilterWords={negativeFilterWords}

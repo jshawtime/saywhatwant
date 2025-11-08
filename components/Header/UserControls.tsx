@@ -5,7 +5,8 @@
  * Handles user identity and color selection
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import CountUp from 'react-countup';
 import { StyledUserIcon, StyledUsernameInput, StyledClearIcon } from '@/components/UIElements';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 import { getDarkerColor } from '@/modules/colorSystem';
@@ -164,9 +165,16 @@ export const UserControls: React.FC<UserControlsProps> = ({
     }
   };
   
+  // Track previous score for animation
+  const [prevScore, setPrevScore] = useState(eqScore);
+  
+  useEffect(() => {
+    setPrevScore(eqScore);
+  }, [eqScore]);
+  
   return (
     <div className="flex items-center gap-2">
-      {/* EQ Score (Emotional Intelligence) */}
+      {/* EQ Score (Emotional Intelligence) - Animated */}
       <span 
         className="mr-2 opacity-60" 
         style={{ 
@@ -176,7 +184,13 @@ export const UserControls: React.FC<UserControlsProps> = ({
         }}
         title="Emotional Intelligence Score (0-100)"
       >
-        {eqScore}
+        <CountUp 
+          start={prevScore}
+          end={eqScore}
+          duration={1}
+          preserveValue={true}
+          useEasing={true}
+        />
       </span>
       
       {/* Username Input with Color Picker */}
