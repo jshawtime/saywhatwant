@@ -30,13 +30,13 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div style={{ color: userColor }}>
         {searchTerm ? 'No matching comments' : (
           <>
-            <div style={{ fontSize: '20.7px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '16px', marginBottom: '12px' }}>
               Your conversations are anonymous - even your 1000th one
             </div>
-            <div style={{ fontSize: '16.1px', marginBottom: '23px' }}>
+            <div style={{ fontSize: '13px', marginBottom: '23px' }}>
               Bookmark this page to save this conversation
             </div>
-            <div style={{ fontSize: '11.5px', opacity: 0.5, marginTop: '12px' }}>
+            <div style={{ fontSize: '10px', opacity: 0.5, marginTop: '12px' }}>
               Build: {BUILD_TIMESTAMP}
             </div>
           </>

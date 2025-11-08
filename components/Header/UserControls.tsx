@@ -178,8 +178,8 @@ export const UserControls: React.FC<UserControlsProps> = ({
           className="mr-2 opacity-60" 
           style={{ 
             color: userColorRgb,
-            fontSize: '20.7px',  // 150% larger (was 13.8px)
-            fontWeight: 500
+            fontSize: '20px',  // 150% larger (was 13.8px)
+            fontWeight: 700
           }}
           title="Messages in current window"
         >
@@ -193,8 +193,8 @@ export const UserControls: React.FC<UserControlsProps> = ({
           className="mr-2 opacity-60" 
           style={{ 
             color: userColorRgb,
-            fontSize: '20.7px',  // 150% larger (was 13.8px)
-            fontWeight: 500
+            fontSize: '20px',  // 150% larger (was 13.8px)
+            fontWeight: 700
           }}
           title="Total global messages"
         >
