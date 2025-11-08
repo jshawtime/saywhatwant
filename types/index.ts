@@ -26,6 +26,7 @@ export interface Comment {
   context?: string[];             // Pre-formatted context messages from frontend
   botParams?: BotParams;          // Bot control parameters from URL (structured, type-safe)
   replyTo?: string;               // For AI messages: ID of human message being replied to
+  eqScore?: number;               // Emotional Intelligence score 0-100 (for human messages)
 }
 
 export interface CommentsResponse {
