@@ -169,8 +169,14 @@ export const UserControls: React.FC<UserControlsProps> = ({
   const [prevScore, setPrevScore] = useState(eqScore);
   
   useEffect(() => {
-    setPrevScore(eqScore);
-  }, [eqScore]);
+    // Delay setting prevScore until after animation completes (1 second)
+    if (prevScore !== eqScore) {
+      const timer = setTimeout(() => {
+        setPrevScore(eqScore);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [eqScore, prevScore]);
   
   return (
     <div className="flex items-center gap-2">
