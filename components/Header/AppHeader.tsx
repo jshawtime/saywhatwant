@@ -6,12 +6,14 @@
  */
 
 import React from 'react';
+import { Download, Share2 } from 'lucide-react';
 import DomainFilter from '@/components/DomainFilter';
 import FilterBar from '@/components/FilterBar';
 import { SearchBar } from '@/components/Search/SearchBar';
 import { MessageTypeToggle } from './MessageTypeToggle';
 import { UserControls } from './UserControls';
 import { getDarkerColor } from '@/modules/colorSystem';
+import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 import { UsernameFilter } from '@/modules/filterSystem';
 
 interface AppHeaderProps {
@@ -73,6 +75,12 @@ interface AppHeaderProps {
   // Events
   onTitleClick: () => void;
   onTitleContextMenu: (e: React.MouseEvent) => void;
+  
+  // Export menu handlers (for Download icon)
+  onCopyAll: () => void;
+  onCopyAllVerbose: () => void;
+  onSaveAll: () => void;
+  setTitleContextMenu: (menu: { x: number; y: number } | null) => void;
 }
 
 /**
@@ -114,6 +122,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   userColorRgb,
   onTitleClick,
   onTitleContextMenu,
+  
+  // Export menu handlers
+  onCopyAll,
+  onCopyAllVerbose,
+  onSaveAll,
+  setTitleContextMenu,
   
   // Message Type Channel
   activeChannel,
@@ -201,6 +215,39 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             userColorRgb={userColorRgb}
             onChannelChange={onChannelChange}
           />
+          
+          {/* Spacer */}
+          <div className="w-3" />
+          
+          {/* Download Icon - Opens export menu */}
+          <button
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setTitleContextMenu({ 
+                x: rect.left, 
+                y: rect.bottom + 5 
+              });
+            }}
+            className="p-2 rounded-full transition-all hover:bg-black/40"
+            title="Export conversation"
+          >
+            <Download 
+              className="w-3.5 h-3.5"
+              style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) }}
+            />
+          </button>
+          
+          {/* Share Icon - Placeholder for future */}
+          <button
+            className="p-2 rounded-full transition-all opacity-50 cursor-not-allowed"
+            title="Share conversation (coming soon)"
+            disabled
+          >
+            <Share2 
+              className="w-3.5 h-3.5"
+              style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) }}
+            />
+          </button>
           
           {/* User Controls */}
           <UserControls

@@ -1168,6 +1168,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           setDomainFilterEnabled(newState);
         }}
         onTitleContextMenu={handleTitleContextMenu}
+        onCopyAll={handleCopyAll}
+        onCopyAllVerbose={handleCopyAllVerbose}
+        onSaveAll={handleSaveAll}
+        setTitleContextMenu={setTitleContextMenu}
       />
 
       {/* Comments Stream */}
