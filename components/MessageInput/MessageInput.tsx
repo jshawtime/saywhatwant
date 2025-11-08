@@ -251,11 +251,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             placeholder="Say what you want..."
-            className="w-full px-3 pt-6 pb-2 pr-10 bg-white/5 border rounded-lg resize-none focus:outline-none min-h-[56px] max-h-[120px] text-sm md:text-sm custom-scrollbar touch-manipulation box-border"
+            className="w-full px-4 pt-7 pb-3 pr-12 bg-white/5 border rounded-lg resize-none focus:outline-none min-h-[64px] max-h-[138px] custom-scrollbar touch-manipulation box-border"
             style={{
               ['--placeholder-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKER),
               ['--scrollbar-color' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
               ['--scrollbar-bg' as any]: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST),
+              fontSize: '16.1px',  // 15% larger (was 14px from text-sm)
               color: userColorRgb,
               backgroundColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARKEST * 0.5),
               borderColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK),  // userColor, no fallback

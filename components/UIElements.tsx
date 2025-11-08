@@ -100,7 +100,7 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
   onChange,
   userColor,
   placeholder = "Search...",
-  className = "w-full pl-10 pr-4 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none"
+  className = "w-full pl-10 pr-4 py-2 bg-white/5 border rounded-lg focus:outline-none"
 }) => {
   const baseColor = userColor;
   const textColor = value ? baseColor : getDarkerColor(baseColor, OPACITY_LEVELS.DARK);
@@ -117,6 +117,7 @@ export const StyledSearchInput: React.FC<StyledSearchInputProps> = ({
       style={{
         color: textColor,
         borderColor: borderColor,
+        fontSize: '16.1px',  // 15% larger (was 14px from text-sm)
         ['--placeholder-color' as any]: placeholderColor,
       }}
       tabIndex={-1}
@@ -166,7 +167,7 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
       }}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className={`flex-1 pl-9 pr-8 py-1.5 bg-white/5 border rounded-lg text-sm focus:outline-none placeholder-white/40 transition-all duration-300 touch-manipulation ${
+      className={`flex-1 pl-9 pr-8 py-2 bg-white/5 border rounded-lg focus:outline-none placeholder-white/40 transition-all duration-300 touch-manipulation ${
         usernameFlash 
           ? 'animate-pulse shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
           : ''
@@ -176,7 +177,7 @@ export const StyledUsernameInput: React.FC<StyledUsernameInputProps> = ({
         width: '100%',
         maxWidth: '100%',
         boxSizing: 'border-box',
-        fontSize: '16px', // Prevent zoom on mobile
+        fontSize: '18.4px', // 15% larger (was 16px)
         color: textColor,
         borderColor: usernameFlash ? 'rgb(34, 211, 238)' : borderColor  // Cyan when flashing, userColor otherwise
       }}

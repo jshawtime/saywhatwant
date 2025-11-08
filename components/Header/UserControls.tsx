@@ -275,7 +275,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
           title={showVideo ? 'Hide video' : 'Show video'}
           tabIndex={-1}
         >
-          <Tv className="w-5 h-5" />
+          <Tv className="w-6 h-6" />
         </button>
       )}
     </div>

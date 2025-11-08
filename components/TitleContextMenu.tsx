@@ -79,8 +79,11 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           onCopyAll();
           onClose();
         }}
-        className="block w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all"
-        style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) }}
+        className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
+        style={{ 
+          color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
+          fontSize: '16.1px'  // 15% larger (was 14px from text-sm)
+        }}
         aria-label="Copy all messages"
       >
         Copy ALL
@@ -92,8 +95,11 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           onCopyAllVerbose();
           onClose();
         }}
-        className="block w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all"
-        style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) }}
+        className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
+        style={{ 
+          color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
+          fontSize: '16.1px'  // 15% larger (was 14px from text-sm)
+        }}
         aria-label="Copy all messages with debug info"
       >
         Copy ALL - verbose
@@ -105,8 +111,11 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           onSaveAll();
           onClose();
         }}
-        className="block w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all"
-        style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT) }}
+        className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
+        style={{ 
+          color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
+          fontSize: '16.1px'  // 15% larger (was 14px from text-sm)
+        }}
         aria-label="Save all messages"
       >
         Save ALL

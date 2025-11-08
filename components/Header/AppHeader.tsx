@@ -206,7 +206,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             title="Export conversation"
           >
             <Download 
-              className="w-5 h-5"
+              className="w-6 h-6"
               style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) }}
             />
           </button>
@@ -218,7 +218,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             disabled
           >
             <Share2 
-              className="w-5 h-5"
+              className="w-6 h-6"
               style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) }}
             />
           </button>
