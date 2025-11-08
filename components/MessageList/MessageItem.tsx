@@ -45,10 +45,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           onTouchStart={(e) => onTouchStart(e, comment, true)}
           onTouchEnd={onTouchEnd}
           onTouchMove={onTouchEnd}
-          className="text-xs font-medium flex-shrink-0 hover:underline cursor-pointer select-none" 
+          className="font-medium flex-shrink-0 hover:underline cursor-pointer select-none" 
           title={`Click to filter by ${comment.username || 'Anonymous'} | Right click more options`}
           style={{ 
-            lineHeight: '20px',
+            fontSize: '13.8px',  // 15% larger (was 12px from text-xs)
+            lineHeight: '23px',  // 15% larger (was 20px)
             color: getDarkerColor(commentColor, OPACITY_LEVELS.LIGHT)
           }}
           tabIndex={-1}
@@ -63,9 +64,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             onTouchStart={(e) => onTouchStart(e, comment, false)}
             onTouchEnd={onTouchEnd}
             onTouchMove={onTouchEnd}
-            className="text-sm leading-snug break-all overflow-wrap-anywhere" 
+            className="leading-snug break-all overflow-wrap-anywhere" 
             style={{ 
-              lineHeight: '20px',
+              fontSize: '16.1px',  // 15% larger (was 14px from text-sm)
+              lineHeight: '23px',  // 15% larger (was 20px)
               color: commentColor
             }}
           >
@@ -75,8 +77,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         
         {/* Timestamp - positioned absolute on right */}
         <span 
-          className="absolute top-0 right-0 text-[10px] border px-1.5 py-0.5 rounded"
+          className="absolute top-0 right-0 border px-2 py-1 rounded"
           style={{ 
+            fontSize: '11.5px',  // 15% larger (was 10px)
             color: getDarkerColor(commentColor, 0.7),
             borderColor: getDarkerColor(commentColor, OPACITY_LEVELS.DARK),
             backgroundColor: getDarkerColor(commentColor, OPACITY_LEVELS.DARKEST)
