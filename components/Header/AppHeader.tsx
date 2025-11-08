@@ -180,34 +180,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <div className="p-3 space-y-2">
         {/* Title and Domain Filter */}
         <div className="flex items-center justify-between gap-4">
-          {/* Title & Domain LED */}
-          <div className="flex items-center gap-3">
-            <h2 
-              onClick={onTitleClick}
-              onContextMenu={onTitleContextMenu}
-              className="sww-title transition-opacity cursor-pointer select-none" 
-              title={domainFilterEnabled 
-                ? "Show messages across all domains | Right click more options" 
-                : "Show messages from this domain only | Right click more options"
-              }
-              style={{ 
-                color: userColorRgb,
-                opacity: domainFilterEnabled ? 0.4 : 0.25,
-                textShadow: 'none'
-              }}
-            >
-              {modelDomain || title}
-            </h2>
-            
-            {mounted && (
-              <DomainFilter
-                isEnabled={domainFilterEnabled}
-                domain={currentDomain}
-                color={userColorRgb}
-                onClick={onTitleClick}
-              />
-            )}
-          </div>
+          {/* Icons: Human, AI, Download, Share (moved to left) */}
+          <div className="flex items-center gap-1.5">
           
           {/* Message Type Toggle (Exclusive Channel) */}
           <MessageTypeToggle
@@ -232,7 +206,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             title="Export conversation"
           >
             <Download 
-              className="w-3.5 h-3.5"
+              className="w-5 h-5"
               style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) }}
             />
           </button>
@@ -244,10 +218,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             disabled
           >
             <Share2 
-              className="w-3.5 h-3.5"
+              className="w-5 h-5"
               style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) }}
             />
           </button>
+          
+          </div>
           
           {/* User Controls */}
           <UserControls

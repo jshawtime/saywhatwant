@@ -96,7 +96,7 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
         title={isHumanActive ? "Hide human messages" : "Show human messages"}
       >
         <Users 
-          className="w-3.5 h-3.5"
+          className="w-5 h-5"
           style={{ 
             color: getDarkerColor(userColorRgb, 
               isHumanActive ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
@@ -114,7 +114,7 @@ export const MessageTypeToggle: React.FC<MessageTypeToggleProps> = ({
         title={isAIActive ? "Hide AI messages" : "Show AI messages"}
       >
         <Sparkles 
-          className="w-3.5 h-3.5"
+          className="w-5 h-5"
           style={{ 
             color: getDarkerColor(userColorRgb, 
               isAIActive ? OPACITY_LEVELS.FULL : OPACITY_LEVELS.DARK
