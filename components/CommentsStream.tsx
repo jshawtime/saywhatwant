@@ -856,14 +856,32 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     const soundsToPlay: NotificationSound[] = [];
     const filtersToMark: string[] = [];
     
+    console.log('[SOUND-ALERT] Checking', newComments.length, 'new messages for alerts');
+    
     // Check each new comment
     newComments.forEach(comment => {
+      console.log('[SOUND-ALERT] Processing:', comment.username, 'type:', comment['message-type']);
+      
+      // ONLY check HUMAN messages for sound alerts
+      if (comment['message-type'] !== 'human') {
+        console.log('[SOUND-ALERT] Skipping AI message:', comment.username);
+        return; // Skip AI messages
+      }
+      
       // Check username filters (username+color combo)
       filterUsernames.forEach(filter => {
+        // ONLY alert for HUMAN filters
+        if (filter.messageType === 'AI') {
+          console.log('[SOUND-ALERT] Skipping AI filter:', filter.username);
+          return; // Skip AI filters
+        }
+        
         // Match both username AND color (username+color = unique identity)
         if (comment.username === filter.username && comment.color === filter.color) {
           const filterKey = getFilterKey(filter.username, filter.color);
           const setting = getFilterNotificationSetting(filterKey);
+          
+          console.log('[SOUND-ALERT] Match found!', filter.username, 'sound:', setting.sound);
           
           if (setting.sound !== 'none' && !filtersToMark.includes(filterKey)) {
             soundsToPlay.push(setting.sound);
@@ -886,6 +904,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         }
       });
     });
+    
+    console.log('[SOUND-ALERT] Sounds to play:', soundsToPlay.length, soundsToPlay);
     
     // Play sounds in order with cooldown
     if (soundsToPlay.length > 0) {

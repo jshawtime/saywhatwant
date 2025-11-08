@@ -12,7 +12,7 @@ import { OPACITY_LEVELS } from '@/modules/colorOpacity';
 
 interface MessageItemProps {
   comment: Comment;
-  onUsernameClick: (username: string, color: string) => void;
+  onUsernameClick: (username: string, color: string, messageType: string) => void;
   onContextMenu: (e: React.MouseEvent, comment: Comment, isUsername: boolean) => void;
   onTouchStart: (e: React.TouchEvent, comment: Comment, isUsername: boolean) => void;
   onTouchEnd: () => void;
@@ -40,7 +40,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className="flex items-start relative" style={{ gap: 'var(--comment-username-gap)' }}>
         {/* Username - vertically centered with first line of message */}
         <button 
-          onClick={() => comment.username && onUsernameClick(comment.username, comment.color)}
+          onClick={() => comment.username && onUsernameClick(comment.username, comment.color, comment['message-type'])}
           onContextMenu={(e) => onContextMenu(e, comment, true)}
           onTouchStart={(e) => onTouchStart(e, comment, true)}
           onTouchEnd={onTouchEnd}

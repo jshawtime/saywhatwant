@@ -43,9 +43,12 @@ export function useSimpleFilters({
   }, []);
 
   // Simple operations - no merging, just direct manipulation
-  const addUser = useCallback((username: string, color: string) => {
+  const addUser = useCallback((username: string, color: string, messageType: string = 'human') => {
     const normalized = normalizeUsername(username);
     const colorDigits = rgbToNineDigit(color);
+    
+    // Determine message type: 'human' or 'AI'
+    const type = (messageType === 'AI' || messageType === 'ai') ? 'AI' : 'human';
     
     // Check if already exists
     const exists = filterState.users.some(u => 
@@ -56,7 +59,7 @@ export function useSimpleFilters({
     if (!exists) {
       const newState: FilterState = {
         ...filterState,
-        users: [...filterState.users, { username: normalized, color: colorDigits }]  // Store as 9-digit
+        users: [...filterState.users, { username: normalized, color: colorDigits, messageType: type }]  // Store with message type
       };
       updateURL(newState);
     }

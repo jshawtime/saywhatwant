@@ -188,6 +188,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
               {filterUsernames.map((filter, idx) => {
                 const filterKey = getFilterKey(filter.username, filter.color);
                 const setting = filterNotificationSettings[filterKey] || { sound: 'none', isUnread: false };
+                const isHumanFilter = filter.messageType === 'human' || !filter.messageType;  // Default to human if not set
                 
                 return (
                   <span
@@ -200,9 +201,15 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       opacity: isFilterEnabled ? 1 : 0.4,
                       boxShadow: setting.isUnread ? `0 0 0 2px ${filter.color}` : 'none'
                     }}
-                    onContextMenu={(e) => handleFilterContextMenu(e, filterKey)}
+                    onContextMenu={(e) => {
+                      if (isHumanFilter) {
+                        handleFilterContextMenu(e, filterKey);
+                      } else {
+                        e.preventDefault();  // Block context menu for AI usernames
+                      }
+                    }}
                     onMouseEnter={() => handleFilterHover(filterKey)}
-                    title="Right click to set alert. Filter must be on."
+                    title={isHumanFilter ? "Right click to set alert. Filter must be on." : filter.username}
                   >
                     {setting.sound !== 'none' && (
                       <span style={{ color: filter.color }}>
