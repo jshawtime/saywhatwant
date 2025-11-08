@@ -182,13 +182,14 @@ export const UserControls: React.FC<UserControlsProps> = ({
     <div className="flex items-center gap-2">
       {/* EQ Score (Emotional Intelligence) - Animated */}
       <span 
-        className="mr-2 opacity-60" 
+        className="mr-2 opacity-60 select-none" 
         style={{ 
           color: userColorRgb,
           fontSize: '20px',
-          fontWeight: 700
+          fontWeight: 700,
+          cursor: 'default'
         }}
-        title="Emotional Intelligence Score (0-100)"
+        title="Emotional Intelligence Score"
       >
         <CountUp 
           start={prevScore}
