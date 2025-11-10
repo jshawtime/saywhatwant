@@ -194,7 +194,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
             fontSize: '10px',
             fontWeight: 900,
             letterSpacing: '0.5px',
-            opacity: 0.5,
+            opacity: 0.7,
             marginBottom: '-2px'
           }}
         >
@@ -203,9 +203,9 @@ export const UserControls: React.FC<UserControlsProps> = ({
         <div
           style={{ 
             color: userColorRgb,
-            fontSize: '20px',
+            fontSize: '25px',
             fontWeight: 700,
-            opacity: 0.6
+            opacity: 1
           }}
         >
           <CountUp 
