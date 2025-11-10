@@ -181,24 +181,42 @@ export const UserControls: React.FC<UserControlsProps> = ({
   return (
     <div className="flex items-center gap-2">
       {/* EQ Score (Emotional Intelligence) - Animated */}
-      <span 
-        className="mr-2 opacity-60 select-none" 
+      <div 
+        className="mr-4 select-none flex flex-col items-center" 
         style={{ 
-          color: userColorRgb,
-          fontSize: '20px',
-          fontWeight: 700,
           cursor: 'default'
         }}
         title="Emotional Intelligence Score"
       >
-        <CountUp 
-          start={prevScore}
-          end={eqScore}
-          duration={1}
-          preserveValue={true}
-          useEasing={true}
-        />
-      </span>
+        <div 
+          style={{ 
+            color: userColorRgb,
+            fontSize: '10px',
+            fontWeight: 900,
+            letterSpacing: '0.5px',
+            opacity: 0.5,
+            marginBottom: '-2px'
+          }}
+        >
+          SCORE
+        </div>
+        <div
+          style={{ 
+            color: userColorRgb,
+            fontSize: '20px',
+            fontWeight: 700,
+            opacity: 0.6
+          }}
+        >
+          <CountUp 
+            start={prevScore}
+            end={eqScore}
+            duration={1}
+            preserveValue={true}
+            useEasing={true}
+          />
+        </div>
+      </div>
       
       {/* Username Input with Color Picker */}
       <div 
