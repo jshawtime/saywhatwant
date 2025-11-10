@@ -203,7 +203,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
         <div
           style={{ 
             color: userColorRgb,
-            fontSize: '25px',
+            fontSize: '29px',
             fontWeight: 700,
             opacity: 1
           }}
