@@ -608,21 +608,45 @@ async function selectEntitiesWithMistral(message: any) {
 **Tasks:**
 1. ✅ Design architecture and user flow
 2. ✅ Create README documentation
-3. ⏳ Install Mistral Small 3.1 32B on Ollama (10.0.0.110)
-4. ⏳ Test Mistral Small with simple synthesis prompts
+3. ✅ LM Studio running on 10.0.0.100 with model loaded
+4. ⏳ Test synthesis with LM Studio API
 5. ⏳ Verify no impact on existing system
 
-**Testing:**
+**LM Studio Setup (10.0.0.100):**
+
+LM Studio is already running on 10.0.0.100:1234 with OpenAI-compatible API.
+
+**API Endpoint:**
+```
+http://10.0.0.100:1234/v1/chat/completions
+```
+
+**Model Selection:**
+- Whatever model is loaded in LM Studio will handle synthesis
+- User can swap models anytime (Magistral, Mistral, Llama, etc.)
+- No code changes needed to change synthesis model
+- Maximum flexibility for experimentation
+
+**Testing synthesis:**
 ```bash
-# On 10.0.0.110
-ollama pull mistral-small:latest
-ollama run mistral-small:latest "Synthesize these 3 views: [test]"
+# Test LM Studio API from PM2 machine (10.0.0.110)
+curl -X POST http://10.0.0.100:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "any",
+    "messages": [
+      {"role": "user", "content": "Synthesize these 3 views: 1) Eternal 2) Biological 3) Illusion"}
+    ],
+    "temperature": 0.7,
+    "max_tokens": 500
+  }'
 ```
 
 **Success Criteria:**
-- ✅ Mistral Small responds correctly
-- ✅ Existing entities still work
-- ✅ No performance degradation
+- ✅ LM Studio responds to API calls
+- ✅ Synthesis quality is high
+- ✅ Response time acceptable (~20-60 seconds)
+- ✅ Existing Ollama entities still work (10.0.0.110)
 
 ---
 
@@ -640,10 +664,10 @@ ollama run mistral-small:latest "Synthesize these 3 views: [test]"
 {
   "id": "god-mode",
   "username": "GodMode",
-  "baseModel": "mistral-small",
+  "baseModel": "the-eternal",
   "quantizations": {
     "f16": {
-      "modelPath": "mistral-small",
+      "modelPath": "the-eternal-f16",
       "enabled": true
     }
   },
@@ -677,10 +701,17 @@ ollama run mistral-small:latest "Synthesize these 3 views: [test]"
   "enabled": true,
   "modelServer": "ollama-hm",
   "specialHandler": "multiEntityBroadcast",
-  "synthesisModel": "mistral-small",
-  "synthesisTimeout": 30
+  "synthesisServer": "lm-studio",
+  "synthesisEndpoint": "http://10.0.0.100:1234/v1/chat/completions",
+  "synthesisTimeout": 600
 }
 ```
+
+**Key fields:**
+- `specialHandler: "multiEntityBroadcast"` - Triggers God Mode processing
+- `synthesisServer: "lm-studio"` - Use LM Studio for synthesis (not Ollama)
+- `synthesisEndpoint` - LM Studio API on 10.0.0.100
+- `synthesisTimeout: 600` - Max 10 minutes for synthesis (allows for slower models)
 
 #### **1.2: Add Special Handler Detection**
 
@@ -755,10 +786,10 @@ async function handleGodMode(message: any, godModeEntity: any): Promise<void> {
     successfulResponses
   );
   
-  // Call synthesis model
-  console.log('[GOD-MODE] Generating synthesis...');
-  const synthesis = await callOllamaForSynthesis(
-    godModeEntity.synthesisModel,
+  // Call synthesis via LM Studio
+  console.log('[GOD-MODE] Generating synthesis with LM Studio...');
+  const synthesis = await callLMStudioForSynthesis(
+    godModeEntity.synthesisEndpoint,
     synthesisPrompt
   );
   
@@ -856,15 +887,17 @@ function buildSynthesisPrompt(
   return prompt;
 }
 
-async function callOllamaForSynthesis(
-  modelName: string,
+async function callLMStudioForSynthesis(
+  endpoint: string,
   prompt: string
 ): Promise<string> {
-  const response = await fetch('http://10.0.0.110:11434/v1/chat/completions', {
+  // Call LM Studio API (OpenAI-compatible)
+  // Uses whatever model is currently loaded in LM Studio
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: modelName,
+      model: 'loaded-model',  // LM Studio ignores this, uses loaded model
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -875,7 +908,7 @@ async function callOllamaForSynthesis(
   });
   
   if (!response.ok) {
-    throw new Error(`Synthesis failed: ${response.status}`);
+    throw new Error(`LM Studio synthesis failed: ${response.status}`);
   }
   
   const data = await response.json() as any;
