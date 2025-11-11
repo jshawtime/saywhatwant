@@ -994,16 +994,33 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             }
             
             // Check for eqScore in new messages and save to sessionStorage
-            // ONLY update if this is OUR message (matching our username and color)
+            // ONLY update if this is OUR conversation (matching human:color + AI:color pair)
             newComments.forEach(msg => {
               if (msg['message-type'] === 'human' && msg.eqScore !== undefined) {
-                // Only update score if this message is from THIS tab's user
-                if (msg.username === username && msg.color === userColor) {
+                // Check if this human message is from OUR username:color
+                const isOurHuman = msg.username === username && msg.color === userColor;
+                
+                if (!isOurHuman) {
+                  console.log(`[EQ-SCORE] Skipping score ${msg.eqScore} from ${msg.username}:${msg.color} (different human)`);
+                  return;
+                }
+                
+                // Now check if we're in a specific conversation with an AI
+                if (ais) {
+                  // We have an AI conversation - score belongs to this specific conversation
+                  // ais format: "AIName:aiColor" (e.g., "TheEternal:080175220")
+                  const [expectedAiUsername, expectedAiColor] = ais.split(':');
+                  
+                  // The score is for: humanUsername:humanColor + aiUsername:aiColor conversation
+                  // (Conversation key format: conv:Human:080150227:TheEternal:080175220)
                   sessionStorage.setItem('sww-eq-score', msg.eqScore.toString());
-                  setEqScore(msg.eqScore);  // Trigger re-render with new score
-                  console.log(`[EQ-SCORE] Updated sessionStorage: ${msg.eqScore} (our message)`);
+                  setEqScore(msg.eqScore);
+                  console.log(`[EQ-SCORE] Updated sessionStorage: ${msg.eqScore} (conversation: ${username}:${userColor} + ${expectedAiUsername}:${expectedAiColor})`);
                 } else {
-                  console.log(`[EQ-SCORE] Skipping score ${msg.eqScore} from ${msg.username} (not our message)`);
+                  // No specific AI - this is a "global" conversation
+                  sessionStorage.setItem('sww-eq-score', msg.eqScore.toString());
+                  setEqScore(msg.eqScore);
+                  console.log(`[EQ-SCORE] Updated sessionStorage: ${msg.eqScore} (global conversation: ${username}:${userColor})`);
                 }
               }
             });
