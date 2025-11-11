@@ -105,6 +105,79 @@ GodMode → Posts: "[SYNTHESIS] Drawing from 44 diverse perspectives..."
 
 ---
 
+## 🎨 Visual Design: Unified Identity System
+
+**Problem:** If each entity posts with its own username, the URL filter would be enormous:
+```
+Bad: ?u=Human:080210153+TheEternal:080175220+Aristotle:080228169+FearAndLoathing:196080172+...+GodMode:200150080
+→ 49+ entities = unmaintainable URL, breaks when you add new entities
+```
+
+**Solution:** All God Mode responses post as **GodMode** with entity name prepended:
+
+### Message Format
+```
+Username: GodMode
+Color: 200150080 (gold)
+Text: (EntityName) actual response text
+```
+
+### Example Conversation
+```
+Human: What is consciousness?
+
+GodMode: 🔮 Consulting 49 AI entities serially...
+
+GodMode: (TheEternal) Consciousness is the fundamental awareness...
+
+GodMode: (Aristotle) Building upon TheEternal's perspective...
+
+GodMode: (FearAndLoathing) Listen, man, they're both right but...
+
+[... 46 more entity responses ...]
+
+GodMode: ⚡ [SYNTHESIS]
+
+The consensus across all 49 perspectives reveals...
+```
+
+### URL Filter
+```
+Clean: ?u=Human:080210153+GodMode:200150080&filteractive=true
+→ Just 2 users, works forever, self-healing when entities added
+```
+
+### Benefits
+
+1. ✅ **Simple URL** - Filter shows Human + GodMode only (2 users, not 50+)
+2. ✅ **Clear attribution** - See which model said what: (TheEternal), (Aristotle), etc.
+3. ✅ **Unified visual identity** - All gold, all GodMode, instantly recognizable
+4. ✅ **Self-healing** - Add new entity JSON → automatically included, URL unchanged
+5. ✅ **Future-proof** - Works with 3 entities or 300 entities
+6. ✅ **Clean synthesis input** - Context uses unprefixed text for better synthesis
+
+### Technical Details
+
+**Posted to DO:**
+```json
+{
+  "username": "GodMode",
+  "color": "200150080",
+  "text": "(TheEternal) Consciousness is the fundamental awareness...",
+  "messageType": "AI",
+  "replyTo": "human-message-id"
+}
+```
+
+**Context for next entity (unprefixed):**
+```
+Consciousness is the fundamental awareness...
+```
+
+This ensures synthesis receives clean text without parenthetical prefixes cluttering the input.
+
+---
+
 ## User Experience Flow
 
 ### Timeline (Option A - Show All Responses)
