@@ -191,11 +191,11 @@ export const UserControls: React.FC<UserControlsProps> = ({
         <div 
           style={{ 
             color: userColorRgb,
-            fontSize: '10px',
+            fontSize: '9px',
             fontWeight: 900,
             letterSpacing: '0.5px',
             opacity: 0.7,
-            marginBottom: '-2px'
+            marginBottom: '0px'
           }}
         >
           SCORE
