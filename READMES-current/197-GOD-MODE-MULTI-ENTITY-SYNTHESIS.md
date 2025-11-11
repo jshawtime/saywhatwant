@@ -305,11 +305,12 @@ console.log(`[GOD-MODE] Discovered ${allEntities.length} entities`);
 
 **Entity processing order:**
 ```typescript
-// Get all enabled entities (excluding god-mode and eq-score)
+// Get all enabled entities (excluding utility files)
 const allEntities = getAllEntities().filter(e => 
   e.enabled && 
-  e.id !== 'god-mode' && 
-  e.id !== 'eq-score'
+  e.id !== 'god-mode' &&      // Exclude self-reference
+  e.id !== 'eq-score' &&      // Exclude EQ scoring utility
+  e.id !== 'global'           // Exclude global utility config
 );
 
 // Process in alphabetical order by filename (consistent order)
@@ -321,11 +322,16 @@ for (const entity of allEntities) {
 }
 ```
 
+**Excluded entities:**
+- `god-mode.json` - Self-reference (can't consult itself)
+- `eq-score.json` - EQ scoring utility (not conversational)
+- `global.json` - Global configuration utility (not conversational)
+
 **Automatic scaling:**
 - Add new entity file → God Mode automatically includes it (no code changes)
 - Remove entity file → God Mode automatically excludes it
 - Disable entity (`"enabled": false`) → God Mode skips it
-- Current count: 52 entities (50 active, excluding god-mode and eq-score)
+- Current count: 52 entities total, 49 consultable (excludes god-mode, eq-score, global)
 
 **Example:**
 ```
@@ -387,7 +393,7 @@ Current entities (November 2024):
 - your-money-or-your-life.json
 
 Total: 52 entities
-God Mode will consult: 50 entities (excludes god-mode and eq-score)
+God Mode will consult: 49 entities (excludes god-mode, eq-score, global)
 ```
 
 **Future-proof:**
@@ -401,8 +407,8 @@ Result:
   No configuration updates required
   
 Processing time increases by ~5 seconds per new entity
-  Current: 50 entities × 5 sec = 250 seconds (~4 minutes)
-  With 1 new: 51 entities × 5 sec = 255 seconds (~4.25 minutes)
+  Current: 49 entities × 5 sec = 245 seconds (~4 minutes)
+  With 1 new: 50 entities × 5 sec = 250 seconds (~4.15 minutes)
 ```
 
 ### Future Enhancement (V2): Mistral-Powered Entity Selection
@@ -1239,14 +1245,14 @@ if (entity.specialHandler === 'multiEntityBroadcast') {
 - **Load:** Minimal
 - **Purpose:** Prove serial context architecture works
 
-### Phase 2 (ALL 44 entities - Production)
+### Phase 2 (ALL 49 entities - Production)
 
-- **Time:** 3-4 minutes (220 seconds)
+- **Time:** ~4 minutes (245 seconds)
 - **Breakdown:**
-  - 44 entities × ~5 seconds each = 220 seconds
+  - 49 entities × ~5 seconds each = 245 seconds
   - User watches responses stream every 5 seconds
   - Feels faster because of constant activity
-- **Messages:** ~47 total (status + 44 responses + synthesis)
+- **Messages:** ~52 total (status + 49 responses + synthesis)
 - **Load:** Serial processing = no Ollama overload
 - **User Experience:** Engaging to watch conversation develop
 
