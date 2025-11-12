@@ -46,7 +46,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           onTouchEnd={onTouchEnd}
           onTouchMove={onTouchEnd}
           className="font-medium flex-shrink-0 hover:underline cursor-pointer select-none" 
-          title={`Click to filter by ${comment.username || 'Anonymous'} | Right click more options`}
           style={{ 
             fontSize: '13.8px',  // 15% larger (was 12px from text-xs)
             lineHeight: '23px',  // 15% larger (was 20px)

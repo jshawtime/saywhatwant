@@ -70,7 +70,6 @@ export const parseCommentText = (
                     onClick={() => onWordClick(word)}
                     className="hover:underline cursor-pointer"
                     style={{ color: 'inherit' }}
-                    title={`Click to filter by: ${word}`}
                   >
                     {word}
                   </span>
