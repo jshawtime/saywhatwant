@@ -1,9 +1,39 @@
 # 200: God Mode - True Session-Based Storage Keys
 
-**Status:** 📋 PLANNING - Separate DO keys per session  
+**Status:** ✅ IMPLEMENTED - Session-based storage working  
 **Created:** 2025-11-12  
+**Deployed:** 2025-11-12  
 **Priority:** CRITICAL - Fixes 128KB limit  
-**Problem:** All God Mode sessions share ONE conversation key → hits 128KB limit
+**Problem:** All God Mode sessions shared ONE conversation key → hit 128KB limit after 3-7 sessions
+
+---
+
+## 🐛 Bugs Encountered During Implementation
+
+### Bug 1: Map Iterator vs Array
+**Error:** `keys is not defined`  
+**Cause:** `const allKeys = [...convKeys.keys(), ...godModeKeys.keys()]`  
+**Problem:** Map.keys() returns an iterator, not an array. Can't spread directly.  
+**Fix:** `const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())]`  
+**Applied to:** getMessages(), getPending()
+
+### Bug 2: Map.size Not Available After Conversion
+**Error:** `keys.size is not defined`  
+**Cause:** After renaming `keys` to `convKeys` and `godModeKeys`, logging still referenced `keys.size`  
+**Fix:** `Array.from(convKeys.keys()).length + Array.from(godModeKeys.keys()).length`  
+**Applied to:** getPending() logging, getGodModeConversation() logging
+
+### Bug 3: Transient 500 Errors in PM2 Logs
+**Symptom:** PM2 error log shows old 500s even after fix  
+**Cause:** PM2 logs persistent errors until cleared  
+**Not a bug:** Latest polls show "Idle" (working correctly)  
+**Verification:** Direct curl to endpoint returns valid JSON  
+
+### Lessons Learned:
+✅ Test DO endpoints directly with curl after deployment  
+✅ Map iterators need Array.from() in JavaScript  
+✅ PM2 error logs show historical errors (check latest output, not error log)  
+✅ Cloudflare deployment takes ~5-10 seconds to propagate  
 
 ---
 
