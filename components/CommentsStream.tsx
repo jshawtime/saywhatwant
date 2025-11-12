@@ -1053,6 +1053,20 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           checkNotificationMatches(newComments);
         }
         
+        // Reset polling to fast mode if any message matches filter
+        if (filterUsernames.length > 0) {
+          const matchesFilter = newComments.some(msg => 
+            filterUsernames.some(filter => 
+              msg.username === filter.username && msg.color === filter.color
+            )
+          );
+          
+          if (matchesFilter) {
+            lastActivityTime.current = Date.now();
+            console.log('[Activity] Filtered message detected - reset to fast polling for 30s');
+          }
+        }
+        
         // Smart auto-scroll: If user is anchored to bottom, show them new messages
         // This works in ALL modes: filtered, unfiltered, search, etc.
         // The ONLY thing that matters: Is user at bottom?
