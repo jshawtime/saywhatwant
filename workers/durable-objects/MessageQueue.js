@@ -65,6 +65,19 @@ export class MessageQueue {
       if (path === '/api/conversation' && request.method === 'GET') {
         return await this.getConversation(url);
       }
+      
+      // God Mode session endpoints
+      if (path === '/api/godmode-session' && request.method === 'POST') {
+        return await this.saveGodModeSession(request);
+      }
+      
+      if (path === '/api/godmode-sessions' && request.method === 'GET') {
+        return await this.listGodModeSessions(url);
+      }
+      
+      if (path.startsWith('/api/godmode-session/') && request.method === 'GET') {
+        return await this.getGodModeSession(request, path);
+      }
 
       return this.jsonResponse({ error: 'Not found' }, 404);
     } catch (error) {
@@ -504,6 +517,92 @@ export class MessageQueue {
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400',
       }
+    });
+  }
+  
+  /**
+   * POST /api/godmode-session - Save God Mode session metadata
+   */
+  async saveGodModeSession(request) {
+    const { sessionKey, sessionData } = await request.json();
+    
+    // Store in Durable Objects
+    await this.state.storage.put(sessionKey, sessionData);
+    
+    console.log('[MessageQueue] Saved God Mode session:', sessionKey, 'with', sessionData.messageIds.length, 'messages');
+    
+    return this.jsonResponse({ 
+      success: true, 
+      sessionKey: sessionKey,
+      messageCount: sessionData.messageIds.length
+    });
+  }
+  
+  /**
+   * GET /api/godmode-sessions?humanUsername=X&humanColor=Y&godModeColor=Z
+   * List God Mode sessions with optional filtering
+   */
+  async listGodModeSessions(url) {
+    const humanUsername = url.searchParams.get('humanUsername');
+    const humanColor = url.searchParams.get('humanColor');
+    const godModeColor = url.searchParams.get('godModeColor');
+    
+    // List all godmode-session keys
+    const keys = await this.state.storage.list({ prefix: 'godmode-session:' });
+    
+    const sessions = [];
+    for (const [key, data] of keys) {
+      // Filter by human and god mode if specified
+      if (humanUsername && data.humanUsername !== humanUsername) continue;
+      if (humanColor && data.humanColor !== humanColor) continue;
+      if (godModeColor && data.godModeColor !== godModeColor) continue;
+      
+      sessions.push(data);
+    }
+    
+    // Sort by timestamp (newest first)
+    sessions.sort((a, b) => b.timestamp - a.timestamp);
+    
+    console.log('[MessageQueue] Listed', sessions.length, 'God Mode sessions');
+    
+    return this.jsonResponse({ 
+      sessions: sessions,
+      total: sessions.length
+    });
+  }
+  
+  /**
+   * GET /api/godmode-session/:sessionId
+   * Get specific God Mode session with all messages
+   */
+  async getGodModeSession(request, path) {
+    const sessionId = path.split('/').pop();
+    const sessionKey = `godmode-session:${sessionId}`;
+    
+    const sessionData = await this.state.storage.get(sessionKey);
+    
+    if (!sessionData) {
+      return this.jsonResponse({ error: 'Session not found' }, 404);
+    }
+    
+    // Fetch all messages for this session
+    // Messages are in messages:all key (global stream)
+    const allMessages = await this.state.storage.get('messages:all') || [];
+    const sessionMessages = [];
+    
+    for (const msgId of sessionData.messageIds) {
+      const msg = allMessages.find(m => m.id === msgId);
+      if (msg) {
+        sessionMessages.push(msg);
+      }
+    }
+    
+    console.log('[MessageQueue] Retrieved God Mode session:', sessionId, 'with', sessionMessages.length, 'messages');
+    
+    return this.jsonResponse({
+      session: sessionData,
+      messages: sessionMessages,
+      messageCount: sessionMessages.length
     });
   }
 }
