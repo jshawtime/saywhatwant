@@ -63,6 +63,11 @@ export class MessageQueue {
       }
 
       if (path === '/api/conversation' && request.method === 'GET') {
+        // Check if this is a God Mode conversation
+        const aiUsername = url.searchParams.get('aiUsername');
+        if (aiUsername && aiUsername.toLowerCase() === 'godmode') {
+          return await this.getGodModeConversation(url);
+        }
         return await this.getConversation(url);
       }
       
@@ -140,12 +145,23 @@ export class MessageQueue {
     }
 
     // Build conversation key
-    const conversationKey = this.getConversationKey(
-      humanUsername,
-      humanColor,
-      aiUsername,
-      aiColor
-    );
+    // Special routing for God Mode sessions
+    const sessionId = body.botParams?.sessionId;
+    let conversationKey;
+    
+    if (sessionId && body.botParams?.entity === 'god-mode') {
+      // God Mode: Use session-specific key (one key per session)
+      conversationKey = `godmode:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:${sessionId}`;
+      console.log('[MessageQueue] God Mode session key:', conversationKey);
+    } else {
+      // Normal entity: Use standard conversation key (all messages in one key)
+      conversationKey = this.getConversationKey(
+        humanUsername,
+        humanColor,
+        aiUsername,
+        aiColor
+      );
+    }
 
     // Create message object
     const message = {
@@ -213,12 +229,16 @@ export class MessageQueue {
   async getMessages(url) {
     const after = parseInt(url.searchParams.get('after') || url.searchParams.get('since') || '0');
     
-    // Get all conversation keys
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    // Get all conversation keys (normal entities)
+    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
     
-    // Load all conversations in parallel
+    // Get all God Mode session keys
+    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    
+    // Load all conversations and sessions in parallel
+    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
     const conversations = await Promise.all(
-      Array.from(keys.keys()).map(key => this.state.storage.get(key))
+      allKeys.map(key => this.state.storage.get(key))
     );
     
     // Flatten to all messages
@@ -227,7 +247,7 @@ export class MessageQueue {
     // Filter messages newer than 'after'
     const filtered = allMessages.filter(m => m.timestamp > after);
 
-    console.log('[MessageQueue] GET messages after', after, '→', filtered.length, 'results from', keys.keys().size, 'conversations');
+    console.log('[MessageQueue] GET messages after', after, '→', filtered.length, 'results from', Array.from(convKeys.keys()).length, 'conversations +', Array.from(godModeKeys.keys()).length, 'God Mode sessions');
 
     return this.jsonResponse(filtered);
   }
@@ -238,12 +258,16 @@ export class MessageQueue {
   async getPending(url) {
     const limit = parseInt(url.searchParams.get('limit') || '999999');
     
-    // Get all conversation keys
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    // Get all conversation keys (normal entities)
+    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
     
-    // Load all conversations in parallel
+    // Get all God Mode session keys
+    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    
+    // Load all conversations and sessions in parallel
+    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
     const conversations = await Promise.all(
-      Array.from(keys.keys()).map(key => this.state.storage.get(key))
+      allKeys.map(key => this.state.storage.get(key))
     );
     
     // Flatten to all messages
@@ -275,13 +299,15 @@ export class MessageQueue {
 
     const pendingForBot = forBot.slice(0, limit);
     const platformMessages = platformOnly.slice(0, 10); // Last 10 platform posts
+    
+    const totalKeys = Array.from(convKeys.keys()).length + Array.from(godModeKeys.keys()).length;
 
-    console.log('[MessageQueue] GET pending:', pendingForBot.length, 'bot +', platformMessages.length, 'platform from', keys.keys().size, 'conversations');
+    console.log('[MessageQueue] GET pending:', pendingForBot.length, 'bot +', platformMessages.length, 'platform from', Array.from(convKeys.keys()).length, 'conversations +', Array.from(godModeKeys.keys()).length, 'God Mode sessions');
 
     return this.jsonResponse({
       pending: pendingForBot,
       platformOnly: platformMessages,
-      kvStats: { reads: keys.keys().size, writes: 0 }
+      kvStats: { reads: totalKeys, writes: 0 }
     });
   }
 
@@ -407,6 +433,39 @@ export class MessageQueue {
     return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
   }
 
+  /**
+   * GET /api/conversation for God Mode (query ALL session keys)
+   */
+  async getGodModeConversation(url) {
+    const humanUsername = url.searchParams.get('humanUsername');
+    const humanColor = url.searchParams.get('humanColor');
+    const aiUsername = url.searchParams.get('aiUsername');
+    const aiColor = url.searchParams.get('aiColor');
+    const after = parseInt(url.searchParams.get('after') || '0');
+    
+    // List all session keys for this Human:GodMode pair
+    const prefix = `godmode:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:`;
+    const sessionKeys = await this.state.storage.list({ prefix: prefix });
+    
+    // Load all sessions in parallel
+    const allSessions = await Promise.all(
+      Array.from(sessionKeys.keys()).map(key => this.state.storage.get(key))
+    );
+    
+    // Flatten to all messages
+    const allMessages = allSessions.flat().filter(m => m !== null);
+    
+    // Filter by timestamp
+    const filtered = allMessages.filter(m => m.timestamp > after);
+    
+    // Sort by timestamp
+    filtered.sort((a, b) => a.timestamp - b.timestamp);
+    
+    console.log('[MessageQueue] God Mode conversation:', filtered.length, 'messages from', Array.from(sessionKeys.keys()).length, 'sessions');
+    
+    return this.jsonResponse(filtered);
+  }
+  
   /**
    * GET /api/conversation - Get messages for a specific conversation
    * Query params: humanUsername, humanColor, aiUsername, aiColor, limit
