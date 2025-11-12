@@ -1104,8 +1104,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Special case: God Mode doesn't use context from human message
         // Each entity builds its own context during serial processing
         if (urlEntity === 'god-mode') {
-          console.log('[CommentsStream] God Mode - sending null context (builds own context internally)');
-          return null;  // God Mode doesn't need frontend context
+          console.log('[CommentsStream] God Mode - sending undefined context (builds own context internally)');
+          return undefined;  // God Mode doesn't need frontend context
         }
         
         const messages = displayedMessages.slice(-(urlNom || displayedMessages.length));
