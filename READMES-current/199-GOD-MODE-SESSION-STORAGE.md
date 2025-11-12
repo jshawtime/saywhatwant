@@ -1,12 +1,96 @@
 # 199: God Mode Session Storage Architecture
 
-**Status:** 📋 PLANNING - Separate storage keys for God Mode sessions  
+**Status:** ✅ IMPLEMENTED - Session storage working, context issue identified  
 **Created:** 2025-11-12  
-**Problem:** God Mode hits 128KB DO key limit after 39 conversations
+**Updated:** 2025-11-12  
+**Problem:** Frontend sends massive context array causing 500 errors
 
 ---
 
-## 🎯 The Problem
+## 🎯 The Real Problem (Discovered via Testing)
+
+### Initial Hypothesis (Wrong):
+```
+Thought: Conversation key hitting 128KB limit
+Reality: Conversation key only has 13 messages (4KB) - fine!
+```
+
+### Actual Problem (Correct):
+```
+Frontend sends context: [158 messages] in POST body
+→ POST request body becomes massive
+→ Cloudflare/DO chokes on large request
+→ 500 error
+
+God Mode doesn't use this context anyway!
+Each entity builds its own context during serial processing.
+```
+
+### Evidence:
+- Working God Mode: 10 messages → `context: [10 messages]` → Works ✅
+- Broken God Mode: 158 messages → `context: [158 messages]` → 500 error ❌
+- New God Mode: Fresh conversation → Works ✅
+
+### Why Frontend Sends 158 Messages:
+```typescript
+// Line 1104 in CommentsStream.tsx
+if (isFilterEnabled) {
+  const messages = displayedMessages.slice(-(urlNom || displayedMessages.length));
+  // No urlNom in God Mode URL → sends ALL displayed messages!
+  return messages.map(m => `${m.username}: ${m.text}`);
+}
+```
+
+---
+
+## 🎯 The Solution: Empty Context for God Mode
+
+### What We Want:
+```
+God Mode URL: &entity=god-mode
+→ Frontend detects God Mode
+→ Sends context: null (or empty array)
+→ Small POST body
+→ No 500 errors
+→ God Mode builds its own context anyway
+```
+
+### Implementation (Frontend):
+
+**File:** `saywhatwant/components/CommentsStream.tsx`  
+**Line:** ~1103
+
+```typescript
+// If filters are active, ALWAYS send context (even if empty)
+if (isFilterEnabled) {
+  // Special case: God Mode doesn't use context from human message
+  if (urlEntity === 'god-mode') {
+    console.log('[CommentsStream] God Mode - sending null context');
+    return null;  // God Mode builds its own context internally
+  }
+  
+  const messages = displayedMessages.slice(-(urlNom || displayedMessages.length));
+  console.log(`[CommentsStream] Filter active - sending ${messages.length} messages as context`);
+  return messages.map(m => `${m.username}: ${m.text}`);
+}
+```
+
+### Why This Works:
+✅ Frontend has `urlEntity` from URL (`entity=god-mode`)  
+✅ Detection is simple and reliable  
+✅ Doesn't affect normal entities  
+✅ God Mode doesn't use context anyway  
+✅ Fixes 500 error permanently  
+
+### Why This is Safe:
+✅ Only affects `entity=god-mode` URLs  
+✅ All other entities still get context  
+✅ No backend changes needed  
+✅ Semantically correct (God Mode = independent processing)  
+
+---
+
+## 🎯 The Original Problem (Also Solved)
 
 ### Current Architecture
 ```

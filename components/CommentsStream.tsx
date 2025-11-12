@@ -1101,6 +1101,13 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       // If filters are active, ALWAYS send context (even if empty)
       // This prevents bot from fetching unfiltered messages from KV
       if (isFilterEnabled) {
+        // Special case: God Mode doesn't use context from human message
+        // Each entity builds its own context during serial processing
+        if (urlEntity === 'god-mode') {
+          console.log('[CommentsStream] God Mode - sending null context (builds own context internally)');
+          return null;  // God Mode doesn't need frontend context
+        }
+        
         const messages = displayedMessages.slice(-(urlNom || displayedMessages.length));
         console.log(`[CommentsStream] Filter active - sending ${messages.length} messages as context`);
         // Return empty array (not undefined) if no messages - tells bot "use nothing, don't fetch"
