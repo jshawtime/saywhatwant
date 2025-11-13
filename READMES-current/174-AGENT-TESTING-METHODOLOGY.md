@@ -15,6 +15,102 @@ This README documents the **exact methodology** for testing Durable Objects work
 
 ---
 
+## ⚠️ FUNDAMENTAL TEST - DO THIS FIRST
+
+### Before ANY other testing, verify you can POST and RETRIEVE a message from DO
+
+**This is the most basic test. If this fails, everything else is folly.**
+
+### The Test:
+
+```bash
+# 1. POST a test message (mimics PM2 God Mode post)
+# Use human-readable timestamp in text for easy identification
+curl -X POST "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "(TestEntity) Test God Mode message - posted at 2:49 AM 13th November 2025",
+    "username": "GodMode",
+    "color": "999888777",
+    "message-type": "AI",
+    "replyTo": "test-msg",
+    "botParams": {
+      "humanUsername": "Human",
+      "humanColor": "888777666",
+      "entity": "god-mode",
+      "ais": "GodMode:999888777",
+      "sessionId": "test-session-2025-11-13-0249"
+    }
+  }'
+
+# Should return: {"id":"XXXXX","timestamp":NNNNNN,"status":"success"}
+# Note the ID!
+
+# 2. Verify user confirms it appears in frontend
+# (This proves the message exists somewhere)
+
+# 3. Find that EXACT message in DO by searching for unique text
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?after=0&limit=500" \
+  > /tmp/do_messages.json
+
+python3 << 'PYEOF'
+import json
+
+with open('/tmp/do_messages.json') as f:
+    data = json.load(f)
+
+# Search for our unique test message
+target = [m for m in data if 'AGENT_TEST_MESSAGE_UNIQUE_12345' in m.get('text', '')]
+
+if target:
+    print("✅ SUCCESS! Found test message in DO!")
+    print("\nMessage structure:")
+    print(json.dumps(target[0], indent=2))
+    
+    # Verify sessionId
+    bp = target[0].get('botParams', {})
+    if 'sessionId' in bp:
+        print(f"\n✅✅ sessionId PRESERVED: {bp['sessionId']}")
+    else:
+        print(f"\n❌ sessionId MISSING from botParams")
+        print(f"botParams keys: {list(bp.keys())}")
+else:
+    print("❌ FAILED! Test message NOT in DO!")
+    print(f"Checked {len(data)} messages")
+    print("Message posted successfully but not retrievable")
+    print("\nThis means:")
+    print("- DO is returning success but not storing")
+    print("- OR message in a key that /api/comments doesn't query")
+    print("- OR deployment hasn't propagated")
+PYEOF
+
+# 4. Check which DO key it was stored in
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; \
+  keys=json.load(sys.stdin)['keys']; \
+  session_keys=[k for k in keys if 'agent-test-session-unique' in k]; \
+  godmode_keys=[k for k in keys if k.startswith('godmode:')]; \
+  print(f'\\nKeys with our test sessionId: {len(session_keys)}'); \
+  [print(f'  {k}') for k in session_keys]; \
+  print(f'\\nTotal godmode: keys: {len(godmode_keys)}')"
+```
+
+### Success Criteria:
+
+✅ **POST returns success**  
+✅ **Message appears in frontend** (user confirms)  
+✅ **Message retrievable from DO** (found by unique text)  
+✅ **sessionId in botParams** (if testing God Mode)  
+✅ **Correct DO key created** (godmode: format for God Mode)  
+
+### If ANY of these fail:
+
+❌ **Don't proceed with other tests**  
+❌ **Fix the fundamental issue first**  
+❌ **All other testing is meaningless until this works**  
+
+---
+
 ## Testing Stack Overview
 
 ### Layer 1: Durable Objects Worker (Cloudflare Edge)
