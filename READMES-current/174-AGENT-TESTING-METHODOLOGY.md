@@ -111,6 +111,59 @@ curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-ke
 
 ---
 
+## ⚠️ CRITICAL: How to Query DO Messages Correctly
+
+### WRONG WAY (Will Miss Messages):
+```bash
+# DON'T DO THIS for finding specific messages:
+curl "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?after=0&limit=500"
+```
+
+**Why this fails:**
+- Queries ALL conversation keys (298+ keys)
+- limit=500 spreads across ALL keys (~1-2 messages per key)
+- Large conversations (200+ messages) are mostly INVISIBLE
+- You'll miss recent messages in busy conversations!
+
+### RIGHT WAY (Gets All Messages):
+```bash
+# DO THIS to find messages in a specific conversation:
+curl "https://saywhatwant-do-worker.bootloaders.workers.dev/api/conversation?humanUsername=Human&humanColor=231080166&aiUsername=GodMode&aiColor=171181106"
+```
+
+**Why this works:**
+- Queries ONE SPECIFIC conversation
+- Returns ALL messages from that conversation (no limit!)
+- Works for conversations with 1 or 1000 messages
+- Guaranteed to find everything for this Human:AI pair
+
+### BEST WAY (Search All Conversations):
+```bash
+# Use the test script: TEST-SCRIPTS/find-latest-do-message.py
+python3 TEST-SCRIPTS/find-latest-do-message.py
+```
+
+**What it does:**
+1. Lists all conversation keys
+2. Queries EACH conversation individually
+3. Finds the absolute latest message across ALL conversations
+4. Shows full payload with all fields
+
+**This is the ONLY reliable way to find the newest message in DO!**
+
+### Rule of Thumb:
+
+**Looking for latest overall message?**
+→ Use `find-latest-do-message.py` script
+
+**Looking for messages in specific conversation?**
+→ Use `/api/conversation?humanUsername=X&humanColor=Y&aiUsername=Z&aiColor=W`
+
+**DON'T use `/api/comments?limit=N` for verification!**
+→ It's for frontend polling (recent messages), NOT for finding specific messages
+
+---
+
 ## Testing Stack Overview
 
 ### Layer 1: Durable Objects Worker (Cloudflare Edge)
