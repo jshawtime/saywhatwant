@@ -235,7 +235,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   } = useMessageTypeFilters(streamRef);
   
   // Auto-scroll detection using the new modular system
-  const { isNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
+  const { isNearBottom, checkIfNearBottom, scrollToBottom: smoothScrollToBottom } = useAutoScrollDetection(streamRef, 100);
   
   // Clear "New Messages" indicator when user scrolls to bottom
   useEffect(() => {
@@ -1077,7 +1077,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // Smart auto-scroll: If user is anchored to bottom, show them new messages
         // This works in ALL modes: filtered, unfiltered, search, etc.
         // The ONLY thing that matters: Is user at bottom?
-        if (isNearBottom) {
+        // CRITICAL: Check position RIGHT NOW (not stale state) before deciding
+        const userIsAtBottom = checkIfNearBottom();
+        if (userIsAtBottom) {
           console.log('[Polling] User at bottom, auto-scrolling to show new messages');
           setTimeout(() => smoothScrollToBottom(), 50);
         } else {
