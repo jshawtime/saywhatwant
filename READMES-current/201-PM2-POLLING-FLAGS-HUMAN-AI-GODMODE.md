@@ -1,8 +1,9 @@
-# 201: God Mode Dedicated PM2 Worker
+# 201: PM2 Polling Flags - Human-AI / God Mode / Both
 
-**Status:** 📋 PLANNING - Not needed yet, monitor usage first  
+**Status:** 📋 PLANNING - Config-based polling separation  
 **Created:** 2025-11-12  
 **Priority:** LOW - Optimization for high God Mode usage  
+**Type:** Architecture - Dual PM2 with polling flags  
 **Problem:** God Mode blocks primary PM2 for 6+ minutes per session
 
 ---
