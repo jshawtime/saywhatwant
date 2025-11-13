@@ -180,6 +180,7 @@ export class MessageQueue {
           priority: body.botParams?.priority || body.priority || 5,
           entity,
           ais: body.botParams?.ais || null,
+          sessionId: body.botParams?.sessionId || null,  // God Mode session routing
           claimedBy: null,
           claimedAt: null,
           completedAt: messageType === 'AI' ? timestamp : null
