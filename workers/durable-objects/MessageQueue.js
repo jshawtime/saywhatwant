@@ -149,10 +149,19 @@ export class MessageQueue {
     const sessionId = body.botParams?.sessionId;
     let conversationKey;
     
+    // DEBUG: Log routing decision
+    console.log('[MessageQueue] Routing check:', {
+      hasSessionId: !!sessionId,
+      sessionIdValue: sessionId,
+      entity: body.botParams?.entity,
+      isGodMode: body.botParams?.entity === 'god-mode',
+      willUseGodModeKey: !!(sessionId && body.botParams?.entity === 'god-mode')
+    });
+    
     if (sessionId && body.botParams?.entity === 'god-mode') {
       // God Mode: Use session-specific key (one key per session)
       conversationKey = `godmode:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:${sessionId}`;
-      console.log('[MessageQueue] God Mode session key:', conversationKey);
+      console.log('[MessageQueue] ✅ Using God Mode session key:', conversationKey);
     } else {
       // Normal entity: Use standard conversation key (all messages in one key)
       conversationKey = this.getConversationKey(
@@ -161,6 +170,7 @@ export class MessageQueue {
         aiUsername,
         aiColor
       );
+      console.log('[MessageQueue] Using standard conv key:', conversationKey);
     }
 
     // Create message object
