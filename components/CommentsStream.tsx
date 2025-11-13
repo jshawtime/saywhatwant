@@ -957,9 +957,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         // CHANNEL-EXCLUSIVE: Only poll for active channel (human OR AI)
         // If mt=ALL, don't send type parameter (get everything)
         const typeParam = messageType === 'ALL' ? '' : `&type=${messageType}`;
+        
+        // OPTIMIZATION: Only poll God Mode sessions if viewing God Mode
+        // Reduces DO reads by 50% for non-God Mode users
+        const isViewingGodMode = urlEntity === 'god-mode' || 
+                                 filterUsernames.some(f => f.username.toLowerCase() === 'godmode');
+        const godModeParam = isViewingGodMode ? '&includeGodMode=true' : '';
+        
         // REMOVED fresh=true - using cache for speed (cache updated on every POST)
-        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${lastPollTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}`;
-        console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(lastPollTimestamp.current).toLocaleTimeString()}`);
+        const pollUrl = `${COMMENTS_CONFIG.apiUrl}?after=${lastPollTimestamp.current}&limit=${POLL_BATCH_LIMIT}${typeParam}${godModeParam}`;
+        console.log(`[Presence Polling] Polling for ${messageType} messages after ${new Date(lastPollTimestamp.current).toLocaleTimeString()}${isViewingGodMode ? ' (including God Mode)' : ''}`);
         console.log(`[Presence Polling] URL: ${pollUrl}`);
         
         const response = await fetch(pollUrl);

@@ -228,12 +228,18 @@ export class MessageQueue {
    */
   async getMessages(url) {
     const after = parseInt(url.searchParams.get('after') || url.searchParams.get('since') || '0');
+    const includeGodMode = url.searchParams.get('includeGodMode') === 'true';
     
     // Get all conversation keys (normal entities)
     const convKeys = await this.state.storage.list({ prefix: 'conv:' });
     
-    // Get all God Mode session keys
-    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    // Conditionally get God Mode session keys (only if viewing God Mode)
+    let godModeKeys;
+    if (includeGodMode) {
+      godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    } else {
+      godModeKeys = new Map();  // Empty map if not viewing God Mode
+    }
     
     // Load all conversations and sessions in parallel
     const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
