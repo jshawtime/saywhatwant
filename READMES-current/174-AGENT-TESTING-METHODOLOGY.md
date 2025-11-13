@@ -852,8 +852,475 @@ curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?sinc
 
 ---
 
+## Methodology 4: God Mode Session Storage Testing
+
+### Why This is Different:
+- God Mode uses session-based DO keys (not conversation keys)
+- Multiple storage formats (godmode: vs conv:)
+- Session metadata tracking
+- Large synthesis responses
+
+### Step 1: Verify Session Key Creation
+
+**After posting God Mode question, check DO:**
+
+```bash
+# List all God Mode session keys
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; keys=json.load(sys.stdin).get('keys',[]); \
+  godmode=[k for k in keys if k.startswith('godmode:')]; \
+  print(f'God Mode session keys: {len(godmode)}'); \
+  [print(f'  {k}') for k in godmode[-5:]]"
+```
+
+**Expected:**
+```
+God Mode session keys: 5
+  godmode:Human:231080166:GodMode:171181106:1763027011418-1mmzaea
+  godmode:Human:231080166:GodMode:171181106:1763027234567-abc123x
+  ...
+```
+
+**Red flags:**
+- ❌ 0 keys found → Session routing not working
+- ❌ Keys use conv: format → sessionId not preserved
+- ❌ Keys missing sessionId suffix → Routing logic broken
+
+### Step 2: Verify sessionId in Message botParams
+
+**Check if stored messages have sessionId:**
+
+```bash
+# Get latest God Mode message
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?after=0&limit=5" \
+  > /tmp/recent.json
+
+python3 << 'PYEOF'
+import json
+
+with open('/tmp/recent.json') as f:
+    data = json.load(f)
+
+godmode = [m for m in data if m.get('username') == 'GodMode']
+if godmode:
+    m = godmode[-1]
+    print(f"Latest GodMode message:")
+    print(f"  ID: {m['id']}")
+    print(f"  Text: {m['text'][:50]}...")
+    
+    bp = m.get('botParams', {})
+    print(f"\nbotParams fields:")
+    for key in bp.keys():
+        print(f"  {key}: {bp[key]}")
+    
+    if 'sessionId' in bp:
+        print(f"\n✅ sessionId preserved!")
+    else:
+        print(f"\n❌ sessionId MISSING - DO worker dropping it!")
+PYEOF
+```
+
+**Expected:**
+```
+botParams fields:
+  status: complete
+  priority: 5
+  entity: god-mode
+  ais: GodMode:171181106
+  sessionId: 1763027011418-1mmzaea  ← Must be present!
+```
+
+### Step 3: Verify Session Isolation
+
+**Post 3 God Mode questions, check each has separate key:**
+
+```bash
+# List all session keys for specific Human:GodMode pair
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; keys=json.load(sys.stdin).get('keys',[]); \
+  target_keys=[k for k in keys if 'Human:231080166' in k and 'GodMode:171181106' in k]; \
+  print(f'Keys for Human:231080166 + GodMode:171181106:'); \
+  [print(f'  {k}') for k in target_keys]"
+```
+
+**Expected (after 3 sessions):**
+```
+godmode:Human:231080166:GodMode:171181106:1763027011418-1mmzaea (Session 1)
+godmode:Human:231080166:GodMode:171181106:1763027234567-abc123x (Session 2)
+godmode:Human:231080166:GodMode:171181106:1763027456789-xyz789p (Session 3)
+```
+
+**Red flag:**
+- ❌ Only 1 key → All sessions merged (broken)
+- ❌ conv: format → Old behavior (not using sessions)
+
+### Step 4: Check Conversation Key Size
+
+**Verify session keys don't grow beyond limit:**
+
+```bash
+# Check size of a specific session key
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/conversation?humanUsername=Human&humanColor=231080166&aiUsername=GodMode&aiColor=171181106" \
+  | python3 -c "import json, sys; data=json.load(sys.stdin); \
+  size=len(json.dumps(data)); \
+  print(f'Messages: {len(data)}'); \
+  print(f'Size: {size:,} bytes ({size/1024:.1f} KB)'); \
+  print(f'128KB limit: 131,072 bytes'); \
+  print(f'Status: {\"OVER!\" if size > 131072 else \"OK\"}'); \
+  print(f'Percentage: {(size/131072)*100:.1f}%')"
+```
+
+**With session-based storage:**
+- Each key should be <50KB (one session only)
+- Multiple keys for same Human:GodMode pair
+- Never exceeds 128KB per key
+
+**Without session-based storage (broken):**
+- One key grows with each session
+- After 3-7 sessions: Exceeds 128KB
+- 500 errors start appearing
+
+### Step 5: Test Session Retrieval
+
+**Query all sessions for a user:**
+
+```bash
+# Get all sessions for Human:231080166 + GodMode:171181106
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/godmode-sessions?humanUsername=Human&humanColor=231080166&godModeColor=171181106" \
+  | python3 -m json.tool
+```
+
+**Expected:**
+```json
+{
+  "sessions": [
+    {
+      "sessionId": "1763027011418-1mmzaea",
+      "timestamp": 1763027011418,
+      "humanQuestion": "What should an AI...",
+      "entitiesUsed": ["god-is-a-machine", "how-to-get-what-you-want"],
+      "entityCount": 2,
+      "messageIds": ["msg1", "msg2", "msg3", "msg4", "msg5"]
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+## Methodology 5: Investigating DO Storage Issues
+
+### Technique 1: Search by Key Pattern
+
+**Find keys matching pattern:**
+
+```bash
+# All God Mode related keys
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; keys=json.load(sys.stdin).get('keys',[]); \
+  matches=[k for k in keys if 'GodMode' in k]; \
+  print(f'Keys containing GodMode: {len(matches)}'); \
+  [print(f'  {k}') for k in matches[:10]]"
+
+# Session-specific search
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; keys=json.load(sys.stdin).get('keys',[]); \
+  session=[k for k in keys if 'session-' in k or k.startswith('godmode:')]; \
+  print(f'Session keys: {len(session)}'); \
+  [print(f'  {k}') for k in session]"
+```
+
+### Technique 2: Check Message Structure
+
+**Verify fields are preserved:**
+
+```python
+import json
+
+# Load message from DO
+with open('/tmp/message.json') as f:
+    msg = json.load(f)
+
+# Check all fields
+print("Message structure:")
+for key, value in msg.items():
+    if isinstance(value, dict):
+        print(f"  {key}:")
+        for k, v in value.items():
+            print(f"    {k}: {v}")
+    else:
+        val_str = str(value)[:50]
+        print(f"  {key}: {val_str}")
+
+# Verify botParams
+if 'botParams' in msg:
+    bp = msg['botParams']
+    required = ['entity', 'ais', 'sessionId']  # For God Mode
+    for field in required:
+        if field in bp:
+            print(f"✅ {field}: present")
+        else:
+            print(f"❌ {field}: MISSING!")
+```
+
+### Technique 3: Compare Key Sizes
+
+**Identify which keys are growing:**
+
+```bash
+# Save all keys to file
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  > /tmp/keys_before.json
+
+# Post messages...
+
+# Check again
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  > /tmp/keys_after.json
+
+# Compare
+python3 << 'PYEOF'
+import json
+
+with open('/tmp/keys_before.json') as f:
+    before = set(json.load(f)['keys'])
+
+with open('/tmp/keys_after.json') as f:
+    after = set(json.load(f)['keys'])
+
+new_keys = after - before
+print(f"New keys created: {len(new_keys)}")
+for key in new_keys:
+    print(f"  {key}")
+PYEOF
+```
+
+### Technique 4: Trace Message Flow
+
+**Follow a message through the entire system:**
+
+```bash
+# 1. POST message, capture ID
+MESSAGE_ID=$(curl -s -X POST https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Test","username":"Test","color":"123123123","message-type":"human","botParams":{"entity":"god-mode","sessionId":"test-session-123"}}' \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+
+echo "Message ID: $MESSAGE_ID"
+
+# 2. Check if it appears in pending
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/queue/pending" \
+  | python3 -c "import sys, json; data=json.load(sys.stdin); \
+  msg=[m for m in data['pending'] if m['id']=='$MESSAGE_ID']; \
+  print('Found in pending:', len(msg)>0); \
+  if msg: print('SessionId:', msg[0].get('botParams',{}).get('sessionId','NONE'))"
+
+# 3. Check which key it was stored in
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; \
+  print('Checking for key with test-session-123:'); \
+  keys=json.load(sys.stdin)['keys']; \
+  matches=[k for k in keys if 'test-session-123' in k]; \
+  print(f'Found {len(matches)} keys:'); \
+  [print(f'  {k}') for k in matches]"
+```
+
+**This traces:**
+- POST → What ID was assigned
+- Pending → Is it queryable with sessionId
+- Keys → Which key format was used
+
+### Technique 5: PM2 Session Tracking
+
+**Verify PM2 generated and used sessionId:**
+
+```bash
+# Check PM2 logs for session ID
+npx pm2 logs ai-bot-do --lines 200 --nostream 2>&1 \
+  | grep "Starting session:" \
+  | tail -5
+
+# Expected:
+# [GOD-MODE] Starting session: 1763027011418-1mmzaea
+
+# Check if that sessionId appears in payloads
+npx pm2 logs ai-bot-do --lines 500 --nostream 2>&1 \
+  | grep "1763027011418-1mmzaea"
+
+# Should appear in:
+# - Starting session log
+# - Session complete log
+# - Possibly in payload logs (if we log botParams)
+```
+
+### Technique 6: Conversation Log Cross-Reference
+
+**Use conversation logs to find session IDs:**
+
+```bash
+# List recent God Mode conversation logs
+ls -lt /path/to/AI-Bot-Deploy/conversation-logs/GodMode*.txt | head -5
+
+# Example:
+# GodMode171181106Human231080166-session-1763027011418-1mmzaea.txt
+
+# Extract session ID from filename
+SESSION_ID=$(ls -t conversation-logs/GodMode*.txt | head -1 | grep -o 'session-[^.]*' | cut -d- -f2-)
+
+echo "Latest session ID: $SESSION_ID"
+
+# Search DO for that session key
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/admin/list-keys" \
+  | python3 -c "import json, sys; \
+  keys=json.load(sys.stdin)['keys']; \
+  matches=[k for k in keys if '$SESSION_ID' in k]; \
+  print(f'DO keys with session {SESSION_ID}: {len(matches)}'); \
+  [print(f'  {k}') for k in matches]"
+```
+
+**Cross-reference:**
+- Conversation log exists → PM2 processed it
+- DO key exists → Storage working
+- DO key missing → Routing broken
+
+### Technique 7: Check botParams Preservation
+
+**Verify DO worker preserves all botParams fields:**
+
+```bash
+# Post message with custom botParams
+curl -X POST https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Test message",
+    "username": "TestUser",
+    "color": "123123123",
+    "message-type": "AI",
+    "replyTo": "test123",
+    "botParams": {
+      "humanUsername": "Human",
+      "humanColor": "231080166",
+      "entity": "god-mode",
+      "ais": "GodMode:171181106",
+      "sessionId": "test-preserve-123",
+      "customField": "should-this-survive"
+    }
+  }'
+
+# Retrieve and check
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?after=0&limit=1" \
+  | python3 -c "import json, sys; data=json.load(sys.stdin); \
+  msg=data[0]; bp=msg.get('botParams',{}); \
+  print('botParams fields preserved:'); \
+  print(f'  sessionId: {\"sessionId\" in bp}'); \
+  print(f'  customField: {\"customField\" in bp}'); \
+  print(f'\\nAll fields: {list(bp.keys())}')"
+```
+
+**This reveals:**
+- Which fields DO worker preserves
+- Which fields get dropped
+- If sessionId is being stripped
+
+### Technique 8: Cloudflare Deployment Verification
+
+**Confirm deployment actually updated:**
+
+```bash
+# Get current deployment version
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?after=0&limit=1" \
+  -H "Cache-Control: no-cache" \
+  | python3 -c "import json, sys; msg=json.load(sys.stdin)[0]; \
+  bp=msg.get('botParams',{}); \
+  print('Deployment check:'); \
+  print(f'  sessionId field exists: {\"sessionId\" in bp}'); \
+  print(f'  If FALSE: Deployment not propagated or code not deployed')"
+
+# Force cache clear
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/comments?after=0&limit=1&_nocache=$(date +%s)" \
+  > /dev/null
+
+# Try again after cache clear
+```
+
+**Cloudflare propagation:**
+- Can take 5-30 seconds
+- Test endpoint directly (not through frontend)
+- Use cache-busting parameters
+
+---
+
+## Advanced Debugging Patterns
+
+### Pattern 1: God Mode Session Not Creating Keys
+
+**Symptoms:**
+- PM2 logs show session ID
+- Conversation logs created with session ID
+- DO has 0 godmode: keys
+- Messages in conv: keys instead
+
+**Debug steps:**
+1. Verify PM2 is sending sessionId (check logs)
+2. Verify DO worker preserves sessionId (check stored message)
+3. Verify routing logic triggers (check DO worker code line 152)
+4. Test deployment propagation (wait 30s, try again)
+
+**Common causes:**
+- DO worker not preserving sessionId field
+- Routing logic condition not met
+- Deployment not propagated
+- JavaScript error in DO worker
+
+### Pattern 2: Large Synthesis Fails to Post
+
+**Symptoms:**
+- PM2 logs show synthesis generated (25KB+)
+- Synthesis not in DO
+- 500 error when posting
+- Conversation breaks
+
+**Debug steps:**
+```bash
+# Check conversation key size before synthesis
+curl -s "https://saywhatwant-do-worker.bootloaders.workers.dev/api/conversation?..." \
+  | python3 -c "import json, sys; data=json.load(sys.stdin); \
+  size=len(json.dumps(data)); \
+  print(f'{size:,} bytes'); \
+  print(f'{(size/131072)*100:.1f}% of 128KB'); \
+  print(f'Adding 25KB synthesis would exceed' if size > 106000 else 'Should fit')"
+```
+
+**Common causes:**
+- Conversation key near 128KB limit
+- Adding synthesis exceeds limit
+- Need session-based storage
+
+### Pattern 3: Frontend Not Seeing God Mode Messages
+
+**Symptoms:**
+- PM2 processed God Mode
+- Messages in DO
+- Frontend doesn't display them
+
+**Debug steps:**
+```bash
+# Check if frontend is polling with includeGodMode
+# Browser console should show:
+# [Presence Polling] ... (including God Mode)
+
+# If not, check URL:
+# - Has entity=god-mode? OR
+# - Has filter with "GodMode" username?
+
+# If neither: Frontend won't poll godmode: keys!
+```
+
+---
+
 **Status:** ✅ COMPLETE - Agent testing methodology documented  
-**Last Updated:** November 2, 2025  
+**Last Updated:** November 12, 2025  
 **Audience:** AI Agents conducting system tests  
-**Related:** README 173 (Context field fix)
+**Related:** README 173 (Context field fix), README 200 (God Mode sessions)
 
