@@ -151,9 +151,10 @@ export function useMessageLoadingState(
     const newLoadedCount = loadedCount + newMessagesCount;
     setLoadedCount(newLoadedCount);
     
-    // Increase dynamic max to accommodate new messages + headroom
-    const newMax = initialMax + newLoadedCount + 50; // +50 headroom
-    setMaxMessages(newMax);
+    // Keep hard limit (don't grow beyond initialMax)
+    // Rolling window: always trim to initialMax newest messages
+    console.log(`[LoadingState] Maintaining hard limit at ${initialMax} messages (loaded ${newLoadedCount} via lazy load)`);
+    // maxMessages stays at initialMax - true rolling window
     
     // Update state
     setIsLoadingMore(false);
