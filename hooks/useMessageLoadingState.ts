@@ -163,7 +163,7 @@ export function useMessageLoadingState(
     console.log(
       `[LoadingState] Loaded ${newMessagesCount} messages. ` +
       `Total lazy loaded: ${newLoadedCount}. ` +
-      `Dynamic max: ${newMax}. ` +
+      `Hard limit: ${initialMax}. ` +
       `Has more: ${stillHasMore}`
     );
   }, [isLoadingMore, loadedCount, initialMax]);
