@@ -44,7 +44,7 @@ export const MESSAGE_SYSTEM_CONFIG: MessageSystemConfig = {
   activeWindow: 12000,           // 12s activity window (4 polls at 3s each)
   
   // Display Settings
-  maxDisplayMessages: 1000,     // Show max n in DOM
+  maxDisplayMessages: 500,     // Show max n in DOM
   
   // Storage Settings
   maxIndexedDBMessages: 100000,  // Store max nk messages
