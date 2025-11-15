@@ -641,10 +641,69 @@ Just change endpoint config - no code changes!
 **Risk:** Low (can rollback to Ollama)
 
 ### Step 5: Add Multiple PM2 Workers (If Step 4 Works)
-- Use ecosystem.config.js
-- Start 3-5 PM2 workers
-- All pointing to same Llama.cpp server
-- Test concurrent processing
+
+**Single command starts all workers (no multiple terminals!):**
+
+```bash
+# Create ecosystem.config.js
+module.exports = {
+  apps: [
+    {
+      name: 'ai-bot-worker-1',
+      script: 'dist/index-do-simple.js',
+      env: { WORKER_CONFIG: 'worker-config-llamacpp.json' }
+    },
+    {
+      name: 'ai-bot-worker-2',
+      script: 'dist/index-do-simple.js',
+      env: { WORKER_CONFIG: 'worker-config-llamacpp.json' }
+    },
+    {
+      name: 'ai-bot-worker-3',
+      script: 'dist/index-do-simple.js',
+      env: { WORKER_CONFIG: 'worker-config-llamacpp.json' }
+    },
+    {
+      name: 'ai-bot-worker-4',
+      script: 'dist/index-do-simple.js',
+      env: { WORKER_CONFIG: 'worker-config-llamacpp.json' }
+    },
+    {
+      name: 'ai-bot-worker-5',
+      script: 'dist/index-do-simple.js',
+      env: { WORKER_CONFIG: 'worker-config-ollama.json' }  // Fallback
+    }
+  ]
+};
+
+# Start all 5 workers with ONE command
+pm2 start ecosystem.config.js
+
+# View all workers
+pm2 list
+
+# Monitor all logs in one view
+pm2 logs
+
+# Monitor specific worker
+pm2 logs ai-bot-worker-3
+
+# Restart all
+pm2 restart all
+
+# Stop all
+pm2 stop all
+
+# All workers run as background daemons
+# Close terminal - they keep running!
+```
+
+**Benefits:**
+- ✅ Single command starts all workers
+- ✅ No multiple terminal tabs needed
+- ✅ Background daemons (survive terminal close)
+- ✅ Unified logging (pm2 logs shows all)
+- ✅ Easy management (restart one or all)
 
 **Complexity:** Low (reuse README-201)  
 **Risk:** Medium (verify no race conditions)
