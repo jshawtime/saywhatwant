@@ -546,16 +546,82 @@ Result: 3+ concurrent messages processing!
 **Complexity:** Low (~100 lines)  
 **Risk:** None (doesn't affect existing code)
 
-### Step 2: Setup Llama.cpp Server
+### Step 2: Build Llama.cpp (Development Machine First)
+
+**Build on 10.0.0.99 (dev machine) for testing:**
 ```bash
-ssh user@10.0.0.110
-# Install and build llama.cpp
-# Start with: ./llama-server --parallel 16 --port 8080
+# On 10.0.0.99
+cd ~/llama-builds
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+cmake -B build
+cmake --build build --config Release -j 8
+
+# Test locally first
+cd build/bin
+./llama-server \
+  --hf ggml-ai/Qwen2.5-7B-Instruct-Q4_K_M-GGUF \
+  --parallel 4 \
+  --port 8080 \
+  --ctx-size 4096
+
 # Test with curl
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"test"}]}'
+```
+
+**Then move to production machine (easy!):**
+```bash
+# On 10.0.0.99, create portable package
+cd ~/llama-builds
+tar -czf llama-cpp-build.tar.gz llama.cpp/
+
+# Transfer to production machine (10.0.0.110 or dedicated server)
+scp llama-cpp-build.tar.gz user@10.0.0.110:~/
+
+# On 10.0.0.110
+tar -xzf llama-cpp-build.tar.gz
+cd llama.cpp/build/bin
+
+# Start with production settings
+./llama-server \
+  --hf ggml-ai/Qwen2.5-7B-Instruct-Q4_K_M-GGUF \
+  --parallel 24 \
+  --port 8080 \
+  --ctx-size 8192 \
+  --host 0.0.0.0  # Listen on all interfaces
+
+# Update PM2 config to point to new machine
+# worker-config.json: "endpoint": "http://10.0.0.110:8080/v1/chat/completions"
+```
+
+**Benefits:**
+- ✅ Test on dev machine first (low risk)
+- ✅ Easy to move (self-contained directory)
+- ✅ No dependencies needed on target machine
+- ✅ Can run on dedicated hardware later
+- ✅ PM2 just changes endpoint config
+
+**Portable architecture:**
+```
+Development (10.0.0.99):
+  PM2 → localhost:8080 (llama.cpp local)
+  Test, verify, tune
+
+Production Option A (10.0.0.110):
+  PM2 on 10.0.0.99 → 10.0.0.110:8080 (llama.cpp remote)
+  Uses existing Mac Studio
+
+Production Option B (Dedicated Server):
+  PM2 on 10.0.0.99 → new-server:8080 (llama.cpp remote)
+  Scale to dedicated AI hardware
+
+Just change endpoint config - no code changes!
 ```
 
 **Complexity:** Medium (build from source)  
-**Risk:** None (separate from Ollama)
+**Risk:** None (separate from Ollama, test on dev first)
 
 ### Step 3: Update PM2 to Use Backend Abstraction
 - Replace direct Ollama calls
