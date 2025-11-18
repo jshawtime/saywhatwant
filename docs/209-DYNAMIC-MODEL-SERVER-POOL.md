@@ -2,6 +2,7 @@
 
 **Purpose:** Manage thousands of models with limited RAM  
 **Strategy:** Load on demand, LRU eviction, memory-based limits  
+**Architecture:** Pool Manager on 10.0.0.110, PM2 Bot queries via HTTP  
 **Status:** 📋 PLANNING
 
 ---
@@ -28,36 +29,67 @@ Impossible!
 
 ---
 
-## The Solution: Dynamic Server Pool
+## The Solution: Pool Manager + HTTP API
 
-### Architecture:
+### Architecture Decision: ✅ Option A
 
-**Server Pool Manager:**
+**Pool Manager runs ON 10.0.0.110:**
+- Manages local llama-servers
+- Tracks usage, memory, availability
+- Handles LRU eviction
+- Exposes HTTP API for PM2 bot
+
+**PM2 Bot runs ON 10.0.0.99:**
+- Receives entity requests
+- Queries Pool Manager API
+- Gets port for model
+- Sends inference request
+
+**Communication:**
 ```
-Max servers: Calculated from available RAM
-Currently running: Track active servers
-Last used: Track timestamp per server
-Idle timeout: Kill if unused >N minutes
-On-demand: Start server when needed
+PM2 Bot (10.0.0.99):
+  GET http://10.0.0.110:9000/get-server?model=the-eternal-f16
+  
+Pool Manager (10.0.0.110):
+  Checks if server running
+  Starts if needed (or evicts LRU)
+  Returns: { port: 8080, status: 'ready' }
+  
+PM2 Bot:
+  POST http://10.0.0.110:8080/v1/chat/completions
+  (inference request)
 ```
+
+### Pool Manager Logic:
 
 **Memory Management:**
 ```
-Total RAM: 512GB (detect dynamically)
+Total RAM: Detect via os.totalmem()
 Reserved: 20GB (system overhead)
-Available: 492GB
+Available: RAM - 20GB
 Per model: 18GB (with 8K context)
+Max servers: floor(Available / 18)
 
-Max servers: 492 / 18 = 27 concurrent servers
+Example (512GB): (512 - 20) / 18 = 27 servers
 ```
 
 **LRU Eviction:**
 ```
-Request for model #28
-Pool is full (27 servers running)
-→ Find least recently used server
-→ Kill that server
-→ Start server for model #28
+Pool full (27 servers)
+Request for new model
+→ Find server with oldest lastUsed timestamp
+→ Kill that server (pm2 stop llama-modelX)
+→ Start new server (pm2 start llama-modelY)
+→ Return port to PM2 bot
+```
+
+**Idle Timeout:**
+```
+Every minute:
+  Check all servers
+  If lastUsed > 30 minutes ago
+  → Kill server (free 18GB)
+  → Available for new requests
 ```
 
 ---
@@ -176,32 +208,36 @@ const pool = new ServerPoolManager(maxServers);
 
 ---
 
-### Component 3: Model Router with Pool
+### Component 3: Model Router with Pool API
 
 **Update:** `AI-Bot-Deploy/src/modules/modelRouter.ts`
 
 ```typescript
-// Instead of static MODEL_PORT_MAP, query the pool:
-
 async function getModelEndpoint(modelKey: string, fallbackEndpoint: string): Promise<string> {
-  // Check if model is in Llama.cpp pool
-  const port = await serverPool.getServer(modelKey);
-  
-  if (port) {
-    console.log(`[ModelRouter] ${modelKey} → localhost:${port} (Llama.cpp)`);
-    return `http://localhost:${port}/v1/chat/completions`;
+  try {
+    // Query Pool Manager on 10.0.0.110
+    const response = await fetch(`http://10.0.0.110:9000/get-server?model=${modelKey}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      const endpoint = `http://10.0.0.110:${data.port}/v1/chat/completions`;
+      console.log(`[ModelRouter] ${modelKey} → 10.0.0.110:${data.port} (Llama.cpp)`);
+      return endpoint;
+    }
+  } catch (error) {
+    console.log(`[ModelRouter] Pool Manager unavailable, using fallback`);
   }
   
   // Fallback to Ollama
-  console.log(`[ModelRouter] ${modelKey} → fallback (Ollama)`);
+  console.log(`[ModelRouter] ${modelKey} → Ollama fallback`);
   return fallbackEndpoint;
 }
 ```
 
-**This will:**
-- Get port for existing server
-- Or start new server if not running
-- Or evict LRU and start new server if pool full
+**Communication:**
+- PM2 Bot asks Pool Manager for port
+- Pool Manager handles all server lifecycle
+- PM2 Bot just sends requests to returned port
 
 ---
 
@@ -307,29 +343,51 @@ const POOL_CONFIG = {
 
 ---
 
-## PM2 Integration
+## Deployment Architecture
 
-### Server Pool as PM2 Service
+### On 10.0.0.110 (Llama.cpp Server Machine):
 
-**File:** `llamacpp-HM/pool-manager.js`
-
-Main service that:
-1. Monitors requests from PM2 bot
-2. Starts/stops llama-servers as needed
-3. Tracks usage and enforces limits
-4. Runs as PM2 daemon
-
-**Start:**
+**Install:**
 ```bash
-pm2 start pool-manager.js --name llama-pool
+# Node.js (if not installed)
+brew install node
+
+# PM2
+npm install -g pm2
+
+# Llama.cpp (already done)
 ```
 
-**PM2 Bot:**
-```typescript
-// Instead of fixed port routing
-const port = await queryPoolManager(modelKey);
-const endpoint = `http://localhost:${port}/v1/chat/completions`;
+**Services:**
+```bash
+# Pool Manager (HTTP API on port 9000)
+pm2 start pool-manager.js --name llama-pool-manager
+
+# Individual llama-servers (managed by Pool Manager)
+# Started/stopped dynamically by Pool Manager
 ```
+
+**Pool Manager:**
+- Calculates max servers from RAM
+- Exposes HTTP API (port 9000)
+- Manages llama-server lifecycle
+- Tracks usage, LRU, idle timeout
+
+---
+
+### On 10.0.0.99 (PM2 Bot Machine):
+
+**Update modelRouter.ts:**
+- Query Pool Manager API before each request
+- Get port for model
+- Send inference to that port
+- Fallback to Ollama if unavailable
+
+**No changes to:**
+- Entity processing
+- Message handling
+- Response posting
+- Just routing layer changes
 
 ---
 
@@ -356,30 +414,36 @@ const endpoint = `http://localhost:${port}/v1/chat/completions`;
 
 ---
 
-## Implementation Phases
+## Implementation Checklist
 
-### Phase 1: Memory Calculator
-- [ ] Detect system RAM
-- [ ] Calculate max servers
-- [ ] Test on different machines
+### On 10.0.0.110 (Server Machine):
+- [ ] Install Node.js (if not installed)
+- [ ] Install PM2
+- [ ] Create pool-manager service
+- [ ] Start pool manager on port 9000
+- [ ] Test HTTP API responds
 
-### Phase 2: Server Pool Manager
-- [ ] Track active servers
-- [ ] Start/stop llama-servers
-- [ ] LRU eviction logic
-- [ ] Idle timeout monitoring
+### Pool Manager Service:
+- [ ] Calculate max servers from RAM
+- [ ] HTTP endpoint: GET /get-server?model=X
+- [ ] Track active servers Map
+- [ ] Start llama-server via PM2
+- [ ] Return port to caller
+- [ ] LRU eviction when pool full
+- [ ] Idle timeout monitoring (30 min)
 
-### Phase 3: PM2 Integration
-- [ ] Pool manager as PM2 service
-- [ ] PM2 bot queries pool
-- [ ] Dynamic routing based on pool
-- [ ] Fallback to Ollama if pool busy
+### On 10.0.0.99 (PM2 Bot):
+- [ ] Update modelRouter to query Pool Manager API
+- [ ] Handle server not ready (retry logic)
+- [ ] Fallback to Ollama if Pool Manager unavailable
+- [ ] Log which machine/port used
 
-### Phase 4: Testing
-- [ ] Test with 30 models
-- [ ] Verify LRU eviction
-- [ ] Verify idle timeout
-- [ ] Monitor memory stays under limit
+### Testing:
+- [ ] Request model #1 → Server starts, port returned
+- [ ] Request model #1 again → Same port, instant
+- [ ] Fill pool to max → LRU eviction works
+- [ ] Wait 30+ min → Idle servers killed
+- [ ] Memory stays under limit
 
 ---
 
