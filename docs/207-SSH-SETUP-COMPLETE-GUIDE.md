@@ -120,6 +120,44 @@ ls -ld ~
 
 ---
 
+### Step 6: Configure Passwordless Sudo (For Remote Operations)
+
+**Why needed:**
+- Remote software installation requires sudo
+- SSH cannot enter passwords interactively
+- Future machines 200+ miles away need unattended operations
+
+**On the TARGET machine, run:**
+```bash
+sudo visudo
+```
+
+**Add this line at the bottom:**
+```
+username ALL=(ALL) NOPASSWD: /usr/sbin/installer, /bin/cp, /bin/mkdir, /usr/local/bin/brew
+```
+
+**Replace `username` with actual username** (e.g., `ms512-1`)
+
+**Example:**
+```
+ms512-1 ALL=(ALL) NOPASSWD: /usr/sbin/installer, /bin/cp, /bin/mkdir, /usr/local/bin/brew
+```
+
+**What this allows (without password):**
+- `installer` - Install packages
+- `cp` / `mkdir` - File operations during installs
+- `brew` - Homebrew package management
+
+**Security Note:**
+- Only allows specific safe commands
+- Not full sudo access
+- Required for automated remote deployments
+
+**Save:** Ctrl+X, Y, Enter (nano) or `:wq` (vim)
+
+---
+
 ### Step 6: Configure SSH on Dev Machine
 
 **On DEV machine, create/edit `~/.ssh/config`:**
