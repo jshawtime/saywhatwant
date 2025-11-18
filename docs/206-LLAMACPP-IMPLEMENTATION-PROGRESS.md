@@ -98,6 +98,46 @@ cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/hm-server-deployment/llamacpp-HM
 
 ---
 
+### Phase 5: Dynamic Backend Logging ✅
+
+**ALL OLLAMA REFERENCES FIXED:**
+
+**doLogger Methods (3 renamed):**
+- ✅ `logOllamaStart` → `logLLMStart(modelName, backendName)`
+- ✅ `logOllamaSuccess` → `logLLMSuccess(count, duration, backendName, text)`
+- ✅ `logOllamaError` → `logLLMError(message, backendName)`
+
+**Console Logs (2 fixed):**
+- ✅ `[OLLAMA-response]` → `[${backend.name.toUpperCase()}-response]`
+- ✅ `[Ollama] Bot chose` → `[${backend.name}] Bot chose`
+
+**Comments/Docs (3 updated):**
+- ✅ Code comment: `[OLLAMA]` → `[LLM-BACKEND]`
+- ✅ Docstring: "using Ollama" → "using LLM backend"
+- ✅ Comment: "Ollama receives" → "LLM backend receives"
+
+**Log Output Examples:**
+
+When using Llama.cpp:
+```
+[ModelRouter] the-eternal-f16 → localhost:8080 (Llama.cpp)
+[LLAMA-CPP] the-eternal-f16 → generating...
+[LLAMA-CPP-response] Full response from llama-cpp:
+[LLAMA-CPP] ✓ 245 chars in 1.2s
+```
+
+When using Ollama fallback:
+```
+[ModelRouter] crushing-it-f16 → http://10.0.0.110:11434/v1/chat/completions (Ollama fallback)
+[OLLAMA] crushing-it-f16 → generating...
+[OLLAMA-response] Full response from ollama:
+[OLLAMA] ✓ 312 chars in 3.4s
+```
+
+**Status:** ✅ Complete, logs now accurately identify backend
+
+---
+
 ## 🔧 What's Next (Testing Needed)
 
 ### Test 2: PM2 Bot Routing
