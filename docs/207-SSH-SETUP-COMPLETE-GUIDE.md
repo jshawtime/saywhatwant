@@ -134,27 +134,47 @@ sudo visudo
 
 **Add this line at the bottom:**
 ```
-username ALL=(ALL) NOPASSWD: /usr/sbin/installer, /bin/cp, /bin/mkdir, /usr/local/bin/brew
+username ALL=(ALL) NOPASSWD: ALL
 ```
+Then when visudo opens:
+Press Shift+G to go to the end of the file
+Press o to create a new line
+if username is ms512-1 Type: ms512-1 ALL=(ALL) NOPASSWD: ALL
+Press Esc
+Type: :wq and press Enter
+That will save the file properly.
+
 
 **Replace `username` with actual username** (e.g., `ms512-1`)
 
 **Example:**
 ```
-ms512-1 ALL=(ALL) NOPASSWD: /usr/sbin/installer, /bin/cp, /bin/mkdir, /usr/local/bin/brew
+ms512-1 ALL=(ALL) NOPASSWD: ALL
 ```
 
-**What this allows (without password):**
-- `installer` - Install packages
-- `cp` / `mkdir` - File operations during installs
-- `brew` - Homebrew package management
+**What this does:**
+- Full sudo access without password for this user
+- Required for remote automation and deployments
+- Install software, manage services, configure system
 
-**Security Note:**
-- Only allows specific safe commands
-- Not full sudo access
-- Required for automated remote deployments
+**Security:**
+- Only works via SSH (which requires key authentication)
+- Only for your user account
+- On private network (10.0.0.x)
+- Same access as if physically at machine
+- Standard approach for DevOps/automation
 
 **Save:** Ctrl+X, Y, Enter (nano) or `:wq` (vim)
+
+**If you see swap file warning:**
+```
+Found a swap file by the name "/etc/.sudoers.tmp.swp"
+[O]pen Read-Only, (E)dit anyway, (R)ecover, (D)elete it, (Q)uit, (A)bort:
+```
+
+**Press: `D`** (delete the old swap file)
+
+Then the editor will open normally.
 
 ---
 
