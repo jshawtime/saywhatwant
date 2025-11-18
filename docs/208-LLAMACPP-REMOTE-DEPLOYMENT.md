@@ -1,7 +1,7 @@
 # 208: Llama.cpp Remote Deployment to 10.0.0.110
 
 **Target:** Mac Studio M3 Ultra (512GB RAM)  
-**Goal:** Deploy 19-model Llama.cpp system remotely via SSH  
+**Goal:** Deploy multi-model Llama.cpp system remotely via SSH (auto-discovers all models)  
 **Status:** 🔄 IN PROGRESS
 
 ---
@@ -27,10 +27,11 @@
 **Production System on 10.0.0.110:**
 - [ ] cmake installed
 - [ ] llama.cpp cloned and built
-- [ ] 19 model servers running (ports 8080-8098)
-- [ ] ~342GB RAM usage
+- [ ] Multi-model servers running (auto-discovered from models folder)
+- [ ] All non-TSC f16 models loaded
 - [ ] PM2 managing all servers
 - [ ] Accessible from dev machine
+- [ ] Self-healing: Add model to folder → auto-included
 
 ---
 
@@ -54,12 +55,13 @@
 - [ ] Verify response
 - [ ] Check memory usage
 
-### Phase 4: Deploy 19 Models
-- [ ] Transfer start script to server
+### Phase 4: Deploy Multi-Model System
+- [ ] Scan models directory for all f16 models (exclude TSC)
+- [ ] Generate start script for ALL models
 - [ ] Create logs directory
-- [ ] Start all 19 model servers
+- [ ] Start all model servers (one per model, sequential ports)
 - [ ] Verify all ports respond
-- [ ] Monitor memory usage (~342GB)
+- [ ] Monitor total memory usage
 
 ### Phase 5: Update PM2 Bot
 - [ ] Update worker-config.json endpoint to 10.0.0.110
