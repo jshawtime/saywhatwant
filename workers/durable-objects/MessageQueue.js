@@ -49,6 +49,11 @@ export class MessageQueue {
       if (path === '/api/queue/claim' && request.method === 'POST') {
         return await this.claimMessage(request);
       }
+      
+      // NEW: Atomic claim-next endpoint (combines pending + claim)
+      if (path === '/api/queue/claim-next' && request.method === 'POST') {
+        return await this.claimNextMessage(request);
+      }
 
       if (path === '/api/queue/complete' && request.method === 'POST') {
         return await this.completeMessage(request);
@@ -369,6 +374,112 @@ export class MessageQueue {
     }
     
     return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
+  }
+
+  /**
+   * POST /api/queue/claim-next - Atomic operation: Get next pending + claim it
+   * Combines getPending + claimMessage into single atomic operation
+   * This prevents race conditions when multiple workers poll simultaneously
+   */
+  async claimNextMessage(request) {
+    const { workerId } = await request.json();
+    
+    if (!workerId) {
+      return this.jsonResponse({
+        success: false,
+        message: null,
+        error: 'workerId required'
+      }, 400);
+    }
+    
+    // Get all conversation keys (normal entities)
+    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
+    
+    // Get all God Mode session keys
+    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    
+    // Load all conversations and sessions
+    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
+    const conversations = await Promise.all(
+      allKeys.map(async key => ({
+        key,
+        messages: await this.state.storage.get(key)
+      }))
+    );
+    
+    // Flatten to all messages with their keys
+    const allMessages = [];
+    for (const conv of conversations) {
+      if (!conv.messages) continue;
+      for (const msg of conv.messages) {
+        if (msg['message-type'] === 'human' && 
+            msg.botParams?.status === 'pending' &&
+            msg.botParams?.entity) {
+          allMessages.push({ ...msg, _convKey: conv.key });
+        }
+      }
+    }
+    
+    // No pending messages
+    if (allMessages.length === 0) {
+      console.log('[MessageQueue] claim-next: No pending messages');
+      return this.jsonResponse({
+        success: false,
+        message: null,
+        reason: 'no_pending_messages'
+      });
+    }
+    
+    // Sort by priority (desc) then timestamp (asc)
+    allMessages.sort((a, b) => {
+      const priorityDiff = (b.botParams.priority || 5) - (a.botParams.priority || 5);
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.timestamp - b.timestamp;
+    });
+    
+    // Take first message
+    const messageToClaimWithKey = allMessages[0];
+    const conversationKey = messageToClaimWithKey._convKey;
+    delete messageToClaimWithKey._convKey;  // Remove temp property
+    
+    // Load the conversation for this message
+    const conversation = await this.state.storage.get(conversationKey);
+    const messageIndex = conversation.findIndex(m => m.id === messageToClaimWithKey.id);
+    
+    if (messageIndex === -1) {
+      return this.jsonResponse({
+        success: false,
+        message: null,
+        error: 'Message not found in conversation (race condition)'
+      }, 404);
+    }
+    
+    const message = conversation[messageIndex];
+    
+    // Double-check status (another worker might have claimed it)
+    if (message.botParams.status !== 'pending') {
+      console.log('[MessageQueue] claim-next: Message already claimed:', message.id);
+      return this.jsonResponse({
+        success: false,
+        message: null,
+        reason: 'already_claimed'
+      }, 409);
+    }
+    
+    // ATOMIC CLAIM: Update message status
+    message.botParams.status = 'processing';
+    message.botParams.claimedBy = workerId;
+    message.botParams.claimedAt = Date.now();
+    
+    // Save conversation back
+    await this.state.storage.put(conversationKey, conversation);
+    
+    console.log('[MessageQueue] claim-next:', message.id, 'claimed by', workerId, 'from', conversationKey);
+    
+    return this.jsonResponse({
+      success: true,
+      message: message
+    });
   }
 
   /**
