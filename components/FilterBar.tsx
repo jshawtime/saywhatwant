@@ -190,7 +190,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 const setting = filterNotificationSettings[filterKey] || { sound: 'none', isUnread: false };
                 const isHumanFilter = filter.messageType === 'human' || !filter.messageType;  // Default to human if not set
                 const chipColor = filter.colorRgb || userColor;
-                const displayLabel = `${filter.username}:${filter.color}`;
+                const displayLabel = filter.username;
                 
                 return (
                   <span
@@ -211,7 +211,11 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       }
                     }}
                     onMouseEnter={() => handleFilterHover(filterKey)}
-                    title={isHumanFilter ? "Right click to set alert. Filter must be on." : filter.username}
+                    title={
+                      isHumanFilter
+                        ? `Right click to set alert. Filter must be on.\n${filter.username}:${filter.color}`
+                        : `${filter.username}:${filter.color}`
+                    }
                   >
                     {setting.sound !== 'none' && (
                       <span style={{ color: chipColor }}>
