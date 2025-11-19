@@ -191,6 +191,57 @@ setEqScore(18);  // Tab 9 - DROPPED?
 
 ---
 
+### 7. React Animation/Transition Conflicts
+
+**Theory:** Score update triggers animation, but animation doesn't complete before next update
+
+**Scenario:**
+```
+Tab 1: Score updates 0 → 21
+  - Animation starts (fade in, count up, etc.)
+  - Animation duration: 500ms
+  - Completes successfully ✅
+
+Tab 8: Score updates 0 → 28
+  - Animation starts
+  - But Tab 9's score update arrives (100ms later)
+  - React tries to start another animation
+  - Previous animation interrupted/cancelled
+  - State gets corrupted
+  - Score never displays ❌
+```
+
+**With 7+ tabs updating rapidly:**
+```
+Tab 1: Animation starts, finishes (no interruption)
+Tab 2: Animation starts, finishes
+...
+Tab 7: Animation starts, finishes
+
+Tab 8: Animation starts...
+  → Tab 9 update arrives mid-animation
+  → Animation cancelled/corrupted
+  → Score display breaks
+  → Shows "0" (default/fallback)
+```
+
+**Evidence:**
+- Consistent cutoff at tab 7-8 (timing threshold?)
+- All tabs beyond 7 affected (cascading animation conflicts?)
+- Scores ARE in sessionStorage but not displaying (rendering issue?)
+
+**Possible fix:**
+- Disable score animations during high traffic
+- Or use CSS-only animations (can't be interrupted by JS)
+- Or debounce score updates (wait for animation to finish)
+
+**User note:** "Could be chasing ghosts but could also be a weird react issue"
+- Multi-computer test will help isolate this
+- If works on different computers: Browser/React throttling confirmed
+- If still broken: Something else
+
+---
+
 ## 🧪 Diagnostic Steps (For Later)
 
 ### Test 1: Different Computers
