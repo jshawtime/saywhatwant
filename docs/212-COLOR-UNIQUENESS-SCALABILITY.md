@@ -56,12 +56,20 @@ New:     color="185142040-ABC123DEFG" (9-digit + 10-char suffix)
 ### 3. Backend: Storage & Routing
 **File**: `saywhatwant/workers/durable-objects/MessageQueue.js`
 - Verify `postMessage` stores full 19-char string
-- Update `getConversationKey` to use full color string for uniqueness
+- **CRITICAL**: `getConversationKey` uses `:` separator (`conv:human:color:ai:color`).
+- **SAFE**: Suffix uses `-`, so `split(':')` logic will NOT break.
 
 ### 4. AI Bot: Handling & Generation
 **File**: `hm-server-deployment/AI-Bot-Deploy/src/index-do-simple.ts`
 - Update `postAIResponse` to handle/pass full color strings
-- Update random color generation to include suffix
+- Update random color generation logic to include suffix (currently generates 9-digit only)
+- Verify `ais.split(':')` logic (safe with `-` suffix)
+
+### 5. Verification Scripts
+**Files**: 
+- `saywhatwant/ai/verify-colors.ts`
+- `hm-server-deployment/AI-Bot-Deploy/verify-colors.ts`
+- **Action**: Update regex from `^\d{9}$` to `^\d{9}(-[A-Za-z0-9]{10})?$` to prevent false negatives during validation.
 
 ---
 
@@ -77,17 +85,18 @@ New:     color="185142040-ABC123DEFG" (9-digit + 10-char suffix)
 ### Backend (Cloudflare DO)
 - [ ] **`saywhatwant/workers/durable-objects/MessageQueue.js`**: 
     - `postMessage`: Ensure extraction uses full string
-    - `getConversationKey`: Ensure it builds key using full string
+    - `getConversationKey`: Confirmed safe (uses `:` separator)
 
 ### AI Bot
 - [ ] **`hm-server-deployment/AI-Bot-Deploy/src/index-do-simple.ts`**: 
     - `postAIResponse`: Pass full color string
     - `generateResponse`: Handle random color generation with suffix
+- [ ] **`hm-server-deployment/AI-Bot-Deploy/src/index-simple.ts`**:
+    - Update legacy `postAIResponse` (just in case)
 
-### No Migration Needed
-- **Greenfield**: No users yet, strictly development phase
-- **Backward Compatibility**: Not required
-- **Database Migration**: Not required
+### Utilities
+- [ ] **`saywhatwant/ai/verify-colors.ts`**: Update validation regex
+- [ ] **`hm-server-deployment/AI-Bot-Deploy/verify-colors.ts`**: Update validation regex
 
 ---
 
