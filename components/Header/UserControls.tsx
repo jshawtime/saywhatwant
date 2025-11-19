@@ -60,6 +60,11 @@ interface UserControlsProps {
   eqScore: number;
   
   /**
+   * Aggregate EQ score across this browser
+   */
+  eqTotal: number;
+  
+  /**
    * Callback when username changes
    */
   onUsernameChange: (username: string) => void;
@@ -137,6 +142,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
   randomizedColors,
   maxUsernameLength,
   eqScore,
+  eqTotal,
   onUsernameChange,
   onUsernameFocus,
   onUsernameTab,
@@ -167,6 +173,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
   
   // Track previous score for animation
   const [prevScore, setPrevScore] = useState(eqScore);
+  const [prevTotal, setPrevTotal] = useState(eqTotal);
   
   useEffect(() => {
     // Delay setting prevScore until after animation completes (1 second)
@@ -178,8 +185,65 @@ export const UserControls: React.FC<UserControlsProps> = ({
     }
   }, [eqScore, prevScore]);
   
+  useEffect(() => {
+    if (prevTotal !== eqTotal) {
+      const timer = setTimeout(() => {
+        setPrevTotal(eqTotal);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [eqTotal, prevTotal]);
+  
   return (
     <div className="flex items-center gap-2">
+      {/* Total EQ Score - smaller stacked label */}
+      <div
+        className="mr-2 select-none flex flex-col items-center"
+        style={{ cursor: 'default' }}
+        title="Total EQ score across this browser"
+      >
+        <div
+          style={{
+            color: userColorRgb,
+            fontSize: '10px',
+            fontWeight: 900,
+            lineHeight: '10px',
+            opacity: 0.6
+          }}
+        >
+          TOTAL
+        </div>
+        <div
+          style={{
+            color: userColorRgb,
+            fontSize: '10px',
+            fontWeight: 900,
+            lineHeight: '10px',
+            marginBottom: '2px',
+            opacity: 0.6
+          }}
+        >
+          SCORE
+        </div>
+        <div
+          style={{
+            color: userColorRgb,
+            fontSize: '12px',
+            fontWeight: 700,
+            opacity: 0.9
+          }}
+        >
+          <CountUp
+            start={prevTotal}
+            end={eqTotal}
+            duration={1}
+            preserveValue={true}
+            useEasing={true}
+            formattingFn={(value) => formatNumber(Math.round(value))}
+          />
+        </div>
+      </div>
+      
       {/* EQ Score (Emotional Intelligence) - Animated */}
       <div 
         className="mr-4 select-none flex flex-col items-center" 

@@ -33,6 +33,42 @@ const MAX_USERNAME_LENGTH = 16;
 const MAX_DISPLAY_MESSAGES = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
 const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
 const INDEXEDDB_LAZY_LOAD_CHUNK = MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize;
+const EQ_TOTAL_STORAGE_KEY = 'sww-eq-total-score';
+const EQ_TOTAL_IDS_STORAGE_KEY = 'sww-eq-total-ids';
+const EQ_TOTAL_HISTORY_LIMIT = 200;
+
+const getStoredEqTotal = (): number => {
+  if (typeof window === 'undefined') {
+    return 0;
+  }
+  const storedValue = parseInt(localStorage.getItem(EQ_TOTAL_STORAGE_KEY) || '0', 10);
+  return Number.isFinite(storedValue) ? storedValue : 0;
+};
+
+const getStoredEqTotalIds = (): string[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  try {
+    const raw = localStorage.getItem(EQ_TOTAL_IDS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const initializeEqTotalStorage = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (localStorage.getItem(EQ_TOTAL_STORAGE_KEY) === null) {
+    localStorage.setItem(EQ_TOTAL_STORAGE_KEY, '0');
+  }
+  if (localStorage.getItem(EQ_TOTAL_IDS_STORAGE_KEY) === null) {
+    localStorage.setItem(EQ_TOTAL_IDS_STORAGE_KEY, '[]');
+  }
+};
 
 // ==========================================
 // COMPONENTS (Extracted in Phase 3)
@@ -160,6 +196,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     // Load from sessionStorage on mount (per-tab isolation)
     return parseInt(sessionStorage.getItem('sww-eq-score') || '0');
   });
+  const [eqTotal, setEqTotal] = useState<number>(() => getStoredEqTotal());
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
@@ -189,6 +226,61 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setUserColor,
     setShowColorPicker
   } = useColorPicker();
+  
+  const updateBrowserEqTotal = useCallback((messageId: string, score: number) => {
+    if (typeof window === 'undefined' || !messageId) {
+      return;
+    }
+    const storedIds = getStoredEqTotalIds();
+    if (storedIds.includes(messageId)) {
+      return;
+    }
+    const currentTotal = getStoredEqTotal();
+    const nextTotal = currentTotal + score;
+    const updatedIds = [messageId, ...storedIds].slice(0, EQ_TOTAL_HISTORY_LIMIT);
+    localStorage.setItem(EQ_TOTAL_STORAGE_KEY, nextTotal.toString());
+    localStorage.setItem(EQ_TOTAL_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
+    setEqTotal(nextTotal);
+  }, []);
+  
+  useEffect(() => {
+    initializeEqTotalStorage();
+    setEqTotal(getStoredEqTotal());
+  }, []);
+  
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === EQ_TOTAL_STORAGE_KEY && event.newValue !== null) {
+        const nextValue = parseInt(event.newValue, 10);
+        setEqTotal(Number.isFinite(nextValue) ? nextValue : 0);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+  
+  useEffect(() => {
+    if (!username || !userColor) {
+      previousIdentityRef.current = { username, color: userColor };
+      return;
+    }
+    const previousIdentity = previousIdentityRef.current;
+    if (
+      previousIdentity &&
+      (previousIdentity.username !== username || previousIdentity.color !== userColor)
+    ) {
+      initializeEqTotalStorage();
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(EQ_TOTAL_STORAGE_KEY, '0');
+        localStorage.setItem(EQ_TOTAL_IDS_STORAGE_KEY, '[]');
+      }
+      setEqTotal(0);
+    }
+    previousIdentityRef.current = { username, color: userColor };
+  }, [username, userColor]);
   
   // Consolidated loading state (replaces 6 separate useState calls)
   const {
@@ -224,6 +316,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const lastActivityTime = useRef<number>(Date.now()); // Track last user activity for active/idle polling
   const idlePollCount = useRef<number>(0); // Track number of idle polls for regressive backoff
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Polling timeout handle
+  const previousIdentityRef = useRef<{ username: string; color: string } | null>(null);
   
   // Message type scroll restoration (still needed for Humans/Entities toggle)
   // NOTE: This hook will be deprecated once we fully remove the old toggle system
@@ -1029,6 +1122,11 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   setEqScore(msg.eqScore);
                   // Removed console.log - reduces noise during stress tests
                 }
+                
+                if (msg.id) {
+                  const numericScore = Number(msg.eqScore) || 0;
+                  updateBrowserEqTotal(msg.id, numericScore);
+                }
               }
             });
           } catch (err) {
@@ -1093,7 +1191,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         console.error('[Comments] Polling error:', err);
       }
   }, [loadCommentsFromStorage, isNearBottom, smoothScrollToBottom, trimToMaxMessages, 
-      isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches, isFilterMode, matchesCurrentFilter]);
+      isFilterEnabled, filterUsernames, filterWords, checkNotificationMatches, isFilterMode, matchesCurrentFilter, updateBrowserEqTotal]);
   
   // Use the modular polling system
   // Simplified polling - active (3s) vs idle (regressive 5s → 1000s)
@@ -1234,6 +1332,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         showVideo={showVideo}
         onToggleVideo={toggleVideo}
         eqScore={eqScore}
+        eqTotal={eqTotal}
         filterUsernames={mergedUserFilters}
             filterWords={filterWords}
             negativeFilterWords={negativeFilterWords}

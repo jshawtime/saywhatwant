@@ -52,6 +52,7 @@ interface AppHeaderProps {
   
   // EQ Score
   eqScore: number;
+  eqTotal: number;
   
   // Filters
   filterUsernames: UsernameFilter[];
@@ -156,6 +157,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   
   // EQ Score
   eqScore,
+  eqTotal,
   
   // Filters
   filterUsernames,
@@ -262,6 +264,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             randomizedColors={randomizedColors}
             maxUsernameLength={maxUsernameLength}
             eqScore={eqScore}
+            eqTotal={eqTotal}
             onUsernameChange={onUsernameChange}
             onUsernameFocus={onUsernameFocus}
             onUsernameTab={onUsernameTab}
