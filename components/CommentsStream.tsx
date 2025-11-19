@@ -264,13 +264,16 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   
   useEffect(() => {
     if (!username || !userColor) {
-      previousIdentityRef.current = { username, color: userColor };
       return;
     }
     const previousIdentity = previousIdentityRef.current;
+    if (!previousIdentity) {
+      previousIdentityRef.current = { username, color: userColor };
+      return;
+    }
     if (
-      previousIdentity &&
-      (previousIdentity.username !== username || previousIdentity.color !== userColor)
+      previousIdentity.username !== username ||
+      previousIdentity.color !== userColor
     ) {
       initializeEqTotalStorage();
       if (typeof window !== 'undefined') {
@@ -278,8 +281,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         localStorage.setItem(EQ_TOTAL_IDS_STORAGE_KEY, '[]');
       }
       setEqTotal(0);
+      previousIdentityRef.current = { username, color: userColor };
     }
-    previousIdentityRef.current = { username, color: userColor };
   }, [username, userColor]);
   
   // Consolidated loading state (replaces 6 separate useState calls)

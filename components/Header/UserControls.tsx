@@ -198,17 +198,17 @@ export const UserControls: React.FC<UserControlsProps> = ({
     <div className="flex items-center gap-2">
       {/* Total EQ Score - smaller stacked label */}
       <div
-        className="mr-2 select-none flex flex-col items-center"
-        style={{ cursor: 'default' }}
-        title="Total EQ score across this browser"
+        className="mr-4 select-none flex flex-col items-end cursor-pointer"
+        title="Click to see worldwide leaderboard"
       >
         <div
           style={{
             color: userColorRgb,
-            fontSize: '10px',
+            fontSize: '9px',
             fontWeight: 900,
-            lineHeight: '10px',
-            opacity: 0.6
+            letterSpacing: '0.5px',
+            opacity: 0.7,
+            marginBottom: '0px'
           }}
         >
           TOTAL
@@ -216,21 +216,12 @@ export const UserControls: React.FC<UserControlsProps> = ({
         <div
           style={{
             color: userColorRgb,
-            fontSize: '10px',
-            fontWeight: 900,
-            lineHeight: '10px',
-            marginBottom: '2px',
-            opacity: 0.6
-          }}
-        >
-          SCORE
-        </div>
-        <div
-          style={{
-            color: userColorRgb,
-            fontSize: '12px',
+            fontSize: '29px',
             fontWeight: 700,
-            opacity: 0.9
+            opacity: 1,
+            marginTop: '-8px',
+            textAlign: 'right',
+            minWidth: '3ch'
           }}
         >
           <CountUp
