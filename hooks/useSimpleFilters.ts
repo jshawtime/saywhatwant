@@ -236,7 +236,7 @@ export function useSimpleFilters({
     // Convert colors to RGB for display in FilterBar
     mergedUserFilters: filterState.users.map(user => ({
       ...user,
-      color: nineDigitToRgb(user.color)
+      colorRgb: nineDigitToRgb(user.color)
     })),
     mergedFilterWords: filterState.words,
     mergedNegativeWords: filterState.negativeWords,

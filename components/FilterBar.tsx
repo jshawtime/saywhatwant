@@ -189,6 +189,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 const filterKey = getFilterKey(filter.username, filter.color);
                 const setting = filterNotificationSettings[filterKey] || { sound: 'none', isUnread: false };
                 const isHumanFilter = filter.messageType === 'human' || !filter.messageType;  // Default to human if not set
+                const chipColor = filter.colorRgb || userColor;
+                const displayLabel = `${filter.username}:${filter.color}`;
                 
                 return (
                   <span
@@ -197,9 +199,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
                       setting.isUnread ? 'font-bold' : ''
                     }`}
                     style={{ 
-                      backgroundColor: getDarkerColor(filter.color, OPACITY_LEVELS.DARKEST), // 10% opacity
+                      backgroundColor: getDarkerColor(chipColor, OPACITY_LEVELS.DARKEST), // 10% opacity
                       opacity: isFilterEnabled ? 1 : 0.4,
-                      boxShadow: setting.isUnread ? `0 0 0 2px ${filter.color}` : 'none'
+                      boxShadow: setting.isUnread ? `0 0 0 2px ${chipColor}` : 'none'
                     }}
                     onContextMenu={(e) => {
                       if (isHumanFilter) {
@@ -212,12 +214,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     title={isHumanFilter ? "Right click to set alert. Filter must be on." : filter.username}
                   >
                     {setting.sound !== 'none' && (
-                      <span style={{ color: filter.color }}>
+                      <span style={{ color: chipColor }}>
                         {getSoundIcon(setting.sound)}
                       </span>
                     )}
-                    <span style={{ fontSize: '13.8px', fontWeight: 500, color: filter.color }}>
-                      {filter.username}
+                    <span style={{ fontSize: '13.8px', fontWeight: 500, color: chipColor }}>
+                      {displayLabel}
                     </span>
                     <button
                       onClick={(e) => {
@@ -225,7 +227,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         onRemoveUsernameFilter(filter.username, filter.color);
                       }}
                       className="hover:opacity-80"
-                      style={{ color: filter.color }}
+                      style={{ color: chipColor }}
                       tabIndex={-1}
                     >
                       <X className="w-4 h-4" />

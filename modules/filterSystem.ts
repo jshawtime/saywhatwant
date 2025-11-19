@@ -15,8 +15,9 @@
 
 export interface UsernameFilter {
   username: string;
-  color: string;
+  color: string; // Stored as canonical 9-digit format (with optional suffix)
   messageType?: 'human' | 'AI';  // Track if filter is for human or AI username
+  colorRgb?: string; // Optional RGB representation for UI styling
 }
 
 export interface DateTimeFilter {
