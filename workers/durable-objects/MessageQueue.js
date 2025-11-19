@@ -474,11 +474,16 @@ export class MessageQueue {
     // Save conversation back
     await this.state.storage.put(conversationKey, conversation);
     
-    console.log('[MessageQueue] claim-next:', message.id, 'claimed by', workerId, 'from', conversationKey);
+    // Calculate remaining pending count (after this claim)
+    const remainingPending = allMessages.length - 1; // -1 because we just claimed one
+    
+    console.log('[MessageQueue] claim-next:', message.id, 'claimed by', workerId, 'from', conversationKey, `(${remainingPending} remaining)`);
     
     return this.jsonResponse({
       success: true,
-      message: message
+      message: message,
+      totalPending: allMessages.length,      // Total before claim
+      remainingPending: remainingPending     // Remaining after claim
     });
   }
 
