@@ -37,6 +37,7 @@ const EQ_TOTAL_STORAGE_KEY = 'sww-eq-total-score';
 const EQ_TOTAL_IDS_STORAGE_KEY = 'sww-eq-total-ids';
 const EQ_TOTAL_NAME_STORAGE_KEY = 'sww-eq-total-name';
 const EQ_TOTAL_ID_STORAGE_KEY = 'sww-eq-total-id';
+const EQ_TOTAL_JOINED_AT_STORAGE_KEY = 'sww-eq-total-joined-at';
 const EQ_TOTAL_HISTORY_LIMIT = 200;
 
 const TOTAL_NAME_DEFAULT = 'New User';
@@ -78,6 +79,9 @@ const initializeEqTotalStorage = (): void => {
   if (localStorage.getItem(EQ_TOTAL_ID_STORAGE_KEY) === null) {
     localStorage.setItem(EQ_TOTAL_ID_STORAGE_KEY, generateRandomId());
   }
+  if (localStorage.getItem(EQ_TOTAL_JOINED_AT_STORAGE_KEY) === null) {
+    localStorage.setItem(EQ_TOTAL_JOINED_AT_STORAGE_KEY, Date.now().toString());
+  }
 };
 
 const generateRandomId = (): string => {
@@ -101,6 +105,13 @@ const getStoredEqTotalId = (): string => {
     return '';
   }
   return localStorage.getItem(EQ_TOTAL_ID_STORAGE_KEY) || '';
+};
+
+const getStoredEqTotalJoinedAt = (): string => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  return localStorage.getItem(EQ_TOTAL_JOINED_AT_STORAGE_KEY) || '';
 };
 
 // ==========================================
@@ -232,6 +243,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [eqTotal, setEqTotal] = useState<number>(() => getStoredEqTotal());
   const [eqTotalName, setEqTotalName] = useState<string>(() => getStoredEqTotalName());
   const [eqTotalId, setEqTotalId] = useState<string>(() => getStoredEqTotalId());
+  const [eqTotalJoinedAt, setEqTotalJoinedAt] = useState<string>(() => getStoredEqTotalJoinedAt());
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
@@ -283,6 +295,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     setEqTotal(getStoredEqTotal());
     setEqTotalName(getStoredEqTotalName());
     setEqTotalId(getStoredEqTotalId());
+    setEqTotalJoinedAt(getStoredEqTotalJoinedAt());
   }, []);
   
   useEffect(() => {
@@ -299,6 +312,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       }
       if (event.key === EQ_TOTAL_ID_STORAGE_KEY && event.newValue !== null) {
         setEqTotalId(event.newValue);
+      }
+      if (event.key === EQ_TOTAL_JOINED_AT_STORAGE_KEY && event.newValue !== null) {
+        setEqTotalJoinedAt(event.newValue);
       }
     };
     window.addEventListener('storage', handleStorage);
