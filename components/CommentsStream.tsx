@@ -1008,7 +1008,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                 const isOurHuman = msg.username === username && msg.color === userColor;
                 
                 if (!isOurHuman) {
-                  console.log(`[EQ-SCORE] Skipping score ${msg.eqScore} from ${msg.username}:${msg.color} (different human)`);
+                  // Silently skip scores from other users (no console spam)
                   return;
                 }
                 
@@ -1022,12 +1022,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
                   // (Conversation key format: conv:Human:080150227:TheEternal:080175220)
                   sessionStorage.setItem('sww-eq-score', msg.eqScore.toString());
                   setEqScore(msg.eqScore);
-                  console.log(`[EQ-SCORE] Updated sessionStorage: ${msg.eqScore} (conversation: ${username}:${userColor} + ${expectedAiUsername}:${expectedAiColor})`);
+                  // Removed console.log - reduces noise during stress tests
                 } else {
                   // No specific AI - this is a "global" conversation
                   sessionStorage.setItem('sww-eq-score', msg.eqScore.toString());
                   setEqScore(msg.eqScore);
-                  console.log(`[EQ-SCORE] Updated sessionStorage: ${msg.eqScore} (global conversation: ${username}:${userColor})`);
+                  // Removed console.log - reduces noise during stress tests
                 }
               }
             });
