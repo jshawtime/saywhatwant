@@ -35,7 +35,11 @@ const INDEXEDDB_INITIAL_LOAD = MESSAGE_SYSTEM_CONFIG.maxDisplayMessages;
 const INDEXEDDB_LAZY_LOAD_CHUNK = MESSAGE_SYSTEM_CONFIG.lazyLoadChunkSize;
 const EQ_TOTAL_STORAGE_KEY = 'sww-eq-total-score';
 const EQ_TOTAL_IDS_STORAGE_KEY = 'sww-eq-total-ids';
+const EQ_TOTAL_NAME_STORAGE_KEY = 'sww-eq-total-name';
+const EQ_TOTAL_ID_STORAGE_KEY = 'sww-eq-total-id';
 const EQ_TOTAL_HISTORY_LIMIT = 200;
+
+const TOTAL_NAME_DEFAULT = 'New User';
 
 const getStoredEqTotal = (): number => {
   if (typeof window === 'undefined') {
@@ -68,6 +72,35 @@ const initializeEqTotalStorage = (): void => {
   if (localStorage.getItem(EQ_TOTAL_IDS_STORAGE_KEY) === null) {
     localStorage.setItem(EQ_TOTAL_IDS_STORAGE_KEY, '[]');
   }
+  if (localStorage.getItem(EQ_TOTAL_NAME_STORAGE_KEY) === null) {
+    localStorage.setItem(EQ_TOTAL_NAME_STORAGE_KEY, TOTAL_NAME_DEFAULT);
+  }
+  if (localStorage.getItem(EQ_TOTAL_ID_STORAGE_KEY) === null) {
+    localStorage.setItem(EQ_TOTAL_ID_STORAGE_KEY, generateRandomId());
+  }
+};
+
+const generateRandomId = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 10; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const getStoredEqTotalName = (): string => {
+  if (typeof window === 'undefined') {
+    return TOTAL_NAME_DEFAULT;
+  }
+  return localStorage.getItem(EQ_TOTAL_NAME_STORAGE_KEY) || TOTAL_NAME_DEFAULT;
+};
+
+const getStoredEqTotalId = (): string => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  return localStorage.getItem(EQ_TOTAL_ID_STORAGE_KEY) || '';
 };
 
 // ==========================================
@@ -197,6 +230,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     return parseInt(sessionStorage.getItem('sww-eq-score') || '0');
   });
   const [eqTotal, setEqTotal] = useState<number>(() => getStoredEqTotal());
+  const [eqTotalName, setEqTotalName] = useState<string>(() => getStoredEqTotalName());
+  const [eqTotalId, setEqTotalId] = useState<string>(() => getStoredEqTotalId());
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
@@ -246,6 +281,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   useEffect(() => {
     initializeEqTotalStorage();
     setEqTotal(getStoredEqTotal());
+    setEqTotalName(getStoredEqTotalName());
+    setEqTotalId(getStoredEqTotalId());
   }, []);
   
   useEffect(() => {
@@ -257,6 +294,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         const nextValue = parseInt(event.newValue, 10);
         setEqTotal(Number.isFinite(nextValue) ? nextValue : 0);
       }
+      if (event.key === EQ_TOTAL_NAME_STORAGE_KEY && event.newValue !== null) {
+        setEqTotalName(event.newValue || TOTAL_NAME_DEFAULT);
+      }
+      if (event.key === EQ_TOTAL_ID_STORAGE_KEY && event.newValue !== null) {
+        setEqTotalId(event.newValue);
+      }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
@@ -266,23 +309,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     if (!username || !userColor) {
       return;
     }
-    const previousIdentity = previousIdentityRef.current;
-    if (!previousIdentity) {
-      previousIdentityRef.current = { username, color: userColor };
-      return;
-    }
-    if (
-      previousIdentity.username !== username ||
-      previousIdentity.color !== userColor
-    ) {
-      initializeEqTotalStorage();
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(EQ_TOTAL_STORAGE_KEY, '0');
-        localStorage.setItem(EQ_TOTAL_IDS_STORAGE_KEY, '[]');
-      }
-      setEqTotal(0);
-      previousIdentityRef.current = { username, color: userColor };
-    }
+    previousIdentityRef.current = { username, color: userColor };
   }, [username, userColor]);
   
   // Consolidated loading state (replaces 6 separate useState calls)
