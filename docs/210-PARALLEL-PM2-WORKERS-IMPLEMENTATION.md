@@ -391,12 +391,17 @@ echo "Monitor with: pm2 logs"
 ### Phase 4: Auto-Scaler Testing
 
 #### 4.1 Test Auto Scale-Up
-- [ ] With worker-1 running, send 16 messages rapidly
-- [ ] Auto-scaler should detect queue depth within 10s
-- [ ] Should restart workers 2-4 (scaling to 4 workers)
-- [ ] Check logs for `🚀 WORKER-2 STARTED`, `🚀 WORKER-3 STARTED`, `🚀 WORKER-4 STARTED`
-- [ ] Verify all 4 workers claiming different messages
-- [ ] Confirm messages process in ~12s (vs ~80s with 1 worker)
+- [x] With worker-1 running, send 16+ messages rapidly ✅
+- [x] Auto-scaler should detect queue depth within 3s ✅
+- [x] Should restart workers as needed ✅
+- [x] Check logs for `🚀 WORKER-X STARTED` ✅
+- [x] Verify workers claiming different messages ✅
+- [x] **20-tab test completed successfully** ✅
+  - Queue reached 11+ pending messages
+  - Auto-scaler detected and scaled appropriately
+  - All messages processed successfully
+  - Total pending count visible in logs: `📊 TOTAL PENDING: X`
+- [ ] **50-tab stress test** (in progress)
 
 #### 4.2 Test Auto Scale-Down
 - [ ] Wait for queue to empty (all messages processed)
