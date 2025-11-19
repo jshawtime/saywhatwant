@@ -112,26 +112,48 @@ export const adjustColorBrightness = (color: string, factor: number = 1): string
 export const getDarkerColor = adjustColorBrightness;
 
 // ==========================================
+// SUFFIX GENERATION (SCALABILITY FIX)
+// ==========================================
+
+/**
+ * Generates a 10-character alphanumeric suffix for color uniqueness
+ * Format: [A-Za-z0-9]{10}
+ * Combinations: 62^10 = 839 quadrillion
+ */
+const generateSuffix = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 10; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// ==========================================
 // FORMAT CONVERSION FUNCTIONS
 // ==========================================
 
 /**
- * Convert 9-digit format (RRRGGGBBB) to rgb(r, g, b) string for CSS
+ * Convert 9-digit format (RRRGGGBBB[-SUFFIX]) to rgb(r, g, b) string for CSS
  * 
  * This is the PRIMARY conversion function for displaying colors in the UI.
+ * Now handles optional 10-char unique suffix by ignoring it for display.
  * 
- * @param digits - 9-digit color string (e.g., "255165000")
+ * @param fullColor - 9-digit color string with optional suffix (e.g., "255165000-ABC123DEFG")
  * @returns RGB color string for CSS (e.g., "rgb(255, 165, 0)")
  * 
  * @example
- * nineDigitToRgb("255165000") // Returns: "rgb(255, 165, 0)"
- * nineDigitToRgb("096165250") // Returns: "rgb(96, 165, 250)"
+ * nineDigitToRgb("255165000")              // Returns: "rgb(255, 165, 0)"
+ * nineDigitToRgb("096165250-ABC123DEFG")   // Returns: "rgb(96, 165, 250)"
  */
-export const nineDigitToRgb = (digits: string): string => {
+export const nineDigitToRgb = (fullColor: string): string => {
+  // Strip suffix if present to get just the 9 digits
+  const digits = fullColor.split('-')[0];
+
   if (!/^\d{9}$/.test(digits)) {
     // If already RGB format, return as-is (backwards compatibility)
-    if (digits.startsWith('rgb(')) return digits;
-    console.warn('[ColorSystem] Invalid 9-digit format, using default:', digits);
+    if (fullColor.startsWith('rgb(')) return fullColor;
+    console.warn('[ColorSystem] Invalid 9-digit format, using default:', fullColor);
     // Default fallback - blue-400
     return 'rgb(96, 165, 250)';
   }
@@ -147,17 +169,19 @@ export const nineDigitToRgb = (digits: string): string => {
  * Convert RGB format to 9-digit format (RRRGGGBBB) for storage/URLs
  * 
  * This is the PRIMARY conversion function for storing colors in databases and URLs.
+ * Preserves suffix if already present in input 9-digit string.
  * 
  * @param color - RGB color string (e.g., "rgb(255, 165, 0)") or 9-digit string
  * @returns 9-digit color string (e.g., "255165000")
  * 
  * @example
- * rgbToNineDigit("rgb(255, 165, 0)") // Returns: "255165000"
- * rgbToNineDigit("255165000")        // Returns: "255165000" (already 9-digit)
+ * rgbToNineDigit("rgb(255, 165, 0)")          // Returns: "255165000"
+ * rgbToNineDigit("255165000-ABC")             // Returns: "255165000-ABC" (preserves suffix)
  */
 export const rgbToNineDigit = (color: string): string => {
-  // Already in 9-digit format - return as-is
-  if (/^\d{9}$/.test(color)) {
+  // Already in 9-digit format (with optional suffix) - return as-is
+  // Regex checks for 9 digits at start
+  if (/^\d{9}/.test(color)) {
     return color;
   }
   
@@ -177,9 +201,12 @@ export const rgbToNineDigit = (color: string): string => {
 };
 
 /**
- * Gets a random color in 9-digit format (RRRGGGBBB)
+ * Gets a random color in 9-digit format with UNIQUE SUFFIX
+ * Format: RRRGGGBBB-SUFFIX (e.g., 123456789-ABC123DEFG)
+ * 
  * Creates bright, visible colors with good contrast on dark backgrounds
- * Total possible colors: 81 × 81 × 6 = 39,366 unique combinations
+ * Total possible colors: 81 × 81 × 6 = 39,366 visual combinations
+ * Total unique identifiers: 839 quadrillion
  */
 export const getRandomColor = (): string => {
   // Get random values for each range
@@ -226,12 +253,14 @@ export const getRandomColor = (): string => {
       break;
   }
   
-  // Return 9-digit format (RRRGGGBBB) instead of RGB string
+  // Return 9-digit format (RRRGGGBBB) + 10-char unique suffix
   const rStr = r.toString().padStart(3, '0');
   const gStr = g.toString().padStart(3, '0');
   const bStr = b.toString().padStart(3, '0');
   
-  return `${rStr}${gStr}${bStr}`;
+  const suffix = generateSuffix();
+  
+  return `${rStr}${gStr}${bStr}-${suffix}`;
 };
 
 /**
@@ -247,17 +276,18 @@ export const getRandomColorFromPalette = (): string => {
 
 /**
  * Check if a string is in 9-digit format (RRRGGGBBB)
+ * Supports optional 10-char suffix: RRRGGGBBB-SUFFIX
  * 
  * @param color - Color string to check
  * @returns true if the color is in 9-digit format
  * 
  * @example
- * isNineDigitFormat("255165000")          // true
- * isNineDigitFormat("rgb(255, 165, 0)")   // false
- * isNineDigitFormat("25516500")           // false (only 8 digits)
+ * isNineDigitFormat("255165000")                // true
+ * isNineDigitFormat("255165000-ABC123DEFG")     // true
+ * isNineDigitFormat("rgb(255, 165, 0)")         // false
  */
 export const isNineDigitFormat = (color: string): boolean => {
-  return /^\d{9}$/.test(color);
+  return /^\d{9}(-[A-Za-z0-9]{10})?$/.test(color);
 };
 
 /**

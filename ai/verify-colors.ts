@@ -30,7 +30,8 @@ configFiles.forEach(file => {
     
     config.entities.forEach((entity: any) => {
       const isRgb = entity.color && entity.color.includes('rgb(');
-      const is9Digit = entity.color && /^\d{9}$/.test(entity.color);
+      // Support optional suffix: 9 digits + optional (-[A-Za-z0-9]{10})
+      const is9Digit = entity.color && /^\d{9}(-[A-Za-z0-9]{10})?$/.test(entity.color);
       
       if (isRgb) {
         console.log(`  ❌ ${entity.username}: ${entity.color} (RGB format - needs fixing!)`);

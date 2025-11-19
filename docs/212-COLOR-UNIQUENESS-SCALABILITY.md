@@ -76,27 +76,28 @@ New:     color="185142040-ABC123DEFG" (9-digit + 10-char suffix)
 ## 📋 Codebase Checklist
 
 ### Frontend
-- [ ] **`saywhatwant/modules/colorSystem.ts`**: 
+- [x] **`saywhatwant/modules/colorSystem.ts`**: 
     - Update `getRandomColor` to generate suffix
     - Update regex validators
     - Update `nineDigitToRgb` to strip suffix before conversion
-- [ ] **`saywhatwant/components/CommentsStream.tsx`**: Verify display logic (should use `getCommentColor`)
+- [x] **`saywhatwant/lib/url-filter-simple.ts`**: Update duplicated color logic
+- [x] **`saywhatwant/components/CommentsStream.tsx`**: Verify display logic (uses `getCommentColor` which uses `ensureRgb` which uses `nineDigitToRgb` - SAFE)
 
 ### Backend (Cloudflare DO)
-- [ ] **`saywhatwant/workers/durable-objects/MessageQueue.js`**: 
-    - `postMessage`: Ensure extraction uses full string
+- [x] **`saywhatwant/workers/durable-objects/MessageQueue.js`**: 
+    - `postMessage`: Ensure extraction uses full string (SAFE)
     - `getConversationKey`: Confirmed safe (uses `:` separator)
 
 ### AI Bot
-- [ ] **`hm-server-deployment/AI-Bot-Deploy/src/index-do-simple.ts`**: 
+- [x] **`hm-server-deployment/AI-Bot-Deploy/src/index-do-simple.ts`**: 
     - `postAIResponse`: Pass full color string
     - `generateResponse`: Handle random color generation with suffix
-- [ ] **`hm-server-deployment/AI-Bot-Deploy/src/index-simple.ts`**:
+- [x] **`hm-server-deployment/AI-Bot-Deploy/src/index-simple.ts`**:
     - Update legacy `postAIResponse` (just in case)
 
 ### Utilities
-- [ ] **`saywhatwant/ai/verify-colors.ts`**: Update validation regex
-- [ ] **`hm-server-deployment/AI-Bot-Deploy/verify-colors.ts`**: Update validation regex
+- [x] **`saywhatwant/ai/verify-colors.ts`**: Update validation regex
+- [x] **`hm-server-deployment/AI-Bot-Deploy/verify-colors.ts`**: Update validation regex
 
 ---
 
