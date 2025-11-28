@@ -147,6 +147,7 @@ import { useContextMenus } from '@/hooks/useContextMenus';
 import { useMobileKeyboard } from '@/hooks/useMobileKeyboard';
 import { useMessageLoadingState } from '@/hooks/useMessageLoadingState';
 import { useUsernameEditor } from '@/hooks/useUsernameEditor';
+import { useVersionCheck } from '@/hooks/useVersionCheck';
 
 // ==========================================
 // MODULES (Business Logic)
@@ -248,6 +249,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
   const [mounted, setMounted] = useState(false); // For hydration safety
+  
+  // Force refresh capability (Doc 216)
+  const [serverVersion, setServerVersion] = useState<string | undefined>(undefined);
+  useVersionCheck(serverVersion);
   
   // Username editing (consolidated into hook)
   const {

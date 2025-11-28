@@ -323,7 +323,7 @@ export class MessageQueue {
     // Return with version for force-refresh capability (Doc 216)
     return this.jsonResponse({
       messages: filtered,
-      version: "1.0.0"  // Version for frontend force-refresh detection
+      version: "1.0.1"  // Version for frontend force-refresh detection
     });
   }
 
