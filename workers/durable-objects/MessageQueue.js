@@ -12,6 +12,12 @@ export class MessageQueue {
   constructor(state, env) {
     this.state = state;
     this.env = env;
+    
+    // IN-MEMORY STATE (Cost optimization - Doc 215)
+    this.pendingQueue = [];           // For bot polling (pending messages only)
+    this.recentMessages = [];         // For frontend polling (last 50K messages)
+    this.MAX_CACHE_SIZE = 50000;      // 50K messages = ~100MB = 78% of 128MB limit
+    this.initialized = false;          // Track if state loaded from storage
   }
 
   /**
@@ -94,6 +100,53 @@ export class MessageQueue {
       console.error('[MessageQueue] Error:', error);
       return this.jsonResponse({ error: error.message }, 500);
     }
+  }
+
+  /**
+   * Initialize in-memory state from storage (ONE TIME on DO startup)
+   * Called automatically on first request after DO starts/restarts
+   */
+  async initialize() {
+    if (this.initialized) return;
+    
+    console.log('[MessageQueue] 🔄 Initializing in-memory state...');
+    const startTime = Date.now();
+    
+    // ONE-TIME full scan (only on DO startup)
+    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
+    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
+    
+    // Load all conversations in parallel
+    const conversations = await Promise.all(
+      allKeys.map(key => this.state.storage.get(key))
+    );
+    
+    // Flatten to all messages
+    const allMessages = conversations.flat().filter(m => m !== null);
+    
+    // Sort by timestamp (newest first)
+    allMessages.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Recent messages (last 50K for frontend) - uses ~100MB of 128MB limit
+    this.recentMessages = allMessages.slice(0, this.MAX_CACHE_SIZE);
+    
+    // Pending messages (for bot)
+    this.pendingQueue = allMessages.filter(m => 
+      m['message-type'] === 'human' && 
+      m.botParams?.status === 'pending' &&
+      m.botParams?.entity
+    );
+    
+    const elapsed = Date.now() - startTime;
+    this.initialized = true;
+    
+    console.log('[MessageQueue] ✅ Initialized:', {
+      conversations: allKeys.length,
+      pending: this.pendingQueue.length,
+      recent: this.recentMessages.length,
+      elapsed: `${elapsed}ms`
+    });
   }
 
   /**
@@ -230,150 +283,134 @@ export class MessageQueue {
     conversation = [...activeMessages, ...completedMessages];
   }
 
-    // Save conversation
+    // Save conversation to storage
     await this.state.storage.put(conversationKey, conversation);
 
-    console.log('[MessageQueue] Posted to', conversationKey, '→', conversation.length, 'messages total');
+    // Add to in-memory caches (Cost optimization - Doc 215)
+    await this.initialize();  // Ensure state is loaded
+    
+    // Add to recent messages cache (for frontend polling)
+    this.recentMessages.unshift(message);  // Add to front (newest first)
+    if (this.recentMessages.length > this.MAX_CACHE_SIZE) {
+      this.recentMessages.pop();  // Remove oldest
+    }
+    
+    // If pending human message for bot, add to pending queue
+    if (messageType === 'human' && entity && message.botParams?.status === 'pending') {
+      this.pendingQueue.push(message);
+      console.log('[MessageQueue] Added to pending queue:', message.id);
+    }
+
+    console.log('[MessageQueue] Posted to', conversationKey, '→', conversation.length, 'messages total (pending:', this.pendingQueue.length, ', recent:', this.recentMessages.length, ')');
 
     return this.jsonResponse({ id, timestamp, status: 'success' });
   }
 
   /**
    * GET /api/comments?after=timestamp - Get messages after timestamp
-   * Returns messages from ALL conversations
+   * OPTIMIZED: Uses in-memory recentMessages cache (0 storage reads!)
    */
   async getMessages(url) {
+    await this.initialize();  // Ensure state is loaded
+    
     const after = parseInt(url.searchParams.get('after') || url.searchParams.get('since') || '0');
-    const includeGodMode = url.searchParams.get('includeGodMode') === 'true';
     
-    // Get all conversation keys (normal entities)
-    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
+    // Filter recent messages by timestamp (in memory, fast!)
+    const filtered = this.recentMessages.filter(m => m.timestamp > after);
     
-    // Conditionally get God Mode session keys (only if viewing God Mode)
-    let godModeKeys;
-    if (includeGodMode) {
-      godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
-    } else {
-      godModeKeys = new Map();  // Empty map if not viewing God Mode
-    }
+    console.log('[MessageQueue] GET messages (in-memory):', filtered.length, 'of', this.recentMessages.length, 'recent, reads: 0');
     
-    // Load all conversations and sessions in parallel
-    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
-    const conversations = await Promise.all(
-      allKeys.map(key => this.state.storage.get(key))
-    );
-    
-    // Flatten to all messages
-    const allMessages = conversations.flat().filter(m => m !== null);
-    
-    // Filter messages newer than 'after'
-    const filtered = allMessages.filter(m => m.timestamp > after);
-
-    console.log('[MessageQueue] GET messages after', after, '→', filtered.length, 'results from', Array.from(convKeys.keys()).length, 'conversations +', Array.from(godModeKeys.keys()).length, 'God Mode sessions');
-
     return this.jsonResponse(filtered);
   }
 
   /**
    * GET /api/queue/pending - Get pending messages for bot
+   * OPTIMIZED: Uses in-memory pendingQueue (0 storage reads!)
    */
   async getPending(url) {
+    await this.initialize();  // Ensure state is loaded (no-op if already initialized)
+    
     const limit = parseInt(url.searchParams.get('limit') || '999999');
     
-    // Get all conversation keys (normal entities)
-    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
-    
-    // Get all God Mode session keys
-    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
-    
-    // Load all conversations and sessions in parallel
-    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
-    const conversations = await Promise.all(
-      allKeys.map(key => this.state.storage.get(key))
-    );
-    
-    // Flatten to all messages
-    const allMessages = conversations.flat().filter(m => m !== null);
-    
-    // Separate into two categories:
-    // 1. Messages WITH entity (for bot processing)
-    const forBot = allMessages.filter(m => 
-      m['message-type'] === 'human' && 
-      m.botParams?.status === 'pending' &&
-      m.botParams?.entity  // Must have entity
-    );
-    
-    // 2. Messages WITHOUT entity (for logging only)
-    const platformOnly = allMessages.filter(m =>
-      m['message-type'] === 'human' &&
-      !m.botParams?.entity  // No entity = just human posting to platform
-    );
-
-    // Sort bot messages by priority (desc) then timestamp (asc)
-    forBot.sort((a, b) => {
+    // Sort by priority (desc) then timestamp (asc) - in memory, fast!
+    this.pendingQueue.sort((a, b) => {
       const priorityDiff = (b.botParams.priority || 5) - (a.botParams.priority || 5);
       if (priorityDiff !== 0) return priorityDiff;
       return a.timestamp - b.timestamp;
     });
     
-    // Sort platform-only by timestamp (newest first for logging)
-    platformOnly.sort((a, b) => b.timestamp - a.timestamp);
-
-    const pendingForBot = forBot.slice(0, limit);
-    const platformMessages = platformOnly.slice(0, 10); // Last 10 platform posts
+    const pendingForBot = this.pendingQueue.slice(0, limit);
     
-    const totalKeys = Array.from(convKeys.keys()).length + Array.from(godModeKeys.keys()).length;
-
-    console.log('[MessageQueue] GET pending:', pendingForBot.length, 'bot +', platformMessages.length, 'platform from', Array.from(convKeys.keys()).length, 'conversations +', Array.from(godModeKeys.keys()).length, 'God Mode sessions');
-
+    console.log('[MessageQueue] GET pending (in-memory):', pendingForBot.length, 'messages, reads: 0');
+    
     return this.jsonResponse({
       pending: pendingForBot,
-      platformOnly: platformMessages,
-      kvStats: { reads: totalKeys, writes: 0 }
+      platformOnly: [],  // Platform posts not needed for bot polling
+      kvStats: { reads: 0, writes: 0 }  // ZERO storage reads!
     });
   }
 
   /**
    * POST /api/queue/claim - Claim a message for processing
+   * OPTIMIZED: Uses in-memory pendingQueue for lookup
    */
   async claimMessage(request) {
+    await this.initialize();  // Ensure state is loaded
+    
     const { messageId, workerId } = await request.json();
     
-    // Get all conversation keys
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    // Find in in-memory pending queue (fast!)
+    const queueIndex = this.pendingQueue.findIndex(m => m.id === messageId);
     
-    // Find message in conversations
-    for (const key of keys.keys()) {
+    if (queueIndex === -1) {
+      return this.jsonResponse({ success: false, error: 'Message not found in pending queue' }, 404);
+    }
+    
+    const message = this.pendingQueue[queueIndex];
+    
+    if (message.botParams.status !== 'pending') {
+      return this.jsonResponse({
+        success: false,
+        error: `Message status is ${message.botParams.status}, not pending`
+      }, 409);
+    }
+    
+    // Update message status
+    message.botParams.status = 'processing';
+    message.botParams.claimedBy = workerId;
+    message.botParams.claimedAt = Date.now();
+    
+    // Remove from pending queue (in-memory)
+    this.pendingQueue.splice(queueIndex, 1);
+    
+    // Update in recent messages cache (so frontend sees status change)
+    const recentIndex = this.recentMessages.findIndex(m => m.id === messageId);
+    if (recentIndex !== -1) {
+      this.recentMessages[recentIndex] = message;
+    }
+    
+    // Find and update in storage (for persistence)
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    const allKeys = [...Array.from(keys.keys()), ...Array.from(godModeKeys.keys())];
+    
+    for (const key of allKeys) {
       const conversation = await this.state.storage.get(key);
       if (!conversation) continue;
       
-      const messageIndex = conversation.findIndex(m => m.id === messageId);
-      
-      if (messageIndex !== -1) {
-        const message = conversation[messageIndex];
-        
-        if (message.botParams.status !== 'pending') {
-          return this.jsonResponse({
-            success: false,
-            error: `Message status is ${message.botParams.status}, not pending`
-          }, 409);
-        }
-        
-        // Update message
-        message.botParams.status = 'processing';
-        message.botParams.claimedBy = workerId;
-        message.botParams.claimedAt = Date.now();
-        
-        // Save conversation back
+      const convIndex = conversation.findIndex(m => m.id === messageId);
+      if (convIndex !== -1) {
+        conversation[convIndex] = message;
         await this.state.storage.put(key, conversation);
         
-        console.log('[MessageQueue] Claimed:', messageId, 'from', key);
+        console.log('[MessageQueue] Claimed:', messageId, 'from', key, '(pending:', this.pendingQueue.length, ')');
         
         return this.jsonResponse({ success: true, message });
       }
     }
     
-    return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
+    // Should never reach here if message was in pending queue
+    return this.jsonResponse({ success: false, error: 'Message not found in storage' }, 500);
   }
 
   /**
