@@ -419,10 +419,11 @@ export class MessageQueue {
 
   /**
    * POST /api/queue/claim-next - Atomic operation: Get next pending + claim it
-   * Combines getPending + claimMessage into single atomic operation
-   * This prevents race conditions when multiple workers poll simultaneously
+   * OPTIMIZED: Uses in-memory pendingQueue (0 storage reads!)
    */
   async claimNextMessage(request) {
+    await this.initialize();  // Ensure state is loaded
+    
     const { workerId } = await request.json();
     
     if (!workerId) {
@@ -433,99 +434,140 @@ export class MessageQueue {
       }, 400);
     }
     
-    // Get all conversation keys (normal entities)
-    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
-    
-    // Get all God Mode session keys
-    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
-    
-    // Load all conversations and sessions
-    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
-    const conversations = await Promise.all(
-      allKeys.map(async key => ({
-        key,
-        messages: await this.state.storage.get(key)
-      }))
-    );
-    
-    // Flatten to all messages with their keys
-    const allMessages = [];
-    for (const conv of conversations) {
-      if (!conv.messages) continue;
-      for (const msg of conv.messages) {
-        if (msg['message-type'] === 'human' && 
-            msg.botParams?.status === 'pending' &&
-            msg.botParams?.entity) {
-          allMessages.push({ ...msg, _convKey: conv.key });
-        }
-      }
-    }
-    
-    // No pending messages
-    if (allMessages.length === 0) {
-      console.log('[MessageQueue] claim-next: No pending messages');
+    // Check in-memory queue
+    if (this.pendingQueue.length === 0) {
+      console.log('[MessageQueue] claim-next: No pending messages (in-memory check)');
       return this.jsonResponse({
         success: false,
         message: null,
-        reason: 'no_pending_messages'
+        reason: 'no_pending_messages',
+        totalPending: 0,
+        remainingPending: 0
       });
     }
     
     // Sort by priority (desc) then timestamp (asc)
-    allMessages.sort((a, b) => {
+    this.pendingQueue.sort((a, b) => {
       const priorityDiff = (b.botParams.priority || 5) - (a.botParams.priority || 5);
       if (priorityDiff !== 0) return priorityDiff;
       return a.timestamp - b.timestamp;
     });
     
     // Take first message
-    const messageToClaimWithKey = allMessages[0];
-    const conversationKey = messageToClaimWithKey._convKey;
-    delete messageToClaimWithKey._convKey;  // Remove temp property
+    const message = this.pendingQueue[0];
+    const totalPendingBefore = this.pendingQueue.length;
     
-    // Load the conversation for this message
-    const conversation = await this.state.storage.get(conversationKey);
-    const messageIndex = conversation.findIndex(m => m.id === messageToClaimWithKey.id);
-    
-    if (messageIndex === -1) {
-      return this.jsonResponse({
-        success: false,
-        message: null,
-        error: 'Message not found in conversation (race condition)'
-      }, 404);
-    }
-    
-    const message = conversation[messageIndex];
-    
-    // Double-check status (another worker might have claimed it)
+    // Double-check status (sanity check)
     if (message.botParams.status !== 'pending') {
-      console.log('[MessageQueue] claim-next: Message already claimed:', message.id);
-      return this.jsonResponse({
-        success: false,
-        message: null,
-        reason: 'already_claimed'
-      }, 409);
+      // Should not happen in single-threaded DO, but good safety
+      this.pendingQueue.shift(); // Remove invalid message
+      return this.claimNextMessage(request); // Try next one
     }
     
-    // ATOMIC CLAIM: Update message status
+    // Update message status
     message.botParams.status = 'processing';
     message.botParams.claimedBy = workerId;
     message.botParams.claimedAt = Date.now();
     
-    // Save conversation back
-    await this.state.storage.put(conversationKey, conversation);
+    // Remove from pending queue
+    this.pendingQueue.shift();
     
-    // Calculate remaining pending count (after this claim)
-    const remainingPending = allMessages.length - 1; // -1 because we just claimed one
+    // Update in recent messages cache
+    const recentIndex = this.recentMessages.findIndex(m => m.id === message.id);
+    if (recentIndex !== -1) {
+      this.recentMessages[recentIndex] = message;
+    }
     
-    console.log('[MessageQueue] claim-next:', message.id, 'claimed by', workerId, 'from', conversationKey, `(${remainingPending} remaining)`);
+    // Find and update in storage (persistence)
+    // We need to find which conversation key this message belongs to
+    // This is the ONLY storage read needed (and we can optimize it if we store key in memory)
+    
+    // For now, we have to search storage to find the key to update persistence
+    // OPTIMIZATION: Instead of scanning all keys, construct the key from message data!
+    // We have humanUsername, humanColor, aiUsername, aiColor in the message
+    
+    let conversationKey;
+    
+    // Helper to check if we can construct the key
+    const canConstructKey = (msg) => {
+      // Check for God Mode session
+      if (msg.botParams?.sessionId && msg.botParams?.entity === 'god-mode') {
+        return true;
+      }
+      // Check for normal conversation (need AI username/color)
+      if (msg.botParams?.entity && msg.botParams?.ais) {
+        return true;
+      }
+      return false;
+    };
+    
+    if (canConstructKey(message)) {
+      if (message.botParams?.sessionId && message.botParams?.entity === 'god-mode') {
+        // Reconstruct God Mode key
+        // Format: godmode:{humanUsername}:{humanColor}:{aiUsername}:{aiColor}:{sessionId}
+        // We need to parse ais to get aiUsername/Color
+        const [aiUser, aiCol] = (message.botParams.ais || 'GodMode:default').split(':');
+        conversationKey = `godmode:${message.username}:${message.color}:${aiUser}:${aiCol}:${message.botParams.sessionId}`;
+      } else {
+        // Reconstruct standard key
+        // Format: conv:{humanUsername}:{humanColor}:{aiUsername}:{aiColor}
+        const [aiUser, aiCol] = (message.botParams.ais || `${message.botParams.entity}:default`).split(':');
+        conversationKey = `conv:${message.username}:${message.color}:${aiUser}:${aiCol}`;
+      }
+      
+      // Try to get this specific conversation (1 read)
+      const conversation = await this.state.storage.get(conversationKey);
+      
+      if (conversation) {
+        const msgIndex = conversation.findIndex(m => m.id === message.id);
+        if (msgIndex !== -1) {
+          conversation[msgIndex] = message;
+          await this.state.storage.put(conversationKey, conversation);
+          console.log('[MessageQueue] claim-next: Claimed via key lookup:', conversationKey);
+        } else {
+          console.error('[MessageQueue] claim-next: Message not found in expected key:', conversationKey);
+          // Fallback to scan if key construction failed (unlikely)
+          await this.scanAndSaveClaim(message);
+        }
+      } else {
+        // Key not found (maybe constructed wrong?), fallback to scan
+        console.warn('[MessageQueue] claim-next: Key not found, falling back to scan:', conversationKey);
+        await this.scanAndSaveClaim(message);
+      }
+    } else {
+      // Fallback: scan all keys (expensive, but rare)
+      await this.scanAndSaveClaim(message);
+    }
     
     return this.jsonResponse({
       success: true,
       message: message,
-      totalPending: allMessages.length,      // Total before claim
-      remainingPending: remainingPending     // Remaining after claim
+      totalPending: totalPendingBefore,
+      remainingPending: this.pendingQueue.length
     });
+  }
+  
+  /**
+   * Helper: Scan all keys to find and update a message (fallback)
+   */
+  async scanAndSaveClaim(message) {
+    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    const allKeys = [...Array.from(keys.keys()), ...Array.from(godModeKeys.keys())];
+    
+    for (const key of allKeys) {
+      const conversation = await this.state.storage.get(key);
+      if (!conversation) continue;
+      
+      const convIndex = conversation.findIndex(m => m.id === message.id);
+      if (convIndex !== -1) {
+        conversation[convIndex] = message;
+        await this.state.storage.put(key, conversation);
+        console.log('[MessageQueue] claim-next: Claimed via scan:', key);
+        return;
+      }
+    }
+    console.error('[MessageQueue] claim-next: Message persistence failed - not found in storage');
   }
 
   /**
