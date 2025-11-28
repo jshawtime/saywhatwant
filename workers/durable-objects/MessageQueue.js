@@ -615,34 +615,80 @@ export class MessageQueue {
   /**
    * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
    */
+  /**
+   * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
+   * OPTIMIZED: Uses in-memory lookup or key construction to avoid scan
+   */
   async patchMessage(request, path) {
+    await this.initialize();  // Ensure state is loaded
+    
     const messageId = path.split('/').pop();  // Extract ID from path
     const body = await request.json();
     
-    // Get all conversation keys
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    let message;
+    let conversationKey;
     
-    // Find message in conversations
-    for (const key of keys.keys()) {
+    // 1. Try to find in recent messages (fastest)
+    const recentMsg = this.recentMessages.find(m => m.id === messageId);
+    
+    if (recentMsg) {
+      message = recentMsg;
+      // Construct key from message
+      if (message.botParams?.sessionId && message.botParams?.entity === 'god-mode') {
+        const [aiUser, aiCol] = (message.botParams.ais || 'GodMode:default').split(':');
+        conversationKey = `godmode:${message.username}:${message.color}:${aiUser}:${aiCol}:${message.botParams.sessionId}`;
+      } else if (message.botParams?.entity) {
+        const [aiUser, aiCol] = (message.botParams.ais || `${message.botParams.entity}:default`).split(':');
+        conversationKey = `conv:${message.username}:${message.color}:${aiUser}:${aiCol}`;
+      } else {
+        // Platform message (human->human), key format is slightly different or platform messages are stored differently
+        // Assuming standard format for now: conv:User:Col:platform:platform
+        conversationKey = `conv:${message.username}:${message.color}:platform:platform`;
+      }
+    }
+    
+    // 2. If found key, try to update directly (1 read + 1 write)
+    if (conversationKey) {
+      const conversation = await this.state.storage.get(conversationKey);
+      if (conversation) {
+        const idx = conversation.findIndex(m => m.id === messageId);
+        if (idx !== -1) {
+          // Update in storage
+          if (body.eqScore !== undefined) conversation[idx].eqScore = body.eqScore;
+          await this.state.storage.put(conversationKey, conversation);
+          
+          // Update in memory
+          if (recentMsg && body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
+          
+          console.log('[MessageQueue] PATCH success (fast):', messageId);
+          return this.jsonResponse({ success: true, message: conversation[idx] });
+        }
+      }
+    }
+    
+    // 3. Fallback: Scan storage (slow, but necessary if not in memory/key failed)
+    console.warn('[MessageQueue] PATCH slow fallback for:', messageId);
+    
+    // Get all keys
+    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
+    const godKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godKeys.keys())];
+    
+    for (const key of allKeys) {
       const conversation = await this.state.storage.get(key);
       if (!conversation) continue;
       
-      const messageIndex = conversation.findIndex(m => m.id === messageId);
-      
-      if (messageIndex !== -1) {
-        // Update message fields
-        const message = conversation[messageIndex];
-        
-        // Update eqScore if provided
-        if (body.eqScore !== undefined) {
-          message.eqScore = body.eqScore;
-          console.log('[MessageQueue] Updated eqScore:', messageId, '→', body.eqScore);
-        }
-        
-        // Save conversation back
+      const idx = conversation.findIndex(m => m.id === messageId);
+      if (idx !== -1) {
+        // Update
+        if (body.eqScore !== undefined) conversation[idx].eqScore = body.eqScore;
         await this.state.storage.put(key, conversation);
         
-        return this.jsonResponse({ success: true, message });
+        // Update memory if present
+        if (recentMsg && body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
+        
+        console.log('[MessageQueue] PATCH success (slow scan):', messageId);
+        return this.jsonResponse({ success: true, message: conversation[idx] });
       }
     }
     
