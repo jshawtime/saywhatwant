@@ -606,9 +606,6 @@ export class MessageQueue {
   
   /**
    * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
-   */
-  /**
-   * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
    * OPTIMIZED: Uses in-memory lookup or key construction to avoid scan
    */
   async patchMessage(request, path) {
