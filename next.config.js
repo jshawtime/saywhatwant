@@ -1,3 +1,14 @@
+const fs = require('fs');
+const path = require('path');
+
+// Read version from VERSION file at build time
+const versionPath = path.join(__dirname, 'VERSION');
+const version = fs.existsSync(versionPath) 
+  ? fs.readFileSync(versionPath, 'utf8').trim() 
+  : '1.0.0';
+
+console.log('[Build] App version:', version);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -5,6 +16,9 @@ const nextConfig = {
   output: 'export',
   images: {
     unoptimized: true,
+  },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
   },
   // Allow CORS for Cloudflare Workers and R2
   async headers() {

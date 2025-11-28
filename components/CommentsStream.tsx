@@ -1115,7 +1115,19 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        newComments = await response.json();
+        const data = await response.json();
+        
+        // Handle both old format (array) and new format (object with version) - Doc 216
+        if (Array.isArray(data)) {
+          newComments = data;
+        } else {
+          newComments = data.messages || [];
+          // Update server version for force refresh check
+          if (data.version) {
+            setServerVersion(data.version);
+          }
+        }
+
         console.log(`[Presence Polling] Response: ${newComments.length} messages`);
         
         // Always update lastPollTimestamp (whether messages found or not)

@@ -320,7 +320,11 @@ export class MessageQueue {
     
     console.log('[MessageQueue] GET messages (in-memory):', filtered.length, 'of', this.recentMessages.length, 'recent, reads: 0');
     
-    return this.jsonResponse(filtered);
+    // Return with version for force-refresh capability (Doc 216)
+    return this.jsonResponse({
+      messages: filtered,
+      version: "1.0.0"  // Version for frontend force-refresh detection
+    });
   }
 
   /**

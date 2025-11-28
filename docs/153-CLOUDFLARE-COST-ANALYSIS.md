@@ -2,70 +2,53 @@
 
 **Tags:** #cost #cloudflare #durable-objects #workers #scaling #economics  
 **Created:** November 1, 2025  
-**Status:** ✅ CURRENT - Durable Objects production cost analysis  
+**Updated:** November 28, 2025 - Added in-memory optimization (Doc 215)
+**Status:** ✅ CURRENT - Post-optimization costs  
 
 ---
 
-## 💰 COST BREAKDOWN BY COMPONENT
+## 💰 REALISTIC COST: 1,000 Users @ 20 Messages/Day
 
-**Total Monthly Cost: $31.42** (at 1M messages/month)
+**Total Monthly Cost: $28.88** (pure per-million rates, no free tier)
 
-```
-Frontend Polling:     $23.69  (75%) ← MAIN COST
-Message Operations:   $7.73   (25%)
-─────────────────────────────────────
-Total:                $31.42  (100%)
-```
+**User Activity:**
+- 1,000 users
+- 20 human messages per user per day
+- 20 AI replies per user per day  
+- **1,200,000 total messages/month**
 
-**Key Insight:** Frontend polling costs **3.1x more** than actual message processing.
+**Cost Breakdown:**
+- Storage Reads: $0.36 (1.8M operations)
+- Storage Writes: $2.40 (2.4M operations)
+- Storage (disk): $0.48 (2.4 GB)
+- Compute: $0.89 (71k GB-seconds)
+- DO Requests: $8.25 (55M requests)
+- Workers: $16.50 (55M requests)
 
-**Why?** 
-- 1M messages/month = 52M frontend polls (polling every 5s active → 5-3000s idle)
-- Polling volume is **26x** the actual message volume
-- Each poll costs money even when no new messages exist
+**Per-User Economics:**
+- **$0.029 per user per month** ($0.35/year)
+- **$0.000024 per message**
+- **41,667 messages per dollar**
 
-**Optimization Impact:**
-- Active polling: 5s for 30s (6 polls) vs original 3s for 30s (10 polls) = 40% reduction
-- Idle backoff: 10s → 3000s (more aggressive than original 5s → 1000s)
-- **Keystroke spam fix:** Removed keystroke/click/focus triggers, only poll on message send
-  - Eliminates 10-20 polls per message during typing
-  - Additional savings: ~$4/month at 1K users
-- **Net savings: $12.44/month at 1M messages** (was $43.86, now $31.42)
-- **Total reduction: 28% cheaper**
+**Breakeven ($10 product):**
+- Need **0.29% conversion rate**
+- Can support **345 free users per sale**
 
----
-
-## 🎯 KEY METRIC: Breakeven Conversion
-
-**Cost per human message:** $0.000031
-
-**Messages per $10 product sale:**
-```
-$10 / $0.000031 = 322,580 messages
-```
-
-**What this means:**
-- You can serve **322,580 messages** for every $10 product sale to break even
-- Conversion rate needed depends on messages-per-user (unknown currently)
-- If users average 1,000 messages: need 0.31% conversion
-- If users average 10,000 messages: need 3.1% conversion
-- **Bottom line: Costs are SO LOW that you have massive margin for free users and marketing**
+**Perfect linear scaling** - $0.029/user constant at any scale!
 
 ---
 
-## Executive Summary
+## 🎯 Quick Reference
 
-**At 1 million human messages per month (1000 active users):**
-- **Total cost: $31.42/month** (pure per-million rates, no free tier)
-- **Cost per human message: $0.000031** (includes AI reply)
-- **32,258 conversations per dollar**
-- **Simple scaling:** Multiply operations by rate per million
+| Users | Monthly Cost | Cost/User/Month | Conversion Needed ($10 product) |
+|-------|--------------|-----------------|----------------------------------|
+| 1K | $28.88 | $0.029 | 0.29% |
+| 5K | $144.40 | $0.029 | 0.29% |
+| 10K | $288.80 | $0.029 | 0.29% |
+| 50K | $1,444.00 | $0.029 | 0.29% |
+| 100K | $2,888.00 | $0.029 | 0.29% |
 
-**System Architecture:**
-- Durable Objects for message queue (in-memory state, atomic operations)
-- DO storage for message persistence (strongly consistent)
-- Workers for API routing
-- Cloudflare Pages for frontend (free)
+**Key Insight:** Infrastructure costs are negligible. At $0.35/user/year, you can support 99%+ profit margins on paid users.
 
 ---
 
