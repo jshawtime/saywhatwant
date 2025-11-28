@@ -526,17 +526,16 @@ export class MessageQueue {
           console.log('[MessageQueue] claim-next: Claimed via key lookup:', conversationKey);
         } else {
           console.error('[MessageQueue] claim-next: Message not found in expected key:', conversationKey);
-          // Fallback to scan if key construction failed (unlikely)
-          await this.scanAndSaveClaim(message);
+          return this.jsonResponse({ success: false, error: 'Message persistence failed - message not found in key' }, 500);
         }
       } else {
-        // Key not found (maybe constructed wrong?), fallback to scan
-        console.warn('[MessageQueue] claim-next: Key not found, falling back to scan:', conversationKey);
-        await this.scanAndSaveClaim(message);
+        // Key not found (maybe constructed wrong?)
+        console.error('[MessageQueue] claim-next: Key not found for constructed key:', conversationKey);
+        return this.jsonResponse({ success: false, error: 'Message persistence failed - key not found' }, 500);
       }
     } else {
-      // Fallback: scan all keys (expensive, but rare)
-      await this.scanAndSaveClaim(message);
+      console.error('[MessageQueue] claim-next: Could not construct key from message metadata:', message.id);
+      return this.jsonResponse({ success: false, error: 'Message persistence failed - invalid metadata' }, 500);
     }
     
     return this.jsonResponse({
@@ -548,68 +547,61 @@ export class MessageQueue {
   }
   
   /**
-   * Helper: Scan all keys to find and update a message (fallback)
-   */
-  async scanAndSaveClaim(message) {
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
-    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
-    const allKeys = [...Array.from(keys.keys()), ...Array.from(godModeKeys.keys())];
-    
-    for (const key of allKeys) {
-      const conversation = await this.state.storage.get(key);
-      if (!conversation) continue;
-      
-      const convIndex = conversation.findIndex(m => m.id === message.id);
-      if (convIndex !== -1) {
-        conversation[convIndex] = message;
-        await this.state.storage.put(key, conversation);
-        console.log('[MessageQueue] claim-next: Claimed via scan:', key);
-        return;
-      }
-    }
-    console.error('[MessageQueue] claim-next: Message persistence failed - not found in storage');
-  }
-
-  /**
    * POST /api/queue/complete - Mark message as complete
+   * OPTIMIZED: Uses in-memory lookup to avoid storage scan
    */
   async completeMessage(request) {
+    await this.initialize();  // Ensure state is loaded
+    
     const { messageId } = await request.json();
     
-    // Get all conversation keys
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    let conversationKey;
     
-    // Find message in conversations
-    for (const key of keys.keys()) {
-      const conversation = await this.state.storage.get(key);
-      if (!conversation) continue;
-      
-      const messageIndex = conversation.findIndex(m => m.id === messageId);
-      
-      if (messageIndex !== -1) {
-        const message = conversation[messageIndex];
-        
-        if (message.botParams.status !== 'processing') {
-          return this.jsonResponse({
-            success: false,
-            error: `Message status is ${message.botParams.status}, not processing`
-          }, 409);
-        }
-        
-        // Update message
-        message.botParams.status = 'complete';
-        message.botParams.completedAt = Date.now();
-        
-        // Save conversation back
-        await this.state.storage.put(key, conversation);
-        
-        console.log('[MessageQueue] Completed:', messageId, 'in', key);
-        
-        return this.jsonResponse({ success: true });
+    // 1. Try to find in recent messages (fastest)
+    const recentMsg = this.recentMessages.find(m => m.id === messageId);
+    
+    if (recentMsg) {
+      // Construct key from message
+      if (recentMsg.botParams?.sessionId && recentMsg.botParams?.entity === 'god-mode') {
+        const [aiUser, aiCol] = (recentMsg.botParams.ais || 'GodMode:default').split(':');
+        conversationKey = `godmode:${recentMsg.username}:${recentMsg.color}:${aiUser}:${aiCol}:${recentMsg.botParams.sessionId}`;
+      } else if (recentMsg.botParams?.entity) {
+        const [aiUser, aiCol] = (recentMsg.botParams.ais || `${recentMsg.botParams.entity}:default`).split(':');
+        conversationKey = `conv:${recentMsg.username}:${recentMsg.color}:${aiUser}:${aiCol}`;
       }
     }
     
-    return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
+    // 2. If key found (or constructed), update storage
+    if (conversationKey) {
+      const conversation = await this.state.storage.get(conversationKey);
+      if (conversation) {
+        const messageIndex = conversation.findIndex(m => m.id === messageId);
+        
+        if (messageIndex !== -1) {
+          const message = conversation[messageIndex];
+          
+          // Update message
+          message.botParams.status = 'complete';
+          message.botParams.completedAt = Date.now();
+          
+          // Save conversation back
+          await this.state.storage.put(conversationKey, conversation);
+          
+          // Update memory
+          if (recentMsg) {
+            recentMsg.botParams.status = 'complete';
+            recentMsg.botParams.completedAt = message.botParams.completedAt;
+          }
+          
+          console.log('[MessageQueue] Completed (fast):', messageId, 'in', conversationKey);
+          return this.jsonResponse({ success: true });
+        }
+      }
+    }
+    
+    // 3. Fail explicitly (NO FALLBACK SCAN)
+    console.error('[MessageQueue] Complete failed: Could not find message key for', messageId);
+    return this.jsonResponse({ success: false, error: 'Message key not found' }, 404);
   }
   
   /**
@@ -666,33 +658,10 @@ export class MessageQueue {
       }
     }
     
-    // 3. Fallback: Scan storage (slow, but necessary if not in memory/key failed)
-    console.warn('[MessageQueue] PATCH slow fallback for:', messageId);
-    
-    // Get all keys
-    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
-    const godKeys = await this.state.storage.list({ prefix: 'godmode:' });
-    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godKeys.keys())];
-    
-    for (const key of allKeys) {
-      const conversation = await this.state.storage.get(key);
-      if (!conversation) continue;
-      
-      const idx = conversation.findIndex(m => m.id === messageId);
-      if (idx !== -1) {
-        // Update
-        if (body.eqScore !== undefined) conversation[idx].eqScore = body.eqScore;
-        await this.state.storage.put(key, conversation);
-        
-        // Update memory if present
-        if (recentMsg && body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
-        
-        console.log('[MessageQueue] PATCH success (slow scan):', messageId);
-        return this.jsonResponse({ success: true, message: conversation[idx] });
-      }
-    }
-    
-    return this.jsonResponse({ success: false, error: 'Message not found' }, 404);
+    // 3. Fallback: Removed (Doc 00-AGENT-best-practices - NO FALLBACKS)
+    // If we can't find the key directly or in memory, fail explicitly
+    console.error('[MessageQueue] PATCH failed: Could not find message key for', messageId);
+    return this.jsonResponse({ success: false, error: 'Message key not found' }, 404);
   }
 
   /**
