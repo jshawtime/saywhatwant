@@ -448,6 +448,35 @@ No migration needed. No backwards compatibility needed.
 
 ---
 
+## Rollback If Needed
+
+Both repos have been committed with "WORKING" tags before this migration.
+
+### Rollback Commands
+
+```bash
+# saywhatwant repo (DO worker, frontend)
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
+git reset --hard 063e809
+
+# hm-server-deployment repo (bot worker)
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/hm-server-deployment
+git reset --hard b185dcf
+
+# Redeploy DO worker with old code
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
+npx wrangler deploy --config wrangler-do.toml
+```
+
+### Commit References
+
+| Repo | Commit | Message |
+|------|--------|---------|
+| saywhatwant | `063e809` | WORKING: Pre per-message storage migration - DO with array storage, idempotency, debug logging |
+| hm-server-deployment | `b185dcf` | WORKING: Pre per-message storage migration - bot worker with DO queue integration |
+
+---
+
 ## Rolling Window Cleanup
 
 ### Current Behavior

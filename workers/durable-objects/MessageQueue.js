@@ -45,6 +45,105 @@ export class MessageQueue {
     // No-op
   }
 
+  // ============================================================
+  // PER-MESSAGE STORAGE HELPERS (Doc 218 - Cost Optimization)
+  // ============================================================
+  
+  /**
+   * Generate conversation ID from participants
+   * Format: {humanUsername}:{humanColor}:{aiUsername}:{aiColor}
+   */
+  getConversationId(humanUsername, humanColor, aiUsername, aiColor) {
+    return `${humanUsername}:${humanColor}:${aiUsername}:${aiColor}`;
+  }
+  
+  /**
+   * Generate message storage key
+   * Format: msg:{conversationId}:{messageId}
+   */
+  getMessageKey(conversationId, messageId) {
+    return `msg:${conversationId}:${messageId}`;
+  }
+  
+  /**
+   * Generate conversation index key
+   * Format: idx:{conversationId}
+   */
+  getIndexKey(conversationId) {
+    return `idx:${conversationId}`;
+  }
+  
+  /**
+   * Store a single message (O(1) cost - ~600 bytes = 1 unit)
+   */
+  async storeMessage(conversationId, message) {
+    const key = this.getMessageKey(conversationId, message.id);
+    await this.storagePut(key, message);
+  }
+  
+  /**
+   * Get a single message by ID (O(1) cost - ~600 bytes = 1 unit)
+   */
+  async getMessage(conversationId, messageId) {
+    const key = this.getMessageKey(conversationId, messageId);
+    return await this.storageGet(key);
+  }
+  
+  /**
+   * Update a single message (O(1) cost - 1 read + 1 write)
+   */
+  async updateMessage(conversationId, messageId, updates) {
+    const key = this.getMessageKey(conversationId, messageId);
+    const message = await this.storageGet(key);
+    if (!message) return null;
+    
+    // Deep merge for nested objects like botParams
+    const updated = { ...message };
+    for (const [k, v] of Object.entries(updates)) {
+      if (v && typeof v === 'object' && !Array.isArray(v) && message[k] && typeof message[k] === 'object') {
+        updated[k] = { ...message[k], ...v };
+      } else {
+        updated[k] = v;
+      }
+    }
+    
+    await this.storagePut(key, updated);
+    return updated;
+  }
+  
+  /**
+   * Get conversation index (message IDs + metadata)
+   */
+  async getIndex(conversationId) {
+    const key = this.getIndexKey(conversationId);
+    return await this.storageGet(key) || { 
+      messageIds: [], 
+      metadata: {
+        createdAt: null,
+        lastMessageAt: null,
+        messageCount: 0
+      }
+    };
+  }
+  
+  /**
+   * Update conversation index
+   */
+  async updateIndex(conversationId, index) {
+    const key = this.getIndexKey(conversationId);
+    await this.storagePut(key, index);
+  }
+  
+  /**
+   * Get multiple messages by IDs (batch read)
+   */
+  async getMessages_batch(conversationId, messageIds) {
+    const keys = messageIds.map(id => this.getMessageKey(conversationId, id));
+    console.log(`[STORAGE] GET_BATCH: ${keys.length} keys`);
+    const messagesMap = await this.state.storage.get(keys);
+    return Array.from(messagesMap.values()).filter(m => m !== null);
+  }
+
   /**
    * Main fetch handler - routes requests to appropriate methods
    */
@@ -129,7 +228,7 @@ export class MessageQueue {
 
   /**
    * Initialize in-memory state from storage (ONE TIME on DO startup)
-   * Called automatically on first request after DO starts/restarts
+   * PER-MESSAGE STORAGE (Doc 218): Load indexes, then batch-load messages
    */
   async initialize() {
     if (this.initialized) {
@@ -139,18 +238,50 @@ export class MessageQueue {
     console.log('[MessageQueue] 🔄 INITIALIZE RUNNING - this should only happen once per DO wake!');
     const startTime = Date.now();
     
-    // ONE-TIME full scan (only on DO startup)
-    const convKeys = await this.storageList({ prefix: 'conv:' });
-    const godModeKeys = await this.storageList({ prefix: 'godmode:' });
-    const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
+    // ============================================================
+    // PER-MESSAGE STORAGE: Load all indexes first (small, ~2KB each)
+    // ============================================================
     
-    // Load all conversations in parallel
-    const conversations = await Promise.all(
-      allKeys.map(key => this.storageGet(key))
+    const indexKeys = await this.storageList({ prefix: 'idx:' });
+    const allIndexKeys = Array.from(indexKeys.keys());
+    
+    console.log('[MessageQueue] Found', allIndexKeys.length, 'conversation indexes');
+    
+    // Load all indexes in parallel
+    const indexes = await Promise.all(
+      allIndexKeys.map(key => this.storageGet(key))
     );
     
-    // Flatten to all messages
-    const allMessages = conversations.flat().filter(m => m !== null);
+    // Collect all message IDs with their conversation IDs
+    const messageRequests = [];
+    for (let i = 0; i < indexes.length; i++) {
+      const index = indexes[i];
+      if (index && index.messageIds) {
+        // Extract conversationId from index key (idx:{conversationId})
+        const conversationId = allIndexKeys[i].substring(4); // Remove 'idx:' prefix
+        
+        for (const msgId of index.messageIds) {
+          messageRequests.push({ conversationId, msgId });
+        }
+      }
+    }
+    
+    console.log('[MessageQueue] Loading', messageRequests.length, 'messages...');
+    
+    // Batch load all messages (in chunks to avoid memory issues)
+    const BATCH_SIZE = 1000;
+    const allMessages = [];
+    
+    for (let i = 0; i < messageRequests.length; i += BATCH_SIZE) {
+      const batch = messageRequests.slice(i, i + BATCH_SIZE);
+      const keys = batch.map(({ conversationId, msgId }) => 
+        this.getMessageKey(conversationId, msgId)
+      );
+      
+      console.log(`[STORAGE] GET_BATCH: ${keys.length} messages (batch ${Math.floor(i/BATCH_SIZE) + 1})`);
+      const messagesMap = await this.state.storage.get(keys);
+      allMessages.push(...Array.from(messagesMap.values()).filter(m => m !== null));
+    }
     
     // Sort by timestamp (newest first)
     allMessages.sort((a, b) => b.timestamp - a.timestamp);
@@ -169,7 +300,8 @@ export class MessageQueue {
     this.initialized = true;
     
     console.log('[MessageQueue] ✅ Initialized:', {
-      conversations: allKeys.length,
+      indexes: allIndexKeys.length,
+      messages: allMessages.length,
       pending: this.pendingQueue.length,
       recent: this.recentMessages.length,
       elapsed: `${elapsed}ms`
@@ -278,6 +410,8 @@ export class MessageQueue {
       domain: body.domain || 'saywhatwant.app',
       'message-type': messageType,
       replyTo: body.replyTo || null,
+      // Store conversation context for easy lookup
+      conversationId: this.getConversationId(humanUsername, humanColor, aiUsername, aiColor),
       // Only include botParams if entity is explicitly provided
       ...(entity && {
         botParams: {
@@ -286,6 +420,8 @@ export class MessageQueue {
           entity,
           ais: body.botParams?.ais || null,
           sessionId: body.botParams?.sessionId || null,  // God Mode session routing
+          humanUsername,  // Store for easy key reconstruction
+          humanColor,
           claimedBy: null,
           claimedAt: null,
           completedAt: messageType === 'AI' ? timestamp : null
@@ -293,44 +429,48 @@ export class MessageQueue {
       })
     };
 
-    // Get existing conversation
-    let conversation = await this.storageGet(conversationKey) || [];
-
-  // Add message to front (newest first)
-  conversation.unshift(message);
-
-  // Keep only last 150 COMPLETED messages (rolling window)
-  // CRITICAL: Never delete pending or processing messages (they're still active)
-  // Result: Conversation can temporarily exceed 150 if many messages are pending/processing
-  if (conversation.length > 150) {
-    // Separate by status (messages without botParams are considered complete)
-    const activeMessages = conversation.filter(m => 
-      m.botParams && (m.botParams.status === 'pending' || m.botParams.status === 'processing')
-    );
-    const completedMessages = conversation.filter(m => 
-      !m.botParams || m.botParams.status === 'complete'
-    );
+    // ============================================================
+    // PER-MESSAGE STORAGE (Doc 218 - O(1) cost per operation)
+    // ============================================================
     
-    // Keep ALL active messages (protected) + last 150 completed messages
-    if (completedMessages.length > 150) {
-      completedMessages.length = 150;
+    const conversationId = this.getConversationId(humanUsername, humanColor, aiUsername, aiColor);
+    
+    // 1. Store message individually (~600 bytes = 1 unit)
+    await this.storeMessage(conversationId, message);
+    
+    // 2. Update conversation index
+    const index = await this.getIndex(conversationId);
+    index.messageIds.push(message.id);
+    index.metadata.lastMessageAt = timestamp;
+    index.metadata.messageCount = index.messageIds.length;
+    if (!index.metadata.createdAt) {
+      index.metadata.createdAt = timestamp;
     }
     
-    // Combine: active first (protected), then completed (rolling window)
-    conversation = [...activeMessages, ...completedMessages];
-  }
-
-    // Save conversation to storage
-    await this.storagePut(conversationKey, conversation);
-    this.logStorageSummary('postMessage');
-
-    // Add to in-memory caches (Cost optimization - Doc 215)
-    // Note: initialize() already called at start of postMessage for idempotency check
+    // Rolling window: keep only last 150 message IDs in index
+    // Old messages stay in storage until explicit cleanup
+    if (index.messageIds.length > 150) {
+      const toRemove = index.messageIds.slice(0, -150);
+      index.messageIds = index.messageIds.slice(-150);
+      
+      // Delete old messages from storage to save storage cost
+      for (const msgId of toRemove) {
+        const key = this.getMessageKey(conversationId, msgId);
+        await this.storageDelete(key);
+      }
+      console.log('[MessageQueue] Rolling window: deleted', toRemove.length, 'old messages');
+    }
+    
+    await this.updateIndex(conversationId, index);
+    
+    // ============================================================
+    // IN-MEMORY CACHE UPDATES (Doc 215)
+    // ============================================================
     
     // Add to recent messages cache (for frontend polling)
-    this.recentMessages.unshift(message);  // Add to front (newest first)
+    this.recentMessages.unshift(message);
     if (this.recentMessages.length > this.MAX_CACHE_SIZE) {
-      this.recentMessages.pop();  // Remove oldest
+      this.recentMessages.pop();
     }
     
     // If pending human message for bot, add to pending queue
@@ -339,7 +479,7 @@ export class MessageQueue {
       console.log('[MessageQueue] Added to pending queue:', message.id);
     }
 
-    console.log('[MessageQueue] Posted to', conversationKey, '→', conversation.length, 'messages total (pending:', this.pendingQueue.length, ', recent:', this.recentMessages.length, ')');
+    console.log('[MessageQueue] Posted:', message.id, 'to', conversationId, '(index:', index.messageIds.length, 'msgs, pending:', this.pendingQueue.length, ')');
 
     return this.jsonResponse({ id, timestamp, status: 'success' });
   }
@@ -394,14 +534,14 @@ export class MessageQueue {
 
   /**
    * POST /api/queue/claim - Claim a message for processing
-   * OPTIMIZED: Uses in-memory pendingQueue for lookup
+   * PER-MESSAGE STORAGE (Doc 218): O(1) cost - just 1 read + 1 write
    */
   async claimMessage(request) {
     await this.initialize();  // Ensure state is loaded
     
     const { messageId, workerId } = await request.json();
     
-    // Find in in-memory pending queue (fast!)
+    // Find in in-memory pending queue
     const queueIndex = this.pendingQueue.findIndex(m => m.id === messageId);
     
     if (queueIndex === -1) {
@@ -417,48 +557,45 @@ export class MessageQueue {
       }, 409);
     }
     
-    // Update message status
+    // Update message status in memory
     message.botParams.status = 'processing';
     message.botParams.claimedBy = workerId;
     message.botParams.claimedAt = Date.now();
     
-    // Remove from pending queue (in-memory)
+    // Remove from pending queue
     this.pendingQueue.splice(queueIndex, 1);
     
-    // Update in recent messages cache (so frontend sees status change)
+    // Update in recent messages cache
     const recentIndex = this.recentMessages.findIndex(m => m.id === messageId);
     if (recentIndex !== -1) {
       this.recentMessages[recentIndex] = message;
     }
     
-    // Find and update in storage (for persistence)
-    const keys = await this.storageList({ prefix: 'conv:' });
-    const godModeKeys = await this.storageList({ prefix: 'godmode:' });
-    const allKeys = [...Array.from(keys.keys()), ...Array.from(godModeKeys.keys())];
+    // Get conversationId from message
+    const conversationId = message.conversationId;
     
-    for (const key of allKeys) {
-      const conversation = await this.storageGet(key);
-      if (!conversation) continue;
-      
-      const convIndex = conversation.findIndex(m => m.id === messageId);
-      if (convIndex !== -1) {
-        conversation[convIndex] = message;
-        await this.storagePut(key, conversation);
-        this.logStorageSummary('claimMessage');
-        
-        console.log('[MessageQueue] Claimed:', messageId, 'from', key, '(pending:', this.pendingQueue.length, ')');
-        
-        return this.jsonResponse({ success: true, message });
-      }
+    if (!conversationId) {
+      console.error('[MessageQueue] claim: No conversationId on message:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message missing conversationId' }, 500);
     }
     
-    // Should never reach here if message was in pending queue
-    return this.jsonResponse({ success: false, error: 'Message not found in storage' }, 500);
+    // Update in storage (1 read + 1 write, ~600 bytes = 1 unit each)
+    const updated = await this.updateMessage(conversationId, messageId, {
+      botParams: message.botParams
+    });
+    
+    if (!updated) {
+      console.error('[MessageQueue] claim: Failed to update message in storage:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message not found in storage' }, 500);
+    }
+    
+    console.log('[MessageQueue] Claimed:', messageId, 'in', conversationId, '(pending:', this.pendingQueue.length, ')');
+    return this.jsonResponse({ success: true, message });
   }
 
   /**
    * POST /api/queue/claim-next - Atomic operation: Get next pending + claim it
-   * OPTIMIZED: Uses in-memory pendingQueue (0 storage reads!)
+   * PER-MESSAGE STORAGE (Doc 218): O(1) cost - just 1 read + 1 write
    */
   async claimNextMessage(request) {
     await this.initialize();  // Ensure state is loaded
@@ -498,12 +635,11 @@ export class MessageQueue {
     
     // Double-check status (sanity check)
     if (message.botParams.status !== 'pending') {
-      // Should not happen in single-threaded DO, but good safety
-      this.pendingQueue.shift(); // Remove invalid message
-      return this.claimNextMessage(request); // Try next one
+      this.pendingQueue.shift();
+      return this.claimNextMessage(request);
     }
     
-    // Update message status
+    // Update message status in memory
     message.botParams.status = 'processing';
     message.botParams.claimedBy = workerId;
     message.botParams.claimedAt = Date.now();
@@ -517,66 +653,29 @@ export class MessageQueue {
       this.recentMessages[recentIndex] = message;
     }
     
-    // Find and update in storage (persistence)
-    // We need to find which conversation key this message belongs to
-    // This is the ONLY storage read needed (and we can optimize it if we store key in memory)
+    // ============================================================
+    // PER-MESSAGE STORAGE UPDATE (Doc 218 - O(1) cost)
+    // ============================================================
     
-    // For now, we have to search storage to find the key to update persistence
-    // OPTIMIZATION: Instead of scanning all keys, construct the key from message data!
-    // We have humanUsername, humanColor, aiUsername, aiColor in the message
+    // Get conversationId from message (stored during postMessage)
+    const conversationId = message.conversationId;
     
-    let conversationKey;
-    
-    // Helper to check if we can construct the key
-    const canConstructKey = (msg) => {
-      // Check for God Mode session
-      if (msg.botParams?.sessionId && msg.botParams?.entity === 'god-mode') {
-        return true;
-      }
-      // Check for normal conversation (need AI username/color)
-      if (msg.botParams?.entity && msg.botParams?.ais) {
-        return true;
-      }
-      return false;
-    };
-    
-    if (canConstructKey(message)) {
-      if (message.botParams?.sessionId && message.botParams?.entity === 'god-mode') {
-        // Reconstruct God Mode key
-        // Format: godmode:{humanUsername}:{humanColor}:{aiUsername}:{aiColor}:{sessionId}
-        // We need to parse ais to get aiUsername/Color
-        const [aiUser, aiCol] = (message.botParams.ais || 'GodMode:default').split(':');
-        conversationKey = `godmode:${message.username}:${message.color}:${aiUser}:${aiCol}:${message.botParams.sessionId}`;
-      } else {
-        // Reconstruct standard key
-        // Format: conv:{humanUsername}:{humanColor}:{aiUsername}:{aiColor}
-        const [aiUser, aiCol] = (message.botParams.ais || `${message.botParams.entity}:default`).split(':');
-        conversationKey = `conv:${message.username}:${message.color}:${aiUser}:${aiCol}`;
-      }
-      
-      // Try to get this specific conversation (1 read)
-      const conversation = await this.storageGet(conversationKey);
-      
-      if (conversation) {
-        const msgIndex = conversation.findIndex(m => m.id === message.id);
-        if (msgIndex !== -1) {
-          conversation[msgIndex] = message;
-          await this.storagePut(conversationKey, conversation);
-          this.logStorageSummary('claimNextMessage');
-          console.log('[MessageQueue] claim-next: Claimed via key lookup:', conversationKey);
-        } else {
-          console.error('[MessageQueue] claim-next: Message not found in expected key:', conversationKey);
-          return this.jsonResponse({ success: false, error: 'Message persistence failed - message not found in key' }, 500);
-        }
-      } else {
-        // Key not found (maybe constructed wrong?)
-        console.error('[MessageQueue] claim-next: Key not found for constructed key:', conversationKey);
-        return this.jsonResponse({ success: false, error: 'Message persistence failed - key not found' }, 500);
-      }
-    } else {
-      console.error('[MessageQueue] claim-next: Could not construct key from message metadata:', message.id);
-      return this.jsonResponse({ success: false, error: 'Message persistence failed - invalid metadata' }, 500);
+    if (!conversationId) {
+      console.error('[MessageQueue] claim-next: No conversationId on message:', message.id);
+      return this.jsonResponse({ success: false, error: 'Message missing conversationId' }, 500);
     }
+    
+    // Direct message update (1 read + 1 write, ~600 bytes = 1 unit each)
+    const updated = await this.updateMessage(conversationId, message.id, {
+      botParams: message.botParams
+    });
+    
+    if (!updated) {
+      console.error('[MessageQueue] claim-next: Failed to update message in storage:', message.id);
+      return this.jsonResponse({ success: false, error: 'Message not found in storage' }, 500);
+    }
+    
+    console.log('[MessageQueue] claim-next: Claimed', message.id, 'in', conversationId);
     
     return this.jsonResponse({
       success: true,
@@ -588,66 +687,54 @@ export class MessageQueue {
   
   /**
    * POST /api/queue/complete - Mark message as complete
-   * OPTIMIZED: Uses in-memory lookup to avoid storage scan
+   * PER-MESSAGE STORAGE (Doc 218): O(1) cost - just 1 read + 1 write
    */
   async completeMessage(request) {
     await this.initialize();  // Ensure state is loaded
     
     const { messageId } = await request.json();
     
-    let conversationKey;
-    
-    // 1. Try to find in recent messages (fastest)
+    // 1. Find in recent messages to get conversationId
     const recentMsg = this.recentMessages.find(m => m.id === messageId);
     
-    if (recentMsg) {
-      // Construct key from message
-      if (recentMsg.botParams?.sessionId && recentMsg.botParams?.entity === 'god-mode') {
-        const [aiUser, aiCol] = (recentMsg.botParams.ais || 'GodMode:default').split(':');
-        conversationKey = `godmode:${recentMsg.username}:${recentMsg.color}:${aiUser}:${aiCol}:${recentMsg.botParams.sessionId}`;
-      } else if (recentMsg.botParams?.entity) {
-        const [aiUser, aiCol] = (recentMsg.botParams.ais || `${recentMsg.botParams.entity}:default`).split(':');
-        conversationKey = `conv:${recentMsg.username}:${recentMsg.color}:${aiUser}:${aiCol}`;
-      }
+    if (!recentMsg) {
+      console.error('[MessageQueue] Complete failed: Message not in memory:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message not found in memory' }, 404);
     }
     
-    // 2. If key found (or constructed), update storage
-    if (conversationKey) {
-      const conversation = await this.storageGet(conversationKey);
-      if (conversation) {
-        const messageIndex = conversation.findIndex(m => m.id === messageId);
-        
-        if (messageIndex !== -1) {
-          const message = conversation[messageIndex];
-          
-          // Update message
-          message.botParams.status = 'complete';
-          message.botParams.completedAt = Date.now();
-          
-          // Save conversation back
-          await this.storagePut(conversationKey, conversation);
-          this.logStorageSummary('completeMessage');
-          
-          // Update memory
-          if (recentMsg) {
-            recentMsg.botParams.status = 'complete';
-            recentMsg.botParams.completedAt = message.botParams.completedAt;
-          }
-          
-          console.log('[MessageQueue] Completed (fast):', messageId, 'in', conversationKey);
-          return this.jsonResponse({ success: true });
-        }
-      }
+    const conversationId = recentMsg.conversationId;
+    
+    if (!conversationId) {
+      console.error('[MessageQueue] Complete failed: No conversationId on message:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message missing conversationId' }, 500);
     }
     
-    // 3. Fail explicitly (NO FALLBACK SCAN)
-    console.error('[MessageQueue] Complete failed: Could not find message key for', messageId);
-    return this.jsonResponse({ success: false, error: 'Message key not found' }, 404);
+    // 2. Update message in storage (1 read + 1 write, ~600 bytes = 1 unit each)
+    const completedAt = Date.now();
+    const updated = await this.updateMessage(conversationId, messageId, {
+      botParams: {
+        ...recentMsg.botParams,
+        status: 'complete',
+        completedAt
+      }
+    });
+    
+    if (!updated) {
+      console.error('[MessageQueue] Complete failed: Message not found in storage:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message not found in storage' }, 404);
+    }
+    
+    // 3. Update in-memory cache
+    recentMsg.botParams.status = 'complete';
+    recentMsg.botParams.completedAt = completedAt;
+    
+    console.log('[MessageQueue] Completed:', messageId, 'in', conversationId);
+    return this.jsonResponse({ success: true });
   }
   
   /**
    * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
-   * OPTIMIZED: Uses in-memory lookup or key construction to avoid scan
+   * PER-MESSAGE STORAGE (Doc 218): O(1) cost - just 1 read + 1 write
    */
   async patchMessage(request, path) {
     await this.initialize();  // Ensure state is loaded
@@ -655,56 +742,43 @@ export class MessageQueue {
     const messageId = path.split('/').pop();  // Extract ID from path
     const body = await request.json();
     
-    let message;
-    let conversationKey;
-    
-    // 1. Try to find in recent messages (fastest)
+    // 1. Find in recent messages to get conversationId
     const recentMsg = this.recentMessages.find(m => m.id === messageId);
     
-    if (recentMsg) {
-      message = recentMsg;
-      // Construct key from message
-      if (message.botParams?.sessionId && message.botParams?.entity === 'god-mode') {
-        const [aiUser, aiCol] = (message.botParams.ais || 'GodMode:default').split(':');
-        conversationKey = `godmode:${message.username}:${message.color}:${aiUser}:${aiCol}:${message.botParams.sessionId}`;
-      } else if (message.botParams?.entity) {
-        const [aiUser, aiCol] = (message.botParams.ais || `${message.botParams.entity}:default`).split(':');
-        conversationKey = `conv:${message.username}:${message.color}:${aiUser}:${aiCol}`;
-      } else {
-        // Platform message (human->human), key format is slightly different or platform messages are stored differently
-        // Assuming standard format for now: conv:User:Col:platform:platform
-        conversationKey = `conv:${message.username}:${message.color}:platform:platform`;
-      }
+    if (!recentMsg) {
+      console.error('[MessageQueue] PATCH failed: Message not in memory:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message not found in memory' }, 404);
     }
     
-    // 2. If found key, try to update directly (1 read + 1 write)
-    if (conversationKey) {
-      const conversation = await this.storageGet(conversationKey);
-      if (conversation) {
-        const idx = conversation.findIndex(m => m.id === messageId);
-        if (idx !== -1) {
-          // Update in storage
-          if (body.eqScore !== undefined) conversation[idx].eqScore = body.eqScore;
-          await this.storagePut(conversationKey, conversation);
-          this.logStorageSummary('patchMessage');
-          
-          // Update in memory
-          if (recentMsg && body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
-          
-          console.log('[MessageQueue] PATCH success (fast):', messageId);
-          return this.jsonResponse({ success: true, message: conversation[idx] });
-        }
-      }
+    const conversationId = recentMsg.conversationId;
+    
+    if (!conversationId) {
+      console.error('[MessageQueue] PATCH failed: No conversationId on message:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message missing conversationId' }, 500);
     }
     
-    // 3. Fallback: Removed (Doc 00-AGENT-best-practices - NO FALLBACKS)
-    // If we can't find the key directly or in memory, fail explicitly
-    console.error('[MessageQueue] PATCH failed: Could not find message key for', messageId);
-    return this.jsonResponse({ success: false, error: 'Message key not found' }, 404);
+    // 2. Build updates object
+    const updates = {};
+    if (body.eqScore !== undefined) updates.eqScore = body.eqScore;
+    
+    // 3. Update message in storage (1 read + 1 write, ~600 bytes = 1 unit each)
+    const updated = await this.updateMessage(conversationId, messageId, updates);
+    
+    if (!updated) {
+      console.error('[MessageQueue] PATCH failed: Message not found in storage:', messageId);
+      return this.jsonResponse({ success: false, error: 'Message not found in storage' }, 404);
+    }
+    
+    // 4. Update in-memory cache
+    if (body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
+    
+    console.log('[MessageQueue] PATCH success:', messageId, 'in', conversationId);
+    return this.jsonResponse({ success: true, message: updated });
   }
 
   /**
    * GET /api/conversation for God Mode (query ALL session keys)
+   * PER-MESSAGE STORAGE (Doc 218): Uses batch reads for efficiency
    */
   async getGodModeConversation(url) {
     const humanUsername = url.searchParams.get('humanUsername');
@@ -713,18 +787,40 @@ export class MessageQueue {
     const aiColor = url.searchParams.get('aiColor');
     const after = parseInt(url.searchParams.get('after') || '0');
     
-    // List all session keys for this Human:GodMode pair
-    const prefix = `godmode:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:`;
-    const sessionKeys = await this.storageList({ prefix: prefix });
+    // List all session index keys for this Human:GodMode pair
+    const prefix = `idx:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:`;
+    const indexKeys = await this.storageList({ prefix: prefix });
     
-    // Load all sessions in parallel
-    const allSessions = await Promise.all(
-      Array.from(sessionKeys.keys()).map(key => this.storageGet(key))
+    // Load all session indexes
+    const allIndexes = await Promise.all(
+      Array.from(indexKeys.keys()).map(key => this.storageGet(key))
     );
-    this.logStorageSummary('getGodModeConversation');
     
-    // Flatten to all messages
-    const allMessages = allSessions.flat().filter(m => m !== null);
+    // Collect all message IDs from all sessions
+    const allMessageRequests = [];
+    for (const index of allIndexes) {
+      if (index && index.messageIds) {
+        // Extract conversationId from index (stored in metadata or derive from key)
+        const conversationId = index.metadata?.conversationId || 
+          `${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:${index.metadata?.sessionId || 'unknown'}`;
+        
+        for (const msgId of index.messageIds) {
+          allMessageRequests.push({ conversationId, msgId });
+        }
+      }
+    }
+    
+    // Batch fetch all messages
+    const messageKeys = allMessageRequests.map(({ conversationId, msgId }) => 
+      this.getMessageKey(conversationId, msgId)
+    );
+    
+    let allMessages = [];
+    if (messageKeys.length > 0) {
+      console.log(`[STORAGE] GET_BATCH: ${messageKeys.length} God Mode messages`);
+      const messagesMap = await this.state.storage.get(messageKeys);
+      allMessages = Array.from(messagesMap.values()).filter(m => m !== null);
+    }
     
     // Filter by timestamp
     const filtered = allMessages.filter(m => m.timestamp > after);
@@ -732,14 +828,14 @@ export class MessageQueue {
     // Sort by timestamp
     filtered.sort((a, b) => a.timestamp - b.timestamp);
     
-    console.log('[MessageQueue] God Mode conversation:', filtered.length, 'messages from', Array.from(sessionKeys.keys()).length, 'sessions');
+    console.log('[MessageQueue] God Mode conversation:', filtered.length, 'messages from', Array.from(indexKeys.keys()).length, 'sessions');
     
     return this.jsonResponse(filtered);
   }
   
   /**
    * GET /api/conversation - Get messages for a specific conversation
-   * Query params: humanUsername, humanColor, aiUsername, aiColor, limit
+   * PER-MESSAGE STORAGE (Doc 218): Uses batch reads for efficiency
    */
   async getConversation(url) {
     const humanUsername = url.searchParams.get('humanUsername');
@@ -748,64 +844,90 @@ export class MessageQueue {
     const aiColor = url.searchParams.get('aiColor');
     const limit = parseInt(url.searchParams.get('limit') || '100');
     
-    // Build conversation key
-    const conversationKey = this.getConversationKey(
+    // Build conversation ID
+    const conversationId = this.getConversationId(
       humanUsername,
       humanColor,
       aiUsername,
       aiColor
     );
     
-    // Get conversation (1 read!)
-    const conversation = await this.storageGet(conversationKey) || [];
-    this.logStorageSummary('getConversation');
+    // Get conversation index (1 read, ~2KB = 1 unit)
+    const index = await this.getIndex(conversationId);
     
-    // Sort by timestamp (oldest first) - should already be sorted but ensure it
-    conversation.sort((a, b) => a.timestamp - b.timestamp);
+    if (!index.messageIds || index.messageIds.length === 0) {
+      console.log('[MessageQueue] GET conversation', conversationId, '→ empty');
+      return this.jsonResponse([]);
+    }
     
-    // Return last N messages
-    const result = conversation.slice(-limit);
+    // Get last N message IDs
+    const messageIds = index.messageIds.slice(-limit);
     
-    console.log('[MessageQueue] GET conversation', conversationKey, '→', result.length, 'of', conversation.length, 'total');
+    // Batch fetch messages (N reads, ~600 bytes each = N units)
+    const messages = await this.getMessages_batch(conversationId, messageIds);
     
-    return this.jsonResponse(result);
+    // Sort by timestamp (oldest first)
+    messages.sort((a, b) => a.timestamp - b.timestamp);
+    
+    console.log('[MessageQueue] GET conversation', conversationId, '→', messages.length, 'of', index.messageIds.length, 'total');
+    
+    return this.jsonResponse(messages);
   }
 
   /**
-   * GET /api/admin/list-keys - List all conversation keys
+   * GET /api/admin/list-keys - List all conversation index keys
+   * PER-MESSAGE STORAGE (Doc 218): Lists idx: keys instead of conv: keys
    */
   async listKeys() {
-    const keys = await this.storageList({ prefix: 'conv:' });
+    const indexKeys = await this.storageList({ prefix: 'idx:' });
+    const msgKeys = await this.storageList({ prefix: 'msg:' });
     
-    const keyList = Array.from(keys.keys());
+    const indexList = Array.from(indexKeys.keys());
+    const msgCount = Array.from(msgKeys.keys()).length;
     
-    console.log('[MessageQueue] Listed', keyList.length, 'conversation keys');
+    console.log('[MessageQueue] Listed', indexList.length, 'conversation indexes,', msgCount, 'messages');
     
     return this.jsonResponse({ 
-      keys: keyList,
-      count: keyList.length
+      keys: indexList,
+      count: indexList.length,
+      messageCount: msgCount
     });
   }
 
   /**
-   * POST /api/admin/purge - Emergency purge of all conversations
+   * POST /api/admin/purge - Emergency purge of all data
+   * PER-MESSAGE STORAGE (Doc 218): Deletes idx: and msg: keys
    */
   async purgeStorage() {
-    const keys = await this.storageList({ prefix: 'conv:' });
+    // Get all keys
+    const indexKeys = await this.storageList({ prefix: 'idx:' });
+    const msgKeys = await this.storageList({ prefix: 'msg:' });
     
-    // Delete all conversation keys
-    const deletePromises = Array.from(keys.keys()).map(key => 
-      this.storageDelete(key)
-    );
+    // Also purge old format keys if any remain
+    const oldConvKeys = await this.storageList({ prefix: 'conv:' });
+    const oldGodModeKeys = await this.storageList({ prefix: 'godmode:' });
+    
+    const allKeys = [
+      ...Array.from(indexKeys.keys()),
+      ...Array.from(msgKeys.keys()),
+      ...Array.from(oldConvKeys.keys()),
+      ...Array.from(oldGodModeKeys.keys())
+    ];
+    
+    // Delete all keys
+    const deletePromises = allKeys.map(key => this.storageDelete(key));
     await Promise.all(deletePromises);
     
-    const count = keys.keys().size;
+    // Clear in-memory caches
+    this.recentMessages = [];
+    this.pendingQueue = [];
+    this.initialized = false;
     
-    console.log('[MessageQueue] PURGED', count, 'conversations');
+    console.log('[MessageQueue] PURGED', allKeys.length, 'keys (indexes + messages + old format)');
     
     return this.jsonResponse({ 
       success: true,
-      message: `Purged ${count} conversations`
+      message: `Purged ${allKeys.length} keys`
     });
   }
 
