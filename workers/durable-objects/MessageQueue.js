@@ -19,6 +19,31 @@ export class MessageQueue {
     this.MAX_CACHE_SIZE = 50000;      // 50K messages = ~100MB = 78% of 128MB limit
     this.initialized = false;          // Track if state loaded from storage
   }
+  
+  // Storage methods with operation logging
+  async storageGet(key) {
+    console.log(`[STORAGE] GET: ${key}`);
+    return await this.state.storage.get(key);
+  }
+  
+  async storagePut(key, value) {
+    console.log(`[STORAGE] PUT: ${key}`);
+    return await this.state.storage.put(key, value);
+  }
+  
+  async storageList(options) {
+    console.log(`[STORAGE] LIST: ${JSON.stringify(options)}`);
+    return await this.state.storage.list(options);
+  }
+  
+  async storageDelete(key) {
+    console.log(`[STORAGE] DELETE: ${key}`);
+    return await this.state.storage.delete(key);
+  }
+  
+  logStorageSummary(operation) {
+    // No-op
+  }
 
   /**
    * Main fetch handler - routes requests to appropriate methods
@@ -107,19 +132,21 @@ export class MessageQueue {
    * Called automatically on first request after DO starts/restarts
    */
   async initialize() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      return;  // Already initialized, no storage operations
+    }
     
-    console.log('[MessageQueue] 🔄 Initializing in-memory state...');
+    console.log('[MessageQueue] 🔄 INITIALIZE RUNNING - this should only happen once per DO wake!');
     const startTime = Date.now();
     
     // ONE-TIME full scan (only on DO startup)
-    const convKeys = await this.state.storage.list({ prefix: 'conv:' });
-    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    const convKeys = await this.storageList({ prefix: 'conv:' });
+    const godModeKeys = await this.storageList({ prefix: 'godmode:' });
     const allKeys = [...Array.from(convKeys.keys()), ...Array.from(godModeKeys.keys())];
     
     // Load all conversations in parallel
     const conversations = await Promise.all(
-      allKeys.map(key => this.state.storage.get(key))
+      allKeys.map(key => this.storageGet(key))
     );
     
     // Flatten to all messages
@@ -163,6 +190,16 @@ export class MessageQueue {
     const body = await request.json();
 
     const id = body.id || this.generateId();
+    
+    // IDEMPOTENCY CHECK: Reject duplicate messages (same ID already exists)
+    // This prevents duplicate storage operations from duplicate requests
+    await this.initialize();
+    const existingMsg = this.recentMessages.find(m => m.id === id);
+    if (existingMsg) {
+      console.log('[MessageQueue] ⚠️ Duplicate message rejected:', id);
+      return this.jsonResponse({ id, timestamp: existingMsg.timestamp, status: 'duplicate' });
+    }
+    
     const timestamp = Date.now();
     const messageType = body['message-type'] || body.messageType || 'human';
     
@@ -257,7 +294,7 @@ export class MessageQueue {
     };
 
     // Get existing conversation
-    let conversation = await this.state.storage.get(conversationKey) || [];
+    let conversation = await this.storageGet(conversationKey) || [];
 
   // Add message to front (newest first)
   conversation.unshift(message);
@@ -284,10 +321,11 @@ export class MessageQueue {
   }
 
     // Save conversation to storage
-    await this.state.storage.put(conversationKey, conversation);
+    await this.storagePut(conversationKey, conversation);
+    this.logStorageSummary('postMessage');
 
     // Add to in-memory caches (Cost optimization - Doc 215)
-    await this.initialize();  // Ensure state is loaded
+    // Note: initialize() already called at start of postMessage for idempotency check
     
     // Add to recent messages cache (for frontend polling)
     this.recentMessages.unshift(message);  // Add to front (newest first)
@@ -394,18 +432,19 @@ export class MessageQueue {
     }
     
     // Find and update in storage (for persistence)
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
-    const godModeKeys = await this.state.storage.list({ prefix: 'godmode:' });
+    const keys = await this.storageList({ prefix: 'conv:' });
+    const godModeKeys = await this.storageList({ prefix: 'godmode:' });
     const allKeys = [...Array.from(keys.keys()), ...Array.from(godModeKeys.keys())];
     
     for (const key of allKeys) {
-      const conversation = await this.state.storage.get(key);
+      const conversation = await this.storageGet(key);
       if (!conversation) continue;
       
       const convIndex = conversation.findIndex(m => m.id === messageId);
       if (convIndex !== -1) {
         conversation[convIndex] = message;
-        await this.state.storage.put(key, conversation);
+        await this.storagePut(key, conversation);
+        this.logStorageSummary('claimMessage');
         
         console.log('[MessageQueue] Claimed:', messageId, 'from', key, '(pending:', this.pendingQueue.length, ')');
         
@@ -516,13 +555,14 @@ export class MessageQueue {
       }
       
       // Try to get this specific conversation (1 read)
-      const conversation = await this.state.storage.get(conversationKey);
+      const conversation = await this.storageGet(conversationKey);
       
       if (conversation) {
         const msgIndex = conversation.findIndex(m => m.id === message.id);
         if (msgIndex !== -1) {
           conversation[msgIndex] = message;
-          await this.state.storage.put(conversationKey, conversation);
+          await this.storagePut(conversationKey, conversation);
+          this.logStorageSummary('claimNextMessage');
           console.log('[MessageQueue] claim-next: Claimed via key lookup:', conversationKey);
         } else {
           console.error('[MessageQueue] claim-next: Message not found in expected key:', conversationKey);
@@ -573,7 +613,7 @@ export class MessageQueue {
     
     // 2. If key found (or constructed), update storage
     if (conversationKey) {
-      const conversation = await this.state.storage.get(conversationKey);
+      const conversation = await this.storageGet(conversationKey);
       if (conversation) {
         const messageIndex = conversation.findIndex(m => m.id === messageId);
         
@@ -585,7 +625,8 @@ export class MessageQueue {
           message.botParams.completedAt = Date.now();
           
           // Save conversation back
-          await this.state.storage.put(conversationKey, conversation);
+          await this.storagePut(conversationKey, conversation);
+          this.logStorageSummary('completeMessage');
           
           // Update memory
           if (recentMsg) {
@@ -638,13 +679,14 @@ export class MessageQueue {
     
     // 2. If found key, try to update directly (1 read + 1 write)
     if (conversationKey) {
-      const conversation = await this.state.storage.get(conversationKey);
+      const conversation = await this.storageGet(conversationKey);
       if (conversation) {
         const idx = conversation.findIndex(m => m.id === messageId);
         if (idx !== -1) {
           // Update in storage
           if (body.eqScore !== undefined) conversation[idx].eqScore = body.eqScore;
-          await this.state.storage.put(conversationKey, conversation);
+          await this.storagePut(conversationKey, conversation);
+          this.logStorageSummary('patchMessage');
           
           // Update in memory
           if (recentMsg && body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
@@ -673,12 +715,13 @@ export class MessageQueue {
     
     // List all session keys for this Human:GodMode pair
     const prefix = `godmode:${humanUsername}:${humanColor}:${aiUsername}:${aiColor}:`;
-    const sessionKeys = await this.state.storage.list({ prefix: prefix });
+    const sessionKeys = await this.storageList({ prefix: prefix });
     
     // Load all sessions in parallel
     const allSessions = await Promise.all(
-      Array.from(sessionKeys.keys()).map(key => this.state.storage.get(key))
+      Array.from(sessionKeys.keys()).map(key => this.storageGet(key))
     );
+    this.logStorageSummary('getGodModeConversation');
     
     // Flatten to all messages
     const allMessages = allSessions.flat().filter(m => m !== null);
@@ -714,7 +757,8 @@ export class MessageQueue {
     );
     
     // Get conversation (1 read!)
-    const conversation = await this.state.storage.get(conversationKey) || [];
+    const conversation = await this.storageGet(conversationKey) || [];
+    this.logStorageSummary('getConversation');
     
     // Sort by timestamp (oldest first) - should already be sorted but ensure it
     conversation.sort((a, b) => a.timestamp - b.timestamp);
@@ -731,7 +775,7 @@ export class MessageQueue {
    * GET /api/admin/list-keys - List all conversation keys
    */
   async listKeys() {
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    const keys = await this.storageList({ prefix: 'conv:' });
     
     const keyList = Array.from(keys.keys());
     
@@ -747,11 +791,11 @@ export class MessageQueue {
    * POST /api/admin/purge - Emergency purge of all conversations
    */
   async purgeStorage() {
-    const keys = await this.state.storage.list({ prefix: 'conv:' });
+    const keys = await this.storageList({ prefix: 'conv:' });
     
     // Delete all conversation keys
     const deletePromises = Array.from(keys.keys()).map(key => 
-      this.state.storage.delete(key)
+      this.storageDelete(key)
     );
     await Promise.all(deletePromises);
     
@@ -814,7 +858,8 @@ export class MessageQueue {
     const { sessionKey, sessionData } = await request.json();
     
     // Store in Durable Objects
-    await this.state.storage.put(sessionKey, sessionData);
+    await this.storagePut(sessionKey, sessionData);
+    this.logStorageSummary('saveGodModeSession');
     
     console.log('[MessageQueue] Saved God Mode session:', sessionKey, 'with', sessionData.messageIds.length, 'messages');
     
@@ -835,7 +880,7 @@ export class MessageQueue {
     const godModeColor = url.searchParams.get('godModeColor');
     
     // List all godmode-session keys
-    const keys = await this.state.storage.list({ prefix: 'godmode-session:' });
+    const keys = await this.storageList({ prefix: 'godmode-session:' });
     
     const sessions = [];
     for (const [key, data] of keys) {
@@ -866,7 +911,7 @@ export class MessageQueue {
     const sessionId = path.split('/').pop();
     const sessionKey = `godmode-session:${sessionId}`;
     
-    const sessionData = await this.state.storage.get(sessionKey);
+    const sessionData = await this.storageGet(sessionKey);
     
     if (!sessionData) {
       return this.jsonResponse({ error: 'Session not found' }, 404);
@@ -874,7 +919,8 @@ export class MessageQueue {
     
     // Fetch all messages for this session
     // Messages are in messages:all key (global stream)
-    const allMessages = await this.state.storage.get('messages:all') || [];
+    const allMessages = await this.storageGet('messages:all') || [];
+    this.logStorageSummary('getGodModeSession');
     const sessionMessages = [];
     
     for (const msgId of sessionData.messageIds) {
