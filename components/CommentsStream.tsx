@@ -1274,40 +1274,22 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Build pre-formatted context from displayed messages (what user sees)
+    // ============================================================
+    // MEMORY-ONLY MODE (Doc 220): ALWAYS send context from IndexedDB
+    // Frontend is the source of truth - DO has no storage
+    // ============================================================
     const contextArray = (() => {
       // Use filteredComments (what's actually displayed on screen)
       const displayedMessages = filteredComments;
       
-      console.log('[DEBUG CONTEXT] filteredComments.length:', displayedMessages.length);
-      console.log('[DEBUG CONTEXT] isFilterEnabled:', isFilterEnabled);
+      // ALWAYS send context - max 200 messages (100 human + 100 AI)
+      const MAX_CONTEXT = 200;
+      const messages = displayedMessages.slice(-MAX_CONTEXT);
       
-      // If filters are active, ALWAYS send context (even if empty)
-      // This prevents bot from fetching unfiltered messages from KV
-      if (isFilterEnabled) {
-        // Special case: God Mode doesn't use context from human message
-        // Each entity builds its own context during serial processing
-        if (urlEntity === 'god-mode') {
-          console.log('[CommentsStream] God Mode - sending undefined context (builds own context internally)');
-          return undefined;  // God Mode doesn't need frontend context
-        }
-        
-        const messages = displayedMessages.slice(-(urlNom || displayedMessages.length));
-        console.log(`[CommentsStream] Filter active - sending ${messages.length} messages as context`);
-        // Return empty array (not undefined) if no messages - tells bot "use nothing, don't fetch"
-        return messages.map(m => `${m.username}: ${m.text}`);
-      }
+      console.log(`[CommentsStream] MEMORY-ONLY: Sending ${messages.length} messages as context (max ${MAX_CONTEXT})`);
       
-      // Filters inactive - only send context if nom specified in URL
-      if (urlNom) {
-        const messages = displayedMessages.slice(-urlNom);
-        console.log(`[CommentsStream] No filter, nom=${urlNom} - sending ${messages.length} messages`);
-        return messages.map(m => `${m.username}: ${m.text}`);
-      }
-      
-      // No filter, no nom - let bot use entity.nom from config
-      console.log(`[CommentsStream] No filter, no nom - bot will use entity.nom`);
-      return undefined;
+      // Return context array - bot will use this directly, no storage fetch
+      return messages.map(m => `${m.username}: ${m.text}`);
     })();
     
     // Pass ais parameter (AI identity override)
