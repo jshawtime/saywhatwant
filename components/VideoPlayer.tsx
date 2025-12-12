@@ -616,15 +616,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
         />
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black">
-          <div className="text-white text-center">
-            <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm opacity-60">Loading video...</p>
-          </div>
-        </div>
-      )}
+      {/* Loading State - No spinner, video first frame with breathing animation handles this */}
 
       {/* Error State */}
       {error && (
@@ -641,8 +633,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
         </div>
       )}
 
-      {/* Color Overlay */}
-      {currentVideo && !error && showOverlay && (
+      {/* Color Overlay - Disabled during intro video playback */}
+      {currentVideo && !error && showOverlay && !isPlayingIntro && (
         <div 
           className="absolute inset-0 pointer-events-none z-10"
           style={{
