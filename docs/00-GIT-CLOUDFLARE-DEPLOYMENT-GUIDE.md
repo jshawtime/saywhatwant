@@ -20,9 +20,11 @@ SAYWHATWANTv1/
 
 | Repo | Git Remote | Deploy Method | Domain |
 |------|------------|---------------|--------|
-| `saywhatwant` | github.com/jshawtime/saywhatwant | **Auto** (git push) | saywhatwant.app |
+| `saywhatwant` | github.com/jshawtime/saywhatwant | **Manual** (wrangler) | saywhatwant.app |
 | `HIGHERMIND-site` | github.com/pbosh/HIGHERMIND-site | **Manual** (wrangler) | highermind.ai |
 | `hm-server-deployment` | github.com (main) | **Local** (PM2) | N/A (local) |
+
+> ⚠️ **Both frontend sites require manual Cloudflare deployment after git push!**
 
 ---
 
@@ -30,8 +32,8 @@ SAYWHATWANTv1/
 
 ### Overview
 - **Technology**: Next.js 14, React, Tailwind CSS
-- **Hosting**: Cloudflare Pages
-- **Deployment**: Auto-deploy on git push to `main`
+- **Hosting**: Cloudflare Workers (static site)
+- **Deployment**: MANUAL via wrangler (NOT auto-deploy)
 - **Domain**: https://saywhatwant.app
 
 ### Git Info
@@ -42,41 +44,57 @@ git remote -v
 # Branch: main
 ```
 
-### Deploy Process
+### ⚠️ IMPORTANT: Two-Step Process
 
-**Git push triggers automatic Cloudflare Pages build:**
+**Git push does NOT deploy. You must manually deploy to Cloudflare.**
+
+### Deploy Process
 
 ```bash
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
 
-# 1. Make your changes
-
-# 2. Stage and commit
+# Step 1: Push to Git (for backup/version control)
 git add -A
 git commit -m "Description of changes"
-
-# 3. Push to main → triggers auto-deploy
 git push
 
-# 4. Monitor deploy at: https://dash.cloudflare.com
-#    Workers & Pages → say-what-want → Deployments
+# Step 2: Build and Deploy to Cloudflare Workers (REQUIRED)
+npm run build
+wrangler deploy
 ```
 
-### Build Command (for reference)
-Cloudflare Pages runs this automatically:
+### One-Liner (Git + Deploy)
+```bash
+git add -A && git commit -m "Message" && git push && npm run build && wrangler deploy
+```
+
+### Wrangler Configuration
+File: `wrangler.toml`
+```toml
+name = "say-what-want"
+main = "workers/site-worker.js"
+[site]
+bucket = "./out"
+```
+
+### Build Command
 ```bash
 npm run build
-# Which runs: NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") next build
+# Runs: NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") next build
+# Creates static site in ./out directory
 ```
 
-### Environment Variables (Cloudflare Dashboard)
-- `NEXT_PUBLIC_BUILD_TIME` - Set automatically
-- `NEXT_PUBLIC_APP_VERSION` - Version for force-refresh system
+### Deploy Command
+```bash
+wrangler deploy
+# Uploads ./out to Cloudflare Workers
+# Deploys to saywhatwant.app
+```
 
 ### Typical Deploy Time
-- Build: ~1-2 minutes
-- Deploy: ~30 seconds
-- Total: ~2-3 minutes after push
+- Build: ~30-60 seconds
+- Deploy: ~10-20 seconds
+- Total: ~1 minute
 
 ### Verify Deployment
 ```bash
@@ -232,9 +250,10 @@ pm2 delete all              # Remove all workers
 When you've made changes across multiple repos:
 
 ```bash
-# 1. saywhatwant (auto-deploys on push)
+# 1. saywhatwant (needs manual deploy)
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
 git add -A && git commit -m "Changes to frontend" && git push
+npm run build && wrangler deploy
 
 # 2. HIGHERMIND-site (needs manual deploy)
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/HIGHERMIND-site
@@ -335,8 +354,8 @@ pm2 restart all
 |--------|-------------|-----------------|---------------------|
 | **Git Branch** | main | master | main |
 | **Git Push** | `git push` | `git push origin master` | `git push` |
-| **Deploy Trigger** | Auto on push | Manual command | Manual (PM2) |
-| **Deploy Command** | N/A | `npx @opennextjs/cloudflare build && deploy` | `npm run build && pm2 restart all` |
+| **Deploy Trigger** | Manual command | Manual command | Manual (PM2) |
+| **Deploy Command** | `npm run build && wrangler deploy` | `npx @opennextjs/cloudflare build && deploy` | `npm run build && pm2 restart all` |
 | **Verify** | curl saywhatwant.app | curl highermind.ai | `pm2 list` |
 
 ---
