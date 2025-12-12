@@ -395,7 +395,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
           src={currentVideo.url}
           autoPlay
           loop={isLoopMode}
-          muted={true}
+          muted={!isPlayingIntro}  // Audio ON for intro videos, OFF for backgrounds
           playsInline
           onEnded={handleVideoEnded}
           onError={(e) => {
