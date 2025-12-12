@@ -25,6 +25,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   const [needsUserInteraction, setNeedsUserInteraction] = useState(false); // Autoplay blocked, needs tap
   const [isBuffering, setIsBuffering] = useState(false); // Buffering state for intro videos
   const [canPlayThrough, setCanPlayThrough] = useState(false); // Has enough buffer to play through
+  const [versionCheckPassed, setVersionCheckPassed] = useState(false); // Wait for version check before playing intro
   // userColor now comes from props - removed duplicate state
   const [showOverlay, setShowOverlay] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
@@ -46,10 +47,52 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
     'hue', 'saturation', 'color', 'luminosity'
   ];
 
-  // Fetch manifest and initialize videos
+  // Check if version check has passed before loading intro video
+  // This prevents the video from starting and then reloading due to version mismatch
   useEffect(() => {
-    loadVideoManifest();
+    const CURRENT_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0';
+    const lastReloadVersion = localStorage.getItem('last_reload_version');
+    
+    // If version matches, we've already passed the version check (or no mismatch)
+    if (lastReloadVersion === CURRENT_VERSION) {
+      console.log('[VideoPlayer] Version check already satisfied, proceeding immediately');
+      setVersionCheckPassed(true);
+      return;
+    }
+    
+    // Otherwise, wait for version check to complete (max 5 seconds)
+    // The version check happens on first API poll (~3s) + 1s grace = ~4s
+    // We wait 5s to be safe, then proceed even if no reload happened (no version mismatch)
+    console.log('[VideoPlayer] Waiting for version check (max 5s)...');
+    
+    const checkInterval = setInterval(() => {
+      const currentReloadVersion = localStorage.getItem('last_reload_version');
+      if (currentReloadVersion === CURRENT_VERSION) {
+        console.log('[VideoPlayer] Version check passed!');
+        setVersionCheckPassed(true);
+        clearInterval(checkInterval);
+      }
+    }, 500);
+    
+    // Fallback: After 5 seconds, proceed anyway (no version mismatch occurred)
+    const fallbackTimeout = setTimeout(() => {
+      clearInterval(checkInterval);
+      console.log('[VideoPlayer] Version check timeout - proceeding (no mismatch detected)');
+      setVersionCheckPassed(true);
+    }, 5000);
+    
+    return () => {
+      clearInterval(checkInterval);
+      clearTimeout(fallbackTimeout);
+    };
   }, []);
+
+  // Fetch manifest and initialize videos (only after version check passes)
+  useEffect(() => {
+    if (versionCheckPassed) {
+      loadVideoManifest();
+    }
+  }, [versionCheckPassed]);
 
   // Load video manifest and initialize
   const loadVideoManifest = async () => {
