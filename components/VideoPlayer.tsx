@@ -22,6 +22,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   const [isLoopMode, setIsLoopMode] = useState(false);
   const [isPlayingIntro, setIsPlayingIntro] = useState(false); // Track if currently playing intro
   const [introPlayed, setIntroPlayed] = useState(false); // Track if intro has been played this session
+  const [needsUserInteraction, setNeedsUserInteraction] = useState(false); // Autoplay blocked, needs tap
   // userColor now comes from props - removed duplicate state
   const [showOverlay, setShowOverlay] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
@@ -328,6 +329,45 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Handle autoplay for intro videos with audio
+  // Browsers block autoplay with audio until user interaction
+  useEffect(() => {
+    if (isPlayingIntro && videoRef.current && currentVideo) {
+      const video = videoRef.current;
+      
+      // Try to play with audio
+      const playPromise = video.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Autoplay succeeded
+            console.log('[VideoPlayer] Intro autoplay succeeded');
+            setNeedsUserInteraction(false);
+          })
+          .catch((error) => {
+            // Autoplay was blocked - need user interaction
+            console.log('[VideoPlayer] Intro autoplay blocked, needs user tap:', error.message);
+            setNeedsUserInteraction(true);
+          });
+      }
+    }
+  }, [isPlayingIntro, currentVideo]);
+
+  // Handle tap to play when autoplay is blocked
+  const handleTapToPlay = () => {
+    if (videoRef.current) {
+      videoRef.current.play()
+        .then(() => {
+          setNeedsUserInteraction(false);
+          console.log('[VideoPlayer] Manual play succeeded after tap');
+        })
+        .catch((err) => {
+          console.error('[VideoPlayer] Manual play failed:', err);
+        });
+    }
+  };
+
   // Listen for shared video events
   useEffect(() => {
     const handlePlaySharedVideo = (event: CustomEvent) => {
@@ -405,6 +445,38 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
             setError('Failed to play video');
           }}
         />
+      )}
+
+      {/* Tap to Play Overlay - shown when autoplay with audio is blocked */}
+      {needsUserInteraction && isPlayingIntro && currentVideo && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/60 cursor-pointer z-20"
+          onClick={handleTapToPlay}
+        >
+          <div className="text-center">
+            <div 
+              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-2"
+              style={{ 
+                backgroundColor: `${userColorRgb}20`,
+                borderColor: userColorRgb 
+              }}
+            >
+              <svg 
+                className="w-10 h-10 ml-1" 
+                fill={userColorRgb} 
+                viewBox="0 0 24 24"
+              >
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+            <p className="text-lg font-medium" style={{ color: userColorRgb }}>
+              Tap to Play
+            </p>
+            <p className="text-sm opacity-60 mt-1" style={{ color: userColorRgb }}>
+              with audio
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Hidden Preload Video */}
