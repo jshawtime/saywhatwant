@@ -18,13 +18,18 @@ SAYWHATWANTv1/
 
 ## Quick Reference
 
-| Repo | Git Remote | Deploy Method | Domain |
-|------|------------|---------------|--------|
-| `saywhatwant` | github.com/jshawtime/saywhatwant | **Manual** (wrangler) | saywhatwant.app |
-| `HIGHERMIND-site` | github.com/pbosh/HIGHERMIND-site | **Manual** (wrangler) | highermind.ai |
-| `hm-server-deployment` | github.com (main) | **Local** (PM2) | N/A (local) |
+| Component | Git Remote | Deploy Method | Domain |
+|-----------|------------|---------------|--------|
+| **saywhatwant UI** | github.com/jshawtime/saywhatwant | **Auto** (git push) | saywhatwant.app |
+| **saywhatwant Worker** | (same repo) | **Manual** (wrangler) | (KV/API bindings) |
+| **HIGHERMIND-site** | github.com/pbosh/HIGHERMIND-site | **Manual** (wrangler) | highermind.ai |
+| **hm-server-deployment** | github.com (main) | **Local** (PM2) | N/A (local) |
 
-> ⚠️ **Both frontend sites require manual Cloudflare deployment after git push!**
+> **4 Deployment Paths:**
+> 1. saywhatwant UI → Git push auto-deploys via Cloudflare Pages
+> 2. saywhatwant Worker → Manual `wrangler deploy`
+> 3. HIGHERMIND-site → Manual `npx @opennextjs/cloudflare build && deploy`
+> 4. hm-server-deployment → Local `npm run build && pm2 restart all`
 
 ---
 
@@ -32,8 +37,7 @@ SAYWHATWANTv1/
 
 ### Overview
 - **Technology**: Next.js 14, React, Tailwind CSS
-- **Hosting**: Cloudflare Workers (static site)
-- **Deployment**: MANUAL via wrangler (NOT auto-deploy)
+- **Hosting**: Cloudflare Pages (UI) + Cloudflare Workers (API/KV)
 - **Domain**: https://saywhatwant.app
 
 ### Git Info
@@ -44,28 +48,50 @@ git remote -v
 # Branch: main
 ```
 
-### ⚠️ IMPORTANT: Two-Step Process
+### ⚠️ TWO Deployment Paths
 
-**Git push does NOT deploy. You must manually deploy to Cloudflare.**
+This repo has **two separate deployment targets**:
 
-### Deploy Process
+| Component | Deploy Method | When to Use |
+|-----------|---------------|-------------|
+| **UI/Frontend** | Git push (auto) | React components, CSS, pages |
+| **Worker** | Manual wrangler | KV bindings, API routes, worker code |
+
+---
+
+### Path A: UI Changes (Auto-Deploy)
+
+**For changes to:** React components, styles, pages, frontend logic
 
 ```bash
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
 
-# Step 1: Push to Git (for backup/version control)
+# Just push to git - Cloudflare Pages auto-deploys
 git add -A
 git commit -m "Description of changes"
 git push
 
-# Step 2: Build and Deploy to Cloudflare Workers (REQUIRED)
-npm run build
-wrangler deploy
+# ✅ Done! Cloudflare Pages will auto-build and deploy
 ```
 
-### One-Liner (Git + Deploy)
+**Monitor at:** https://dash.cloudflare.com → Pages → say-what-want
+
+---
+
+### Path B: Worker Changes (Manual Deploy)
+
+**For changes to:** Worker code, KV bindings, wrangler.toml, API routes
+
 ```bash
-git add -A && git commit -m "Message" && git push && npm run build && wrangler deploy
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
+
+# 1. Push to git (for version control)
+git add -A
+git commit -m "Description of changes"
+git push
+
+# 2. Deploy worker manually
+wrangler deploy
 ```
 
 ### Wrangler Configuration
@@ -75,26 +101,24 @@ name = "say-what-want"
 main = "workers/site-worker.js"
 [site]
 bucket = "./out"
+
+[[kv_namespaces]]
+binding = "COMMENTS_KV"
+id = "ddf6162d4c874d52bb6e41d1c3889a0f"
 ```
 
-### Build Command
-```bash
-npm run build
-# Runs: NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") next build
-# Creates static site in ./out directory
-```
+---
 
-### Deploy Command
-```bash
-wrangler deploy
-# Uploads ./out to Cloudflare Workers
-# Deploys to saywhatwant.app
-```
+### When to Use Which?
 
-### Typical Deploy Time
-- Build: ~30-60 seconds
-- Deploy: ~10-20 seconds
-- Total: ~1 minute
+| Change Type | Deploy Method |
+|-------------|---------------|
+| VideoPlayer.tsx | Git push (auto) |
+| CommentsStream.tsx | Git push (auto) |
+| CSS/Tailwind | Git push (auto) |
+| wrangler.toml | `wrangler deploy` |
+| workers/site-worker.js | `wrangler deploy` |
+| KV namespace changes | `wrangler deploy` |
 
 ### Verify Deployment
 ```bash
@@ -245,25 +269,28 @@ pm2 delete all              # Remove all workers
 
 ---
 
-## Complete Workflow: All 3 Repos
+## Complete Workflow: All 4 Deployment Paths
 
 When you've made changes across multiple repos:
 
 ```bash
-# 1. saywhatwant (needs manual deploy)
+# 1. saywhatwant UI (auto-deploy on git push)
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
 git add -A && git commit -m "Changes to frontend" && git push
-npm run build && wrangler deploy
+# ✅ Cloudflare Pages auto-deploys
 
-# 2. HIGHERMIND-site (needs manual deploy)
+# 2. saywhatwant Worker (if KV/worker changes)
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
+wrangler deploy
+
+# 3. HIGHERMIND-site (manual deploy)
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/HIGHERMIND-site
 git add -A && git commit -m "Changes to gallery" && git push origin master
 npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare deploy
 
-# 3. hm-server-deployment (local rebuild)
+# 4. hm-server-deployment (local rebuild)
 cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/hm-server-deployment
 git add -A && git commit -m "Changes to backend" && git push
-# If code changed:
 cd AI-Bot-Deploy && npm run build && pm2 restart all
 ```
 
@@ -350,13 +377,13 @@ pm2 restart all
 
 ## Summary Table
 
-| Action | saywhatwant | HIGHERMIND-site | hm-server-deployment |
-|--------|-------------|-----------------|---------------------|
-| **Git Branch** | main | master | main |
-| **Git Push** | `git push` | `git push origin master` | `git push` |
-| **Deploy Trigger** | Manual command | Manual command | Manual (PM2) |
-| **Deploy Command** | `npm run build && wrangler deploy` | `npx @opennextjs/cloudflare build && deploy` | `npm run build && pm2 restart all` |
-| **Verify** | curl saywhatwant.app | curl highermind.ai | `pm2 list` |
+| Action | saywhatwant UI | saywhatwant Worker | HIGHERMIND-site | hm-server-deployment |
+|--------|----------------|-------------------|-----------------|---------------------|
+| **Git Branch** | main | main | master | main |
+| **Git Push** | `git push` | `git push` | `git push origin master` | `git push` |
+| **Deploy Trigger** | Auto (Pages) | Manual | Manual | Manual (PM2) |
+| **Deploy Command** | N/A (auto) | `wrangler deploy` | `npx @opennextjs/cloudflare build && deploy` | `npm run build && pm2 restart all` |
+| **Verify** | curl saywhatwant.app | curl saywhatwant.app | curl highermind.ai | `pm2 list` |
 
 ---
 
