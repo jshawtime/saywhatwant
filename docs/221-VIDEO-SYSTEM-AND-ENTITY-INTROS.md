@@ -25,10 +25,10 @@
 
 ## 2. Video Types
 
-| Type | Naming | Behavior |
-|------|--------|----------|
-| **Background** | `sww-XXXXX.mp4` | Random shuffle playback |
-| **Entity Intro** | `[entity-id].mov` | Plays once via URL param |
+| Type | Naming | Behavior | Audio |
+|------|--------|----------|-------|
+| **Background** | `sww-XXXXX.mp4` | Random shuffle playback | 🔇 Muted |
+| **Entity Intro** | `[entity-id].mov` | Plays once via URL param | 🔊 Sound ON |
 
 ---
 
