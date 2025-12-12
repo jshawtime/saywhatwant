@@ -36,16 +36,23 @@
 
 ### URL Parameter Control
 
-Intro videos are triggered **manually via URL parameter**:
+Intro videos are triggered **manually via URL hash parameter**:
 
 ```
-?entity=the-eternal&intro-video=true
+#entity=the-eternal&intro-video=true
 ```
+
+> **Note**: App uses hash-based params (`#`) not query params (`?`)
 
 | URL | Behavior |
 |-----|----------|
-| `?entity=the-eternal` | Background videos only |
-| `?entity=the-eternal&intro-video=true` | Play intro → then backgrounds |
+| `#entity=the-eternal` | Background videos only |
+| `#entity=the-eternal&intro-video=true` | Play intro → then backgrounds |
+
+**Full example URL:**
+```
+https://saywhatwant.app/#u=Human:080212195-xxx+TheEternal:080187169-xxx&entity=the-eternal&intro-video=true
+```
 
 ### How It Works
 
