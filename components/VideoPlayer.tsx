@@ -57,11 +57,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
       console.log(`[VideoPlayer] Using ${videoSource.type} video source`);
 
       // Check URL params for intro video trigger
-      const urlParams = new URLSearchParams(window.location.search);
+      // App uses hash-based params (#...&param=value) not query params (?param=value)
+      const hash = window.location.hash.slice(1); // Remove leading #
+      const urlParams = new URLSearchParams(hash);
       const introVideoParam = urlParams.get('intro-video');
       const entityParam = urlParams.get('entity');
       
-      console.log(`[VideoPlayer] URL params - intro-video: ${introVideoParam}, entity: ${entityParam}`);
+      console.log(`[VideoPlayer] URL hash params - intro-video: ${introVideoParam}, entity: ${entityParam}`);
 
       // Fetch video manifest
       const manifestUrl = videoSource.manifestUrl;
