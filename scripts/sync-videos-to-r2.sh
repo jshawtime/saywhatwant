@@ -96,29 +96,15 @@ fi
 
 echo -e "\n${GREEN}Found ${LOCAL_COUNT} video(s) in source folder${NC}"
 
-# Ensure rclone is installed
-if ! command -v rclone &> /dev/null; then
-    echo -e "\n${YELLOW}Installing rclone...${NC}"
-    brew install rclone
+# Ensure wrangler is available
+if ! command -v wrangler &> /dev/null; then
+    echo -e "\n${YELLOW}Installing wrangler...${NC}"
+    npm install -g wrangler
 fi
 
-# Configure rclone for R2
-echo -e "\n${YELLOW}Configuring rclone...${NC}"
-mkdir -p ~/.config/rclone
-cat > ~/.config/rclone/rclone.conf << EOF
-[r2]
-type = s3
-provider = Cloudflare
-access_key_id = ${R2_ACCESS_KEY_ID}
-secret_access_key = ${R2_SECRET_ACCESS_KEY}
-endpoint = https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
-acl = private
-EOF
-echo -e "${GREEN}✓ rclone configured${NC}"
-
-# Get list of existing files in R2
+# Get list of existing files in R2 using wrangler
 echo -e "\n${YELLOW}Fetching existing files from R2...${NC}"
-R2_FILES=$(rclone lsf r2:${R2_BUCKET_NAME} 2>/dev/null)
+R2_FILES=$(wrangler r2 object list sww-videos --remote 2>/dev/null | grep -E '\.(mp4|mov)' | awk '{print $NF}')
 R2_COUNT=$(echo "$R2_FILES" | grep -c . 2>/dev/null || echo "0")
 echo -e "${GREEN}✓ Found ${R2_COUNT} files in R2${NC}"
 
@@ -171,7 +157,7 @@ for video_path in "${TO_UPLOAD[@]}"; do
     filename=$(basename "$video_path")
     echo -ne "${YELLOW}Uploading ${filename}... ${NC}"
     
-    if rclone copy "$video_path" r2:${R2_BUCKET_NAME}/ --progress 2>/dev/null; then
+    if wrangler r2 object put "${R2_BUCKET_NAME}/${filename}" --file="$video_path" --remote 2>/dev/null; then
         echo -e "${GREEN}✓${NC}"
         SUCCESS=$((SUCCESS + 1))
     else
@@ -188,8 +174,8 @@ fi
 # Regenerate manifest
 echo -e "\n${CYAN}═══ Regenerating manifest ═══${NC}"
 
-# Get all files from R2 for manifest
-ALL_R2_FILES=$(rclone lsf r2:${R2_BUCKET_NAME} 2>/dev/null | grep -E '\.(mp4|mov)$')
+# Get all files from R2 for manifest using wrangler
+ALL_R2_FILES=$(wrangler r2 object list ${R2_BUCKET_NAME} --remote 2>/dev/null | grep -E '\.(mp4|mov)' | awk '{print $NF}')
 TOTAL_VIDEOS=$(echo "$ALL_R2_FILES" | grep -c . 2>/dev/null || echo "0")
 
 # Generate manifest JSON
@@ -245,7 +231,7 @@ echo -e "${GREEN}✓ Copied to: public/r2-video-manifest.json${NC}"
 
 # Upload manifest to R2
 echo -e "\n${YELLOW}Uploading manifest to R2...${NC}"
-if rclone copy "$MANIFEST_FILE" r2:${R2_BUCKET_NAME}/ 2>/dev/null; then
+if wrangler r2 object put "${R2_BUCKET_NAME}/video-manifest.json" --file="$MANIFEST_FILE" --remote 2>/dev/null; then
     echo -e "${GREEN}✓ Manifest uploaded to R2${NC}"
 else
     echo -e "${RED}✗ Failed to upload manifest${NC}"

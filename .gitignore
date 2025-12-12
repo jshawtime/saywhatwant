@@ -58,3 +58,5 @@ playwright-report/
 test-results/
 logs/
 # Trigger deploy
+videos-to-upload/*.mov
+videos-to-upload/*.mp4

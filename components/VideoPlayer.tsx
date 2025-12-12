@@ -20,6 +20,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoopMode, setIsLoopMode] = useState(false);
+  const [isPlayingIntro, setIsPlayingIntro] = useState(false); // Track if currently playing intro
+  const [introPlayed, setIntroPlayed] = useState(false); // Track if intro has been played this session
   // userColor now comes from props - removed duplicate state
   const [showOverlay, setShowOverlay] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
@@ -53,6 +55,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
     try {
       const videoSource = getVideoSource();
       console.log(`[VideoPlayer] Using ${videoSource.type} video source`);
+
+      // Check URL params for intro video trigger
+      const urlParams = new URLSearchParams(window.location.search);
+      const introVideoParam = urlParams.get('intro-video');
+      const entityParam = urlParams.get('entity');
+      
+      console.log(`[VideoPlayer] URL params - intro-video: ${introVideoParam}, entity: ${entityParam}`);
 
       // Fetch video manifest
       const manifestUrl = videoSource.manifestUrl;
@@ -92,17 +101,48 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
 
       setAvailableVideos(processedVideos);
       
-      // Load initial random video
-      const randomIndex = Math.floor(Math.random() * processedVideos.length);
-      const selectedVideo = processedVideos[randomIndex];
+      // Check if we should play an intro video
+      // Conditions: intro-video=true AND entity param exists AND intro video exists for that entity
+      let selectedVideo: VideoItem | null = null;
+      
+      if (introVideoParam === 'true' && entityParam && !introPlayed) {
+        // Find intro video for this entity
+        const introVideo = processedVideos.find(v => 
+          v.isIntro === true && v.entityId === entityParam
+        );
+        
+        if (introVideo) {
+          console.log(`[VideoPlayer] Playing intro video for entity: ${entityParam}`, introVideo.key);
+          selectedVideo = introVideo;
+          setIsPlayingIntro(true);
+          setIntroPlayed(true);
+        } else {
+          console.log(`[VideoPlayer] No intro video found for entity: ${entityParam}`);
+        }
+      }
+      
+      // If no intro video, select random background video
+      if (!selectedVideo) {
+        // Filter out intro videos for random selection
+        const backgroundVideos = processedVideos.filter(v => !v.isIntro);
+        if (backgroundVideos.length > 0) {
+          const randomIndex = Math.floor(Math.random() * backgroundVideos.length);
+          selectedVideo = backgroundVideos[randomIndex];
+        } else {
+          // Fallback: use any video
+          const randomIndex = Math.floor(Math.random() * processedVideos.length);
+          selectedVideo = processedVideos[randomIndex];
+        }
+      }
+      
       setCurrentVideo(selectedVideo);
       
       // Preload next random video if not in loop mode
-      if (!isLoopMode) {
+      if (!isLoopMode && selectedVideo) {
         preloadNextRandomVideo(processedVideos, selectedVideo);
       }
       
-      console.log(`[VideoPlayer] Selected video:`, selectedVideo.key);
+      console.log(`[VideoPlayer] Selected video:`, selectedVideo?.key);
       
     } catch (err) {
       console.error('[VideoPlayer] Error loading video:', err);
@@ -113,19 +153,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
     }
   };
 
-  // Preload next random video
+  // Preload next random video (excludes intro videos for normal playback)
   const preloadNextRandomVideo = (videos: VideoItem[], currentVid: VideoItem) => {
-    if (videos.length <= 1) return;
+    // Filter out intro videos for random selection
+    const backgroundVideos = videos.filter(v => !v.isIntro);
+    const videosToUse = backgroundVideos.length > 0 ? backgroundVideos : videos;
+    
+    if (videosToUse.length <= 1) return;
     
     // Pure random selection
-    let randomIndex = Math.floor(Math.random() * videos.length);
+    let randomIndex = Math.floor(Math.random() * videosToUse.length);
     
     // Ensure we don't select the same video
-    while (videos[randomIndex].key === currentVid.key && videos.length > 1) {
-      randomIndex = Math.floor(Math.random() * videos.length);
+    while (videosToUse[randomIndex].key === currentVid.key && videosToUse.length > 1) {
+      randomIndex = Math.floor(Math.random() * videosToUse.length);
     }
     
-    const next = videos[randomIndex];
+    const next = videosToUse[randomIndex];
     setNextVideo(next);
     
     // Preload the video
@@ -137,6 +181,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
 
   // Handle video ended
   const handleVideoEnded = () => {
+    // If intro video just finished, switch to random backgrounds
+    if (isPlayingIntro) {
+      console.log('[VideoPlayer] Intro video ended, switching to random backgrounds');
+      setIsPlayingIntro(false);
+      
+      // Select random background video (exclude intro videos)
+      const backgroundVideos = availableVideos.filter(v => !v.isIntro);
+      if (backgroundVideos.length > 0) {
+        const randomIndex = Math.floor(Math.random() * backgroundVideos.length);
+        const selectedVideo = backgroundVideos[randomIndex];
+        setCurrentVideo(selectedVideo);
+        preloadNextRandomVideo(backgroundVideos, selectedVideo);
+      }
+      return;
+    }
+    
     if (!isLoopMode && availableVideos.length > 0) {
       // Switch to next preloaded video
       if (nextVideo) {
@@ -145,11 +205,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
         // Preload another random video
         preloadNextRandomVideo(availableVideos, nextVideo);
       } else {
-        // Fallback: load a new random video
-        const randomIndex = Math.floor(Math.random() * availableVideos.length);
-        const selectedVideo = availableVideos[randomIndex];
+        // Fallback: load a new random video (exclude intros)
+        const backgroundVideos = availableVideos.filter(v => !v.isIntro);
+        const videosToUse = backgroundVideos.length > 0 ? backgroundVideos : availableVideos;
+        const randomIndex = Math.floor(Math.random() * videosToUse.length);
+        const selectedVideo = videosToUse[randomIndex];
         setCurrentVideo(selectedVideo);
-        preloadNextRandomVideo(availableVideos, selectedVideo);
+        preloadNextRandomVideo(videosToUse, selectedVideo);
       }
     }
     // If loop mode is on, the video will naturally loop via the loop attribute

@@ -48,7 +48,10 @@ export interface VideoManifest {
 export interface VideoItem {
   key: string;
   url: string;
-  size: number;
-  lastModified: string;
+  size?: number;
+  lastModified?: string;
   contentType: string;
+  // Entity intro video fields
+  isIntro?: boolean;
+  entityId?: string;
 }
