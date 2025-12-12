@@ -2,13 +2,20 @@
 
 **Tags:** #debugging #copy-all #verbose #message-ids #diagnostics  
 **Created:** October 26, 2025  
-**Status:** ✅ COMPLETE - Deployed and working
+**Status:** ⚠️ HISTORICAL - KV architecture replaced
 
-## Cache Rebuild Issue Found
+> **⚠️ HISTORICAL DOCUMENT**  
+> This doc references the old KV/cache architecture which has been replaced.  
+> Current system uses **memory-only Durable Objects** (see Doc 220).  
+> The "Copy All Verbose" debug feature still works, but the KV/cache sections below are obsolete.
 
-After initial implementation, discovered 3-second TTL causing messages to get orphaned between cache expirations. When cache expires, messages posted during that window were lost.
+---
 
-**Solution:** Implemented Option 2 (Cache-Aside with Lazy Rebuild) - rebuild cache from actual KV keys when expired, never start fresh.
+## ~~Cache Rebuild Issue Found~~ (OBSOLETE - No longer using KV cache)
+
+~~After initial implementation, discovered 3-second TTL causing messages to get orphaned between cache expirations. When cache expires, messages posted during that window were lost.~~
+
+~~**Solution:** Implemented Option 2 (Cache-Aside with Lazy Rebuild) - rebuild cache from actual KV keys when expired, never start fresh.~~
 
 ### Cache Rebuild Implementation ✅
 

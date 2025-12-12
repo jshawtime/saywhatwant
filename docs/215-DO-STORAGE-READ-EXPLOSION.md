@@ -2,8 +2,12 @@
 
 **Tags:** #critical #cost #durable-objects #optimization #storage  
 **Created:** November 28, 2025  
-**Status:** 🔴 CRITICAL - Production cost issue requiring immediate fix  
-**Priority:** P0 - Blocking production scaling
+**Status:** ✅ RESOLVED - See Doc 220 for solution  
+**Resolution:** Memory-only architecture implemented (Nov 30, 2025)
+
+> **⚠️ HISTORICAL DOCUMENT**  
+> This doc describes the investigation that led to the memory-only migration.  
+> For current architecture and costs, see **Doc 220** and **Doc 153**.
 
 ---
 
