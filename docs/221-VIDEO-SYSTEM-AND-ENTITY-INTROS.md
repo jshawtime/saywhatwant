@@ -52,22 +52,14 @@ Intro videos are triggered via **URL hash parameter**:
 ```
 1. User clicks on highermind.ai
 2. Iframe opens saywhatwant.app with #intro-video=true
-3. WAIT for version check (prevents reload mid-playback)
-4. Video loads (first frame visible)
-5. BREATHING ANIMATION while buffering
-6. Wait for canplaythrough + opacity at 100%
-7. Play video with audio
-8. After intro ends → random backgrounds (muted)
+3. Video loads immediately (first frame visible)
+4. BREATHING ANIMATION while buffering
+5. Wait for canplaythrough + opacity at 100%
+6. Play video with audio
+7. After intro ends → random backgrounds (muted)
 ```
 
-### Version Check Wait
-
-The app has a version check system that may reload the page within ~4 seconds if there's a version mismatch. To prevent video restart:
-
-1. Check if `last_reload_version` in localStorage matches current version
-2. If yes → proceed immediately (version check satisfied)
-3. If no → wait up to 5 seconds for version check to complete
-4. After 5s fallback → proceed (no mismatch detected)
+> **Note:** If a version mismatch causes a page reload (rare, only after deployments), the video simply restarts. No artificial delay needed.
 
 ### Buffering UX (Intro Videos Only)
 
@@ -176,7 +168,7 @@ curl -sI "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/[filename]"
 | Autoplay with audio | ✅ |
 | Buffering breathing animation | ✅ |
 | Natural play on buffer + peak opacity | ✅ |
-| Version check wait before playback | ✅ |
+| Immediate playback (no artificial delays) | ✅ |
 
 ---
 
