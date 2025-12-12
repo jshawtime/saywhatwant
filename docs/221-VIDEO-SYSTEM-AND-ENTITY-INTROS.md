@@ -1,8 +1,8 @@
 # Doc 221: Video System & Entity Intro Videos
 
 > **Created**: December 12, 2025  
-> **Status**: Active  
-> **Purpose**: Video management, R2 uploads, and entity intro videos
+> **Updated**: December 12, 2025  
+> **Status**: Active
 
 ---
 
@@ -27,41 +27,117 @@
 
 | Type | Naming | Behavior | Audio |
 |------|--------|----------|-------|
-| **Background** | `sww-XXXXX.mp4` | Random shuffle playback | 🔇 Muted |
-| **Entity Intro** | `[entity-id].mov` | Plays once via URL param | 🔊 Sound ON |
+| **Background** | `sww-XXXXX.mp4` | Random shuffle, plays immediately | 🔇 Muted |
+| **Entity Intro** | `[entity-id].mov` | Buffer first, play once with breathing animation | 🔊 Sound ON |
 
 ---
 
 ## 3. Entity Intro Videos
 
-### URL Parameter Control
+### URL Trigger
 
-Intro videos are triggered **manually via URL hash parameter**:
+Intro videos are triggered via **URL hash parameter**:
 
 ```
 #entity=the-eternal&intro-video=true
 ```
-
-> **Note**: App uses hash-based params (`#`) not query params (`?`)
 
 | URL | Behavior |
 |-----|----------|
 | `#entity=the-eternal` | Background videos only |
 | `#entity=the-eternal&intro-video=true` | Play intro → then backgrounds |
 
-**Full example URL:**
+### Playback Flow
+
 ```
-https://saywhatwant.app/#u=Human:080212195-xxx+TheEternal:080187169-xxx&entity=the-eternal&intro-video=true
+1. User clicks on highermind.ai
+2. Iframe opens saywhatwant.app with #intro-video=true
+3. Video loads (first frame visible)
+4. BREATHING ANIMATION while buffering
+5. Wait for canplaythrough + opacity at 100%
+6. Play video with audio
+7. After intro ends → random backgrounds (muted)
 ```
 
-### How It Works
+### Buffering UX (Intro Videos Only)
 
-1. External site (you control) builds the URL with `intro-video=true`
-2. VideoPlayer reads URL param on load
-3. If `intro-video=true` AND entity has intro video in manifest → plays intro once
-4. After intro ends → continues with random background videos
+Large intro videos (~100MB) need buffer time. Bad UX = video starts then restarts.
 
-### Manifest Entry Format
+**Solution: Breathing Animation**
+
+```
+┌─────────────────────────────────────────────┐
+│  First frame visible                        │
+│  Opacity: 30% → 100% → 30% (1.5s cycle)     │
+│  Wait for: canplaythrough event             │
+│  Play when: buffered AND opacity at 100%    │
+└─────────────────────────────────────────────┘
+```
+
+| Phase | Opacity | Animating | Audio |
+|-------|---------|-----------|-------|
+| Buffering | 30%↔100% | Yes (breathing) | Silent |
+| Ready (peak 100%) | 100% | Stop | Play with sound |
+
+**CSS Animation:**
+```css
+@keyframes breathing {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.video-buffering {
+  animation: breathing 1.5s ease-in-out infinite;
+}
+```
+
+**Natural Transition Logic:**
+- Wait for `canplaythrough` event (sufficient buffer)
+- Wait for breathing cycle to reach 100% opacity
+- Then start playback → feels seamless
+
+---
+
+## 4. Iframe Embed (highermind.ai)
+
+Intro videos autoplay with sound via iframe from highermind.ai:
+
+```
+User clicks on highermind.ai
+        ↓
+User gesture captured
+        ↓
+Iframe opens with allow="autoplay"
+        ↓
+saywhatwant.app inherits autoplay permission
+        ↓
+Video plays with audio ✓
+```
+
+See `HIGHERMIND-site/docs/101-IFRAME-EMBED-INTEGRATION.md` for implementation.
+
+For adding to other domains, see **Doc 222**.
+
+---
+
+## 5. Adding New Videos
+
+### Upload to R2
+
+```bash
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
+
+# Upload video
+wrangler r2 object put sww-videos/[filename] --file=videos-to-upload/[filename] --remote
+
+# Upload manifest
+wrangler r2 object put sww-videos/video-manifest.json --file=public/r2-video-manifest.json --remote
+
+# Verify
+curl -sI "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/[filename]"
+```
+
+### Manifest Entry for Intro Video
 
 ```json
 {
@@ -75,83 +151,36 @@ https://saywhatwant.app/#u=Human:080212195-xxx+TheEternal:080187169-xxx&entity=t
 
 ---
 
-## 4. Adding New Videos
-
-### Step 1: Place in Upload Folder
-
-```
-saywhatwant/videos-to-upload/
-├── sww-newvid.mp4        # Background video
-└── the-eternal.mov       # Entity intro video
-```
-
-### Step 2: Upload to R2
-
-```bash
-cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
-
-# Single file upload
-wrangler r2 object put sww-videos/the-eternal.mov --file=videos-to-upload/the-eternal.mov --remote
-```
-
-### Step 3: Update Manifest
-
-Add entry to `public/r2-video-manifest.json`, then upload:
-
-```bash
-wrangler r2 object put sww-videos/video-manifest.json --file=public/r2-video-manifest.json --remote
-```
-
-### Step 4: Verify
-
-```bash
-curl -sI "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/the-eternal.mov" | head -3
-```
-
----
-
-## 5. Implementation Status
+## 6. Implementation Status
 
 | Component | Status |
 |-----------|--------|
-| R2 bucket + CDN | ✅ Working |
-| Background video playback | ✅ Working |
-| Entity intro in R2 (`the-eternal.mov`) | ✅ Uploaded |
-| Manifest with intro metadata | ✅ Updated |
-| VideoItem type updated | ✅ Added `isIntro`, `entityId` fields |
-| URL param `intro-video=true` reading | ✅ Implemented |
-| VideoPlayer plays intro on load | ✅ Implemented |
-| Intro → random transition | ✅ Implemented |
-| Exclude intros from random shuffle | ✅ Implemented |
-| **TESTING** | ✅ Verified working (Dec 12, 2025) |
+| R2 bucket + CDN | ✅ |
+| Background video playback | ✅ |
+| Entity intro in R2 (`the-eternal.mov`) | ✅ |
+| Manifest with intro metadata | ✅ |
+| URL param `intro-video=true` | ✅ |
+| VideoPlayer intro detection | ✅ |
+| Intro → random transition | ✅ |
+| Iframe embed (highermind.ai) | ✅ |
+| Autoplay with audio | ✅ |
+| Buffering breathing animation | ✅ |
+| Natural play on buffer + peak opacity | ✅ |
 
 ---
 
-## 6. Quick Reference
-
-### Upload Commands
-
-```bash
-# Upload video
-wrangler r2 object put sww-videos/[filename] --file=videos-to-upload/[filename] --remote
-
-# Upload manifest
-wrangler r2 object put sww-videos/video-manifest.json --file=public/r2-video-manifest.json --remote
-
-# Verify video accessible
-curl -sI "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/[filename]"
-```
-
-### Key Files
+## 7. Key Files
 
 | File | Purpose |
 |------|---------|
-| `videos-to-upload/` | Stage videos before R2 upload |
-| `components/VideoPlayer.tsx` | Video player component |
+| `videos-to-upload/` | Stage videos before upload |
+| `components/VideoPlayer.tsx` | Video player with intro logic |
 | `public/r2-video-manifest.json` | Local manifest copy |
-| `config/video-source.ts` | R2/local toggle |
+| `types/index.ts` | VideoItem interface |
 
-### Cost
+---
+
+## 8. R2 Cost
 
 | Metric | Cost |
 |--------|------|

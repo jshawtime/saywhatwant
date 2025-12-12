@@ -1289,7 +1289,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       console.log(`[CommentsStream] MEMORY-ONLY: Sending ${messages.length} messages as context (max ${MAX_CONTEXT})`);
       
       // Return context array - bot will use this directly, no storage fetch
-      return messages.map(m => `${m.username}: ${m.text}`);
+        return messages.map(m => `${m.username}: ${m.text}`);
     })();
     
     // Pass ais parameter (AI identity override)

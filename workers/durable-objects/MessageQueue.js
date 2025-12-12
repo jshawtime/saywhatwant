@@ -162,9 +162,9 @@ export class MessageQueue {
     
     // Filter recent messages by timestamp (in memory, fast!)
     const filtered = this.recentMessages.filter(m => m.timestamp > after);
-    
+
     console.log('[MessageQueue] GET messages (memory):', filtered.length, 'of', this.recentMessages.length);
-    
+
     return this.jsonResponse({
       messages: filtered,
       version: "2.0.0"  // Memory-only version
@@ -188,7 +188,7 @@ export class MessageQueue {
     const pendingForBot = this.pendingQueue.slice(0, limit);
     
     console.log('[MessageQueue] GET pending (memory):', pendingForBot.length, 'messages');
-    
+
     return this.jsonResponse({
       pending: pendingForBot,
       platformOnly: [],
@@ -205,25 +205,25 @@ export class MessageQueue {
     
     // Find in in-memory pending queue
     const queueIndex = this.pendingQueue.findIndex(m => m.id === messageId);
-    
+      
     if (queueIndex === -1) {
       return this.jsonResponse({ success: false, error: 'Message not found in pending queue' }, 404);
     }
     
     const message = this.pendingQueue[queueIndex];
-    
-    if (message.botParams.status !== 'pending') {
-      return this.jsonResponse({
-        success: false,
-        error: `Message status is ${message.botParams.status}, not pending`
-      }, 409);
-    }
-    
+        
+        if (message.botParams.status !== 'pending') {
+          return this.jsonResponse({
+            success: false,
+            error: `Message status is ${message.botParams.status}, not pending`
+          }, 409);
+        }
+        
     // Update message status in memory
-    message.botParams.status = 'processing';
-    message.botParams.claimedBy = workerId;
-    message.botParams.claimedAt = Date.now();
-    
+        message.botParams.status = 'processing';
+        message.botParams.claimedBy = workerId;
+        message.botParams.claimedAt = Date.now();
+        
     // Remove from pending queue
     this.pendingQueue.splice(queueIndex, 1);
     
@@ -232,7 +232,7 @@ export class MessageQueue {
     if (recentIndex !== -1) {
       this.recentMessages[recentIndex] = message;
     }
-    
+        
     console.log('[MessageQueue] Claimed:', messageId, '(pending:', this.pendingQueue.length, ')');
     return this.jsonResponse({ success: true, message });
   }
@@ -303,7 +303,7 @@ export class MessageQueue {
       remainingPending: this.pendingQueue.length
     });
   }
-  
+
   /**
    * POST /api/queue/complete - Mark message as complete
    * MEMORY ONLY - updates in-memory state
@@ -313,21 +313,21 @@ export class MessageQueue {
     
     // Find in recent messages
     const recentMsg = this.recentMessages.find(m => m.id === messageId);
-    
+      
     if (!recentMsg) {
       console.error('[MessageQueue] Complete failed: Message not in memory:', messageId);
       return this.jsonResponse({ success: false, error: 'Message not found in memory' }, 404);
-    }
-    
+        }
+        
     // Update in-memory
     const completedAt = Date.now();
     if (recentMsg.botParams) {
       recentMsg.botParams.status = 'complete';
       recentMsg.botParams.completedAt = completedAt;
     }
-    
+        
     console.log('[MessageQueue] Completed:', messageId);
-    return this.jsonResponse({ success: true });
+        return this.jsonResponse({ success: true });
   }
   
   /**
@@ -340,12 +340,12 @@ export class MessageQueue {
     
     // Find in recent messages
     const recentMsg = this.recentMessages.find(m => m.id === messageId);
-    
+      
     if (!recentMsg) {
       console.error('[MessageQueue] PATCH failed: Message not in memory:', messageId);
       return this.jsonResponse({ success: false, error: 'Message not found in memory' }, 404);
-    }
-    
+  }
+
     // Update in-memory
     if (body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
     
@@ -357,7 +357,7 @@ export class MessageQueue {
    * GET /api/admin/stats - Get memory stats
    */
   getStats() {
-    return this.jsonResponse({
+    return this.jsonResponse({ 
       mode: 'memory-only',
       recentMessages: this.recentMessages.length,
       pendingQueue: this.pendingQueue.length,

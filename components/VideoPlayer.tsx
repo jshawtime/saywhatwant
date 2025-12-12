@@ -23,6 +23,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   const [isPlayingIntro, setIsPlayingIntro] = useState(false); // Track if currently playing intro
   const [introPlayed, setIntroPlayed] = useState(false); // Track if intro has been played this session
   const [needsUserInteraction, setNeedsUserInteraction] = useState(false); // Autoplay blocked, needs tap
+  const [isBuffering, setIsBuffering] = useState(false); // Buffering state for intro videos
+  const [canPlayThrough, setCanPlayThrough] = useState(false); // Has enough buffer to play through
   // userColor now comes from props - removed duplicate state
   const [showOverlay, setShowOverlay] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(1.0);  // Default, will read from CSS if available
@@ -34,6 +36,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   const nextVideoRef = useRef<HTMLVideoElement>(null);
   const blendMenuRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const breathingStartTime = useRef<number>(0); // Track when breathing animation started
 
   // Available blend modes
   const blendModes = [
@@ -115,10 +118,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
         );
         
         if (introVideo) {
-          console.log(`[VideoPlayer] Playing intro video for entity: ${entityParam}`, introVideo.key);
+          console.log(`[VideoPlayer] Loading intro video for entity: ${entityParam}`, introVideo.key);
           selectedVideo = introVideo;
           setIsPlayingIntro(true);
           setIntroPlayed(true);
+          setIsBuffering(true); // Start buffering state with breathing animation
+          setCanPlayThrough(false);
+          breathingStartTime.current = Date.now();
         } else {
           console.log(`[VideoPlayer] No intro video found for entity: ${entityParam}`);
         }
@@ -329,47 +335,93 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle autoplay for intro videos with audio
-  // Strategy: Start muted (guaranteed to play), then unmute immediately
-  // If unmute fails, show tap overlay for audio only (video keeps playing)
+  // Handle buffering and playback for intro videos
+  // Strategy: Wait for canplaythrough + breathing at 100% opacity, then play with audio
   useEffect(() => {
-    if (isPlayingIntro && videoRef.current && currentVideo) {
+    if (isPlayingIntro && videoRef.current && currentVideo && isBuffering) {
       const video = videoRef.current;
       
-      // Start muted to ensure playback begins
+      // Video starts paused with breathing animation
       video.muted = true;
+      video.pause();
       
-      const playPromise = video.play();
+      // Listen for canplaythrough event
+      const handleCanPlayThrough = () => {
+        console.log('[VideoPlayer] Intro video buffered sufficiently (canplaythrough)');
+        setCanPlayThrough(true);
+      };
       
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('[VideoPlayer] Intro video playing (muted initially)');
-            
-            // Now try to unmute - this is where user gesture matters
-            video.muted = false;
-            
-            // Check if unmute was allowed by checking if it's actually unmuted
-            // Some browsers silently ignore unmute without user gesture
-            setTimeout(() => {
-              if (video.muted) {
-                // Browser re-muted it - need user interaction for audio
-                console.log('[VideoPlayer] Browser blocked unmute, needs user tap for audio');
-                setNeedsUserInteraction(true);
-              } else {
-                console.log('[VideoPlayer] Intro playing with audio!');
-                setNeedsUserInteraction(false);
-              }
-            }, 100);
-          })
-          .catch((error) => {
-            // Even muted playback failed (very rare)
-            console.log('[VideoPlayer] Intro playback failed entirely:', error.message);
-            setNeedsUserInteraction(true);
-          });
-      }
+      video.addEventListener('canplaythrough', handleCanPlayThrough);
+      
+      // Also preload
+      video.load();
+      
+      return () => {
+        video.removeEventListener('canplaythrough', handleCanPlayThrough);
+      };
     }
-  }, [isPlayingIntro, currentVideo]);
+  }, [isPlayingIntro, currentVideo, isBuffering]);
+  
+  // When buffer is ready, wait for breathing cycle to hit 100% then play
+  useEffect(() => {
+    if (canPlayThrough && isBuffering && videoRef.current) {
+      const video = videoRef.current;
+      
+      // Calculate time to next 100% opacity point in breathing cycle
+      // Breathing: 1.5s cycle, 50% = peak (100% opacity)
+      const CYCLE_DURATION = 1500; // 1.5 seconds
+      const elapsed = Date.now() - breathingStartTime.current;
+      const cyclePosition = elapsed % CYCLE_DURATION;
+      const peakPosition = CYCLE_DURATION / 2; // 750ms = peak (100% opacity)
+      
+      let waitTime: number;
+      if (cyclePosition < peakPosition) {
+        // Before peak, wait until peak
+        waitTime = peakPosition - cyclePosition;
+      } else {
+        // After peak, wait until next peak
+        waitTime = CYCLE_DURATION - cyclePosition + peakPosition;
+      }
+      
+      console.log(`[VideoPlayer] Waiting ${waitTime}ms for breathing peak before playing`);
+      
+      const playTimeout = setTimeout(() => {
+        // Stop buffering (stops breathing animation)
+        setIsBuffering(false);
+        
+        // Start playback
+        video.muted = true; // Start muted for guaranteed play
+        const playPromise = video.play();
+        
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('[VideoPlayer] Intro video playing (muted initially)');
+              
+              // Now try to unmute
+              video.muted = false;
+              
+              // Check if unmute was allowed
+              setTimeout(() => {
+                if (video.muted) {
+                  console.log('[VideoPlayer] Browser blocked unmute, needs user tap for audio');
+                  setNeedsUserInteraction(true);
+                } else {
+                  console.log('[VideoPlayer] Intro playing with audio!');
+                  setNeedsUserInteraction(false);
+                }
+              }, 100);
+            })
+            .catch((error) => {
+              console.log('[VideoPlayer] Intro playback failed:', error.message);
+              setNeedsUserInteraction(true);
+            });
+        }
+      }, waitTime);
+      
+      return () => clearTimeout(playTimeout);
+    }
+  }, [canPlayThrough, isBuffering]);
 
   // Handle tap to enable audio when unmute was blocked
   const handleTapToPlay = () => {
@@ -444,17 +496,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
+      {/* Breathing Animation Keyframes */}
+      <style>{`
+        @keyframes breathing {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+        .video-breathing {
+          animation: breathing 1.5s ease-in-out infinite;
+        }
+      `}</style>
+
       {/* Main Video Element */}
       {currentVideo && !error && (
         <video
           ref={videoRef}
           key={currentVideo.key}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${isBuffering ? 'video-breathing' : ''}`}
           style={{ 
-            filter: `brightness(${videoBrightness})`
+            filter: `brightness(${videoBrightness})`,
+            opacity: isBuffering ? undefined : 1 // Let CSS animation control opacity when buffering
           }}
           src={currentVideo.url}
-          autoPlay
+          autoPlay={!isBuffering} // Don't autoplay while buffering intro
           loop={isLoopMode}
           muted={true}  // Always start muted for guaranteed autoplay; unmute via JS for intros
           playsInline
