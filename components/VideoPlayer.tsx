@@ -330,41 +330,60 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
   }, []);
 
   // Handle autoplay for intro videos with audio
-  // Browsers block autoplay with audio until user interaction
+  // Strategy: Start muted (guaranteed to play), then unmute immediately
+  // If unmute fails, show tap overlay for audio only (video keeps playing)
   useEffect(() => {
     if (isPlayingIntro && videoRef.current && currentVideo) {
       const video = videoRef.current;
       
-      // Try to play with audio
+      // Start muted to ensure playback begins
+      video.muted = true;
+      
       const playPromise = video.play();
       
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            // Autoplay succeeded
-            console.log('[VideoPlayer] Intro autoplay succeeded');
-            setNeedsUserInteraction(false);
+            console.log('[VideoPlayer] Intro video playing (muted initially)');
+            
+            // Now try to unmute - this is where user gesture matters
+            video.muted = false;
+            
+            // Check if unmute was allowed by checking if it's actually unmuted
+            // Some browsers silently ignore unmute without user gesture
+            setTimeout(() => {
+              if (video.muted) {
+                // Browser re-muted it - need user interaction for audio
+                console.log('[VideoPlayer] Browser blocked unmute, needs user tap for audio');
+                setNeedsUserInteraction(true);
+              } else {
+                console.log('[VideoPlayer] Intro playing with audio!');
+                setNeedsUserInteraction(false);
+              }
+            }, 100);
           })
           .catch((error) => {
-            // Autoplay was blocked - need user interaction
-            console.log('[VideoPlayer] Intro autoplay blocked, needs user tap:', error.message);
+            // Even muted playback failed (very rare)
+            console.log('[VideoPlayer] Intro playback failed entirely:', error.message);
             setNeedsUserInteraction(true);
           });
       }
     }
   }, [isPlayingIntro, currentVideo]);
 
-  // Handle tap to play when autoplay is blocked
+  // Handle tap to enable audio when unmute was blocked
   const handleTapToPlay = () => {
     if (videoRef.current) {
-      videoRef.current.play()
-        .then(() => {
-          setNeedsUserInteraction(false);
-          console.log('[VideoPlayer] Manual play succeeded after tap');
-        })
-        .catch((err) => {
-          console.error('[VideoPlayer] Manual play failed:', err);
-        });
+      const video = videoRef.current;
+      video.muted = false;
+      
+      // Also ensure it's playing
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
+      
+      setNeedsUserInteraction(false);
+      console.log('[VideoPlayer] Audio enabled after user tap');
     }
   };
 
@@ -437,7 +456,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
           src={currentVideo.url}
           autoPlay
           loop={isLoopMode}
-          muted={!isPlayingIntro}  // Audio ON for intro videos, OFF for backgrounds
+          muted={true}  // Always start muted for guaranteed autoplay; unmute via JS for intros
           playsInline
           onEnded={handleVideoEnded}
           onError={(e) => {
@@ -447,33 +466,32 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
         />
       )}
 
-      {/* Tap to Play Overlay - shown when autoplay with audio is blocked */}
+      {/* Tap for Audio Overlay - shown when video plays but audio is blocked */}
       {needsUserInteraction && isPlayingIntro && currentVideo && (
         <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/60 cursor-pointer z-20"
+          className="absolute inset-0 flex items-center justify-center cursor-pointer z-20"
           onClick={handleTapToPlay}
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
         >
           <div className="text-center">
             <div 
-              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-2"
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 border-2 backdrop-blur-sm"
               style={{ 
-                backgroundColor: `${userColorRgb}20`,
+                backgroundColor: `${userColorRgb}30`,
                 borderColor: userColorRgb 
               }}
             >
+              {/* Speaker/Volume icon */}
               <svg 
-                className="w-10 h-10 ml-1" 
+                className="w-8 h-8" 
                 fill={userColorRgb} 
                 viewBox="0 0 24 24"
               >
-                <path d="M8 5v14l11-7z"/>
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
               </svg>
             </div>
-            <p className="text-lg font-medium" style={{ color: userColorRgb }}>
-              Tap to Play
-            </p>
-            <p className="text-sm opacity-60 mt-1" style={{ color: userColorRgb }}>
-              with audio
+            <p className="text-base font-medium" style={{ color: userColorRgb }}>
+              Tap for Audio
             </p>
           </div>
         </div>
