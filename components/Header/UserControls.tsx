@@ -11,6 +11,13 @@ import { StyledUserIcon, StyledUsernameInput, StyledClearIcon } from '@/componen
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 import { getDarkerColor } from '@/modules/colorSystem';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
+
+/**
+ * Feature flag to show/hide username and color picker controls
+ * Set to false to hide these options from the UI
+ * The underlying functionality still works (URL-based username changes, etc.)
+ */
+const SHOW_USERNAME_COLOR_CONTROLS = false;
 import { formatNumber } from '@/utils/formatNumber';
 
 interface UserControlsProps {
@@ -274,59 +281,61 @@ export const UserControls: React.FC<UserControlsProps> = ({
         </div>
       </div>
       
-      {/* Username Input with Color Picker */}
-      <div 
-        className="relative flex items-center gap-2" 
-        style={{ width: 'calc(15ch + 65px)' }} 
-        ref={colorPickerRef}
-      >
-        {/* Color Picker Button */}
-        <button
-          onClick={onToggleColorPicker}
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
-          aria-label="Choose color"
-          title="Click to pick color or press 'R' for random"
-          tabIndex={-1}
+      {/* Username Input with Color Picker - Hidden via feature flag */}
+      {SHOW_USERNAME_COLOR_CONTROLS && (
+        <div 
+          className="relative flex items-center gap-2" 
+          style={{ width: 'calc(15ch + 65px)' }} 
+          ref={colorPickerRef}
         >
-          <StyledUserIcon userColor={userColorRgb} />
-        </button>
-        
-        {/* Color Picker Dropdown */}
-        <ColorPickerDropdown
-          colors={randomizedColors}
-          onSelectColor={onSelectColor}
-          isVisible={showColorPicker}
-        />
-        
-        {/* Username Input */}
-        <StyledUsernameInput
-          inputRef={usernameRef}
-          value={username}
-          onChange={handleUsernameChange}
-          onFocus={() => {
-            if (!hasClickedUsername) {
-              onUsernameFocus();
-            }
-          }}
-          onKeyDown={handleKeyDown}
-          userColor={userColorRgb}
-          placeholder={hasClickedUsername && username ? "" : "..."}
-          maxLength={maxUsernameLength}
-          usernameFlash={usernameFlash}
-        />
-        
-        {/* Clear Username Button */}
-        {username && (
+          {/* Color Picker Button */}
           <button
-            onClick={onClearUsername}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
-            aria-label="Clear username"
+            onClick={onToggleColorPicker}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 transition-opacity z-10"
+            aria-label="Choose color"
+            title="Click to pick color or press 'R' for random"
             tabIndex={-1}
           >
-            <StyledClearIcon userColor={userColorRgb} />
+            <StyledUserIcon userColor={userColorRgb} />
           </button>
-        )}
-      </div>
+          
+          {/* Color Picker Dropdown */}
+          <ColorPickerDropdown
+            colors={randomizedColors}
+            onSelectColor={onSelectColor}
+            isVisible={showColorPicker}
+          />
+          
+          {/* Username Input */}
+          <StyledUsernameInput
+            inputRef={usernameRef}
+            value={username}
+            onChange={handleUsernameChange}
+            onFocus={() => {
+              if (!hasClickedUsername) {
+                onUsernameFocus();
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            userColor={userColorRgb}
+            placeholder={hasClickedUsername && username ? "" : "..."}
+            maxLength={maxUsernameLength}
+            usernameFlash={usernameFlash}
+          />
+          
+          {/* Clear Username Button */}
+          {username && (
+            <button
+              onClick={onClearUsername}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:opacity-80 rounded transition-opacity"
+              aria-label="Clear username"
+              tabIndex={-1}
+            >
+              <StyledClearIcon userColor={userColorRgb} />
+            </button>
+          )}
+        </div>
+      )}
       
     </div>
   );
