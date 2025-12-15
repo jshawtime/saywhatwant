@@ -1,9 +1,9 @@
 {
   "version": "2.1.0",
-  "generated": "2025-12-15T22:54:11.644846Z",
+  "generated": "2025-12-15T23:24:07.910498Z",
   "source": "r2",
   "publicUrl": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev",
-  "totalVideos": 945,
+  "totalVideos": 946,
   "videos": [
     {
       "key": "the-eternal.mov",
@@ -200,6 +200,13 @@
       "contentType": "video/quicktime",
       "isIntro": true,
       "entityId": "tsc-grimms-fairy-tales"
+    },
+    {
+      "key": "emotional-support-therapist.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/emotional-support-therapist.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "emotional-support-therapist"
     },
     {
       "key": "sww-037kc.mp4",
