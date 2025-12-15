@@ -6,9 +6,24 @@ Video Sync to Cloudflare R2
 Syncs video files from videos-to-upload/ folder to Cloudflare R2 bucket.
 Updates the manifest incrementally (doesn't regenerate from scratch).
 
-Usage: python scripts/sync-videos-to-r2.py [--dry-run] [--force]
+IMPORTANT: This script was created after the bash script corrupted the manifest
+by trying to regenerate it from R2 listing (which failed). This Python version
+uses boto3 for reliable S3-compatible API access and UPDATES the existing
+manifest rather than regenerating it.
 
-Based on the music sync script pattern.
+Usage:
+    python3 scripts/sync-videos-to-r2.py           # Normal sync
+    python3 scripts/sync-videos-to-r2.py --dry-run # Preview only
+    python3 scripts/sync-videos-to-r2.py --force   # Re-upload all
+
+Video Naming Convention:
+    - Entity intros: [entity-id].mov (e.g., "the-eternal.mov")
+    - Background:    sww-XXXXX.mp4  (e.g., "sww-037kc.mp4")
+
+After running, don't forget to:
+    git add -A && git commit -m "Add new intro videos" && git push
+
+See docs/223-VIDEO-SYNC-R2-TROUBLESHOOTING.md for detailed documentation.
 """
 
 import os
@@ -18,6 +33,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
+# =============================================================================
+# DEPENDENCIES
+# Install with: pip3 install boto3 tqdm
+# =============================================================================
 try:
     import boto3
     from botocore.exceptions import ClientError
@@ -28,14 +47,17 @@ except ImportError as e:
     print(f"   Error: {e}")
     sys.exit(1)
 
-# Cloudflare R2 Configuration
+# =============================================================================
+# CLOUDFLARE R2 CONFIGURATION
+# These credentials are for the sww-videos bucket
+# =============================================================================
 R2_CONFIG = {
     'account_id': '85eadfbdf07c02e77aa5dc3b46beb0f9',
     'access_key_id': '655dc0505696e129391b3a2756dc902a',
     'secret_access_key': '789522e4838381732bdc6f51d316f33d3cc97a0bbf8cb8118f8bdb55d4a88365',
     'bucket_name': 'sww-videos',
-    'public_url': 'https://pub-56b43531787b4783b546dd45f31651a7.r2.dev',
-    'endpoint_url': 'https://85eadfbdf07c02e77aa5dc3b46beb0f9.r2.cloudflarestorage.com'
+    'public_url': 'https://pub-56b43531787b4783b546dd45f31651a7.r2.dev',  # Public CDN URL
+    'endpoint_url': 'https://85eadfbdf07c02e77aa5dc3b46beb0f9.r2.cloudflarestorage.com'  # S3 API endpoint
 }
 
 # Console colors
@@ -61,7 +83,15 @@ def format_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f}TB"
 
 def get_s3_client():
-    """Create S3 client for Cloudflare R2"""
+    """
+    Create S3 client for Cloudflare R2.
+    
+    Cloudflare R2 is S3-compatible, so we use boto3's S3 client.
+    The key difference is the endpoint_url which points to R2.
+    
+    Returns:
+        boto3 S3 client or None if connection fails
+    """
     try:
         session = boto3.Session(
             aws_access_key_id=R2_CONFIG['access_key_id'],
@@ -70,7 +100,7 @@ def get_s3_client():
         return session.client(
             's3',
             endpoint_url=R2_CONFIG['endpoint_url'],
-            region_name='auto'
+            region_name='auto'  # R2 uses 'auto' for region
         )
     except Exception as e:
         print_color(f"❌ Error creating S3 client: {e}", Colors.RED)
@@ -154,19 +184,47 @@ def load_manifest(manifest_path: Path) -> Dict:
         return None
 
 def update_manifest(manifest: Dict, uploaded_files: List[str], public_url: str) -> Dict:
-    """Add newly uploaded files to manifest"""
+    """
+    Add newly uploaded files to the manifest INCREMENTALLY.
+    
+    CRITICAL: This function UPDATES the existing manifest rather than regenerating
+    it from scratch. This preserves the 900+ existing background videos.
+    
+    The old bash script tried to regenerate the manifest by listing R2 contents,
+    which failed and resulted in empty manifests. NEVER regenerate from scratch!
+    
+    Video Classification:
+        - Files starting with 'sww-' are background videos
+        - All other files are entity intro videos
+        - Entity ID is derived from filename (e.g., "the-eternal.mov" → "the-eternal")
+    
+    Intro videos are inserted at the beginning of the videos array (after other intros)
+    so they appear first when the manifest is processed.
+    
+    Args:
+        manifest: The existing manifest dict (must have 'videos' array)
+        uploaded_files: List of filenames that were just uploaded
+        public_url: The R2 public CDN URL
+    
+    Returns:
+        Updated manifest dict
+    """
     for filename in uploaded_files:
-        # Check if already exists
+        # Skip if already in manifest (prevents duplicates)
         if any(v['key'] == filename for v in manifest.get('videos', [])):
             print_color(f"  Already in manifest: {filename}", Colors.YELLOW)
             continue
         
-        # Determine if intro video (doesn't start with sww-)
+        # Classify video type based on filename prefix
+        # sww-* = background video, anything else = entity intro
         is_intro = not filename.startswith('sww-')
         entity_id = filename.rsplit('.', 1)[0] if is_intro else None
+        
+        # Determine content type from extension
         ext = filename.split('.')[-1].lower()
         content_type = 'video/quicktime' if ext == 'mov' else 'video/mp4'
         
+        # Build manifest entry
         entry = {
             'key': filename,
             'url': f"{public_url}/{filename}",
@@ -174,9 +232,12 @@ def update_manifest(manifest: Dict, uploaded_files: List[str], public_url: str) 
         }
         
         if is_intro:
+            # Entity intro video - add isIntro and entityId fields
             entry['isIntro'] = True
             entry['entityId'] = entity_id
-            # Insert intro videos near the beginning (after other intros)
+            
+            # Insert intro videos near the beginning (after existing intros)
+            # This ensures intro videos are grouped together in the manifest
             insert_idx = 0
             for i, v in enumerate(manifest['videos']):
                 if v.get('isIntro'):
@@ -186,11 +247,11 @@ def update_manifest(manifest: Dict, uploaded_files: List[str], public_url: str) 
             manifest['videos'].insert(insert_idx, entry)
             print_color(f"  ✅ Added intro: {filename} (entity: {entity_id})", Colors.GREEN)
         else:
-            # Append background videos at end
+            # Background video - append at end
             manifest['videos'].append(entry)
             print_color(f"  ✅ Added background: {filename}", Colors.GREEN)
     
-    # Update metadata
+    # Update manifest metadata
     manifest['totalVideos'] = len(manifest['videos'])
     manifest['generated'] = datetime.utcnow().isoformat() + 'Z'
     
