@@ -1,9 +1,9 @@
 {
   "version": "2.1.0",
-  "generated": "2025-12-15T05:35:52.746Z",
+  "generated": "2025-12-15T22:54:11.644846Z",
   "source": "r2",
   "publicUrl": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev",
-  "totalVideos": 931,
+  "totalVideos": 945,
   "videos": [
     {
       "key": "the-eternal.mov",
@@ -102,6 +102,104 @@
       "contentType": "video/quicktime",
       "isIntro": true,
       "entityId": "sleep-coach"
+    },
+    {
+      "key": "the-truth-teller.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/the-truth-teller.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "the-truth-teller"
+    },
+    {
+      "key": "the-new-american-dream.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/the-new-american-dream.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "the-new-american-dream"
+    },
+    {
+      "key": "tsc-ulysses-by-james-joyce.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-ulysses-by-james-joyce.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-ulysses-by-james-joyce"
+    },
+    {
+      "key": "the-money-mentor.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/the-money-mentor.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "the-money-mentor"
+    },
+    {
+      "key": "this-or-that.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/this-or-that.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "this-or-that"
+    },
+    {
+      "key": "tsc-frankenstein.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-frankenstein.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-frankenstein"
+    },
+    {
+      "key": "stress-free-living.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/stress-free-living.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "stress-free-living"
+    },
+    {
+      "key": "tsc-shakespeare-the-complete-collection.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-shakespeare-the-complete-collection.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-shakespeare-the-complete-collection"
+    },
+    {
+      "key": "toxic-heal-your-body-from-mold-toxicity.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/toxic-heal-your-body-from-mold-toxicity.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "toxic-heal-your-body-from-mold-toxicity"
+    },
+    {
+      "key": "tsc-alice-in-wonderland.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-alice-in-wonderland.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-alice-in-wonderland"
+    },
+    {
+      "key": "tsc-the-odyssey-by-homer.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-the-odyssey-by-homer.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-the-odyssey-by-homer"
+    },
+    {
+      "key": "true-freedom-is-for-anyone.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/true-freedom-is-for-anyone.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "true-freedom-is-for-anyone"
+    },
+    {
+      "key": "tsc-pride-and-prejudice.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-pride-and-prejudice.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-pride-and-prejudice"
+    },
+    {
+      "key": "tsc-grimms-fairy-tales.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/tsc-grimms-fairy-tales.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "tsc-grimms-fairy-tales"
     },
     {
       "key": "sww-037kc.mp4",
