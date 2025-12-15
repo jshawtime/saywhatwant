@@ -71,9 +71,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ toggleVideo, userColor, userC
       
       console.log(`[VideoPlayer] URL hash params - intro-video: ${introVideoParam}, entity: ${entityParam}`);
 
-      // Fetch video manifest
-      const manifestUrl = videoSource.manifestUrl;
-      const response = await fetch(manifestUrl);
+      // Fetch video manifest (with cache-busting to avoid stale cached versions)
+      const manifestUrl = `${videoSource.manifestUrl}?_=${Date.now()}`;
+      const response = await fetch(manifestUrl, { cache: 'no-store' });
       
       if (!response.ok) {
         throw new Error('Failed to load video manifest');
