@@ -520,6 +520,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             localStorage.setItem('sww-color', uisColor);
             console.log('[CommentsStream] Set color to:', uisColor);
           }
+          // Dispatch colorChanged event so VideoPlayer updates its overlay color
+          window.dispatchEvent(new Event('colorChanged'));
         }
       }
     }
