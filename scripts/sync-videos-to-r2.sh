@@ -152,6 +152,7 @@ echo -e "\n${CYAN}═══ Uploading new files ═══${NC}"
 
 SUCCESS=0
 FAILED=0
+UPLOADED_FILES=""
 
 for video_path in "${TO_UPLOAD[@]}"; do
     filename=$(basename "$video_path")
@@ -160,6 +161,12 @@ for video_path in "${TO_UPLOAD[@]}"; do
     if wrangler r2 object put "${R2_BUCKET_NAME}/${filename}" --file="$video_path" --remote 2>/dev/null; then
         echo -e "${GREEN}✓${NC}"
         SUCCESS=$((SUCCESS + 1))
+        # Track successfully uploaded files for manifest update
+        if [ -z "$UPLOADED_FILES" ]; then
+            UPLOADED_FILES="$filename"
+        else
+            UPLOADED_FILES="$UPLOADED_FILES,$filename"
+        fi
     else
         echo -e "${RED}✗${NC}"
         FAILED=$((FAILED + 1))
@@ -171,78 +178,109 @@ if [ "$FAILED" -gt 0 ]; then
     echo -e "${RED}✗ Failed:   ${FAILED}${NC}"
 fi
 
-# Regenerate manifest
-echo -e "\n${CYAN}═══ Regenerating manifest ═══${NC}"
+# Export for manifest update
+export UPLOADED_FILES
 
-# Get all files from R2 for manifest using wrangler
-ALL_R2_FILES=$(wrangler r2 object list ${R2_BUCKET_NAME} --remote 2>/dev/null | grep -E '\.(mp4|mov)' | awk '{print $NF}')
-TOTAL_VIDEOS=$(echo "$ALL_R2_FILES" | grep -c . 2>/dev/null || echo "0")
+# Update manifest (don't regenerate - preserve existing videos)
+echo -e "\n${CYAN}═══ Updating manifest ═══${NC}"
 
-# Generate manifest JSON
-MANIFEST_FILE="${PROJECT_ROOT}/public/cloudflare/video-manifest.json"
-mkdir -p "$(dirname "$MANIFEST_FILE")"
+MANIFEST_FILE="${PROJECT_ROOT}/public/r2-video-manifest.json"
 
-echo "{" > "$MANIFEST_FILE"
-echo "  \"version\": \"2.1.0\"," >> "$MANIFEST_FILE"
-echo "  \"generated\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\"," >> "$MANIFEST_FILE"
-echo "  \"source\": \"r2\"," >> "$MANIFEST_FILE"
-echo "  \"publicUrl\": \"${R2_PUBLIC_URL}\"," >> "$MANIFEST_FILE"
-echo "  \"totalVideos\": ${TOTAL_VIDEOS}," >> "$MANIFEST_FILE"
-echo "  \"videos\": [" >> "$MANIFEST_FILE"
+# Use Node.js to safely update the JSON manifest
+node -e "
+const fs = require('fs');
 
-FIRST=true
-while IFS= read -r filename; do
-    [ -z "$filename" ] && continue
-    
-    if [ "$FIRST" = true ]; then
-        FIRST=false
-    else
-        echo "," >> "$MANIFEST_FILE"
-    fi
-    
-    # Determine if this is an entity intro video
-    IS_INTRO="false"
-    ENTITY_ID=""
-    if [[ ! "$filename" =~ ^sww- ]]; then
-        IS_INTRO="true"
-        ENTITY_ID=$(echo "$filename" | sed 's/\.[^.]*$//')  # Remove extension
-    fi
-    
-    echo -n "    {" >> "$MANIFEST_FILE"
-    echo -n "\"key\": \"${filename}\", " >> "$MANIFEST_FILE"
-    echo -n "\"url\": \"${R2_PUBLIC_URL}/${filename}\", " >> "$MANIFEST_FILE"
-    echo -n "\"contentType\": \"video/mp4\"" >> "$MANIFEST_FILE"
-    if [ "$IS_INTRO" = "true" ]; then
-        echo -n ", \"isIntro\": true, \"entityId\": \"${ENTITY_ID}\"" >> "$MANIFEST_FILE"
-    fi
-    echo -n "}" >> "$MANIFEST_FILE"
-done <<< "$ALL_R2_FILES"
+// Read existing manifest
+const manifestPath = '${MANIFEST_FILE}';
+let manifest;
+try {
+  manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  console.log('Loaded existing manifest with', manifest.videos.length, 'videos');
+} catch (e) {
+  console.error('Error reading manifest:', e.message);
+  process.exit(1);
+}
 
-echo "" >> "$MANIFEST_FILE"
-echo "  ]" >> "$MANIFEST_FILE"
-echo "}" >> "$MANIFEST_FILE"
+const publicUrl = '${R2_PUBLIC_URL}';
 
-echo -e "${GREEN}✓ Manifest generated: ${MANIFEST_FILE}${NC}"
-echo -e "${GREEN}  Total videos: ${TOTAL_VIDEOS}${NC}"
+// Get list of successfully uploaded files from environment
+const uploadedFiles = process.env.UPLOADED_FILES ? process.env.UPLOADED_FILES.split(',').filter(f => f) : [];
+console.log('Files to add:', uploadedFiles.length);
 
-# Also copy to r2-video-manifest.json for compatibility
-cp "$MANIFEST_FILE" "${PROJECT_ROOT}/public/r2-video-manifest.json"
-echo -e "${GREEN}✓ Copied to: public/r2-video-manifest.json${NC}"
+let added = 0;
+for (const filename of uploadedFiles) {
+  // Check if already exists
+  if (manifest.videos.find(v => v.key === filename)) {
+    console.log('  Already exists:', filename);
+    continue;
+  }
+  
+  // Determine if intro video (doesn't start with sww-)
+  const isIntro = !filename.startsWith('sww-');
+  const entityId = isIntro ? filename.replace(/\.[^.]*$/, '') : undefined;
+  const ext = filename.split('.').pop().toLowerCase();
+  const contentType = ext === 'mov' ? 'video/quicktime' : 'video/mp4';
+  
+  const entry = {
+    key: filename,
+    url: publicUrl + '/' + filename,
+    contentType: contentType
+  };
+  
+  if (isIntro) {
+    entry.isIntro = true;
+    entry.entityId = entityId;
+    // Insert intro videos at the beginning (after other intros)
+    const lastIntroIndex = manifest.videos.findIndex(v => !v.isIntro);
+    const insertAt = lastIntroIndex === -1 ? manifest.videos.length : lastIntroIndex;
+    manifest.videos.splice(insertAt, 0, entry);
+  } else {
+    // Append background videos at the end
+    manifest.videos.push(entry);
+  }
+  
+  console.log('  Added:', filename, isIntro ? '(intro)' : '');
+  added++;
+}
+
+// Update metadata
+manifest.totalVideos = manifest.videos.length;
+manifest.generated = new Date().toISOString();
+
+// Save manifest
+fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+console.log('Saved manifest:', manifest.totalVideos, 'total videos');
+console.log('Added', added, 'new videos');
+" 
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓ Manifest updated${NC}"
+else
+    echo -e "${RED}✗ Failed to update manifest${NC}"
+fi
+
+# Copy to cloudflare folder for compatibility
+mkdir -p "${PROJECT_ROOT}/public/cloudflare"
+cp "$MANIFEST_FILE" "${PROJECT_ROOT}/public/cloudflare/video-manifest.json"
+echo -e "${GREEN}✓ Copied to: public/cloudflare/video-manifest.json${NC}"
 
 # Upload manifest to R2
 echo -e "\n${YELLOW}Uploading manifest to R2...${NC}"
 if wrangler r2 object put "${R2_BUCKET_NAME}/video-manifest.json" --file="$MANIFEST_FILE" --remote 2>/dev/null; then
     echo -e "${GREEN}✓ Manifest uploaded to R2${NC}"
 else
-    echo -e "${RED}✗ Failed to upload manifest${NC}"
+    echo -e "${RED}✗ Failed to upload manifest to R2${NC}"
 fi
+
+# Get final count
+TOTAL_VIDEOS=$(node -e "console.log(JSON.parse(require('fs').readFileSync('${MANIFEST_FILE}', 'utf8')).totalVideos)")
 
 # Final summary
 echo -e "\n${CYAN}═══════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}           ✅ Sync Complete!${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}Uploaded:       ${SUCCESS} videos${NC}"
-echo -e "${GREEN}Total in R2:    ${TOTAL_VIDEOS} videos${NC}"
+echo -e "${GREEN}Total in manifest: ${TOTAL_VIDEOS} videos${NC}"
 echo -e "${GREEN}Manifest:       ${R2_PUBLIC_URL}/video-manifest.json${NC}"
 echo -e "\n${YELLOW}Videos are now available at:${NC}"
 echo -e "${CYAN}${R2_PUBLIC_URL}/[filename]${NC}"
