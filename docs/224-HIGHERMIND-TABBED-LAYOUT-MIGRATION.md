@@ -6,6 +6,61 @@ This document outlines the migration of the video drawer from `saywhatwant.app` 
 
 ---
 
+## ⚠️ Rollback Information
+
+Both repositories have been tagged with stable versions before this migration.
+
+### Pre-Migration Tags
+
+| Repository | Tag | Commit |
+|------------|-----|--------|
+| saywhatwant | `v1.0.0-pre-tabbed-layout` | Current stable |
+| HIGHERMIND-site | `v1.0.0-pre-tabbed-layout` | Current stable |
+
+### How to Rollback
+
+**If migration fails, rollback to the working version:**
+
+```bash
+# Rollback saywhatwant
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/saywhatwant
+git checkout v1.0.0-pre-tabbed-layout
+git checkout -b rollback-from-tabbed-layout  # Create branch from tag
+git push origin rollback-from-tabbed-layout
+# Then deploy this branch to Cloudflare
+
+# Rollback HIGHERMIND-site
+cd /Volumes/BOWIE/devrepo/SAYWHATWANTv1/HIGHERMIND-site
+git checkout v1.0.0-pre-tabbed-layout
+git checkout -b rollback-from-tabbed-layout
+git push origin rollback-from-tabbed-layout
+npm run build && wrangler deploy
+```
+
+### What the Pre-Migration Version Has
+
+**saywhatwant (v1.0.0-pre-tabbed-layout):**
+- ✅ Video drawer on left side
+- ✅ Chat interface on right side
+- ✅ Entity intro videos with audio
+- ✅ Background video rotation
+- ✅ Color overlay system
+- ✅ Embedded mode detection (ready but unused)
+
+**HIGHERMIND-site (v1.0.0-pre-tabbed-layout):**
+- ✅ Gallery homepage with model thumbnails
+- ✅ Iframe overlay for saywhatwant.app
+- ✅ Single back button to close overlay
+- ✅ Continue modal for bookmarks/refresh
+- ✅ URL hash syncing for bookmarks
+
+### View Tags on GitHub
+
+- saywhatwant: `https://github.com/jshawtime/saywhatwant/releases/tag/v1.0.0-pre-tabbed-layout`
+- HIGHERMIND-site: `https://github.com/pbosh/HIGHERMIND-site/releases/tag/v1.0.0-pre-tabbed-layout`
+
+---
+
 ## Current State
 
 ### highermind.ai
