@@ -427,6 +427,441 @@ components/VideoPlayer.tsx # (stays, but unused when embedded)
 
 ---
 
+---
+
+## Refactoring Opportunities
+
+This migration is an opportunity to clean up and improve code quality. Below are identified refactoring items with examples.
+
+---
+
+### Refactor 1: Consolidate Color System
+
+#### What We Have (Problem)
+Two separate color system implementations:
+
+**HIGHERMIND-site/lib/colorSystem.ts** (~154 lines)
+```typescript
+// Simplified version - missing features
+export function generateRandomColor(): string { ... }
+export function nineDigitToRgb(digits: string): { r; g; b } | null { ... }
+export function nineDigitToCSS(digits: string): string { ... }
+```
+
+**saywhatwant/modules/colorSystem.ts** (~650 lines)
+```typescript
+// Comprehensive version with:
+// - Type guards (isNineDigitFormat, isRgbFormat)
+// - Safe converters (ensureNineDigit, ensureRgb)
+// - Theme generation (generateColorTheme)
+// - Storage functions (saveUserColor, loadUserColor)
+// - CSS variable management (applyCSSColorTheme)
+// - Brightness adjustment (adjustColorBrightness)
+```
+
+#### What We Want
+Single source of truth for color utilities used by both projects.
+
+#### How to Implement
+**Option A: Copy comprehensive version to HIGHERMIND-site**
+```bash
+# Copy the full module
+cp saywhatwant/modules/colorSystem.ts HIGHERMIND-site/lib/colorSystem.ts
+
+# Update imports in HIGHERMIND-site files
+# - urlBuilder.ts: import { generateRandomColor } → import { getRandomColor }
+```
+
+**Option B: Create shared package (future)**
+```
+shared-libs/
+├── color-system/
+│   ├── index.ts
+│   ├── generators.ts
+│   ├── converters.ts
+│   └── types.ts
+```
+
+**Recommendation**: Option A for now (copy), Option B later if needed.
+
+---
+
+### Refactor 2: Split Monolithic VideoPlayer
+
+#### What We Have (Problem)
+`VideoPlayer.tsx` is 830+ lines with everything mixed together:
+- State management (15+ useState hooks)
+- Video playback logic
+- Intro video detection
+- Color overlay rendering
+- Settings UI (brightness, blend modes)
+- Share functionality
+
+#### What We Want
+Modular, testable components:
+
+```
+components/VideoDrawer/
+├── index.ts                    # Public exports
+├── VideoDrawer.tsx             # Main container (~100 lines)
+├── VideoCore.tsx               # Video element + playback (~150 lines)
+├── VideoOverlay.tsx            # Color overlay (~50 lines)
+├── VideoControls.tsx           # Settings UI (~150 lines)
+├── hooks/
+│   ├── useVideoPlayer.ts       # Playback state & logic (~200 lines)
+│   ├── useVideoManifest.ts     # Manifest fetching (~80 lines)
+│   └── useIntroVideo.ts        # Intro detection (~60 lines)
+└── types.ts                    # Component-specific types
+```
+
+#### How to Implement
+
+**Step 1: Extract hooks**
+```typescript
+// hooks/useVideoManifest.ts
+export function useVideoManifest() {
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const loadManifest = async () => {
+    const videoSource = getVideoSource();
+    const manifestUrl = `${videoSource.manifestUrl}?_=${Date.now()}`;
+    const response = await fetch(manifestUrl, { cache: 'no-store' });
+    const manifest = await response.json();
+    // ... process videos
+    return manifest.videos;
+  };
+  
+  return { videos, isLoading, error, loadManifest };
+}
+```
+
+**Step 2: Extract intro video logic**
+```typescript
+// hooks/useIntroVideo.ts
+export function useIntroVideo(videos: VideoItem[], entity: string | null) {
+  const [introPlayed, setIntroPlayed] = useState(false);
+  
+  const findIntroVideo = useCallback(() => {
+    if (!entity || introPlayed) return null;
+    return videos.find(v => v.isIntro && v.entityId === entity);
+  }, [videos, entity, introPlayed]);
+  
+  const markIntroPlayed = () => setIntroPlayed(true);
+  
+  return { findIntroVideo, markIntroPlayed, introPlayed };
+}
+```
+
+**Step 3: Create VideoCore component**
+```typescript
+// VideoCore.tsx
+interface VideoCoreProps {
+  video: VideoItem | null;
+  isIntro: boolean;
+  brightness: number;
+  onEnded: () => void;
+  onCanPlayThrough: () => void;
+}
+
+export const VideoCore: React.FC<VideoCoreProps> = ({
+  video, isIntro, brightness, onEnded, onCanPlayThrough
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  return (
+    <video
+      ref={videoRef}
+      src={video?.url}
+      muted={!isIntro}
+      loop={!isIntro}
+      onEnded={onEnded}
+      onCanPlayThrough={onCanPlayThrough}
+      style={{ filter: `brightness(${brightness})` }}
+      className="absolute inset-0 w-full h-full object-cover"
+    />
+  );
+};
+```
+
+---
+
+### Refactor 3: Centralize Constants
+
+#### What We Have (Problem)
+Constants scattered across files:
+
+```typescript
+// saywhatwant/config/video-source.ts
+r2: { bucketUrl: 'https://pub-56b43531787b4783b546dd45f31651a7.r2.dev' }
+
+// saywhatwant/modules/colorSystem.ts
+export const DEFAULT_COLOR = '096165250';
+export const STORAGE_KEYS = { USER_COLOR: 'sww-userColor' };
+
+// HIGHERMIND-site/lib/constants.ts
+export const SITE_CONSTANTS = { BASE_URL: 'https://saywhatwant.app' };
+```
+
+#### What We Want
+Single constants file per project with clear organization:
+
+```typescript
+// HIGHERMIND-site/lib/constants.ts
+export const CONSTANTS = {
+  // URLs
+  SAYWHATWANT_URL: 'https://saywhatwant.app',
+  R2_VIDEO_URL: 'https://pub-56b43531787b4783b546dd45f31651a7.r2.dev',
+  
+  // Video
+  VIDEO_MANIFEST_PATH: '/video-manifest.json',
+  
+  // Colors
+  DEFAULT_USER_COLOR: '096165250',
+  
+  // Storage Keys
+  STORAGE: {
+    USER_COLOR: 'hm-user-color',
+    ACTIVE_TAB: 'hm-active-tab',
+    LAST_ENTITY: 'hm-last-entity',
+  },
+  
+  // Layout
+  LAYOUT: {
+    TAB_SIDEBAR_WIDTH: 48,
+    VIDEO_ASPECT_RATIO: 9 / 16,
+  },
+};
+```
+
+---
+
+### Refactor 4: Extract URL Utilities
+
+#### What We Have (Problem)
+URL hash parsing duplicated:
+
+```typescript
+// VideoPlayer.tsx
+const hash = window.location.hash.slice(1);
+const urlParams = new URLSearchParams(hash);
+const entityParam = urlParams.get('entity');
+
+// ChatOverlayContext.tsx
+const entityMatch = hash.match(/entity=([^&]+)/);
+```
+
+#### What We Want
+Shared URL utility functions:
+
+```typescript
+// lib/urlUtils.ts
+
+/**
+ * Parse hash-based URL parameters
+ * @example parseHashParams('#foo=bar&baz=qux') → { foo: 'bar', baz: 'qux' }
+ */
+export function parseHashParams(hash: string): Record<string, string> {
+  const cleanHash = hash.startsWith('#') ? hash.slice(1) : hash;
+  const params = new URLSearchParams(cleanHash);
+  const result: Record<string, string> = {};
+  params.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
+}
+
+/**
+ * Get specific parameter from URL hash
+ */
+export function getHashParam(key: string): string | null {
+  const params = parseHashParams(window.location.hash);
+  return params[key] || null;
+}
+
+/**
+ * Convert kebab-case to Title Case
+ * @example kebabToTitle('the-eternal') → 'The Eternal'
+ */
+export function kebabToTitle(str: string): string {
+  return str
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
+ * Build URL with hash parameters
+ */
+export function buildHashUrl(base: string, params: Record<string, string>): string {
+  const hashString = Object.entries(params)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+  return `${base}#${hashString}`;
+}
+```
+
+---
+
+### Refactor 5: Type Consolidation
+
+#### What We Have (Problem)
+Similar types in different locations:
+
+```typescript
+// saywhatwant/types/index.ts
+export interface VideoItem {
+  key: string;
+  url: string;
+  contentType: string;
+  isIntro?: boolean;
+  entityId?: string;
+}
+
+// HIGHERMIND-site/types/url.ts
+export interface ColorPair {
+  userColor: string;
+  aiColor: string;
+}
+```
+
+#### What We Want
+Clear type organization in HIGHERMIND-site:
+
+```typescript
+// HIGHERMIND-site/types/video.ts
+export interface VideoItem {
+  key: string;
+  url: string;
+  contentType: string;
+  isIntro?: boolean;
+  entityId?: string;
+}
+
+export interface VideoManifest {
+  version: string;
+  generated: string;
+  source: string;
+  publicUrl: string;
+  totalVideos: number;
+  videos: VideoItem[];
+}
+
+export interface VideoPlayerState {
+  currentVideo: VideoItem | null;
+  nextVideo: VideoItem | null;
+  isLoading: boolean;
+  isPlaying: boolean;
+  isPlayingIntro: boolean;
+  isBuffering: boolean;
+}
+
+// HIGHERMIND-site/types/color.ts
+export interface ColorPair {
+  userColor: string;  // Format: RRRGGGBBB-SUFFIX
+  aiColor: string;
+}
+
+export interface ColorTheme {
+  base: string;
+  text: string;
+  overlay: string;
+  border: string;
+}
+
+// HIGHERMIND-site/types/layout.ts
+export type TabId = 'video' | 'gallery' | 'info';
+
+export interface TabState {
+  activeTab: TabId;
+  videoDrawerOpen: boolean;
+}
+```
+
+---
+
+### Refactor 6: CSS Animation to Module
+
+#### What We Have (Problem)
+Breathing animation inline in JSX:
+
+```tsx
+// VideoPlayer.tsx
+<video
+  style={{
+    opacity: 0.3,
+    animation: 'breathing 2s ease-in-out infinite',
+  }}
+/>
+// Plus @keyframes defined somewhere in globals
+```
+
+#### What We Want
+CSS module with reusable animations:
+
+```css
+/* styles/animations.module.css */
+.breathing {
+  animation: breathing 2s ease-in-out infinite;
+}
+
+@keyframes breathing {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.slideInLeft {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.slideOutLeft {
+  animation: slideOutLeft 0.3s ease-in forwards;
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+```
+
+```tsx
+// Usage
+import styles from '@/styles/animations.module.css';
+
+<video className={isBuffering ? styles.breathing : ''} />
+<div className={isOpen ? styles.slideInLeft : styles.slideOutLeft} />
+```
+
+---
+
+## Refactoring Checklist
+
+### Pre-Migration (Do First)
+- [ ] Copy comprehensive colorSystem.ts to HIGHERMIND-site
+- [ ] Create shared URL utilities in HIGHERMIND-site
+- [ ] Create centralized constants file
+- [ ] Create type definitions for video system
+
+### During Migration
+- [ ] Split VideoPlayer into modular components
+- [ ] Extract custom hooks (useVideoManifest, useIntroVideo)
+- [ ] Create CSS animation module
+- [ ] Use new utilities consistently
+
+### Post-Migration (Cleanup)
+- [ ] Remove duplicate code
+- [ ] Update imports throughout both projects
+- [ ] Add JSDoc comments to shared utilities
+- [ ] Consider shared package if needed in future
+
+---
+
 ## Related Documentation
 
 - `221-VIDEO-SYSTEM-AND-ENTITY-INTROS.md` - Current video system
