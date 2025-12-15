@@ -1,9 +1,9 @@
 {
   "version": "2.1.0",
-  "generated": "2025-12-12T14:55:23.000Z",
+  "generated": "2025-12-15T05:35:52.746Z",
   "source": "r2",
   "publicUrl": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev",
-  "totalVideos": 918,
+  "totalVideos": 931,
   "videos": [
     {
       "key": "the-eternal.mov",
@@ -11,6 +11,97 @@
       "contentType": "video/quicktime",
       "isIntro": true,
       "entityId": "the-eternal"
+    },
+    {
+      "key": "alcohol-addiction-support.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/alcohol-addiction-support.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "alcohol-addiction-support"
+    },
+    {
+      "key": "astrophysics-a-deep-dive.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/astrophysics-a-deep-dive.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "astrophysics-a-deep-dive"
+    },
+    {
+      "key": "climate-change-solutions.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/climate-change-solutions.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "climate-change-solutions"
+    },
+    {
+      "key": "climb-the-corporate-ladder-fast.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/climb-the-corporate-ladder-fast.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "climb-the-corporate-ladder-fast"
+    },
+    {
+      "key": "conflict-helper.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/conflict-helper.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "conflict-helper"
+    },
+    {
+      "key": "dystopian-survival-guide.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/dystopian-survival-guide.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "dystopian-survival-guide"
+    },
+    {
+      "key": "emotional-intelligence.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/emotional-intelligence.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "emotional-intelligence"
+    },
+    {
+      "key": "how-to-get-what-you-want.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/how-to-get-what-you-want.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "how-to-get-what-you-want"
+    },
+    {
+      "key": "mind-control-for-health-living.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/mind-control-for-health-living.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "mind-control-for-health-living"
+    },
+    {
+      "key": "modern-parenting.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/modern-parenting.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "modern-parenting"
+    },
+    {
+      "key": "monetize-your-passion.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/monetize-your-passion.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "monetize-your-passion"
+    },
+    {
+      "key": "philosophy-philosophy-philosophy.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/philosophy-philosophy-philosophy.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "philosophy-philosophy-philosophy"
+    },
+    {
+      "key": "sleep-coach.mov",
+      "url": "https://pub-56b43531787b4783b546dd45f31651a7.r2.dev/sleep-coach.mov",
+      "contentType": "video/quicktime",
+      "isIntro": true,
+      "entityId": "sleep-coach"
     },
     {
       "key": "sww-037kc.mp4",
