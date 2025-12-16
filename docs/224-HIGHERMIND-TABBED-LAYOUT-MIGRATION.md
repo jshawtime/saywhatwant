@@ -414,30 +414,36 @@ components/VideoPlayer.tsx # (stays, but unused when embedded)
 
 ## Implementation Checklist
 
+### Pre-Migration
+- [x] Copy comprehensive colorSystem.ts to HIGHERMIND-site
+- [x] Create shared URL utilities in HIGHERMIND-site
+- [x] Create centralized constants file with VIDEO_CONFIG, LAYOUT, STORAGE_KEYS
+- [x] Create video type definitions (VideoItem, VideoManifest, VideoPlayerState)
+
 ### Phase 1: Layout Structure
-- [ ] Create TabSidebar component with 3 icon buttons
-- [ ] Create LeftPanel container with 9:16 aspect ratio
-- [ ] Create MainLayout wrapper
-- [ ] Create PermanentIframe component
-- [ ] Set up basic tab switching state
+- [x] Create TabSidebar component with 3 icon buttons (🎬 🖼️ ℹ️)
+- [x] Create LeftPanel container with 9:16 aspect ratio
+- [x] Create MainLayout wrapper
+- [x] Create PermanentIframe component
+- [x] Set up basic tab switching state
 
 ### Phase 2: Video Migration
-- [ ] Copy VideoPlayer.tsx to VideoDrawer.tsx
-- [ ] Copy supporting modules (colorSystem, etc.)
-- [ ] Adapt VideoDrawer to accept props instead of URL parsing
-- [ ] Add drawer slide animation
-- [ ] Test video playback independently
+- [x] Create VideoDrawer component (migrated from saywhatwant)
+- [x] Create useVideoManifest hook
+- [x] Create useIntroVideo hook
+- [x] Adapt VideoDrawer to accept props instead of URL parsing
+- [x] Add settings panel (brightness, overlay toggle, shuffle/loop)
 
 ### Phase 3: Gallery Refactor
-- [ ] Extract Gallery from current page.tsx
-- [ ] Create Gallery component in GalleryTab
-- [ ] Wire up model click → iframe URL update
-- [ ] Wire up model click → switch to Video tab
+- [x] Create GalleryPanel component in GalleryTab
+- [x] Create InfoPanel placeholder component
+- [x] Wire up model click → iframe URL update
+- [x] Wire up model click → switch to Video tab
 
 ### Phase 4: saywhatwant.app Changes
-- [ ] Add embedded detection
-- [ ] Hide video drawer when embedded
-- [ ] Adjust layout when embedded
+- [x] Add embedded detection (iframe check + URL param)
+- [x] Hide video drawer when embedded
+- [x] Adjust layout when embedded (chat takes full width)
 - [ ] Test in iframe context
 
 ### Phase 5: Integration
@@ -898,16 +904,16 @@ import styles from '@/styles/animations.module.css';
 ## Refactoring Checklist
 
 ### Pre-Migration (Do First)
-- [ ] Copy comprehensive colorSystem.ts to HIGHERMIND-site
-- [ ] Create shared URL utilities in HIGHERMIND-site
-- [ ] Create centralized constants file
-- [ ] Create type definitions for video system
+- [x] Copy comprehensive colorSystem.ts to HIGHERMIND-site
+- [x] Create shared URL utilities in HIGHERMIND-site
+- [x] Create centralized constants file
+- [x] Create type definitions for video system
 
 ### During Migration
-- [ ] Split VideoPlayer into modular components
-- [ ] Extract custom hooks (useVideoManifest, useIntroVideo)
-- [ ] Create CSS animation module
-- [ ] Use new utilities consistently
+- [x] Split VideoPlayer into modular components (VideoDrawer + hooks)
+- [x] Extract custom hooks (useVideoManifest, useIntroVideo)
+- [x] Create CSS animation module (breathing animation in component)
+- [x] Use new utilities consistently
 
 ### Post-Migration (Cleanup)
 - [ ] Remove duplicate code
