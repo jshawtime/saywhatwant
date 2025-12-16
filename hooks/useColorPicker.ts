@@ -5,9 +5,20 @@
  * Handles random color generation, localStorage persistence, and picker visibility
  */
 
-import { useState, useMemo, useLayoutEffect } from 'react';
+import { useState, useMemo, useLayoutEffect, useEffect } from 'react';
 import { getRandomColor, nineDigitToRgb, DEFAULT_COLOR } from '@/modules/colorSystem';
 import { rgbToNineDigit } from '@/lib/url-filter-simple';
+
+// Post color to parent frame for embedded mode
+const postColorToParent = (color: string, colorRgb: string) => {
+  if (typeof window !== 'undefined' && window.parent !== window) {
+    window.parent.postMessage({
+      type: 'sww-color-update',
+      color,
+      colorRgb
+    }, '*');
+  }
+};
 
 interface UseColorPickerReturn {
   userColor: string;           // 9-digit color format
@@ -41,6 +52,13 @@ export function useColorPicker(initialColor?: string): UseColorPickerReturn {
   
   // Convert to RGB for CSS
   const userColorRgb = useMemo(() => nineDigitToRgb(userColor), [userColor]);
+  
+  // Post color to parent frame when it changes (for embedded mode)
+  useEffect(() => {
+    if (userColor !== DEFAULT_COLOR) {
+      postColorToParent(userColor, userColorRgb);
+    }
+  }, [userColor, userColorRgb]);
   
   // Shuffle colors array
   const shuffleColors = () => {

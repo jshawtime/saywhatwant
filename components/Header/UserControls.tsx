@@ -248,7 +248,6 @@ export const UserControls: React.FC<UserControlsProps> = ({
         style={{ 
           cursor: 'default'
         }}
-        title="Emotional Intelligence Score"
       >
         <div 
           style={{ 
