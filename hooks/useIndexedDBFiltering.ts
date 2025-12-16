@@ -63,6 +63,33 @@ export function useIndexedDBFiltering(
   const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(params.searchTerm);
   
+  // Use refs to avoid stale closure issues in callbacks
+  const filterUsernamesRef = useRef(params.filterUsernames);
+  const isFilterEnabledRef = useRef(params.isFilterEnabled);
+  const activeChannelRef = useRef(params.activeChannel);
+  const filterWordsRef = useRef(params.filterWords);
+  const negativeFilterWordsRef = useRef(params.negativeFilterWords);
+  const domainFilterEnabledRef = useRef(params.domainFilterEnabled);
+  const currentDomainRef = useRef(params.currentDomain);
+  const debouncedSearchTermRef = useRef(debouncedSearchTerm);
+  
+  // Keep refs in sync with props
+  useEffect(() => {
+    filterUsernamesRef.current = params.filterUsernames;
+    isFilterEnabledRef.current = params.isFilterEnabled;
+    activeChannelRef.current = params.activeChannel;
+    filterWordsRef.current = params.filterWords;
+    negativeFilterWordsRef.current = params.negativeFilterWords;
+    domainFilterEnabledRef.current = params.domainFilterEnabled;
+    currentDomainRef.current = params.currentDomain;
+  }, [params.filterUsernames, params.isFilterEnabled, params.activeChannel, 
+      params.filterWords, params.negativeFilterWords, params.domainFilterEnabled, params.currentDomain]);
+  
+  // Keep debounced search term ref in sync
+  useEffect(() => {
+    debouncedSearchTermRef.current = debouncedSearchTerm;
+  }, [debouncedSearchTerm]);
+  
   // User is ALWAYS filtering (at minimum by channel)
   // Channel is mandatory, username/word filters are optional additions
   const isFilterMode = true; // Always query IndexedDB with at least channel criteria
@@ -165,57 +192,65 @@ export function useIndexedDBFiltering(
   ]);
   
   // Test if a message matches current filter criteria
+  // Uses refs to avoid stale closure issues when called from async contexts (polling)
   const matchesCurrentFilter = useCallback((message: Comment): boolean => {
+    // Use refs for latest values (avoids stale closure)
+    const filterUsernames = filterUsernamesRef.current;
+    const isFilterEnabled = isFilterEnabledRef.current;
+    const activeChannel = activeChannelRef.current;
+    
     // CHANNEL CHECK FIRST (Top-level: Human, AI, or ALL)
     // Handle 'ALL' to allow both human and AI messages
-    if (params.activeChannel !== 'ALL') {
+    if (activeChannel !== 'ALL') {
       // Specific channel - must match
-      if (message['message-type'] !== params.activeChannel) return false;
+      if (message['message-type'] !== activeChannel) return false;
     }
     // If activeChannel === 'ALL', skip this check (allow both types)
     
     // If filter is NOT active, only channel filtering applies
-    if (!params.isFilterEnabled) {
+    if (!isFilterEnabled) {
       return true; // Channel matched, no other filters
     }
     
     // Filter IS active - now apply username/word filters WITHIN the active channel:
     
     // Username filter - EXACT case match for both username and color
-    if (params.filterUsernames.length > 0) {
-      const usernameMatch = params.filterUsernames.some(
+    if (filterUsernames.length > 0) {
+      const usernameMatch = filterUsernames.some(
         filter => 
           message.username === filter.username && 
           message.color === filter.color
       );
       if (!usernameMatch) {
-        // Debug: Log why message didn't match
-        console.log('[FilterHook] Message rejected - username/color mismatch:', {
-          messageUsername: message.username,
-          messageColor: message.color,
-          filterUsernames: params.filterUsernames.map(f => `${f.username}:${f.color}`)
-        });
+        // Debug: Log why message didn't match (stringify arrays for visibility)
+        console.log('[FilterHook] Message rejected - username/color mismatch:', 
+          `message=${message.username}:${message.color}`,
+          `filters=${JSON.stringify(filterUsernames.map(f => `${f.username}:${f.color}`))}`
+        );
         return false;
       }
     }
     
-    // Include words
-    if (params.filterWords.length > 0) {
+    // Include words (use ref)
+    const filterWords = filterWordsRef.current;
+    if (filterWords.length > 0) {
       const textLower = message.text.toLowerCase();
-      const hasAllWords = params.filterWords.every(word => textLower.includes(word.toLowerCase()));
+      const hasAllWords = filterWords.every(word => textLower.includes(word.toLowerCase()));
       if (!hasAllWords) return false;
     }
     
-    // Exclude words
-    if (params.negativeFilterWords.length > 0) {
+    // Exclude words (use ref)
+    const negativeFilterWords = negativeFilterWordsRef.current;
+    if (negativeFilterWords.length > 0) {
       const textLower = message.text.toLowerCase();
-      const hasExcludedWord = params.negativeFilterWords.some(word => textLower.includes(word.toLowerCase()));
+      const hasExcludedWord = negativeFilterWords.some(word => textLower.includes(word.toLowerCase()));
       if (hasExcludedWord) return false;
     }
     
-    // Search term (use debounced for consistency)
-    if (debouncedSearchTerm.length > 0) {
-      const searchLower = debouncedSearchTerm.toLowerCase();
+    // Search term (use ref for consistency)
+    const searchTerm = debouncedSearchTermRef.current;
+    if (searchTerm.length > 0) {
+      const searchLower = searchTerm.toLowerCase();
       const textLower = message.text.toLowerCase();
       const usernameLower = message.username?.toLowerCase() || '';
       if (!textLower.includes(searchLower) && !usernameLower.includes(searchLower)) {
@@ -223,22 +258,15 @@ export function useIndexedDBFiltering(
       }
     }
     
-    // Domain filter
-    if (params.domainFilterEnabled && message.domain !== params.currentDomain) {
+    // Domain filter (use refs)
+    const domainFilterEnabled = domainFilterEnabledRef.current;
+    const currentDomain = currentDomainRef.current;
+    if (domainFilterEnabled && message.domain !== currentDomain) {
       return false;
     }
     
     return true;
-  }, [
-    isFilterMode,
-    params.filterUsernames,
-    params.filterWords,
-    params.negativeFilterWords,
-    debouncedSearchTerm, // Use debounced version
-    params.domainFilterEnabled,
-    params.currentDomain,
-    params.activeChannel  // NEW: Use exclusive channel
-  ]);
+  }, []); // Empty deps - uses refs for latest values
   
   // Re-query IndexedDB when filters change
   useEffect(() => {
