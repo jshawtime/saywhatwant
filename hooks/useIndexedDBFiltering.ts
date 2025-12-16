@@ -188,7 +188,15 @@ export function useIndexedDBFiltering(
           message.username === filter.username && 
           message.color === filter.color
       );
-      if (!usernameMatch) return false;
+      if (!usernameMatch) {
+        // Debug: Log why message didn't match
+        console.log('[FilterHook] Message rejected - username/color mismatch:', {
+          messageUsername: message.username,
+          messageColor: message.color,
+          filterUsernames: params.filterUsernames.map(f => `${f.username}:${f.color}`)
+        });
+        return false;
+      }
     }
     
     // Include words
