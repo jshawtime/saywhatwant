@@ -1320,3 +1320,228 @@ Complete testing guide for God Mode Phase 1 MVP implementation. **Implementation
 
 ---
 
+### 199-GOD-MODE-SESSION-STORAGE.md
+**Tags:** #god-mode #storage #durable-objects #session-management #architecture  
+**Created:** November 12, 2025  
+**Status:** ✅ IMPLEMENTED - Session storage working
+
+Architecture for storing God Mode sessions separately to avoid 128KB DO key limit. **Problem:** Frontend sends massive context array (158+ messages) causing 500 errors; God Mode doesn't use this context anyway since each entity builds its own during serial processing. **Solution:** Frontend sends null context for God Mode entity detection via urlEntity='god-mode', reducing POST body size significantly. **Session Key Architecture:** Instead of all sessions in one `conv:` key, each session gets own key `godmode-session:{sessionId}` containing metadata (sessionId, timestamp, human/AI identities, question, entitiesUsed, messageIds). Individual messages still post to `/api/comments` for real-time visibility. **Benefits:** Unlimited sessions (each ~500 bytes metadata), no 128KB limit, queryable session history, backward compatible. **Implementation:** PM2 generates unique sessionId per question, tracks message IDs as posted, saves session metadata to DO via new endpoint. DO Worker adds endpoints: `POST /api/godmode-session`, `GET /api/godmode-sessions`, `GET /api/godmode-session/:id`. **Frontend unchanged** - polling and filter system work identically.
+
+---
+
+### 200-GOD-MODE-TRUE-SESSION-KEYS.md
+**Tags:** #god-mode #durable-objects #storage #session-routing #128kb-limit  
+**Created:** November 12, 2025  
+**Status:** ✅ IMPLEMENTED - Session-based storage working
+
+Fixes 128KB DO key limit by using session-specific storage keys for God Mode. **Problem:** All God Mode sessions shared ONE conversation key (`conv:Human:X:GodMode:Y`), hitting 128KB limit after 3-7 sessions (~20KB per session average). **Solution:** Separate DO key per session using format `godmode:Human:X:GodMode:Y:{sessionId}`. Each session isolated (~8-50KB), unlimited sessions possible. **Implementation:** PM2 adds `sessionId` to botParams in all postToAPI calls; DO Worker routes God Mode messages to session-specific keys when sessionId present; getMessages() and getConversation() updated to query both `conv:` and `godmode:` prefixes. **Bugs Fixed:** Map.keys() returns iterator not array (use Array.from()), Map.size logging after variable rename. **Key Format:** `godmode:{humanUsername}:{humanColor}:{aiUsername}:{aiColor}:{timestamp}-{random}`. Backward compatible - old `conv:` keys still readable during transition.
+
+---
+
+### 201-PM2-POLLING-FLAGS-HUMAN-AI-GODMODE.md
+**Tags:** #pm2 #polling #god-mode #worker-config #optimization #architecture  
+**Created:** November 12, 2025  
+**Status:** 📋 PLANNING - Config-based polling separation
+
+Architecture for separating PM2 workers by message type to prevent God Mode blocking normal messages. **Problem:** God Mode blocks primary PM2 for 6+ minutes per session; other messages queue up. **Solution:** Dual PM2 with config flags `pollHumanAI` and `pollGodMode` allowing workers to filter messages. **Configurations:** Unified (current: both=true), Primary (pollHumanAI=true, pollGodMode=false), GodMode-only (reverse). **Implementation:** worker-config.json with polling flags, PM2 filters pending messages based on config, ecosystem.config.js starts multiple workers. **Benefits:** Non-blocking architecture, scalable (add more God Mode workers), independent restart/monitoring. **Atomic claiming** already solved via DO Worker - first worker to claim wins. Current usage (~1-5 God Mode/hour) doesn't require implementation yet; monitor and implement when blocking issues observed.
+
+---
+
+### 202-GOD-MODE-SESSION-ROUTING-FIX.md
+**Tags:** #god-mode #session-routing #durable-objects #debugging #resolved  
+**Created:** November 13, 2025  
+**Status:** ✅ RESOLVED - Session-based storage working
+
+Verification that God Mode session routing is working correctly. **Problem:** Conversation key had 298 messages (271KB, 207% of 128KB limit) causing 500 errors after ~15-20 sessions. **Resolution:** Session-based routing IS triggering correctly. Cloudflare logs show: `[MessageQueue] ✅ Using God Mode session key: godmode:Human:888777666:GodMode:999888777:session-1763033732`. **Verified:** Messages stored in session-specific keys, retrievable via `/api/conversation` query, sessionId preserved in stored messages. **What's Working:** PM2 generates unique sessionId, sends in botParams to DO, DO preserves and routes correctly, conversation logs use session-based filenames.
+
+---
+
+### 203-HARD-MESSAGE-LIMIT-ROLLING-WINDOW.md
+**Tags:** #performance #message-limit #lazy-loading #rolling-window #optimization  
+**Created:** November 13, 2025  
+**Status:** 📋 PLANNING - Fix growing message limit
+
+Analysis of performance issue where message limit grows with lazy loading instead of maintaining true rolling window. **Problem:** `maxMessages` increases from 1000 to 1100, 1200+ after lazy loading, never resets, causing UI slowdown. **Current behavior:** `newMax = initialMax + newLoadedCount + 50` keeps growing. **Options:** Option A - hard 1000 limit (drops newest when lazy loading); Option B - don't allow lazy load beyond limit; Option C - separate forward/backward limits; Option D - reset on page load + periodic trim. **Recommendation:** Periodic trim every 5 minutes - if messages > 1000, trim to newest 1000 and reset maxMessages. Allows exploration during session while recovering performance. Quick fix alternative: reduce hard limit from 1000 to 500 in `config/message-system.ts`.
+
+---
+
+### 204-LLAMACPP-PARALLEL-BACKEND.md
+**Tags:** #llama-cpp #parallel-processing #backend-abstraction #performance #scaling  
+**Created:** November 13, 2025  
+**Status:** 📋 PLANNING - Flag-based dual system
+
+Architecture for Llama.cpp parallel backend to replace serial Ollama processing. **Problem:** Both PM2 (processes 1 message at a time) and Ollama (no parallel processing) are bottlenecks limiting throughput to ~720 msg/hour. **Solution:** Llama.cpp with `--parallel N` flag enables concurrent request processing; 4 concurrent requests = ~50-60 tps aggregate. **Mac Studio M3 Ultra capacity:** Conservative 16-24 slots, aggressive 32-40 slots based on 512GB RAM. **Implementation:** Backend abstraction layer (`llmBackend.ts`) with OllamaBackend and LlamaCppBackend classes, factory function based on config. Worker-config.json specifies backend type and endpoint. **Performance with 5 PM2 workers + Llama.cpp parallel 24:** ~5000-8000 msg/hour (vs 720 current), wait time 8-10s (vs 50s for 10 users). Keeps Ollama as fallback, A/B testable via config flag.
+
+---
+
+### 205-LLAMACPP-MULTI-MODEL-PM2-ORCHESTRATION.md
+**Tags:** #llama-cpp #multi-model #pm2 #orchestration #memory-management  
+**Created:** November 15, 2025  
+**Status:** 📋 PLANNING - Dynamic multi-model server management
+
+Architecture for running multiple Llama.cpp servers, one per model, managed by PM2. **Limitation:** Each llama-server loads ONE model; run multiple instances for multiple models. **Memory calculation:** ~18GB per server (15GB FP16 model + 3GB context/KV cache); 512GB = max 25 servers conservative. **PM2 Ecosystem config:** `ecosystem-models.js` defines 20 servers on ports 8080-8099, each with unique model path, `--parallel 1` per server. **Model Routing:** `modelRouter.ts` maps model-key to port, falls back to Ollama for unmapped models. **Benefits:** All models loaded simultaneously (0s load time), PM2 monitors/auto-restarts, health monitoring, memory tracking. **Phases:** Phase 1 static 20 models, Phase 2 dynamic based on memory, Phase 3 on-demand loading with LRU eviction. Production recommendation: Top 20 always loaded (~360GB), remaining 22 use Ollama fallback.
+
+---
+
+### 206-LLAMACPP-IMPLEMENTATION-PROGRESS.md
+**Tags:** #llama-cpp #implementation #progress #multi-model #deployment  
+**Created:** November 15, 2025  
+**Status:** 🚀 IN PROGRESS - Multi-model system working
+
+Progress tracker for Llama.cpp implementation. **Phase 1 Complete:** Backend abstraction (`llmBackend.ts`, `workerConfig.ts`, `modelRouter.ts`), tested with Ollama. **Phase 2 Complete:** Llama.cpp built on 10.0.0.99 with Metal GPU acceleration, performance ~50 tps, mapping time ~1s. **Phase 3 Complete:** 3 model servers running via PM2 (the-eternal:8080, 1984:8081, fear-and-loathing:8082), all responding correctly, ~14-15GB each. **Phase 4 Testing:** Routing code integrated, logs show which backend used (`[LLAMA-CPP]` vs `[OLLAMA]`), ready for live entity testing. **Phase 5 Pending:** 3 parallel bot workers for concurrent processing verification. **Issues Resolved:** PM2 ecosystem files treated as single script (use shell script instead), model filename pattern (hyphen to underscore), server host setting must be 0.0.0.0. **19-Model Production Ready:** ecosystem-19models.js generated, ports 8080-8098, ~342GB memory.
+
+---
+
+### 207-SSH-SETUP-COMPLETE-GUIDE.md
+**Tags:** #ssh #remote-access #macos #permissions #deployment  
+**Created:** November 15, 2025  
+**Status:** ✅ Working - Passwordless SSH configured
+
+Complete guide for passwordless SSH from dev machine to any new Mac on local network. **Core Problem:** SSH key authentication fails when home directory is world-writable (`drwxrwxrwx`); OpenSSH security policy ignores authorized_keys. **Solution:** `chmod 755 ~` on target machine. **Setup Process:** 1) Enable Remote Login on target (System Settings → Sharing), 2) Get target IP/username, 3) Generate SSH key on dev (`ssh-keygen -t ed25519`), 4) Copy key (`ssh-copy-id user@target`), 5) Fix permissions on target (`chmod 755 ~`, `chmod 700 ~/.ssh`, `chmod 600 ~/.ssh/authorized_keys`), 6) Configure passwordless sudo for remote operations (`visudo` add `username ALL=(ALL) NOPASSWD: ALL`), 7) Test. **Security:** Key-based auth more secure than passwords, private network (10.0.0.x), ed25519 modern standard. Works for remote servers anywhere with internet access.
+
+---
+
+### 208-LLAMACPP-REMOTE-DEPLOYMENT.md
+**Tags:** #llama-cpp #remote #deployment #ssh #mac-studio  
+**Created:** November 15, 2025  
+**Status:** 🔄 IN PROGRESS
+
+Deployment plan for Llama.cpp to Mac Studio M3 Ultra (512GB RAM) at 10.0.0.110 via SSH. **Prerequisites:** SSH access configured, 512GB RAM available, cmake not installed yet. **Target:** Multi-model servers auto-discovering all models, PM2 managing all, self-healing (add model → auto-included). **Implementation Phases:** Phase 1 - Install dependencies (Homebrew, cmake, git), Phase 2 - Build Llama.cpp with cmake/Metal support, Phase 3 - Test single model, Phase 4 - Deploy multi-model system scanning models directory for all f16 models, Phase 5 - Update PM2 bot worker-config.json endpoint to 10.0.0.110.
+
+---
+
+### 209-DYNAMIC-MODEL-SERVER-POOL.md
+**Tags:** #llama-cpp #pool-manager #lru #memory-management #scaling  
+**Created:** November 15, 2025  
+**Status:** ✅ COMPLETE - Production deployed
+
+Dynamic model server pool with LRU eviction for managing thousands of models with limited RAM. **Problem:** Static loading can't handle 1000+ models; need load-on-demand with memory limits. **Architecture:** Pool Manager on 10.0.0.110 exposes HTTP API (port 9000), PM2 Bot queries `/get-server?model=X` and receives port for model. **Memory Management:** Auto-calculates max servers from RAM (512GB = 27 servers at 18GB each), LRU eviction when pool full, 30-minute idle timeout. **Implementation:** ServerPoolManager class tracks activeServers Map with pid/port/lastUsed, evictLRU() finds least recently used, startIdleMonitor() checks every minute. **Test Results:** Server reuse 5ms average (vs 12.6s cold start), 60 models discovered, LRU eviction verified with 30 models, port reuse working (6.9s vs 12.6s). **Production Deployed:** PM2 Bot updated to query Pool Manager dynamically, 10s timeout with Ollama fallback, all logs show `[LLAMA-CPP]` and `10.0.0.110:PORT`.
+
+---
+
+### 210-PARALLEL-PM2-WORKERS-IMPLEMENTATION.md
+**Tags:** #pm2 #parallel-workers #auto-scaling #atomic-claiming #throughput  
+**Created:** November 19, 2025  
+**Status:** ✅ IMPLEMENTED - Ready for testing
+
+Parallel PM2 workers with atomic claiming for 5-10x throughput improvement. **Goal:** Auto-scaling from 1-10 PM2 workers based on queue depth. **Key Insight:** Most messages hit HOT servers (~1.2s processing), not 5-10s. **Capacity:** 10 workers = ~9,000 msg/hour (vs 720 current). **Atomic Claiming:** New `/api/queue/claim-next` endpoint combines fetch+claim into single atomic DO operation, eliminating race conditions. Workers call claim-next, get message or null, process if found. **Auto-Scaler:** Monitors queue every 10s, scales up by restarting stopped workers (1-2s), scales down gracefully after 60s cooldown. **10-Worker Ecosystem:** Workers 2-10 pre-registered but stopped, auto-scaler restarts as needed. **Implementation Complete:** DO Worker claim-next deployed, PM2 bot updated, 10 workers pre-registered, auto-scaler monitoring, ALL CAPS startup logging, WebSocket port conflict fixed. **20-tab test successful** - queue reached 11+ pending, scaled appropriately, all messages processed.
+
+---
+
+### 211-EQ-SCORE-MULTI-TAB-DISPLAY-ISSUE.md
+**Tags:** #eq-score #multi-tab #browser-throttling #debugging #investigation  
+**Created:** November 19, 2025  
+**Status:** 🔍 INVESTIGATION PAUSED - Possible same-computer limitation
+
+Investigation of EQ-score display issue where tabs 8+ show "0" during stress tests. **Symptoms:** Tabs 1-7 display correctly, tabs 8-15+ show "0" after 3+ minutes, all tabs receive AI responses correctly, all tabs polling. **Backend Verified Working:** All 19/19 messages claimed, EQ-scores calculated, stored via PATCH. **Possible Causes:** Browser tab throttling (most likely - Chrome limits background tabs after N active), React state update batching, sessionStorage quota limits, same-computer resource limits, animation conflicts. **Evidence for throttling:** Consistent 7-tab cutoff, all tabs beyond 7 affected equally, tabs polling but not updating state. **Workaround:** Use first 7 tabs for testing; production users on different computers unlikely affected. **Next Steps:** Test with multiple computers to confirm browser throttling theory; if confirmed, consider Service Worker or Shared Worker solution.
+
+---
+
+### 212-COLOR-UNIQUENESS-SCALABILITY.md
+**Tags:** #color-system #uniqueness #scalability #uuid #collision  
+**Created:** November 19, 2025  
+**Status:** 📋 PLANNING
+
+Scalability fix for color collision with 839 quadrillion combinations. **Current Problem:** 9-digit RGB format has only 77,106 unique colors via algorithm; collision at 77K conversations. **Solution:** YouTube-style 10-char suffix appended to color: `185142040-ABC123DEFG` (19 chars total). **Math:** 62^10 = 839 quadrillion combinations, effectively zero collision probability, no uniqueness checks needed. **Implementation:** Update `getRandomColor()` to append suffix, update regex validators (`^\d{9}(-[A-Za-z0-9]{10})?$`), `getCommentColor()` extracts 9-digit part for CSS, DO storage key uses `:` separator so `-` suffix is safe. **Files to Update:** colorSystem.ts, url-filter-simple.ts, CommentsStream.tsx (verified safe via getCommentColor chain), MessageQueue.js, index-do-simple.ts for AI color generation.
+
+---
+
+### 213-LM-STUDIO-SYNTHESIS-ENDPOINT.md
+**Tags:** #lm-studio #synthesis #archived #superseded  
+**Created:** November 2025  
+**Status:** 📁 ARCHIVED - Superseded by doc 214
+
+Archived documentation for Cloudflare Access + service tokens experiment with LM Studio. **Status:** Superseded - use 214-LM-STUDIO-DIRECT-ACCESS.md instead for hitting `https://aientities.saywhatwant.app/v1/chat/completions` directly. Reference implementation in `generateSynthesis()` in index-do-simple.ts, tunnel health checks in `scripts/tunnel-manager.sh`.
+
+---
+
+### 214-LM-STUDIO-DIRECT-ACCESS.md
+**Tags:** #lm-studio #direct-access #api #cloudflare-tunnel  
+**Created:** November 2025  
+**Status:** ✅ ACTIVE - Reference documentation
+
+Guide for external/internal projects to access LM Studio inference directly without DO queue or PM2 workers. **Endpoint:** `https://aientities.saywhatwant.app/v1/chat/completions` (OpenAI-compatible JSON). **Backend:** LM Studio on 10.0.0.100 via Cloudflare Tunnel, currently runs Mistral Small Instruct as "loaded-model". **Request Template:** Use `"model": "loaded-model"` so LM Studio uses currently loaded model. **Health Checks:** `/health` for HTTP 200, `/v1/models` to list models. **Error Handling:** 502/530 = tunnel can't reach 10.0.0.100:1234, 400 = malformed payload, set timeout ≥600s for large prompts. **Integration Tips:** Rate limit yourself (≤2 req/sec sustained), log request IDs, plan for future auth headers. Reference: `generateSynthesis()` in index-do-simple.ts.
+
+---
+
+### 216-VERSION-MANAGEMENT-FORCE-REFRESH.md
+**Tags:** #version-control #deployment #hot-reload #frontend  
+**Created:** November 28, 2025  
+**Status:** 🔴 IMPLEMENTING - Silent force refresh
+
+Version management system for forcing all open tabs to refresh after deployment. **Problem:** 1000 users with tabs open have old code; no way to force refresh. **Solution:** All `/api/comments` responses include version number, frontend checks on every poll, if mismatch → silent reload (no notification). **Implementation:** `VERSION` file as single source of truth, next.config.js reads at build time and injects as `NEXT_PUBLIC_APP_VERSION`, DO Worker adds version to getMessages() response (`{ messages: [...], version: "1.0.0" }`), `useVersionCheck` hook compares serverVersion with build version and triggers `window.location.reload()`. **Backward Compatibility:** Frontend handles both array (old) and object (new) response formats. **Reload Loop Prevention:** Use localStorage to track last reload version, prevent multiple reloads within 60 seconds. **Cost:** Zero additional requests (piggybacks on polling), +20 bytes per response.
+
+---
+
+### 219-PER-MESSAGE-STORAGE-TEST-REPORT.md
+**Tags:** #storage #durable-objects #per-message #testing #cost-optimization  
+**Created:** November 30, 2025  
+**Status:** ✅ Testing complete
+
+Test report verifying per-message storage format for DO operations. **New Format:** `msg:{conversationId}:{messageId}` for messages + `idx:{conversationId}` for index (vs old `conv:{conversationId}` array). **Test Results:** All 10 tests passed - POST human message creates msg: and idx: keys, GET /api/comments returns from memory (0 storage reads), claim-next/complete use O(1) storage, PATCH eqScore works, multi-message context verified with 8 messages. **Dual Write Confirmed:** postMessage() writes to storage AND memory (recentMessages, pendingQueue); polling reads from MEMORY ONLY. **Cost Per Message Pair:** 4 reads + 6 writes (constant regardless of conversation size). **Old vs New:** 40-msg conversation old format ~30 reads/25 writes per message pair, new format always 4 reads/6 writes = 83% savings at scale.
+
+---
+
+### 220-MEMORY-ONLY-DO-MIGRATION.md
+**Tags:** #durable-objects #memory-only #cost-optimization #architecture  
+**Created:** November 30, 2025  
+**Status:** ✅ COMPLETE - Deployed and tested
+
+Migration to memory-only Durable Objects with zero storage operations. **Philosophy:** Real-time app, no stored history - if your tab is closed, you miss out. **Problem:** Bot was fetching context from DO storage instead of using `message.context` from frontend. **Solution:** Frontend sends context from IndexedDB (last 200 messages), Bot uses `message.context` directly, DO uses memory only (`this.pendingQueue` and `this.recentMessages`), starts fresh on hibernation. **Cost Per Message:** $0 (vs 4 reads + 6 writes before), only pay for DO requests ($0.15/million). **Bug Fix:** Llama.cpp rejects 2+ assistant messages at end; bot now always adds: 1) context messages, 2) current user message, 3) empty assistant for completion. **Testing Verified:** Frontend sends context, bot uses message.context, multi-turn works, God Mode works, storage operations = 0.
+
+---
+
+### 221-VIDEO-SYSTEM-AND-ENTITY-INTROS.md
+**Tags:** #video #r2 #entity-intros #cloudflare #streaming  
+**Created:** December 12, 2025  
+**Status:** ✅ ACTIVE
+
+Video system architecture for background and entity intro videos. **R2 Storage:** Bucket `sww-videos`, public URL `https://pub-56b43531787b4783b546dd45f31651a7.r2.dev`, manifest at `/video-manifest.json`. **Video Types:** Background (`sww-XXXXX.mp4`) - random shuffle, muted autoplay; Entity Intro (`[entity-id].mov`) - buffer first, play once with sound. **URL Trigger:** `#entity=the-eternal&intro-video=true` plays intro then backgrounds. **Buffering UX:** Breathing animation (opacity 30%↔100% over 1.5s cycle) while buffering, waits for `canplaythrough` event AND peak opacity before playing. **Iframe Embed:** User clicks on highermind.ai → iframe opens with `allow="autoplay"` → saywhatwant.app inherits autoplay permission → video plays with audio. **Upload Process:** `wrangler r2 object put` for video and manifest, manifest entry includes `isIntro: true, entityId: "entity-id"`. **Cost:** Storage $0.015/GB-month, GET $0.36/1M, egress free.
+
+---
+
+### 222-IFRAME-EMBED-OTHER-DOMAINS.md
+**Tags:** #iframe #embed #autoplay #integration #cross-domain  
+**Created:** December 12, 2025  
+**Status:** 📋 Reference documentation
+
+Guide for adding saywhatwant.app iframe embed to domains other than highermind.ai. **Why Iframe:** New tab/redirect blocks autoplay; iframe with `allow="autoplay"` works via user gesture on host site. **Required Components:** ChatOverlay component (full-screen with iframe), Context/State management, Click handler to open overlay. **Critical Iframe Attributes:** `allow="autoplay *; fullscreen; microphone; camera; clipboard-write"`. **URL Format:** `https://saywhatwant.app/#u=Human:COLOR1+DisplayName:COLOR2&filteractive=true&mt=ALL&uis=Human:COLOR1&ais=DisplayName:COLOR2&priority=5&entity=ENTITY&intro-video=true`. **Color Format:** 19 chars `RRRGGGBBB-XXXXXXXXXX`. **Reference Implementation:** See `HIGHERMIND-site/components/ChatOverlay/`, `lib/urlBuilder.ts`, `lib/colorSystem.ts`. **Bookmarkability:** Sync hash params to host URL using `window.history.pushState`.
+
+---
+
+### 223-VIDEO-SYNC-R2-TROUBLESHOOTING.md
+**Tags:** #video #r2 #sync #troubleshooting #manifest  
+**Created:** December 2025  
+**Status:** ✅ ACTIVE - Complete guide
+
+Complete guide for syncing entity intro videos to R2 and troubleshooting issues. **Folder Structure:** `videos-to-upload/` for new videos, `public/r2-video-manifest.json` local manifest, `scripts/sync-videos-to-r2.py` (recommended). **Naming Convention:** Entity intro `[entity-id].mov/.mp4` (filename = entity ID), background `sww-*.mp4`. **Sync Process:** Python script scans folder, compares with R2, uploads new/changed, updates manifest incrementally preserving existing 900+ videos. **Common Issues:** Issue 1 - SyntaxError in JSON (browser cached broken manifest, use cache-busting `?_=${Date.now()}`); Issue 2 - Manifest has 0 videos (bash script corrupted, restore from git or use Python); Issue 3 - New videos not playing (verify filename matches entity ID, manifest has isIntro:true, manifest uploaded to R2, git pushed); Issue 4 - Wrangler CLI errors (use Python boto3 instead). **R2 Config:** Access keys documented, public URL for manifest validation. **VideoPlayer now has cache-busting built in.**
+
+---
+
+### 224-HIGHERMIND-TABBED-LAYOUT-MIGRATION.md
+**Tags:** #highermind #tabbed-layout #video-drawer #migration #architecture  
+**Created:** December 2025  
+**Status:** 🔄 IN PROGRESS
+
+Migration of video drawer from saywhatwant.app to highermind.ai with permanent chat iframe. **Pre-Migration Tags:** Both repos tagged `v1.0.0-pre-tabbed-layout` for rollback. **New Layout:** Icon sidebar (48px fixed) + Left panel (9:16 aspect ratio, active tab content) + Right side (flex, saywhatwant iframe always visible). **Three Tabs:** Video Tab (🎬) - migrated video player with intro videos, color overlay, settings; Gallery Tab (🖼️) - model thumbnail grid; Info Tab (ℹ️) - empty placeholder. **Gallery Click Behavior:** Updates iframe URL to entity, auto-switches to Video tab, plays entity intro. **Implementation Phases:** Phase 1 - Layout structure with TabSidebar, LeftPanel, MainLayout, PermanentIframe; Phase 2 - Video migration copying VideoPlayer.tsx, config files, hooks; Phase 3 - Gallery refactor; Phase 4 - saywhatwant embedded mode detection (`window !== window.top` or `embedded=true` URL param); Phase 5 - Integration testing. **Refactoring Opportunities:** Consolidate color systems, split monolithic VideoPlayer into modular components with hooks, centralize constants, extract URL utilities.
+
+---
+
+### 225-HIGHERMIND-VIDEO-OVERLAY-SHARE-SYSTEM.md
+**Tags:** #highermind #video-drawer #share #amazon #overlay  
+**Created:** December 16, 2025  
+**Status:** ✅ ACTIVE
+
+Documentation for video drawer entity overlay system with share functionality and Amazon book integration. **Entity Overlay:** Appears at bottom of video drawer showing thumbnail with share, optional description text, and Amazon book link. **Share Functionality:** Click thumbnail/SHARE/Copy Direct Link copies URL format `https://highermind.ai/#m=ENTITY_NAME`, shows "Copied for Sharing" for 2 seconds. **Description Text:** Toggle via `showDescription = false` (line ~330), configurable styling for font size, color, opacity, alignment. **Amazon Book Integration:** Config fields in config-aientities.json (`amazon-link`, `amazon-affiliate-link`), book images at `public/images/books/{entity}.webp/.jpg/.png` (tries formats in order). **Styling:** All text elements (SHARE label, Copy Direct Link, AI MODEL BASED ON, View on Amazon) have configurable font size, color, opacity, text-transform, font-weight at documented line numbers. **Future:** Amazon PA-API integration for dynamic product images using `amazon-link` field.
+
+---
+
+### 226-EQ-SCORE-DEBUG-SESSION-FAILURE.md
+**Tags:** #eq-score #debugging #failure #handover #broken  
+**Created:** December 17, 2025  
+**Status:** ❌ BROKEN - Resolved by new agent
+
+Handover document for broken EQ score system after failed debug session. **Original Issue:** EQ score showing 0 despite ~10 messages sent. **What Previous Agent Diagnosed:** Backend working (PM2 logs showed score calculated and PATCH succeeding), frontend wasn't receiving (stuck at old value). **Root Cause Theory:** Race condition where frontend receives message via optimistic update BEFORE bot scores it, then dedupe logic filters out updated message with score. **Changes Made (Should Be Reverted):** Backend - modelRouter.ts return type changed, index-do-simple.ts updated callers, added verbose logging; Frontend - CommentsStream.tsx added eqScore check, useIndexedDBFiltering.ts added score update logic - **these broke the app**. **Actual Issue Found by New Agent:** `.env.local` was pointing to old KV worker URL (`sww-comments.bootloaders.workers.dev`) instead of DO worker (`saywhatwant-do-worker.bootloaders.workers.dev`). **Resolution:** Updated `.env.local` with correct API endpoint, frontend now reaches PM2 correctly.
+
+---
+

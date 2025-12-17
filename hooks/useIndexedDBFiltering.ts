@@ -343,13 +343,38 @@ export function useIndexedDBFiltering(
   // Even with no username/word filters, we filter by channel
   
   // Add new messages (from polling or submission)
+  // Also updates existing messages if eqScore changes (Doc 193 - EQ Score update fix)
   const addMessages = useCallback((newMessages: Comment[]) => {
     if (newMessages.length === 0) return;
     
     setMessages(prev => {
-      // Avoid duplicates
-      const existingIds = new Set(prev.map(m => m.id));
-      let uniqueNew = newMessages.filter(m => !existingIds.has(m.id));
+      // Build map of existing messages for quick lookup and update
+      const existingMap = new Map(prev.map(m => [m.id, m]));
+      let updated = [...prev];
+      let hasUpdates = false;
+      
+      // Check each new message
+      let uniqueNew: Comment[] = [];
+      for (const msg of newMessages) {
+        const existing = existingMap.get(msg.id);
+        
+        if (existing) {
+          // Message already exists - check if eqScore updated (Doc 193)
+          if (msg.eqScore !== undefined && msg.eqScore !== existing.eqScore) {
+            // Update eqScore in-place
+            const idx = updated.findIndex(m => m.id === msg.id);
+            if (idx !== -1) {
+              updated[idx] = { ...updated[idx], eqScore: msg.eqScore };
+              hasUpdates = true;
+              console.log(`[FilterHook] Updated eqScore for ${msg.id}: ${existing.eqScore} → ${msg.eqScore}`);
+            }
+          }
+          // Skip adding as duplicate (already exists)
+        } else {
+          // Truly new message
+          uniqueNew.push(msg);
+        }
+      }
       
       // In filter mode: only add matching messages
       if (isFilterMode) {
@@ -357,10 +382,13 @@ export function useIndexedDBFiltering(
         console.log(`[FilterHook] ${uniqueNew.length} of ${newMessages.length} new messages match filter`);
       }
       
-      if (uniqueNew.length === 0) return prev;
+      // If we only had updates (no new messages), return the updated array
+      if (uniqueNew.length === 0) {
+        return hasUpdates ? updated : prev;
+      }
       
       // Merge and sort (ensures oldest→newest order is maintained)
-      const combined = mergeAndSortMessages(prev, uniqueNew);
+      const combined = mergeAndSortMessages(updated, uniqueNew);
       const trimmed = combined.slice(-params.maxDisplayMessages);
       
       return trimmed;
