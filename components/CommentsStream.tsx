@@ -333,6 +333,12 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
     previousIdentityRef.current = { username, color: userColor };
   }, [username, userColor]);
   
+  // Keep refs in sync with current identity (for polling callback to avoid stale closures)
+  useEffect(() => {
+    currentUsernameRef.current = username;
+    currentUserColorRef.current = userColor;
+  }, [username, userColor]);
+  
   // Consolidated loading state (replaces 6 separate useState calls)
   const {
     isInitialLoading: isLoading,
@@ -368,6 +374,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const idlePollCount = useRef<number>(0); // Track number of idle polls for regressive backoff
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Polling timeout handle
   const previousIdentityRef = useRef<{ username: string; color: string } | null>(null);
+  // Refs for current identity (used in polling callback to avoid stale closures)
+  const currentUsernameRef = useRef<string>('');
+  const currentUserColorRef = useRef<string>('');
   
   // Message type scroll restoration (still needed for Humans/Entities toggle)
   // NOTE: This hook will be deprecated once we fully remove the old toggle system
@@ -1163,7 +1172,8 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
             newComments.forEach(msg => {
               if (msg['message-type'] === 'human' && msg.eqScore !== undefined) {
                 // Check if this human message is from OUR username:color
-                const isOurHuman = msg.username === username && msg.color === userColor;
+                // Use refs to get current values (avoids stale closure when URL changes)
+                const isOurHuman = msg.username === currentUsernameRef.current && msg.color === currentUserColorRef.current;
                 
                 if (!isOurHuman) {
                   // Silently skip scores from other users (no console spam)
