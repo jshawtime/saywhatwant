@@ -73,6 +73,30 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* Save Conversation via Bookmark */}
+      <button
+        onClick={() => {
+          // Trigger browser's bookmark dialog (Cmd+D / Ctrl+D)
+          alert('Press Cmd+D (Mac) or Ctrl+D (Windows) to bookmark this conversation.\n\nThe URL contains your conversation ID - you can return to it anytime!');
+          onClose();
+        }}
+        className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
+        style={{ 
+          color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
+          fontSize: '12.9px'
+        }}
+        aria-label="Save conversation via bookmark"
+        title="You can bookmark a conversation and continue it later"
+      >
+        Save Conversation (via bookmark)
+      </button>
+
+      {/* Separator */}
+      <div 
+        className="my-1 mx-2 border-t"
+        style={{ borderColor: getDarkerColor(userColorRgb, OPACITY_LEVELS.DARK) }}
+      />
+
       {/* Copy All Button */}
       <button
         onClick={() => {

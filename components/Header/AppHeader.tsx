@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Download, Share2, Tv } from 'lucide-react';
+import { Save, Share2, Tv } from 'lucide-react';
 import DomainFilter from '@/components/DomainFilter';
 import FilterBar from '@/components/FilterBar';
 import { SearchBar } from '@/components/Search/SearchBar';
@@ -197,7 +197,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Spacer */}
           <div className="w-3" />
           
-          {/* Download Icon - Toggles export menu */}
+          {/* Save Icon - Toggles save/export menu */}
           <button
             onClick={(e) => {
               if (titleContextMenu) {
@@ -213,9 +213,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               }
             }}
             className="p-2 rounded-full transition-all hover:bg-black/40"
-            title="Export conversation"
+            title="Save conversation"
           >
-            <Download 
+            <Save 
               className="w-6 h-6"
               style={{ color: getDarkerColor(userColorRgb, OPACITY_LEVELS.MEDIUM) }}
             />
