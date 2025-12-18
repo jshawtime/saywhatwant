@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { getDarkerColor } from '@/modules/colorSystem';
 import { OPACITY_LEVELS } from '@/modules/colorOpacity';
+import { showToast } from '@/components/Toast';
 
 interface TitleContextMenuProps {
   x: number;
@@ -65,6 +66,35 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
     }
   }, [x, y]);
 
+  // Handle bookmark save - copy URL and show toast
+  const handleBookmarkSave = async () => {
+    try {
+      // Copy current URL to clipboard
+      await navigator.clipboard.writeText(window.location.href);
+      
+      // Detect OS for keyboard shortcut hint
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const shortcut = isMac ? '⌘D' : 'Ctrl+D';
+      
+      // Show toast
+      showToast({
+        message: 'URL copied!',
+        subMessage: `Press ${shortcut} to bookmark`,
+        type: 'bookmark',
+        duration: 3500,
+      });
+    } catch (err) {
+      // Fallback if clipboard fails
+      showToast({
+        message: 'Bookmark this page to save',
+        subMessage: 'Press ⌘D (Mac) or Ctrl+D (Windows)',
+        type: 'bookmark',
+        duration: 3500,
+      });
+    }
+    onClose();
+  };
+
   return (
     <div
       ref={menuRef}
@@ -75,11 +105,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
     >
       {/* Save Conversation via Bookmark */}
       <button
-        onClick={() => {
-          // Trigger browser's bookmark dialog (Cmd+D / Ctrl+D)
-          alert('Press Cmd+D (Mac) or Ctrl+D (Windows) to bookmark this conversation.\n\nThe URL contains your conversation ID - you can return to it anytime!');
-          onClose();
-        }}
+        onClick={handleBookmarkSave}
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
@@ -106,7 +132,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-          fontSize: '12.9px'  // Smaller than body text (was 16.1px, now 20% smaller)
+          fontSize: '12.9px'
         }}
         aria-label="Copy all messages"
       >
@@ -122,7 +148,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-          fontSize: '12.9px'  // Smaller than body text (was 16.1px, now 20% smaller)
+          fontSize: '12.9px'
         }}
         aria-label="Copy all messages with debug info"
       >
@@ -138,7 +164,7 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
         className="block w-full px-4 py-2 text-left hover:bg-white/10 transition-all"
         style={{ 
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
-          fontSize: '12.9px'  // Smaller than body text (was 16.1px, now 20% smaller)
+          fontSize: '12.9px'
         }}
         aria-label="Save all messages"
       >

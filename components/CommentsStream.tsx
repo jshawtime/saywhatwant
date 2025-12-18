@@ -126,6 +126,7 @@ import { MessageItem } from '@/components/MessageList/MessageItem';
 import { EmptyState } from '@/components/MessageList/EmptyState';
 import { ContextMenu } from '@/components/ContextMenu';
 import { TitleContextMenu } from '@/components/TitleContextMenu';
+import { ToastProvider } from '@/components/Toast';
 import { ColorPickerDropdown } from '@/components/ColorPicker/ColorPickerDropdown';
 import DomainFilter from '@/components/DomainFilter';
 import { StyledSearchIcon, StyledClearIcon, StyledUserIcon, StyledSearchInput, StyledUsernameInput, StyledCharCounter, StyledFilterIcon } from '@/components/UIElements';
@@ -1501,6 +1502,9 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           onSaveAll={handleSaveAll}
         />
       )}
+      
+      {/* Toast Notifications */}
+      <ToastProvider userColorRgb={userColorRgb} />
     </div>
   );
 };
