@@ -72,6 +72,11 @@ interface UserControlsProps {
   eqTotal: number;
   
   /**
+   * Global EQ score across all users (from DO)
+   */
+  globalScore: number;
+  
+  /**
    * Callback when username changes
    */
   onUsernameChange: (username: string) => void;
@@ -150,6 +155,7 @@ export const UserControls: React.FC<UserControlsProps> = ({
   maxUsernameLength,
   eqScore,
   eqTotal,
+  globalScore,
   onUsernameChange,
   onUsernameFocus,
   onUsernameTab,
@@ -178,9 +184,10 @@ export const UserControls: React.FC<UserControlsProps> = ({
     }
   };
   
-  // Track previous score for animation
+  // Track previous scores for animation
   const [prevScore, setPrevScore] = useState(eqScore);
   const [prevTotal, setPrevTotal] = useState(eqTotal);
+  const [prevGlobalScore, setPrevGlobalScore] = useState(globalScore);
   
   useEffect(() => {
     // Delay setting prevScore until after animation completes (1 second)
@@ -201,8 +208,56 @@ export const UserControls: React.FC<UserControlsProps> = ({
     }
   }, [eqTotal, prevTotal]);
   
+  useEffect(() => {
+    if (prevGlobalScore !== globalScore) {
+      const timer = setTimeout(() => {
+        setPrevGlobalScore(globalScore);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [globalScore, prevGlobalScore]);
+  
   return (
     <div className="flex items-center gap-2">
+      {/* Global EQ Score - All users worldwide */}
+      <div
+        className="mr-4 select-none flex flex-col items-end"
+        title="Global score across all users"
+      >
+        <div
+          style={{
+            color: userColorRgb,
+            fontSize: '9px',
+            fontWeight: 900,
+            letterSpacing: '0.5px',
+            opacity: 0.7,
+            marginBottom: '0px'
+          }}
+        >
+          GLOBAL
+        </div>
+        <div
+          style={{
+            color: userColorRgb,
+            fontSize: '29px',
+            fontWeight: 700,
+            opacity: 1,
+            marginTop: '-8px',
+            textAlign: 'right',
+            minWidth: '3ch'
+          }}
+        >
+          <CountUp
+            start={prevGlobalScore}
+            end={globalScore}
+            duration={1}
+            preserveValue={true}
+            useEasing={true}
+            formattingFn={(value) => formatNumber(Math.round(value))}
+          />
+        </div>
+      </div>
+      
       {/* Total EQ Score - smaller stacked label */}
       <div
         className="mr-4 select-none flex flex-col items-end cursor-pointer"

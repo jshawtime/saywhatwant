@@ -245,6 +245,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
   const [eqTotalName, setEqTotalName] = useState<string>(() => getStoredEqTotalName());
   const [eqTotalId, setEqTotalId] = useState<string>(() => getStoredEqTotalId());
   const [eqTotalJoinedAt, setEqTotalJoinedAt] = useState<string>(() => getStoredEqTotalJoinedAt());
+  const [globalScore, setGlobalScore] = useState<number>(0); // Global score from DO (all users)
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasNewComments, setHasNewComments] = useState(false);
@@ -1142,6 +1143,10 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
           if (data.version) {
             setServerVersion(data.version);
           }
+          // Update global score from DO
+          if (data.globalScore !== undefined) {
+            setGlobalScore(data.globalScore);
+          }
         }
 
         console.log(`[Presence Polling] Response: ${newComments.length} messages`);
@@ -1390,6 +1395,7 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
         onToggleVideo={toggleVideo}
         eqScore={eqScore}
         eqTotal={eqTotal}
+        globalScore={globalScore}
         filterUsernames={mergedUserFilters}
             filterWords={filterWords}
             negativeFilterWords={negativeFilterWords}

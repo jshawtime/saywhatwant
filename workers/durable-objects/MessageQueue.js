@@ -18,6 +18,18 @@ export class MessageQueue {
     this.recentMessages = [];         // For frontend polling (last 50K messages)
     this.MAX_CACHE_SIZE = 50000;      // 50K messages = ~100MB = 78% of 128MB limit
     this.initialized = true;          // Always initialized (no storage to load)
+    
+    // GLOBAL SCORE - Persisted to storage (survives restarts)
+    this.globalScore = 0;
+    this.globalScoreLoaded = false;
+    
+    // Load global score from storage on first request
+    this.state.blockConcurrencyWhile(async () => {
+      const stored = await this.state.storage.get('globalScore');
+      this.globalScore = stored || 0;
+      this.globalScoreLoaded = true;
+      console.log('[MessageQueue] Loaded globalScore from storage:', this.globalScore);
+    });
   }
 
   /**
@@ -167,7 +179,8 @@ export class MessageQueue {
 
     return this.jsonResponse({
       messages: filtered,
-      version: "2.0.0"  // Memory-only version
+      version: "2.0.0",  // Memory-only version
+      globalScore: this.globalScore  // Include global score in every poll
     });
   }
 
@@ -332,7 +345,7 @@ export class MessageQueue {
   
   /**
    * PATCH /api/comments/:id - Update message fields (e.g., eqScore)
-   * MEMORY ONLY - updates in-memory state
+   * MEMORY ONLY for messages - but globalScore is persisted
    */
   async patchMessage(request, path) {
     const messageId = path.split('/').pop();
@@ -344,13 +357,22 @@ export class MessageQueue {
     if (!recentMsg) {
       console.error('[MessageQueue] PATCH failed: Message not in memory:', messageId);
       return this.jsonResponse({ success: false, error: 'Message not found in memory' }, 404);
-  }
+    }
 
     // Update in-memory
-    if (body.eqScore !== undefined) recentMsg.eqScore = body.eqScore;
+    if (body.eqScore !== undefined) {
+      recentMsg.eqScore = body.eqScore;
+      
+      // ADD TO GLOBAL SCORE (persisted)
+      if (body.eqScore > 0) {
+        this.globalScore += body.eqScore;
+        await this.state.storage.put('globalScore', this.globalScore);
+        console.log('[MessageQueue] Global score updated:', this.globalScore, '(+' + body.eqScore + ')');
+      }
+    }
     
     console.log('[MessageQueue] PATCH success:', messageId);
-    return this.jsonResponse({ success: true, message: recentMsg });
+    return this.jsonResponse({ success: true, message: recentMsg, globalScore: this.globalScore });
   }
 
   /**
@@ -363,7 +385,8 @@ export class MessageQueue {
       pendingQueue: this.pendingQueue.length,
       maxCacheSize: this.MAX_CACHE_SIZE,
       storageReads: 0,
-      storageWrites: 0
+      storageWrites: 0,
+      globalScore: this.globalScore
     });
   }
 
