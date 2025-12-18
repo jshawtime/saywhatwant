@@ -76,20 +76,23 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const shortcut = isMac ? '⌘D' : 'Ctrl+D';
       
-      // Show toast
+      // Show persistent toast with prominent shortcut
       showToast({
         message: 'URL copied!',
         subMessage: `Press ${shortcut} to bookmark`,
         type: 'bookmark',
-        duration: 3500,
+        persistent: true,
       });
     } catch (err) {
       // Fallback if clipboard fails
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const shortcut = isMac ? '⌘D' : 'Ctrl+D';
+      
       showToast({
-        message: 'Bookmark this page to save',
-        subMessage: 'Press ⌘D (Mac) or Ctrl+D (Windows)',
+        message: 'Bookmark this page',
+        subMessage: `Press ${shortcut}`,
         type: 'bookmark',
-        duration: 3500,
+        persistent: true,
       });
     }
     onClose();
