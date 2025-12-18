@@ -166,9 +166,9 @@ export const TitleContextMenu: React.FC<TitleContextMenuProps> = ({
           color: getDarkerColor(userColorRgb, OPACITY_LEVELS.LIGHT),
           fontSize: '12.9px'
         }}
-        aria-label="Save all messages"
+        aria-label="Download conversation as a txt file"
       >
-        Save ALL
+        Download Conversation
       </button>
     </div>
   );
