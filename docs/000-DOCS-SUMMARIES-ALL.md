@@ -1545,3 +1545,21 @@ Handover document for broken EQ score system after failed debug session. **Origi
 
 ---
 
+### 227-IFRAME-SANDBOX-RESTRICTIONS.md
+**Tags:** #iframe #sandbox #security #downloads #troubleshooting  
+**Created:** December 17, 2025  
+**Status:** 📋 Reference Documentation
+
+Reference guide for iframe sandbox restrictions when embedding saywhatwant.app in HIGHERMIND or other sites. **Problem:** "Save ALL" download button silently fails when embedded in iframe - works fine when accessing directly. **Root Cause:** Missing `allow-downloads` in iframe `sandbox` attribute. **Sandbox Permissions Used:** `allow-scripts` (JS), `allow-same-origin` (localStorage/IndexedDB), `allow-forms`, `allow-popups` (window.open), `allow-modals` (alert/confirm), `allow-presentation`, `allow-downloads` (file downloads). **Allow Attribute (separate):** `autoplay *`, `fullscreen`, `microphone`, `camera`, `clipboard-write`. **Common Issues:** Downloads fail → add `allow-downloads`; Storage APIs error → add `allow-same-origin`; Clipboard copy fails → add `clipboard-write` to allow; Videos don't autoplay → add `autoplay *` to allow. **Debugging:** Test outside iframe first, check console for "Blocked by sandbox" errors, add permissions incrementally. **Files Modified:** PermanentIframe.tsx and ChatOverlay.tsx in HIGHERMIND-site.
+
+---
+
+### 228-LLAMACPP-CONTEXT-SIZE-DEBUGGING.md
+**Tags:** #llama-cpp #context-size #debugging #400-error #pool-manager #truncation  
+**Created:** December 21, 2025  
+**Status:** ✅ RESOLVED
+
+Complete debugging session for HTTP 400 errors after extended conversations with Llama.cpp. **Symptom:** After 35+ messages, emotional-support-therapist entity returned fallback errors; same entity worked on fresh browser/different computer. **Investigation:** Added verbose error logging to llmBackend.ts to capture actual Llama.cpp response body. **Error Revealed:** `{"error":{"type":"exceed_context_size_error","n_prompt_tokens":1140,"n_ctx":1024}}` - server only had 1024 tokens but request needed 1140. **Root Cause:** pool-manager.js had `emotional-intelligence-f16: 10` parallel slots; with `--ctx-size 8192` and `--parallel 10`, Llama.cpp divides context: 8192÷10=~1024 tokens per slot. **Fix 1:** Changed pool-manager.js to only apply 10 parallel to `eq-score-f16` (short prompts), all other models use `default: 1` (full 8192 context). **Fix 2:** Added token-aware context truncation in index-do-simple.ts - estimates tokens before sending, auto-truncates oldest conversation messages if over 7692 budget (8192-500 reserve), preserves system prompt/initContext/current message. **Fix 3:** Verbose error logging in llmBackend.ts shows full error body, message count, character count, token estimate, per-message breakdown. **Key Lesson:** Parallel slots divide context - match parallelism to use case (high for short prompts, 1 for conversations).
+
+---
+

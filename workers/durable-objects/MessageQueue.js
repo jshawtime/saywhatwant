@@ -179,7 +179,7 @@ export class MessageQueue {
 
     return this.jsonResponse({
       messages: filtered,
-      version: "2.0.0",  // Memory-only version
+      version: "1.0.1",  // Must match VERSION file - mismatch triggers force refresh
       globalScore: this.globalScore  // Include global score in every poll
     });
   }

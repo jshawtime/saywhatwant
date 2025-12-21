@@ -23,6 +23,9 @@ export interface FilterState {
   priority?: number;    // Queue priority 0-99 (0=highest)
   model?: string;       // Override LLM model selection
   nom?: number | 'ALL'; // Context size override
+  
+  // Video control
+  introVideo?: boolean; // Triggers intro video playback on load
 }
 
 /**
@@ -125,6 +128,11 @@ export function parseURL(): FilterState {
           }
         }
         break;
+        
+      case 'intro-video':
+        // Video intro flag - must be preserved for version check skip logic
+        state.introVideo = value === 'true';
+        break;
     }
   }
   
@@ -204,6 +212,11 @@ export function buildURL(state: FilterState): string {
   }
   if (state.nom !== undefined) {
     params.push(`nom=${state.nom}`);
+  }
+  
+  // Preserve intro-video flag (critical for version check skip logic)
+  if (state.introVideo) {
+    params.push(`intro-video=true`);
   }
 
   return params.length > 0 ? `#${params.join('&')}` : '';
