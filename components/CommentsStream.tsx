@@ -1346,6 +1346,17 @@ const CommentsStream: React.FC<CommentsStreamProps> = ({ showVideo = false, togg
       interruptAndReschedule();
       console.log('[Activity] Message sent - reset to fast polling for 30s');
     }
+    
+    // Notify parent window (HIGHERMIND) that user sent a message
+    // This allows parent to update its URL for bookmarkability
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'sww-message-sent',
+        hash: window.location.hash,
+        entity: urlEntity,
+      }, '*');
+      console.log('[PostMessage] Notified parent: message sent');
+    }
   };
 
   // Keep displayedComments in sync with allComments (no lazy loading needed)
