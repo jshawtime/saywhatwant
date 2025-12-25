@@ -1563,3 +1563,14 @@ Complete debugging session for HTTP 400 errors after extended conversations with
 
 ---
 
+
+
+---
+
+### 229-LLAMACPP-POOL-MANAGER-RESTART.md
+**Tags:** #llama-cpp #pool-manager #restart #power-failure #10.0.0.110  
+**Created:** December 25, 2025
+
+Quick reference guide for restarting the Llama.cpp Pool Manager on 10.0.0.110 after power failure. **One-liner restart:** `ssh ms512-1@10.0.0.110 'eval "$(/opt/homebrew/bin/brew shellenv)" && cd ~/llama.cpp && npx pm2 start pool-manager.js --name pool-manager'`. **Verify:** `curl http://10.0.0.110:9000/status`. Pool Manager runs on port 9000, discovers 60 models in `/Users/ms512-1/Desktop/HIGHERMIND-models`, starts llama-server instances on-demand (ports 8080-9000). First request to new model takes 30-60s (loading 15GB into RAM), subsequent requests 1-3s. Max 24 concurrent servers (432GB), LRU eviction when full, 30-min idle timeout. Includes troubleshooting for common issues and all PM2/API commands.
+
+---
